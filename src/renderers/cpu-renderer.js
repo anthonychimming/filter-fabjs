@@ -1,0 +1,64 @@
+/**
+ * Filter FabJS
+ * Modular source extracted from v2.0.7; modular architecture v2.1.0.
+ * Licensed GPL-2.0-or-later. See LICENSE and README.md.
+ */
+import { RendererBackend, RenderCancelledError } from './renderer-backend.js';
+
+export class CpuRenderer extends RendererBackend{
+  constructor(programFactory){super('cpu','CPU Worker');this.programFactory=programFactory;this.worker=null;this.source=null;this.width=0;this.height=0;this.pending=new Map();this.readyPromise=Promise.resolve();this.resolveReady=null;this.rejectReady=null}
+  spawnWorker(){
+    this.worker?.terminate();
+    const workerUrl=URL.createObjectURL(new Blob([this.programFactory()],{type:'application/javascript'}));
+    this.worker=new Worker(workerUrl);URL.revokeObjectURL(workerUrl);
+    this.readyPromise=new Promise((resolve,reject)=>{this.resolveReady=resolve;this.rejectReady=reject});
+    this.worker.onmessage=e=>{
+      const m=e.data;
+      if(m.type==='ready'){this.resolveReady?.();this.resolveReady=this.rejectReady=null;return}
+      const job=this.pending.get(m.id);if(!job)return;
+      if(m.type==='progress'){job.onProgress?.(m);return}
+      if(m.type==='result'){this.pending.delete(m.id);job.resolve({pixels:new Uint8ClampedArray(m.buffer),ms:m.ms,backend:this.id,label:this.label})}
+    };
+    this.worker.onerror=e=>{
+      const error=new Error(e.message||`${this.label} failed`);
+      this.rejectReady?.(error);this.resolveReady=this.rejectReady=null;
+      this.rejectPending(error);
+    };
+  }
+  rejectPending(error){for(const job of this.pending.values())job.reject(error);this.pending.clear()}
+  postSource(){
+    if(!this.worker||!this.source||!this.width||!this.height)return;
+    const copy=this.source.slice();
+    this.worker.postMessage({type:'init',width:this.width,height:this.height,buffer:copy.buffer},[copy.buffer]);
+  }
+  setSource(pixels,width,height){
+    this.source=new Uint8ClampedArray(pixels);this.width=width;this.height=height;
+    this.rejectPending(new RenderCancelledError('Source replaced'));
+    this.spawnWorker();this.postSource();return this.readyPromise;
+  }
+  async render({id,program,controls,legacyMath,onProgress}){
+    if(!this.source||!this.width||!this.height)throw new Error('Renderer source is not initialized');
+    await this.readyPromise;
+    if(!this.worker)throw new Error(`${this.label} is unavailable`);
+    return new Promise((resolve,reject)=>{
+      this.pending.set(id,{resolve,reject,onProgress});
+      try{this.worker.postMessage({type:'render',id,program,controls,legacyMath})}
+      catch(error){this.pending.delete(id);reject(error)}
+    });
+  }
+  async cancel(){
+    const hadWork=this.pending.size>0;
+    const error=new RenderCancelledError();
+    this.rejectReady?.(error);this.resolveReady=this.rejectReady=null;
+    this.rejectPending(error);
+    this.worker?.terminate();this.worker=null;
+    if(this.source&&this.width&&this.height){this.spawnWorker();this.postSource();this.readyPromise.catch(()=>{})}
+    return hadWork;
+  }
+  dispose(){
+    const error=new RenderCancelledError('Renderer disposed');
+    this.rejectReady?.(error);this.resolveReady=this.rejectReady=null;
+    this.rejectPending(error);this.worker?.terminate();this.worker=null;
+    this.source=null;this.width=this.height=0;
+  }
+}

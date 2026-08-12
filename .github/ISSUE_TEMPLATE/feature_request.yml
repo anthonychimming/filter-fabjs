@@ -1,0 +1,29 @@
+name: Improvement proposal
+description: Suggest a focused improvement to the current open-source project
+title: "[Proposal] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or limitation
+      description: What current behavior would this improve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed improvement
+      description: Describe the requested behavior and its technical motivation.
+    validations:
+      required: true
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples or references
+      description: Include formulas, filters, screenshots, or comparable technical behavior when useful.
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility considerations
+      description: Note any CPU, WebGPU, AFS, project-format, or browser implications you can identify.

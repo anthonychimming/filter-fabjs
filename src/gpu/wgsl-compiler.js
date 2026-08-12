@@ -1,0 +1,150 @@
+/**
+ * Filter FabJS
+ * Modular source extracted from v2.0.7; modular architecture v2.1.0.
+ * Licensed GPL-2.0-or-later. See LICENSE and README.md.
+ */
+import { IR_VERSION } from '../core/ir.js';
+
+export class WGSLCompileError extends Error{constructor(message,blockers=[]){super(message);this.name='WGSLCompileError';this.blockers=blockers}}
+const WEBGPU_FUNCTIONS=new Set('src src0 src1 srcWrap srcMirror srcLinear ctl val min max abs add sub dif mix scl sqr sqrt sin cos tan r2x r2y c2d c2m pow clamp lerp step smoothstep floor ceil round fract sign wrap mirror linearGrad radialGrad multiply screen overlay softLight difference'.split(' '));
+const WEBGPU_UNARY=new Set(['+','-','!']);
+const WEBGPU_BINARY=new Set(['+','-','*','/','%','<','<=','>','>=','==','!=','&&','||']);
+export class WGSLCompiler{
+  static analyze(program){
+    const blockers=[];
+    if(!program||program.kind!=='filter-fab-program'||program.irVersion!==IR_VERSION)blockers.push('unsupported IR program');
+    if(program?.mathMode!=='float')blockers.push('legacy integer compatibility mode');
+    const walk=node=>{
+      if(!node)return;
+      switch(node.op){
+        case'const':case'var':return;
+        case'unary':if(!WEBGPU_UNARY.has(node.operator))blockers.push(`operator ${node.operator}`);walk(node.input);return;
+        case'binary':if(!WEBGPU_BINARY.has(node.operator))blockers.push(node.operator===','?'comma sequencing':`operator ${node.operator}`);walk(node.left);walk(node.right);return;
+        case'select':walk(node.condition);walk(node.whenTrue);walk(node.whenFalse);return;
+        case'call':if(!WEBGPU_FUNCTIONS.has(node.fn))blockers.push(`${node.fn}()`);node.args.forEach(walk);return;
+        default:blockers.push(`IR operation ${node.op}`);
+      }
+    };
+    program?.outputs?.forEach(output=>walk(output.expression));
+    const unique=[...new Set(blockers)];
+    return{compatible:unique.length===0,blockers:unique,subset:'phase-3-single-pass'};
+  }
+  static key(program){return JSON.stringify(program.outputs.map(output=>output.expression))}
+  static compile(program){
+    const analysis=this.analyze(program);if(!analysis.compatible)throw new WGSLCompileError(`WebGPU subset does not support: ${analysis.blockers.join(', ')}`,analysis.blockers);
+    const compiler=new WGSLCompiler(program),expressions=program.outputs.map((output,channel)=>compiler.value(output.expression,channel));
+    const code=compiler.shader(expressions);this.validateGeneratedSource(code);return{key:this.key(program),code,analysis};
+  }
+  static validateGeneratedSource(code){
+    const malformed=code.match(/\breturn(?:\s+[^;\n{}]+)?}/g);
+    if(malformed?.length)throw new WGSLCompileError('Generated WGSL contains an unterminated return statement',[...new Set(malformed)]);
+  }
+  constructor(program){this.program=program}
+  number(value){value=Number(value);if(!Number.isFinite(value))throw new WGSLCompileError('WGSL constants must be finite');const raw=String(value);return/[.eE]/.test(raw)?raw:`${raw}.0`}
+  bool(node,channel){
+    if(node.op==='binary'&&['<','<=','>','>=','==','!='].includes(node.operator))return`(${this.value(node.left,channel)} ${node.operator} ${this.value(node.right,channel)})`;
+    if(node.op==='binary'&&node.operator==='&&')return`(ff_bool(${this.value(node.left,channel)}) && ff_bool(${this.value(node.right,channel)}))`;
+    if(node.op==='binary'&&node.operator==='||')return`(ff_bool(${this.value(node.left,channel)}) || ff_bool(${this.value(node.right,channel)}))`;
+    if(node.op==='unary'&&node.operator==='!')return`(!ff_bool(${this.value(node.input,channel)}))`;
+    return`ff_bool(${this.value(node,channel)})`;
+  }
+  variable(name,channel){
+    const direct={r:'sourceColor.x',g:'sourceColor.y',b:'sourceColor.z',a:'sourceColor.w',c:`ff_channel(sourceColor, ${channel}.0)`,i:'luminance',u:'chromaU',v:'chromaV',x:'pixelX',y:'pixelY',z:`${channel}.0`,p:`${channel}.0`,d:'direction',m:'radius',X:'widthF',Y:'heightF',Z:'4.0',P:'4.0',D:'1024.0',M:'maxRadius',R:'255.0',G:'255.0',B:'255.0',A:'255.0',C:'255.0',I:'255.0',U:'255.0',V:'255.0',t:'0.0',rmax:'255.0',gmax:'255.0',bmax:'255.0',amax:'255.0',cmax:'255.0',imax:'255.0',umax:'255.0',vmax:'255.0',dmax:'512.0',mmax:'maxRadius',pmax:'4.0',xmax:'widthF',ymax:'heightF',zmax:'4.0',rmin:'0.0',gmin:'0.0',bmin:'0.0',amin:'0.0',cmin:'0.0',imin:'0.0',umin:'-55.0',vmin:'-78.0',dmin:'-512.0',mmin:'0.0',pmin:'0.0',xmin:'0.0',ymin:'0.0',zmin:'0.0',tmin:'0.0',tmax:'1.0',total:'1.0'};
+    if(name in direct)return direct[name];
+    const alias={r0:'r',g0:'g',b0:'b',a0:'a',c0:'c',i0:'i',u0:'u',v0:'v',d0:'d',m0:'m',r1:'r',g1:'g',b1:'b',a1:'a',c1:'c',i1:'i',u1:'u',v1:'v',d1:'d',m1:'m'}[name];
+    if(alias)return this.variable(alias,channel);
+    throw new WGSLCompileError(`Variable ${name} is not supported by the WebGPU subset`,[name]);
+  }
+  value(node,channel){
+    switch(node.op){
+      case'const':return this.number(node.value);
+      case'var':return this.variable(node.name,channel);
+      case'unary':if(node.operator==='+')return`(${this.value(node.input,channel)})`;if(node.operator==='-')return`(-${this.value(node.input,channel)})`;return`ff_num(${this.bool(node,channel)})`;
+      case'binary':{
+        const a=this.value(node.left,channel),b=this.value(node.right,channel);
+        if(node.operator==='/')return`ff_div(${a}, ${b})`;
+        if(node.operator==='%')return`ff_rem(${a}, ${b})`;
+        if(['<','<=','>','>=','==','!=','&&','||'].includes(node.operator))return`ff_num(${this.bool(node,channel)})`;
+        return`(${a} ${node.operator} ${b})`;
+      }
+      case'select':return`select(${this.value(node.whenFalse,channel)}, ${this.value(node.whenTrue,channel)}, ${this.bool(node.condition,channel)})`;
+      case'call':return this.call(node.fn,node.args.map(arg=>this.value(arg,channel)));
+    }
+    throw new WGSLCompileError(`Unsupported IR operation ${node.op}`,[node.op]);
+  }
+  call(name,a){
+    const A=i=>a[i];
+    switch(name){
+      case'src':case'src0':case'src1':return`ff_sample_nearest(${A(0)}, ${A(1)}, ${A(2)})`;
+      case'srcWrap':return`ff_sample_wrap(${A(0)}, ${A(1)}, ${A(2)})`;
+      case'srcMirror':return`ff_sample_mirror(${A(0)}, ${A(1)}, ${A(2)})`;
+      case'srcLinear':return`ff_sample_linear(${A(0)}, ${A(1)}, ${A(2)})`;
+      case'ctl':return`ff_ctl(${A(0)})`;case'val':return`ff_val(${A(0)}, ${A(1)}, ${A(2)})`;
+      case'min':return`min(${A(0)}, ${A(1)})`;case'max':return`max(${A(0)}, ${A(1)})`;case'abs':return`abs(${A(0)})`;
+      case'add':return`min(${A(0)} + ${A(1)}, ${A(2)})`;case'sub':return`max(abs(${A(0)} - ${A(1)}), ${A(2)})`;case'dif':return`abs(${A(0)} - ${A(1)})`;
+      case'mix':return`ff_mix4(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)})`;case'scl':return`ff_scl(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
+      case'sqr':return`(${A(0)} * ${A(0)})`;case'sqrt':return`sqrt(max(0.0, ${A(0)}))`;
+      case'sin':return`(512.0 * sin(${A(0)} * FF_TAU / 1024.0))`;case'cos':return`(512.0 * cos(${A(0)} * FF_TAU / 1024.0))`;case'tan':return`(1024.0 * tan(${A(0)} * FF_TAU / 1024.0))`;
+      case'r2x':return`(cos(${A(0)} * FF_TAU / 1024.0) * ${A(1)})`;case'r2y':return`(sin(${A(0)} * FF_TAU / 1024.0) * ${A(1)})`;
+      case'c2d':return`(atan2(${A(1)}, ${A(0)}) * 1024.0 / FF_TAU)`;case'c2m':return`length(vec2<f32>(${A(0)}, ${A(1)}))`;
+      case'pow':return`pow(${A(0)}, ${A(1)})`;case'clamp':return`ff_clamp(${A(0)}, ${A(1)}, ${A(2)})`;case'lerp':return`ff_lerp(${A(0)}, ${A(1)}, ${A(2)})`;
+      case'step':return`ff_step(${A(0)}, ${A(1)})`;case'smoothstep':return`ff_smoothstep(${A(0)}, ${A(1)}, ${A(2)})`;
+      case'floor':return`floor(${A(0)})`;case'ceil':return`ceil(${A(0)})`;case'round':return`round(${A(0)})`;case'fract':return`fract(${A(0)})`;case'sign':return`sign(${A(0)})`;
+      case'wrap':return`ff_wrap(${A(0)}, ${A(1)})`;case'mirror':return`ff_mirror(${A(0)}, ${A(1)})`;
+      case'linearGrad':return`ff_linear_grad(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)}, ${A(5)})`;
+      case'radialGrad':return`ff_radial_grad(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
+      case'multiply':case'screen':case'overlay':case'softLight':case'difference':return`ff_blend_${name}(${A(0)}, ${A(1)}, ${a.length>2?A(2):'255.0'})`;
+    }
+    throw new WGSLCompileError(`Function ${name}() is not implemented in WGSL`,[`${name}()`]);
+  }
+  shader(expr){return String.raw`
+const FF_TAU : f32 = 6.283185307179586;
+struct Params { width:u32, height:u32, startRow:u32, rowCount:u32, controls:array<f32,8>, };
+@group(0) @binding(0) var<storage,read> srcPixels:array<u32>;
+@group(0) @binding(1) var<storage,read_write> outPixels:array<u32>;
+@group(0) @binding(2) var<storage,read> params:Params;
+fn ff_bool(v:f32)->bool{return v!=0.0;}
+fn ff_num(v:bool)->f32{return select(0.0,1.0,v);}
+fn ff_clamp(v:f32,lo:f32,hi:f32)->f32{return max(lo,min(hi,v));}
+fn ff_div(a:f32,b:f32)->f32{if(b==0.0){return 0.0;}return a/b;}
+fn ff_rem(a:f32,b:f32)->f32{if(b==0.0){return 0.0;}return a-b*trunc(a/b);}
+fn ff_wrap(v:f32,size:f32)->f32{let s=max(1.0,abs(size));return ff_rem(ff_rem(v,s)+s,s);}
+fn ff_mirror(v:f32,size:f32)->f32{let s=max(1.0,abs(size));let p=ff_wrap(v,s*2.0);if(p<s){return p;}return s*2.0-p-0.000000001;}
+fn ff_channel(p:vec4<f32>,z:f32)->f32{let i=i32(trunc(z));if(i==0){return p.x;}if(i==1){return p.y;}if(i==2){return p.z;}if(i==3){return p.w;}return 0.0;}
+fn ff_unpack(v:u32)->vec4<f32>{return vec4<f32>(f32(v&255u),f32((v>>8u)&255u),f32((v>>16u)&255u),f32((v>>24u)&255u));}
+fn ff_pack(v:vec4<f32>)->u32{let c=vec4<u32>(round(clamp(v,vec4<f32>(0.0),vec4<f32>(255.0))));return c.x|(c.y<<8u)|(c.z<<16u)|(c.w<<24u);}
+fn ff_pixel_clamped(x:f32,y:f32)->vec4<f32>{let maxX=max(0.0,f32(params.width)-1.0);let maxY=max(0.0,f32(params.height)-1.0);let ix=u32(trunc(clamp(x,0.0,maxX)));let iy=u32(trunc(clamp(y,0.0,maxY)));return ff_unpack(srcPixels[iy*params.width+ix]);}
+fn ff_pixel_wrap(x:f32,y:f32)->vec4<f32>{let ix=u32(trunc(ff_wrap(x,f32(params.width))));let iy=u32(trunc(ff_wrap(y,f32(params.height))));return ff_unpack(srcPixels[iy*params.width+ix]);}
+fn ff_pixel_mirror(x:f32,y:f32)->vec4<f32>{let ix=u32(trunc(ff_mirror(x,f32(params.width))));let iy=u32(trunc(ff_mirror(y,f32(params.height))));return ff_unpack(srcPixels[iy*params.width+ix]);}
+fn ff_sample_nearest(x:f32,y:f32,z:f32)->f32{return ff_channel(ff_pixel_clamped(x,y),z);}
+fn ff_sample_wrap(x:f32,y:f32,z:f32)->f32{return ff_channel(ff_pixel_wrap(x,y),z);}
+fn ff_sample_mirror(x:f32,y:f32,z:f32)->f32{return ff_channel(ff_pixel_mirror(x,y),z);}
+fn ff_sample_linear(x:f32,y:f32,z:f32)->f32{let x0=floor(x);let y0=floor(y);let tx=x-x0;let ty=y-y0;let a=ff_sample_nearest(x0,y0,z);let b=ff_sample_nearest(x0+1.0,y0,z);let c=ff_sample_nearest(x0,y0+1.0,z);let d=ff_sample_nearest(x0+1.0,y0+1.0,z);return mix(a,b,tx)*(1.0-ty)+mix(c,d,tx)*ty;}
+fn ff_ctl(index:f32)->f32{let i=i32(trunc(index));if(i<0||i>=8){return 0.0;}return params.controls[u32(i)];}
+fn ff_val(index:f32,a:f32,b:f32)->f32{return ff_ctl(index)*(b-a)/255.0+a;}
+fn ff_lerp(a:f32,b:f32,t0:f32)->f32{let t=clamp(select(t0,t0/255.0,abs(t0)>1.0),0.0,1.0);return mix(a,b,t);}
+fn ff_step(edge:f32,v:f32)->f32{return select(0.0,1.0,v>=edge);}
+fn ff_smoothstep(a:f32,b:f32,v:f32)->f32{if(a==b){return select(0.0,1.0,v>=a);}let t=clamp((v-a)/(b-a),0.0,1.0);return t*t*(3.0-2.0*t);}
+fn ff_mix4(a:f32,b:f32,c:f32,d:f32)->f32{if(d==0.0){return 0.0;}return a*c/d+b*(d-c)/d;}
+fn ff_scl(v:f32,a:f32,b:f32,c:f32,d:f32)->f32{if(b==a){return 0.0;}return c+(d-c)*(v-a)/(b-a);}
+fn ff_linear_grad(x:f32,y:f32,x0:f32,y0:f32,x1:f32,y1:f32)->f32{let dx=x1-x0;let dy=y1-y0;let den=dx*dx+dy*dy;if(den==0.0){return 0.0;}return clamp(((x-x0)*dx+(y-y0)*dy)/den,0.0,1.0);}
+fn ff_radial_grad(x:f32,y:f32,cx:f32,cy:f32,r:f32)->f32{return clamp(1.0-length(vec2<f32>(x-cx,y-cy))/max(0.000001,abs(r)),0.0,1.0);}
+fn ff_opacity(base:f32,blend:f32,opacity:f32)->f32{let t=clamp(select(opacity,opacity/255.0,abs(opacity)>1.0),0.0,1.0);return mix(base,blend,t);}
+fn ff_blend_multiply(a0:f32,b0:f32,o:f32)->f32{let a=clamp(a0,0.0,255.0);let b=clamp(b0,0.0,255.0);return ff_opacity(a,a*b/255.0,o);}
+fn ff_blend_screen(a0:f32,b0:f32,o:f32)->f32{let a=clamp(a0,0.0,255.0);let b=clamp(b0,0.0,255.0);return ff_opacity(a,255.0-(255.0-a)*(255.0-b)/255.0,o);}
+fn ff_blend_overlay(a0:f32,b0:f32,o:f32)->f32{let a=clamp(a0,0.0,255.0);let b=clamp(b0,0.0,255.0);let v=select(2.0*a*b/255.0,255.0-2.0*(255.0-a)*(255.0-b)/255.0,a>=128.0);return ff_opacity(a,v,o);}
+fn ff_blend_softLight(a0:f32,b0:f32,o:f32)->f32{let a=clamp(a0,0.0,255.0);let b=clamp(b0,0.0,255.0);let A=a/255.0;let B=b/255.0;let v=clamp(((1.0-2.0*B)*A*A+2.0*B*A)*255.0,0.0,255.0);return ff_opacity(a,v,o);}
+fn ff_blend_difference(a0:f32,b0:f32,o:f32)->f32{let a=clamp(a0,0.0,255.0);let b=clamp(b0,0.0,255.0);return ff_opacity(a,abs(a-b),o);}
+@compute @workgroup_size(8,8)
+fn main(@builtin(global_invocation_id) gid:vec3<u32>){
+  if(gid.x>=params.width||gid.y>=params.rowCount){return;}
+  let px=gid.x;let py=params.startRow+gid.y;if(py>=params.height){return;}
+  let index=py*params.width+px;let sourceColor=ff_unpack(srcPixels[index]);
+  let pixelX=f32(px);let pixelY=f32(py);let widthF=f32(params.width);let heightF=f32(params.height);
+  let luminance=(299.0*sourceColor.x+587.0*sourceColor.y+114.0*sourceColor.z)/1000.0;
+  let chromaU=(-147407.0*sourceColor.x-289391.0*sourceColor.y+436798.0*sourceColor.z)/2000000.0;
+  let chromaV=(614777.0*sourceColor.x-514799.0*sourceColor.y-99978.0*sourceColor.z)/2000000.0;
+  let dx=widthF*0.5-pixelX;let dy=heightF*0.5-pixelY;let radius=length(vec2<f32>(dx,dy));let maxRadius=length(vec2<f32>(widthF,heightF))*0.5;let direction=atan2(-dy,-dx)*1024.0/FF_TAU;
+  outPixels[index]=ff_pack(vec4<f32>(${expr[0]},${expr[1]},${expr[2]},${expr[3]}));
+}`}
+}
