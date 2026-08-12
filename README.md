@@ -4,6 +4,8 @@ Filter FabJS is an open-source, browser-native procedural RGBA image-filter edit
 
 The project is under active development. This repository documents and develops the open-source project as it exists today.
 
+**[▶ Try Filter FabJS Live](https://achimming.github.io/filter-fabjs/)**
+
 ## Current capabilities
 
 - Four-channel RGBA formula editing.
