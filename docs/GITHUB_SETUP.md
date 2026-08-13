@@ -2,7 +2,7 @@
 
 Recommended repository:
 
-- Owner: `achimming`
+- Owner: `anthonychimming`
 - Name: `filter-fabjs`
 - Visibility: **Public**
 - Default branch: `main`
@@ -18,7 +18,7 @@ Do not initialize the GitHub repository with a README, `.gitignore`, or licence 
 5. Set the repository name to `filter-fabjs` and use the existing project folder.
 6. Commit the files with the message `Initial modular Filter FabJS v2.1.0`.
 7. Choose **Publish repository**.
-8. Make sure the repository is published as **Public** to the `achimming` account.
+8. Make sure the repository is published as **Public** to the `anthonychimming` account.
 
 ## Command line with GitHub CLI
 
@@ -30,7 +30,7 @@ git add .
 git commit -m "Initial modular Filter FabJS v2.1.0"
 git branch -M main
 gh auth login
-gh repo create achimming/filter-fabjs --public --source=. --remote=origin --push
+gh repo create anthonychimming/filter-fabjs --public --source=. --remote=origin --push
 ```
 
 ## Command line without GitHub CLI
@@ -42,7 +42,7 @@ git init
 git add .
 git commit -m "Initial modular Filter FabJS v2.1.0"
 git branch -M main
-git remote add origin https://github.com/achimming/filter-fabjs.git
+git remote add origin https://github.com/anthonychimming/filter-fabjs.git
 git push -u origin main
 ```
 
