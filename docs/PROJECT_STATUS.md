@@ -4,7 +4,7 @@ This document describes the implementation currently present in the public repos
 
 ## Release
 
-- Application version: **2.1.0**
+- Application version: **2.1.1**
 - Native filter format: **version 2**
 - Typed IR: **version 1**
 - Development layout: native ES modules
@@ -20,6 +20,8 @@ Filter FabJS provides two rendering backends:
 The **Auto** renderer selects WebGPU when the current program is compatible and WebGPU is available; otherwise it reports a fallback reason and uses the CPU Worker.
 
 ## Formula engine
+
+Formula text is validated after a short pause without starting a render. The preview changes only when the user selects **Render** or presses **Ctrl/⌘ + Enter**, so incomplete expressions never interrupt typing. After an intentional render, keyboard focus and the text selection are restored.
 
 The current formula engine includes:
 
@@ -60,6 +62,7 @@ The repository includes smoke tests for:
 - Built-in preset compilation.
 - Native JSON and AFS format handling.
 - CPU Worker pixel rendering.
+- Formula-editor event wiring and focus-safe render behavior.
 - JavaScript syntax and production builds.
 
 Run all verification with:

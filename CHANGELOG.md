@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.1.1
+
+- Stopped formula fields from rendering on every keystroke and losing focus mid-entry.
+- Added debounced, non-rendering formula validation with clear current, pending, and invalid states.
+- Added a prominent Render action while preserving the Ctrl/⌘ + Enter shortcut.
+- Restored the focused control and text selection after an intentional render finishes.
+- Deferred control-slider rendering until the drag or number edit is committed.
+- Improved formula-field labels, error relationships, focus indicators, responsive behavior, and help text.
+- Added UI wiring regression checks and documented the UX audit behind the revision.
+
 ## 2.1.0
 
 - Split the v2.0.7 monolithic HTML into native ES modules.

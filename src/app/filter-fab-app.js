@@ -21,7 +21,7 @@ import { createControlsController } from '../ui/controls.js';
 
 export function initFilterFabApp(){
   const {el,ctx}=getDom();
-  const state={source:null,filtered:null,width:0,height:0,view:'filtered',split:50,zoom:'fit',zoomLevel:1,controls:Array(8).fill(128),labels:Array.from({length:8},(_,i)=>`Control ${i+1}`),renderId:0,rendererManager:null,rendererPreference:storageGet('ffw-renderer','auto'),lastProgram:null,lastWGSL:null,lastGpuAnalysis:null,isRendering:false,usedControls:Array(8).fill(false),legacyMath:false};
+  const state={source:null,filtered:null,width:0,height:0,view:'filtered',split:50,zoom:'fit',zoomLevel:1,controls:Array(8).fill(128),labels:Array.from({length:8},(_,i)=>`Control ${i+1}`),renderId:0,rendererManager:null,rendererPreference:storageGet('ffw-renderer','auto'),lastProgram:null,lastWGSL:null,lastGpuAnalysis:null,isRendering:false,usedControls:Array(8).fill(false),legacyMath:false,hasPendingFormulaChanges:false,focusSnapshot:null};
   const canvasView=createCanvasView({state,el,ctx});
   let controlsController;
 
@@ -31,27 +31,96 @@ export function initFilterFabApp(){
   };
   state.rendererManager=new RendererManager(rendererFactories);
 
-  function setStatus(text,kind='good'){el.statusText.textContent=text;el.statusDot.className='status-dot'+(kind==='busy'?' busy':kind==='error'?' error':'');}
+  function setStatus(text,kind='good'){el.statusText.textContent=text;el.statusDot.className='status-dot'+(kind==='busy'?' busy':kind==='pending'?' pending':kind==='error'?' error':'');}
   function toast(text){el.toast.textContent=text;el.toast.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.toast.classList.remove('show'),1800);}
   const interactiveNodes=()=>Array.from(document.querySelectorAll('button,input,select,textarea'));
   function updatePresetDeleteState(){const custom=el.preset?.value.startsWith('custom:');if(!el.deletePreset)return;el.deletePreset.disabled=state.isRendering||!custom;el.deletePreset.title=custom?'Delete selected custom preset':'Select a custom preset to delete';}
   function applyInteractionLocks(){interactiveNodes().forEach(node=>{node.disabled=state.isRendering;});$$('.slider-row',$('#sliderGrid')).forEach((row,index)=>{const unused=!state.usedControls[index];row.classList.toggle('control-unused',unused);row.setAttribute('aria-disabled',String(state.isRendering||unused));row.title=unused?'Not referenced by any channel formula':'';$$('input',row).forEach(node=>{node.disabled=state.isRendering||unused;});});updatePresetDeleteState();}
+  function captureFocus(){const node=document.activeElement;if(!(node instanceof Element)||node===document.body||!node.matches('button,input,select,textarea'))return null;const snapshot={node};if(typeof node.selectionStart==='number'){snapshot.start=node.selectionStart;snapshot.end=node.selectionEnd;snapshot.direction=node.selectionDirection;}return snapshot;}
+  function restoreFocus(snapshot){if(!snapshot?.node?.isConnected||snapshot.node.disabled)return;requestAnimationFrame(()=>{if(!snapshot.node.isConnected||snapshot.node.disabled)return;snapshot.node.focus({preventScroll:true});if(typeof snapshot.start==='number'&&typeof snapshot.node.setSelectionRange==='function')snapshot.node.setSelectionRange(snapshot.start,snapshot.end,snapshot.direction||'none');});}
+  function setFormulaEditStatus(kind,text){el.formulaEditStatus.dataset.state=kind;el.formulaEditStatus.textContent=text;}
+  function markFormulaPending(field=null){state.hasPendingFormulaChanges=true;if(field)field.classList.add('edited');setFormulaEditStatus('pending','Changes not rendered');setStatus('Formula changes ready to render','pending');}
+  function markPreviewCurrent(){state.hasPendingFormulaChanges=false;el.formulas.forEach(field=>field.classList.remove('edited'));setFormulaEditStatus('current','Preview current');}
   function setProgress(pct,row,total){const safePct=clamp(Number.isFinite(Number(pct))?Number(pct):0,0,100),safeTotal=Math.max(0,Math.trunc(Number(total)||0)),safeRow=clamp(Math.trunc(Number(row)||0),0,safeTotal||0);el.progressFill.style.width=`${safePct}%`;el.progressFill.parentElement?.setAttribute('aria-valuenow',String(Math.round(safePct)));el.progressPercent.textContent=`${Math.round(safePct)}%`;el.progressRows.textContent=safeTotal?`${safeRow} / ${safeTotal} rows`:'Preparing…';}
-  function setUILocked(locked,pct=0,row=0,total=0){state.isRendering=Boolean(locked);document.body.classList.toggle('ui-locked',state.isRendering);document.body.setAttribute('aria-busy',String(state.isRendering));applyInteractionLocks();el.renderOverlay.classList.toggle('show',state.isRendering);el.renderOverlay.setAttribute('aria-hidden',String(!state.isRendering));if(state.isRendering)setProgress(pct,row,total);}
+  function setUILocked(locked,pct=0,row=0,total=0){const wasRendering=state.isRendering,nextRendering=Boolean(locked);if(nextRendering&&!wasRendering)state.focusSnapshot=captureFocus();state.isRendering=nextRendering;document.body.classList.toggle('ui-locked',state.isRendering);document.body.setAttribute('aria-busy',String(state.isRendering));applyInteractionLocks();el.renderOverlay.classList.toggle('show',state.isRendering);el.renderOverlay.setAttribute('aria-hidden',String(!state.isRendering));if(state.isRendering)setProgress(pct,row,total);else if(wasRendering){const snapshot=state.focusSnapshot;state.focusSnapshot=null;restoreFocus(snapshot);}}
   function initializeRendererSource(){if(!state.source||!state.width||!state.height)return Promise.resolve();return state.rendererManager.setSource(state.source,state.width,state.height);}
   async function cancelRender(){if(!state.isRendering)return false;state.renderId++;try{await state.rendererManager?.cancelActive();}catch(error){console.error('Renderer cancellation failed',error);}setUILocked(false);setProgress(0,0,state.height||0);setStatus('Render cancelled');el.renderInfo.textContent=`${state.rendererManager?.active?.label||'Renderer'} · cancelled`;toast('Rendering cancelled');return true;}
 
   function compileCurrentProgram(){const astList=el.formulas.map(field=>new Parser(field.value).parse());return compileFilterProgram(astList,{legacyMath:state.legacyMath});}
-  const scheduleRender=debounce(render,110);
+  const scheduleRender=debounce(()=>{if(!state.hasPendingFormulaChanges)render();},110);
+  const scheduleFormulaValidation=debounce(validatePendingFormulas,220);
   controlsController=createControlsController({state,el,scheduleRender,applyInteractionLocks,compileCurrentProgram});
 
   function customList(){try{return JSON.parse(storageGet('ffw-custom-presets','[]'));}catch{return[];}}
   function populatePresets(){const selected=el.preset.value,custom=customList();el.preset.innerHTML='<optgroup label="Built-in">'+[...presets].sort((a,b)=>a.name.localeCompare(b.name)).map(preset=>`<option value="builtin:${preset.id}">${preset.name}</option>`).join('')+'</optgroup>'+(custom.length?'<optgroup label="My presets">'+custom.map((preset,index)=>`<option value="custom:${index}">${escapeHtml(preset.name)}</option>`).join('')+'</optgroup>':'');if(selected&&Array.from(el.preset.options).some(option=>option.value===selected))el.preset.value=selected;updatePresetDeleteState();}
   function currentFilter(){return{format:'filter-fab-js',version:2,mathMode:'float',name:$('#filterName').value.trim()||'Untitled Filter',author:$('#filterAuthor').value.trim(),formulas:el.formulas.map(field=>field.value.trim()),controls:state.controls.map((value,index)=>({label:state.labels[index],value}))};}
-  function applyFilter(definition,selection){state.legacyMath=definition.mathMode==='legacy'||(definition.format==='filter-fab-js'&&!definition.mathMode&&Number(definition.version||1)<=1);const formulas=definition.formulas||definition.f||['r','g','b','a'];el.formulas.forEach((field,index)=>field.value=formulas[index]??['r','g','b','a'][index]);const values=definition.controls?definition.controls.map(control=>typeof control==='number'?control:control.value):definition.values||Array(8).fill(128),labels=definition.controls?definition.controls.map((control,index)=>typeof control==='number'?`Control ${index+1}`:(control.label||`Control ${index+1}`)):definition.labels||Array.from({length:8},(_,index)=>`Control ${index+1}`);state.controls=Array.from({length:8},(_,index)=>clamp(Number(values[index]??128),0,255));state.labels=Array.from({length:8},(_,index)=>labels[index]||`Control ${index+1}`);$('#filterName').value=definition.name||'Untitled Filter';$('#filterAuthor').value=definition.author||'';controlsController.syncSliders();controlsController.refreshControlUsage();if(selection)el.preset.value=selection;updatePresetDeleteState();render();}
+  function applyFilter(definition,selection){state.legacyMath=definition.mathMode==='legacy'||(definition.format==='filter-fab-js'&&!definition.mathMode&&Number(definition.version||1)<=1);const formulas=definition.formulas||definition.f||['r','g','b','a'];el.formulas.forEach((field,index)=>field.value=formulas[index]??['r','g','b','a'][index]);const values=definition.controls?definition.controls.map(control=>typeof control==='number'?control:control.value):definition.values||Array(8).fill(128),labels=definition.controls?definition.controls.map((control,index)=>typeof control==='number'?`Control ${index+1}`:(control.label||`Control ${index+1}`)):definition.labels||Array.from({length:8},(_,index)=>`Control ${index+1}`);state.controls=Array.from({length:8},(_,index)=>clamp(Number(values[index]??128),0,255));state.labels=Array.from({length:8},(_,index)=>labels[index]||`Control ${index+1}`);$('#filterName').value=definition.name||'Untitled Filter';$('#filterAuthor').value=definition.author||'';controlsController.syncSliders();controlsController.refreshControlUsage();if(selection)el.preset.value=selection;updatePresetDeleteState();markFormulaPending();render();}
 
-  function compileAll(){const astList=[];let ok=true;el.formulas.forEach(field=>{const box=field.closest('.formula'),icon=$('.formula-state',box),errorElement=$('.formula-error',box);try{astList.push(new Parser(field.value).parse());field.classList.remove('invalid');icon.textContent='✓';icon.classList.remove('bad');errorElement.classList.remove('show');}catch(error){ok=false;astList.push(null);field.classList.add('invalid');icon.textContent='!';icon.classList.add('bad');errorElement.textContent=`${error.message} at character ${(error.pos??0)+1}`;errorElement.classList.add('show');}});if(!ok){controlsController.updateControlUsage(null);return null;}try{const program=compileFilterProgram(astList,{legacyMath:state.legacyMath});program.metadata.webgpu=WGSLCompiler.analyze(program);state.lastProgram=program;state.lastGpuAnalysis=program.metadata.webgpu;controlsController.updateControlUsage(program);return program;}catch(error){console.error('IR compilation failed',error);setStatus(`Compiler error: ${error.message}`,'error');controlsController.updateControlUsage(null);return null;}}
-  async function render(){if(!state.source||state.isRendering)return;const program=compileAll();if(!program){setStatus('Fix formula errors before rendering','error');return;}const id=++state.renderId,irLabel=`IR v${program.irVersion} · ${program.metadata.nodeCount} ops`;setUILocked(true,0,0,state.height||0);setStatus('Selecting renderer…','busy');el.renderInfo.textContent=`${irLabel} · selecting renderer…`;let renderer=null,selection=null;try{selection=await state.rendererManager.select(program,state.rendererPreference);state.lastGpuAnalysis=selection.analysis;if(id!==state.renderId)return;renderer=selection.renderer;const fallback=selection.fallbackReason?' · CPU fallback':'';setStatus(`Rendering with ${renderer.label}… 0%`,'busy');el.renderInfo.textContent=`${renderer.label}${fallback} · ${irLabel} · preparing…`;const result=await renderer.render({id,program,controls:[...state.controls],legacyMath:state.legacyMath,onProgress:message=>{if(id!==state.renderId)return;setProgress(message.pct,message.row,message.total);setStatus(`Rendering with ${renderer.label}… ${Math.round(message.pct)}%`,'busy');el.renderInfo.textContent=`${renderer.label}${fallback} · ${irLabel} · ${message.row} / ${message.total} rows`;}});if(id!==state.renderId)return;state.filtered=result.pixels;canvasView.drawView();setStatus(selection.fallbackReason?'Ready · CPU fallback':'Ready');const reason=selection.fallbackReason?` · ${selection.fallbackReason}`:'';el.renderInfo.textContent=`${result.label} · ${irLabel} · ${result.ms.toFixed(0)} ms${reason}`;}catch(error){if(id!==state.renderId||error?.name==='RenderCancelledError')return;if(renderer?.id==='webgpu'){console.error('WebGPU render failed; retrying on CPU',error);try{const cpu=await state.rendererManager.get('cpu');state.rendererManager.active=cpu;const result=await cpu.render({id,program,controls:[...state.controls],legacyMath:state.legacyMath,onProgress:message=>{if(id!==state.renderId)return;setProgress(message.pct,message.row,message.total);setStatus(`GPU failed; CPU fallback… ${Math.round(message.pct)}%`,'busy');}});if(id!==state.renderId)return;state.filtered=result.pixels;canvasView.drawView();setStatus('Ready · CPU fallback');el.renderInfo.textContent=`CPU Worker · ${irLabel} · ${result.ms.toFixed(0)} ms · GPU error: ${error.message}`;return;}catch(cpuError){error=new Error(`GPU: ${error.message}; CPU: ${cpuError.message}`);}}console.error('Render failed',error);setStatus(`Renderer error: ${error.message}`,'error');el.renderInfo.textContent=`${renderer?.label||'Renderer'} · ${irLabel} · error`;}finally{if(id===state.renderId)setUILocked(false);}}
+  function compileAll({cache=true}={}){const astList=[];let ok=true;el.formulas.forEach(field=>{const box=field.closest('.formula'),icon=$('.formula-state',box),errorElement=$('.formula-error',box);try{astList.push(new Parser(field.value).parse());field.classList.remove('invalid');field.setAttribute('aria-invalid','false');icon.textContent='✓';icon.classList.remove('bad','pending');errorElement.textContent='';errorElement.classList.remove('show');}catch(error){ok=false;astList.push(null);field.classList.add('invalid');field.setAttribute('aria-invalid','true');icon.textContent='!';icon.classList.remove('pending');icon.classList.add('bad');errorElement.textContent=`${error.message} at character ${(error.pos??0)+1}`;errorElement.classList.add('show');}});if(!ok){controlsController.updateControlUsage(null);return null;}try{const program=compileFilterProgram(astList,{legacyMath:state.legacyMath});program.metadata.webgpu=WGSLCompiler.analyze(program);if(cache){state.lastProgram=program;state.lastGpuAnalysis=program.metadata.webgpu;}controlsController.updateControlUsage(program);return program;}catch(error){console.error('IR compilation failed',error);setStatus(`Compiler error: ${error.message}`,'error');controlsController.updateControlUsage(null);return null;}}
+  function showFormulaFailure(){const hasFieldError=el.formulas.some(field=>field.classList.contains('invalid'));setFormulaEditStatus('invalid',hasFieldError?'Fix formula errors':'Compiler error');if(hasFieldError)setStatus('Fix formula errors before rendering','error');}
+  function validatePendingFormulas(){if(!state.hasPendingFormulaChanges||state.isRendering)return;const program=compileAll({cache:false});if(program){setFormulaEditStatus('pending','Ready to render');setStatus('Formula valid · render to update preview','pending');}else showFormulaFailure();}
+  async function render({focusInvalid=false}={}){
+    if(!state.source||state.isRendering)return;
+    const program=compileAll();
+    if(!program){
+      showFormulaFailure();
+      if(focusInvalid)el.formulas.find(field=>field.classList.contains('invalid'))?.focus();
+      return;
+    }
+    const id=++state.renderId,irLabel=`IR v${program.irVersion} · ${program.metadata.nodeCount} ops`;
+    setUILocked(true,0,0,state.height||0);
+    setStatus('Selecting renderer…','busy');
+    el.renderInfo.textContent=`${irLabel} · selecting renderer…`;
+    let renderer=null,selection=null;
+    try{
+      selection=await state.rendererManager.select(program,state.rendererPreference);
+      state.lastGpuAnalysis=selection.analysis;
+      if(id!==state.renderId)return;
+      renderer=selection.renderer;
+      const fallback=selection.fallbackReason?' · CPU fallback':'';
+      setStatus(`Rendering with ${renderer.label}… 0%`,'busy');
+      el.renderInfo.textContent=`${renderer.label}${fallback} · ${irLabel} · preparing…`;
+      const result=await renderer.render({id,program,controls:[...state.controls],legacyMath:state.legacyMath,onProgress:message=>{
+        if(id!==state.renderId)return;
+        setProgress(message.pct,message.row,message.total);
+        setStatus(`Rendering with ${renderer.label}… ${Math.round(message.pct)}%`,'busy');
+        el.renderInfo.textContent=`${renderer.label}${fallback} · ${irLabel} · ${message.row} / ${message.total} rows`;
+      }});
+      if(id!==state.renderId)return;
+      state.filtered=result.pixels;
+      canvasView.drawView();
+      markPreviewCurrent();
+      setStatus(selection.fallbackReason?'Ready · CPU fallback':'Ready');
+      const reason=selection.fallbackReason?` · ${selection.fallbackReason}`:'';
+      el.renderInfo.textContent=`${result.label} · ${irLabel} · ${result.ms.toFixed(0)} ms${reason}`;
+    }catch(error){
+      if(id!==state.renderId||error?.name==='RenderCancelledError')return;
+      if(renderer?.id==='webgpu'){
+        console.error('WebGPU render failed; retrying on CPU',error);
+        try{
+          const cpu=await state.rendererManager.get('cpu');
+          state.rendererManager.active=cpu;
+          const result=await cpu.render({id,program,controls:[...state.controls],legacyMath:state.legacyMath,onProgress:message=>{
+            if(id!==state.renderId)return;
+            setProgress(message.pct,message.row,message.total);
+            setStatus(`GPU failed; CPU fallback… ${Math.round(message.pct)}%`,'busy');
+          }});
+          if(id!==state.renderId)return;
+          state.filtered=result.pixels;
+          canvasView.drawView();
+          markPreviewCurrent();
+          setStatus('Ready · CPU fallback');
+          el.renderInfo.textContent=`CPU Worker · ${irLabel} · ${result.ms.toFixed(0)} ms · GPU error: ${error.message}`;
+          return;
+        }catch(cpuError){error=new Error(`GPU: ${error.message}; CPU: ${cpuError.message}`);}
+      }
+      console.error('Render failed',error);
+      setStatus(`Renderer error: ${error.message}`,'error');
+      el.renderInfo.textContent=`${renderer?.label||'Renderer'} · ${irLabel} · error`;
+    }finally{
+      if(id===state.renderId)setUILocked(false);
+    }
+  }
 
   function initImage(data,width,height){state.width=width;state.height=height;state.source=new Uint8ClampedArray(data);state.filtered=new Uint8ClampedArray(data);initializeRendererSource().catch(error=>{console.error('Renderer initialization failed',error);setStatus(`Renderer error: ${error.message}`,'error');});el.canvas.width=width;el.canvas.height=height;el.imageInfo.textContent=`${width} × ${height} px`;canvasView.fitCanvas();render();}
   function demoImage(){const width=960,height=640,canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const context=canvas.getContext('2d'),background=context.createLinearGradient(0,0,width,height);background.addColorStop(0,'#102142');background.addColorStop(.48,'#8256c7');background.addColorStop(1,'#f08a72');context.fillStyle=background;context.fillRect(0,0,width,height);for(let i=0;i<18;i++){context.globalAlpha=.09;context.fillStyle=i%2?'#fff':'#07111f';context.beginPath();context.arc(90+i*58,90+(i%4)*130,60+(i%3)*35,0,Math.PI*2);context.fill();}context.globalAlpha=1;context.fillStyle='rgba(8,12,22,.78)';context.roundRect(84,94,792,452,36);context.fill();context.fillStyle='#f2f5ff';context.font='700 62px system-ui';context.fillText('FILTER',132,245);context.fillStyle='#9db2ff';context.fillText('FABJS',132,316);context.font='24px system-ui';context.fillStyle='#c5ccda';context.fillText('Open an image or experiment with this demo.',136,370);const gradient=context.createLinearGradient(136,0,790,0);gradient.addColorStop(0,'#ff6c7a');gradient.addColorStop(.5,'#59d68b');gradient.addColorStop(1,'#66a8ff');context.fillStyle=gradient;context.fillRect(136,412,654,18);return context.getImageData(0,0,width,height);}
@@ -69,9 +138,60 @@ export function initFilterFabApp(){
   async function importFilterFile(file){if(!file)return;try{const text=await file.text(),result=detectFilterFormat(text,file.name);applyFilter(result.data);toast(result.kind==='afs'?'AFS filter imported · CPU legacy mode':'Filter FabJS project imported');}catch(error){console.error('Filter import failed',error);toast(`Import failed: ${error.message}`);}finally{el.filterInput.value='';}}
   function savePreset(){const filter=currentFilter(),name=prompt('Preset name',filter.name);if(!name)return;filter.name=name;const list=customList(),index=list.findIndex(item=>item.name.toLowerCase()===name.toLowerCase());if(index>=0)list[index]=filter;else list.push(filter);if(storageSet('ffw-custom-presets',JSON.stringify(list))){populatePresets();el.preset.value=`custom:${index>=0?index:list.length-1}`;updatePresetDeleteState();toast('Preset saved in this browser');}else toast('Browser storage is unavailable');}
 
-  function wire(){el.rendererSelect.value=['auto','webgpu','cpu'].includes(state.rendererPreference)?state.rendererPreference:'auto';el.rendererSelect.onchange=()=>{state.rendererPreference=el.rendererSelect.value;storageSet('ffw-renderer',state.rendererPreference);render();};$('#openImageBtn').onclick=()=>el.imageInput.click();el.imageInput.onchange=async()=>{await loadImageFile(el.imageInput.files[0]);el.imageInput.value='';};$('#pasteImageBtn').onclick=pasteImageFromClipboard;$('#copyImageBtn').onclick=copyImageToClipboard;$('#importBtn').onclick=()=>el.filterInput.click();el.filterInput.onchange=()=>importFilterFile(el.filterInput.files[0]);$('#exportFilterBtn').onclick=exportFilter;$('#exportImageBtn').onclick=exportPNG;$('#savePresetBtn').onclick=savePreset;el.deletePreset.onclick=deletePreset;$('#resetBtn').onclick=()=>applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');el.preset.onchange=()=>{const[type,id]=el.preset.value.split(':');if(type==='builtin')applyFilter(presets.find(preset=>preset.id===id),el.preset.value);else{const preset=customList()[Number(id)];if(preset)applyFilter(preset,el.preset.value);}};el.formulas.forEach(field=>{field.oninput=()=>{controlsController.refreshControlUsage();scheduleRender();};field.onkeydown=event=>{if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){event.preventDefault();render();}};});document.addEventListener('keydown',event=>{if(event.key==='Escape'&&state.isRendering){event.preventDefault();event.stopPropagation();cancelRender();return;}if((event.ctrlKey||event.metaKey)&&event.shiftKey&&event.key.toLowerCase()==='c'&&!state.isRendering&&!isEditableTarget(event.target)){event.preventDefault();copyImageToClipboard();}});document.addEventListener('paste',event=>{if(state.isRendering||isEditableTarget(event.target)||document.querySelector('dialog[open]'))return;const image=imageFromClipboardData(event.clipboardData);if(!image)return;event.preventDefault();loadImageFile(image,{successMessage:'Image pasted from clipboard'});});$$('#viewMode button').forEach(button=>button.onclick=()=>{$$('#viewMode button').forEach(item=>item.classList.remove('active'));button.classList.add('active');state.view=button.dataset.view;el.splitControl.classList.toggle('show',state.view==='split');canvasView.drawView();});el.split.oninput=()=>{state.split=Number(el.split.value);canvasView.drawView();};$('#zoomFit').onclick=canvasView.fitCanvas;$('#zoomIn').onclick=()=>canvasView.zoom(1.2);$('#zoomOut').onclick=()=>canvasView.zoom(1/1.2);window.onresize=debounce(()=>{if(state.zoom==='fit')canvasView.fitCanvas();},100);let dragDepth=0;const hasFiles=event=>Array.from(event.dataTransfer?.types||[]).includes('Files'),hideDrop=()=>{dragDepth=0;el.drop.classList.remove('show');};el.stage.addEventListener('dragenter',event=>{event.preventDefault();if(state.isRendering||!hasFiles(event))return;dragDepth++;el.drop.classList.add('show');});el.stage.addEventListener('dragover',event=>{event.preventDefault();if(state.isRendering||!hasFiles(event))return;if(event.dataTransfer)event.dataTransfer.dropEffect='copy';el.drop.classList.add('show');});el.stage.addEventListener('dragleave',event=>{event.preventDefault();if(state.isRendering)return;dragDepth=Math.max(0,dragDepth-1);if(dragDepth===0)el.drop.classList.remove('show');});el.stage.addEventListener('drop',event=>{event.preventDefault();hideDrop();if(state.isRendering)return;loadImageFile(event.dataTransfer?.files?.[0]);});document.addEventListener('dragend',hideDrop);window.addEventListener('blur',hideDrop);$('#helpBtn').onclick=()=>$('#helpDialog').showModal();$('#closeHelp').onclick=()=>$('#helpDialog').close();window.addEventListener('beforeunload',()=>state.rendererManager?.dispose());}
+  function wire(){
+    el.rendererSelect.value=['auto','webgpu','cpu'].includes(state.rendererPreference)?state.rendererPreference:'auto';
+    el.rendererSelect.onchange=()=>{state.rendererPreference=el.rendererSelect.value;storageSet('ffw-renderer',state.rendererPreference);if(!state.hasPendingFormulaChanges)render();};
+    $('#openImageBtn').onclick=()=>el.imageInput.click();
+    el.imageInput.onchange=async()=>{await loadImageFile(el.imageInput.files[0]);el.imageInput.value='';};
+    $('#pasteImageBtn').onclick=pasteImageFromClipboard;
+    $('#copyImageBtn').onclick=copyImageToClipboard;
+    $('#importBtn').onclick=()=>el.filterInput.click();
+    el.filterInput.onchange=()=>importFilterFile(el.filterInput.files[0]);
+    $('#exportFilterBtn').onclick=exportFilter;
+    $('#exportImageBtn').onclick=exportPNG;
+    $('#savePresetBtn').onclick=savePreset;
+    el.deletePreset.onclick=deletePreset;
+    el.renderBtn.onclick=()=>render({focusInvalid:true});
+    $('#resetBtn').onclick=()=>applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');
+    el.preset.onchange=()=>{const[type,id]=el.preset.value.split(':');if(type==='builtin')applyFilter(presets.find(preset=>preset.id===id),el.preset.value);else{const preset=customList()[Number(id)];if(preset)applyFilter(preset,el.preset.value);}};
+    el.formulas.forEach(field=>{
+      field.oninput=()=>{
+        const box=field.closest('.formula'),icon=$('.formula-state',box),errorElement=$('.formula-error',box);
+        field.classList.remove('invalid');
+        field.setAttribute('aria-invalid','false');
+        icon.textContent='…';
+        icon.classList.remove('bad');
+        icon.classList.add('pending');
+        errorElement.textContent='';
+        errorElement.classList.remove('show');
+        markFormulaPending(field);
+        scheduleFormulaValidation();
+      };
+      field.onblur=validatePendingFormulas;
+      field.onkeydown=event=>{if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){event.preventDefault();render({focusInvalid:true});}};
+    });
+    document.addEventListener('keydown',event=>{if(event.key==='Escape'&&state.isRendering){event.preventDefault();event.stopPropagation();cancelRender();return;}if((event.ctrlKey||event.metaKey)&&event.shiftKey&&event.key.toLowerCase()==='c'&&!state.isRendering&&!isEditableTarget(event.target)){event.preventDefault();copyImageToClipboard();}});
+    document.addEventListener('paste',event=>{if(state.isRendering||isEditableTarget(event.target)||document.querySelector('dialog[open]'))return;const image=imageFromClipboardData(event.clipboardData);if(!image)return;event.preventDefault();loadImageFile(image,{successMessage:'Image pasted from clipboard'});});
+    $$('#viewMode button').forEach(button=>button.onclick=()=>{$$('#viewMode button').forEach(item=>item.classList.remove('active'));button.classList.add('active');state.view=button.dataset.view;el.splitControl.classList.toggle('show',state.view==='split');canvasView.drawView();});
+    el.split.oninput=()=>{state.split=Number(el.split.value);canvasView.drawView();};
+    $('#zoomFit').onclick=canvasView.fitCanvas;
+    $('#zoomIn').onclick=()=>canvasView.zoom(1.2);
+    $('#zoomOut').onclick=()=>canvasView.zoom(1/1.2);
+    window.onresize=debounce(()=>{if(state.zoom==='fit')canvasView.fitCanvas();},100);
+    let dragDepth=0;
+    const hasFiles=event=>Array.from(event.dataTransfer?.types||[]).includes('Files'),hideDrop=()=>{dragDepth=0;el.drop.classList.remove('show');};
+    el.stage.addEventListener('dragenter',event=>{event.preventDefault();if(state.isRendering||!hasFiles(event))return;dragDepth++;el.drop.classList.add('show');});
+    el.stage.addEventListener('dragover',event=>{event.preventDefault();if(state.isRendering||!hasFiles(event))return;if(event.dataTransfer)event.dataTransfer.dropEffect='copy';el.drop.classList.add('show');});
+    el.stage.addEventListener('dragleave',event=>{event.preventDefault();if(state.isRendering)return;dragDepth=Math.max(0,dragDepth-1);if(dragDepth===0)el.drop.classList.remove('show');});
+    el.stage.addEventListener('drop',event=>{event.preventDefault();hideDrop();if(state.isRendering)return;loadImageFile(event.dataTransfer?.files?.[0]);});
+    document.addEventListener('dragend',hideDrop);
+    window.addEventListener('blur',hideDrop);
+    $('#helpBtn').onclick=()=>$('#helpDialog').showModal();
+    $('#closeHelp').onclick=()=>$('#helpDialog').close();
+    window.addEventListener('beforeunload',()=>state.rendererManager?.dispose());
+  }
 
-  window.FilterFabJS=Object.freeze({version:'2.1.0',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererPreference:()=>state.rendererPreference});
+  window.FilterFabJS=Object.freeze({version:'2.1.1',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererPreference:()=>state.rendererPreference});
   controlsController.buildSliders();populatePresets();wire();const demo=demoImage();initImage(demo.data,demo.width,demo.height);applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');
   return{state,render,applyFilter,loadImageFile};
 }
