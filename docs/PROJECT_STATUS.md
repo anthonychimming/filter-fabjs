@@ -4,7 +4,7 @@ This document describes the implementation currently present in the public repos
 
 ## Release
 
-- Application version: **2.1.1**
+- Application version: **2.1.2**
 - Native filter format: **version 2**
 - Typed IR: **version 1**
 - Development layout: native ES modules
@@ -63,6 +63,7 @@ The repository includes smoke tests for:
 - Native JSON and AFS format handling.
 - CPU Worker pixel rendering.
 - Formula-editor event wiring and focus-safe render behavior.
+- Brand-token contrast, neutral preview-canvas treatment, and the GitHub profile target.
 - JavaScript syntax and production builds.
 
 Run all verification with:
