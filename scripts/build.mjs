@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -29,6 +30,10 @@ function stripModules(source) {
     .replace(/^export\s+/gm, '');
 }
 
+function fingerprint(source) {
+  return createHash('sha256').update(source).digest('hex').slice(0, 12);
+}
+
 await fs.rm(path.join(root, 'dist'), { recursive: true, force: true });
 await fs.mkdir(path.join(root, 'dist', 'site', 'assets'), { recursive: true });
 
@@ -41,19 +46,23 @@ for (const relative of order) {
 
 const bundle = `(()=>{'use strict';\n${modules.join('\n')}\n})();\n`;
 const html = await fs.readFile(path.join(root, 'index.html'), 'utf8');
+const packageMetadata = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'));
+const cssFilename = `app.${fingerprint(css)}.css`;
+const jsFilename = `app.${fingerprint(bundle)}.js`;
+const standaloneFilename = `filter-fabjs-v${packageMetadata.version}.html`;
 
 const siteHtml = html
-  .replace('./styles/app.css', './assets/app.css')
-  .replace('<script type="module" src="./src/main.js"></script>', '<script src="./assets/app.js" defer></script>');
+  .replace('./styles/app.css', `./assets/${cssFilename}`)
+  .replace('<script type="module" src="./src/main.js"></script>', `<script src="./assets/${jsFilename}" defer></script>`);
 
 await fs.writeFile(path.join(root, 'dist', 'site', 'index.html'), siteHtml);
-await fs.writeFile(path.join(root, 'dist', 'site', 'assets', 'app.css'), css);
-await fs.writeFile(path.join(root, 'dist', 'site', 'assets', 'app.js'), bundle);
+await fs.writeFile(path.join(root, 'dist', 'site', 'assets', cssFilename), css);
+await fs.writeFile(path.join(root, 'dist', 'site', 'assets', jsFilename), bundle);
 
 const safeBundle = bundle.replace(/<\/script/gi, '<\\/script');
 const standalone = html
   .replace('<link rel="stylesheet" href="./styles/app.css">', () => `<style>\n${css}\n</style>`)
   .replace('<script type="module" src="./src/main.js"></script>', () => `<script>\n${safeBundle}\n</script>`);
 
-await fs.writeFile(path.join(root, 'dist', 'filter-fabjs-v2.1.2.html'), standalone);
-console.log('Built dist/site and dist/filter-fabjs-v2.1.2.html');
+await fs.writeFile(path.join(root, 'dist', standaloneFilename), standalone);
+console.log(`Built dist/site with fingerprinted assets and dist/${standaloneFilename}`);

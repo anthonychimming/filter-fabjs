@@ -8,6 +8,6 @@
     "build": "node scripts/build.mjs",
     "check": "node scripts/check.mjs",
     "test": "node tests/core-smoke.mjs && node tests/cpu-renderer-smoke.mjs && node tests/ui-wiring-smoke.mjs && node tests/theme-smoke.mjs",
-    "verify": "npm run check && npm test && npm run build"
+    "verify": "npm run check && npm test && npm run build && node tests/build-output-smoke.mjs"
   }
 }

@@ -8,7 +8,7 @@ This document describes the implementation currently present in the public repos
 - Native filter format: **version 2**
 - Typed IR: **version 1**
 - Development layout: native ES modules
-- Release layouts: multi-file static site and standalone HTML
+- Release layouts: multi-file static site with fingerprinted assets and standalone HTML
 
 ## Rendering
 
@@ -64,6 +64,7 @@ The repository includes smoke tests for:
 - CPU Worker pixel rendering.
 - Formula-editor event wiring and focus-safe render behavior.
 - Brand-token contrast, neutral preview-canvas treatment, and the GitHub profile target.
+- Fingerprinted production-asset references and a self-contained standalone build.
 - JavaScript syntax and production builds.
 
 Run all verification with:

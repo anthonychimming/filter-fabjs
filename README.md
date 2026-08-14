@@ -50,7 +50,7 @@ npm run build
 
 Build output:
 
-- `dist/site/` — deployable multi-file static site.
+- `dist/site/` — deployable static site with content-fingerprinted CSS and JavaScript assets to prevent mixed-version browser caches.
 - `dist/filter-fabjs-v2.1.2.html` — standalone single-file distribution.
 
 The build uses Node.js and has no package dependencies.
