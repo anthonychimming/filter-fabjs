@@ -55,5 +55,5 @@ const standalone = html
   .replace('<link rel="stylesheet" href="./styles/app.css">', () => `<style>\n${css}\n</style>`)
   .replace('<script type="module" src="./src/main.js"></script>', () => `<script>\n${safeBundle}\n</script>`);
 
-await fs.writeFile(path.join(root, 'dist', 'filter-fabjs-v2.1.1.html'), standalone);
-console.log('Built dist/site and dist/filter-fabjs-v2.1.1.html');
+await fs.writeFile(path.join(root, 'dist', 'filter-fabjs-v2.1.2.html'), standalone);
+console.log('Built dist/site and dist/filter-fabjs-v2.1.2.html');

@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.1.2
+
+- Introduced a semantic brand palette derived from the supplied Obsidian theme: aubergine surfaces, sage and parchment typography, chartreuse primary actions, magenta edit states, and cyan technical labels.
+- Preserved a neutral black/grey preview stage and transparency checkerboard so the interface does not bias image colour judgement.
+- Rebranded the logo, controls, formula editor, progress, status, overlays, dialogs, reference chips, and built-in demo image.
+- Confirmed the top-navigation GitHub button targets the current `anthonychimming` profile and added a regression check for the URL.
+- Added automated contrast and theme-boundary smoke checks plus brand-token documentation.
+
 ## 2.1.1
 
 - Stopped formula fields from rendering on every keystroke and losing focus mid-entry.
