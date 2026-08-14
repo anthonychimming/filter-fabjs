@@ -7,6 +7,7 @@
 - Rebranded the logo, controls, formula editor, progress, status, overlays, dialogs, reference chips, and built-in demo image.
 - Confirmed the top-navigation GitHub button targets the current `anthonychimming` profile and added a regression check for the URL.
 - Added automated contrast and theme-boundary smoke checks plus brand-token documentation.
+- Fingerprinted the deployed CSS and JavaScript filenames so GitHub Pages cannot combine a new HTML shell with cached assets from an older release.
 
 ## 2.1.1
 
