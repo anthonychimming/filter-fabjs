@@ -4,14 +4,52 @@
  * Licensed GPL-2.0-or-later. See LICENSE and README.md.
  */
 import { clamp } from '../core/utils.js';
+import { FORMULA_LIMITS, Parser } from '../core/formula-language.js';
+
+export const FILTER_FILE_MAX_BYTES=256*1024;
+export const FILTER_TEXT_MAX_LENGTH=256*1024;
 
 export function normalizeFilterText(text){return String(text??'').replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n')}
+function assertFilterTextSize(text){if(String(text??'').length>FILTER_TEXT_MAX_LENGTH)throw new Error(`Filter file exceeds the ${FILTER_FILE_MAX_BYTES/1024} KiB limit`)}
+function boundedString(value,name,maxLength,fallback=''){
+  if(value===undefined||value===null)return fallback;
+  if(typeof value!=='string')throw new Error(`Native filter ${name} must be a string`);
+  const result=value.trim();if(result.length>maxLength)throw new Error(`Native filter ${name} exceeds ${maxLength} characters`);return result||fallback;
+}
+function validatedFormulas(formulas,label='Native filter'){
+  if(!Array.isArray(formulas)||formulas.length!==4)throw new Error(`${label} must contain exactly four channel formulas`);
+  return formulas.map((formula,index)=>{
+    if(typeof formula!=='string'||!formula.trim())throw new Error(`${label} channel ${index+1} must be a non-empty formula string`);
+    const normalized=formula.trim();if(normalized.length>FORMULA_LIMITS.maxLength)throw new Error(`${label} channel ${index+1} exceeds the ${FORMULA_LIMITS.maxLength}-character formula limit`);
+    try{new Parser(normalized).parse()}catch(error){throw new Error(`${label} channel ${index+1}: ${error.message}`)}
+    return normalized;
+  });
+}
+function controlValue(value,index){if(typeof value!=='number'||!Number.isFinite(value)||value<0||value>255)throw new Error(`Native filter control ${index+1} must be a finite number from 0 to 255`);return value}
+function controlLabel(value,index){if(value===undefined||value===null||value==='')return`Control ${index+1}`;if(typeof value!=='string')throw new Error(`Native filter control ${index+1} label must be a string`);const label=value.trim();if(label.length>80)throw new Error(`Native filter control ${index+1} label exceeds 80 characters`);return label||`Control ${index+1}`}
+function normalizeNativeControls(data){
+  if(data.controls!==undefined){
+    if(!Array.isArray(data.controls)||data.controls.length>8)throw new Error('Native filter controls must be an array of at most eight entries');
+    const controls=data.controls.map((control,index)=>{
+      if(typeof control==='number')return{label:`Control ${index+1}`,value:controlValue(control,index)};
+      if(!control||typeof control!=='object'||Array.isArray(control))throw new Error(`Native filter control ${index+1} must be a number or object`);
+      return{label:controlLabel(control.label,index),value:controlValue(control.value,index)};
+    });
+    while(controls.length<8)controls.push({label:`Control ${controls.length+1}`,value:128});
+    return controls;
+  }
+  const values=data.values===undefined?[]:data.values,labels=data.labels===undefined?[]:data.labels;
+  if(!Array.isArray(values)||values.length>8)throw new Error('Native filter values must be an array of at most eight entries');
+  if(!Array.isArray(labels)||labels.length>8)throw new Error('Native filter labels must be an array of at most eight entries');
+  return Array.from({length:8},(_,index)=>({label:controlLabel(labels[index],index),value:index<values.length?controlValue(values[index],index):128}));
+}
 export function validateNativeFilter(data){
   if(!data||typeof data!=='object'||Array.isArray(data))throw new Error('Native filter JSON must contain an object');
-  const formulas=Array.isArray(data.formulas)?data.formulas:Array.isArray(data.f)?data.f:null;
-  if(!formulas||formulas.length<4)throw new Error('Native filter JSON must contain four channel formulas');
-  if(formulas.slice(0,4).some(formula=>typeof formula!=='string'||!formula.trim()))throw new Error('Native filter formulas must be non-empty strings');
-  return data;
+  if(data.format!=='filter-fab-js')throw new Error('Native filter format must be “filter-fab-js”');
+  if(!Number.isInteger(data.version)||![1,2].includes(data.version))throw new Error('Native filter version must be 1 or 2');
+  if(data.mathMode!==undefined&&!['float','legacy'].includes(data.mathMode))throw new Error('Native filter mathMode must be “float” or “legacy”');
+  const formulas=validatedFormulas(Array.isArray(data.formulas)?data.formulas:data.f);
+  return{format:'filter-fab-js',version:data.version,mathMode:data.mathMode??(data.version===1?'legacy':'float'),name:boundedString(data.name,'name',120,'Untitled Filter'),author:boundedString(data.author,'author',120),formulas,controls:normalizeNativeControls(data)};
 }
 export function cleanAFSFormula(group){
   return group
@@ -37,6 +75,7 @@ export function splitAFSFormulaGroups(body){
   return formulas.slice(0,4);
 }
 export function parseAFS(text,fileName=''){
+  assertFilterTextSize(text);
   const normalized=normalizeFilterText(text),lines=normalized.split('\n'),header=(lines.shift()||'').trim();
   if(!/^%RGB(?:-[0-9]+(?:\.[0-9]+)*)?$/i.test(header))throw new Error('Not a supported RGB AFS file');
   if(lines.length<8)throw new Error('AFS file is missing its eight control values');
@@ -47,10 +86,12 @@ export function parseAFS(text,fileName=''){
   });
   const f=splitAFSFormulaGroups(lines.join('\n'));
   if(f.length!==4)throw new Error(`AFS file contains ${f.length} channel formula${f.length===1?'':'s'}; expected 4`);
+  const formulas=validatedFormulas(f,'AFS filter');
   const base=String(fileName||'').replace(/\.[^.]+$/,'').trim();
-  return{format:'filter-factory-afs',version:header.replace(/^%RGB-?/i,'')||'1.0',name:base||'Imported AFS Filter',author:'',mathMode:'legacy',values,labels:Array.from({length:8},(_,i)=>`Control ${i+1}`),f};
+  return{format:'filter-factory-afs',version:header.replace(/^%RGB-?/i,'')||'1.0',name:base||'Imported AFS Filter',author:'',mathMode:'legacy',values,labels:Array.from({length:8},(_,i)=>`Control ${i+1}`),f:formulas};
 }
 export function detectFilterFormat(text,fileName=''){
+  assertFilterTextSize(text);
   const normalized=normalizeFilterText(text),trimmed=normalized.trimStart(),extension=(fileName.match(/\.([^.]+)$/)?.[1]||'').toLowerCase();
   if(trimmed.startsWith('{')||extension==='json')return{kind:'native',data:validateNativeFilter(JSON.parse(normalized))};
   if(/^%RGB(?:-[0-9]+(?:\.[0-9]+)*)?/i.test(trimmed)||extension==='afs')return{kind:'afs',data:parseAFS(normalized,fileName)};

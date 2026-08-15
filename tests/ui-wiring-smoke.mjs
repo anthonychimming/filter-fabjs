@@ -21,6 +21,11 @@ assert.doesNotMatch(app, /mathMode:'float'/, 'filter serialization must not hard
 assert.match(app, /const loadId=\+\+state\.imageLoadId/, 'image loading must use a latest-request generation');
 assert.match(app, /if\(loadId!==state\.imageLoadId\)return false/, 'stale image decodes must be discarded');
 assert.match(app, /finally\{bitmap\?\.close\?\.\(\);\}/, 'decoded image bitmaps must close on every exit path');
+assert.match(app, /state\.rendererManager\.render\(/, 'the UI must delegate selection and runtime fallback to RendererManager');
+assert.doesNotMatch(app, /rendererManager\.get\('cpu'\)|renderer\.render\(/, 'the UI must not implement backend fallback directly');
+assert.doesNotMatch(app, /WGSLCompiler/, 'WebGPU compatibility analysis must stay outside the UI layer');
+assert.match(app, /lastProgramKey===key/, 'control-only renders must reuse the current parsed IR program');
+assert.match(app, /file\.size[\s\S]*FILTER_FILE_MAX_BYTES[\s\S]*file\.text\(\)/, 'filter import must reject oversized files before reading them');
 assert.match(controls, /range\.oninput=\(\)=>update\(range\.value\)/, 'range input must update its displayed value continuously');
 assert.match(controls, /range\.onchange=\(\)=>scheduleRender\(\)/, 'range control must render only after the edit is committed');
 

@@ -19,11 +19,11 @@ RGBA pixel output
 ## Module contracts
 
 - `src/core/formula-language.js` — tokenization, parsing, formula validation, and syntax trees.
-- `src/core/ir.js` — conversion from syntax trees to renderer-neutral typed IR plus compatibility metadata.
+- `src/core/ir.js` — conversion from syntax trees to renderer-neutral typed IR plus semantic metadata.
 - `src/gpu/wgsl-compiler.js` — WebGPU compatibility analysis and typed-IR-to-WGSL compilation.
 - `src/renderers/renderer-backend.js` — shared renderer contract.
 - `src/renderers/cpu-renderer.js` — CPU Worker lifecycle, rendering, progress, and cancellation.
-- `src/renderers/webgpu-renderer.js` — GPU buffers, compute pipelines, tiled dispatch, readback, and cancellation checks.
+- `src/renderers/webgpu-renderer.js` — recoverable GPU buffers, bounded compute-pipeline caching, full-frame dispatch, readback, and cancellation checks.
 - `src/renderers/renderer-manager.js` — renderer selection, source synchronization, and CPU fallback.
 - `src/presets/builtins.js` — built-in filter definitions.
 - `src/io/filter-format.js` — native JSON and historic AFS parsing/import logic.

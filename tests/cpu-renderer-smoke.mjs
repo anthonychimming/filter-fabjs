@@ -44,6 +44,9 @@ assert.deepEqual([...numericEdges], [255,4,0,255, 255,4,0,128], 'CPU fallback se
 const mirroredEdge = await render(['srcMirror(X,y,0)','srcMirror(X,y,1)','srcMirror(X,y,2)','srcMirror(X,y,3)']);
 assert.deepEqual([...mirroredEdge], [100,110,120,128, 100,110,120,128], 'CPU mirror sampling at X must select the final source column');
 
+const chromaRanges = await render(['U','V','umax','vmax']);
+assert.deepEqual([...chromaRanges], [110,156,55,78, 110,156,55,78], 'signed chroma variables must expose matching ranges and maxima');
+
 const sourceText = workerProgram();
 assert.doesNotMatch(sourceText, /const q=\{/, 'variable lookup must not allocate a complete variable object per access');
 assert.match(sourceText, /function vars\(n,e\)\{const p=e\.p,z=e\.z;switch\(n\)/, 'variable lookup must dispatch lazily');

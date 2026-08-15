@@ -98,4 +98,11 @@ const mirrorCode = WGSLCompiler.compile(programFor('srcMirror(X,y,z)')).code;
 assert.ok(mirrorCode.includes('min(u32(trunc(ff_mirror(x,f32(params.width)))),params.width-1u)'), 'mirrored x indices must clamp to the final column');
 assert.ok(mirrorCode.includes('min(u32(trunc(ff_mirror(y,f32(params.height)))),params.height-1u)'), 'mirrored y indices must clamp to the final row');
 
+const chromaCode = WGSLCompiler.compile(programFor('U+V+umax+vmax')).code;
+for (const value of ['110.0','156.0','55.0','78.0']) assert.ok(chromaCode.includes(value), `WGSL chroma metadata must include ${value}`);
+
+const sierpinskiCode = WGSLCompiler.compile(programFor('sierpinski(x,y,X/2,Y/2,64,6,2)')).code;
+assert.ok(sierpinskiCode.includes('let holeDistance=min(0.5-u,min(0.5-v,0.5-w))*localHeight'), 'Sierpiński holes must use physical edge distance for feathering');
+assert.doesNotMatch(sierpinskiCode, /bitU|bitV/, 'Sierpiński recursion must use coherent barycentric child folding');
+
 console.log(`WGSL compiler smoke: ${statelessCases.length} Phase 3.5 functions pass; stateful fallbacks preserved.`);
