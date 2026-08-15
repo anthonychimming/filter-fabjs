@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.2.1
+
+- Fixed the generated WGSL hash expression by parenthesizing multiplicative terms before bitwise XOR.
+- Restored WebGPU execution for GPU-compatible filters instead of compiling unsuccessfully and rerendering through the slower CPU Worker fallback.
+- Added a regression assertion for the WGSL operator-parenthesization requirement.
+
+## 2.2.0
+
+- Completed the Phase 3.5 stateless WebGPU subset with deterministic hash, value, Perlin, Worley, FBM, turbulence, ridged, and periodic noise.
+- Added WebGPU polar sampling and fixed 3×3 convolution for `rad()`, `rad0()`, `rad1()`, `cnv()`, `cnv0()`, and `cnv1()`.
+- Added WebGPU support for `map()`, bias/gain shaping, angular gradients, checker patterns, and brick patterns.
+- Made all 25 native built-in filters WebGPU-compatible while preserving explicit CPU fallback for `rnd()`, `rst()`, `get()`, `put()`, and legacy integer-mode AFS filters.
+- Added WGSL compiler regression coverage and an actual-hardware CPU/WebGPU parity page.
+
 ## 2.1.2
 
 - Introduced a semantic brand palette derived from the supplied Obsidian theme: aubergine surfaces, sage and parchment typography, chartreuse primary actions, magenta edit states, and cyan technical labels.

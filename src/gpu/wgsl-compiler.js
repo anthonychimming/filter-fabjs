@@ -6,7 +6,7 @@
 import { IR_VERSION } from '../core/ir.js';
 
 export class WGSLCompileError extends Error{constructor(message,blockers=[]){super(message);this.name='WGSLCompileError';this.blockers=blockers}}
-const WEBGPU_FUNCTIONS=new Set('src src0 src1 srcWrap srcMirror srcLinear ctl val min max abs add sub dif mix scl sqr sqrt sin cos tan r2x r2y c2d c2m pow clamp lerp step smoothstep floor ceil round fract sign wrap mirror linearGrad radialGrad multiply screen overlay softLight difference'.split(' '));
+const WEBGPU_FUNCTIONS=new Set('src src0 src1 srcWrap srcMirror srcLinear rad rad0 rad1 cnv cnv0 cnv1 ctl val map min max abs add sub dif mix scl sqr sqrt sin cos tan r2x r2y c2d c2m pow clamp lerp step smoothstep floor ceil round fract sign bias gain hash2 valueNoise perlin worleyF1 worleyF2 fbm turbulence ridged periodicNoise wrap mirror linearGrad radialGrad angularGrad checker brick multiply screen overlay softLight difference'.split(' '));
 const WEBGPU_UNARY=new Set(['+','-','!']);
 const WEBGPU_BINARY=new Set(['+','-','*','/','%','<','<=','>','>=','==','!=','&&','||']);
 export class WGSLCompiler{
@@ -27,7 +27,7 @@ export class WGSLCompiler{
     };
     program?.outputs?.forEach(output=>walk(output.expression));
     const unique=[...new Set(blockers)];
-    return{compatible:unique.length===0,blockers:unique,subset:'phase-3-single-pass'};
+    return{compatible:unique.length===0,blockers:unique,subset:'phase-3.5-stateless'};
   }
   static key(program){return JSON.stringify(program.outputs.map(output=>output.expression))}
   static compile(program){
@@ -68,18 +68,21 @@ export class WGSLCompiler{
         return`(${a} ${node.operator} ${b})`;
       }
       case'select':return`select(${this.value(node.whenFalse,channel)}, ${this.value(node.whenTrue,channel)}, ${this.bool(node.condition,channel)})`;
-      case'call':return this.call(node.fn,node.args.map(arg=>this.value(arg,channel)));
+      case'call':return this.call(node.fn,node.args.map(arg=>this.value(arg,channel)),channel);
     }
     throw new WGSLCompileError(`Unsupported IR operation ${node.op}`,[node.op]);
   }
-  call(name,a){
+  call(name,a,channel){
     const A=i=>a[i];
     switch(name){
       case'src':case'src0':case'src1':return`ff_sample_nearest(${A(0)}, ${A(1)}, ${A(2)})`;
       case'srcWrap':return`ff_sample_wrap(${A(0)}, ${A(1)}, ${A(2)})`;
       case'srcMirror':return`ff_sample_mirror(${A(0)}, ${A(1)}, ${A(2)})`;
       case'srcLinear':return`ff_sample_linear(${A(0)}, ${A(1)}, ${A(2)})`;
+      case'rad':case'rad0':case'rad1':return`ff_sample_polar(${A(0)}, ${A(1)}, ${A(2)})`;
+      case'cnv':case'cnv0':case'cnv1':return`ff_convolve3x3(pixelX, pixelY, ${channel}.0, ${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)}, ${A(5)}, ${A(6)}, ${A(7)}, ${A(8)}, ${A(9)})`;
       case'ctl':return`ff_ctl(${A(0)})`;case'val':return`ff_val(${A(0)}, ${A(1)}, ${A(2)})`;
+      case'map':return`ff_map(${A(0)}, ${A(1)})`;
       case'min':return`min(${A(0)}, ${A(1)})`;case'max':return`max(${A(0)}, ${A(1)})`;case'abs':return`abs(${A(0)})`;
       case'add':return`min(${A(0)} + ${A(1)}, ${A(2)})`;case'sub':return`max(abs(${A(0)} - ${A(1)}), ${A(2)})`;case'dif':return`abs(${A(0)} - ${A(1)})`;
       case'mix':return`ff_mix4(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)})`;case'scl':return`ff_scl(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
@@ -90,9 +93,22 @@ export class WGSLCompiler{
       case'pow':return`pow(${A(0)}, ${A(1)})`;case'clamp':return`ff_clamp(${A(0)}, ${A(1)}, ${A(2)})`;case'lerp':return`ff_lerp(${A(0)}, ${A(1)}, ${A(2)})`;
       case'step':return`ff_step(${A(0)}, ${A(1)})`;case'smoothstep':return`ff_smoothstep(${A(0)}, ${A(1)}, ${A(2)})`;
       case'floor':return`floor(${A(0)})`;case'ceil':return`ceil(${A(0)})`;case'round':return`round(${A(0)})`;case'fract':return`fract(${A(0)})`;case'sign':return`sign(${A(0)})`;
+      case'bias':return`ff_bias(${A(0)}, ${A(1)})`;case'gain':return`ff_gain(${A(0)}, ${A(1)})`;
+      case'hash2':return`ff_hash01(${A(0)}, ${A(1)}, ${A(2)})`;
+      case'valueNoise':return`ff_value_noise(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)})`;
+      case'perlin':return`ff_perlin(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)})`;
+      case'worleyF1':return`ff_worley(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}).x`;
+      case'worleyF2':return`ff_worley(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}).y`;
+      case'fbm':return`ff_fbm(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)}, ${A(5)}, ${A(6)})`;
+      case'turbulence':return`ff_turbulence(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
+      case'ridged':return`ff_ridged(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
+      case'periodicNoise':return`ff_periodic_noise(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
       case'wrap':return`ff_wrap(${A(0)}, ${A(1)})`;case'mirror':return`ff_mirror(${A(0)}, ${A(1)})`;
       case'linearGrad':return`ff_linear_grad(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)}, ${A(5)})`;
       case'radialGrad':return`ff_radial_grad(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
+      case'angularGrad':return`ff_angular_grad(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
+      case'checker':return`ff_checker(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)})`;
+      case'brick':return`ff_brick(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)}, ${A(5)})`;
       case'multiply':case'screen':case'overlay':case'softLight':case'difference':return`ff_blend_${name}(${A(0)}, ${A(1)}, ${a.length>2?A(2):'255.0'})`;
     }
     throw new WGSLCompileError(`Function ${name}() is not implemented in WGSL`,[`${name}()`]);
@@ -120,15 +136,33 @@ fn ff_sample_nearest(x:f32,y:f32,z:f32)->f32{return ff_channel(ff_pixel_clamped(
 fn ff_sample_wrap(x:f32,y:f32,z:f32)->f32{return ff_channel(ff_pixel_wrap(x,y),z);}
 fn ff_sample_mirror(x:f32,y:f32,z:f32)->f32{return ff_channel(ff_pixel_mirror(x,y),z);}
 fn ff_sample_linear(x:f32,y:f32,z:f32)->f32{let x0=floor(x);let y0=floor(y);let tx=x-x0;let ty=y-y0;let a=ff_sample_nearest(x0,y0,z);let b=ff_sample_nearest(x0+1.0,y0,z);let c=ff_sample_nearest(x0,y0+1.0,z);let d=ff_sample_nearest(x0+1.0,y0+1.0,z);return mix(a,b,tx)*(1.0-ty)+mix(c,d,tx)*ty;}
+fn ff_sample_polar(angle:f32,distance:f32,z:f32)->f32{let radians=angle*FF_TAU/1024.0;return ff_sample_nearest(f32(params.width)*0.5+cos(radians)*distance,f32(params.height)*0.5+sin(radians)*distance,z);}
+fn ff_convolve3x3(x:f32,y:f32,z:f32,k00:f32,k01:f32,k02:f32,k10:f32,k11:f32,k12:f32,k20:f32,k21:f32,k22:f32,divisor:f32)->f32{if(divisor==0.0){return 0.0;}let total=k00*ff_sample_nearest(x-1.0,y-1.0,z)+k01*ff_sample_nearest(x,y-1.0,z)+k02*ff_sample_nearest(x+1.0,y-1.0,z)+k10*ff_sample_nearest(x-1.0,y,z)+k11*ff_sample_nearest(x,y,z)+k12*ff_sample_nearest(x+1.0,y,z)+k20*ff_sample_nearest(x-1.0,y+1.0,z)+k21*ff_sample_nearest(x,y+1.0,z)+k22*ff_sample_nearest(x+1.0,y+1.0,z);return total/divisor;}
 fn ff_ctl(index:f32)->f32{let i=i32(trunc(index));if(i<0||i>=8){return 0.0;}return params.controls[u32(i)];}
 fn ff_val(index:f32,a:f32,b:f32)->f32{return ff_ctl(index)*(b-a)/255.0+a;}
+fn ff_map(index:f32,v0:f32)->f32{let i=i32(trunc(index));if(i<0||i>=4){return 0.0;}let v=clamp(v0,0.0,255.0);let hi=params.controls[u32(i*2)];let lo=params.controls[u32(i*2+1)];if(hi==lo){return select(255.0,0.0,v<hi);}if(lo>hi){if(v<=hi){return 255.0;}if(v>=lo){return 0.0;}}else{if(v<=lo){return 0.0;}if(v>=hi){return 255.0;}}return (v-lo)*255.0/(hi-lo);}
 fn ff_lerp(a:f32,b:f32,t0:f32)->f32{let t=clamp(select(t0,t0/255.0,abs(t0)>1.0),0.0,1.0);return mix(a,b,t);}
 fn ff_step(edge:f32,v:f32)->f32{return select(0.0,1.0,v>=edge);}
 fn ff_smoothstep(a:f32,b:f32,v:f32)->f32{if(a==b){return select(0.0,1.0,v>=a);}let t=clamp((v-a)/(b-a),0.0,1.0);return t*t*(3.0-2.0*t);}
 fn ff_mix4(a:f32,b:f32,c:f32,d:f32)->f32{if(d==0.0){return 0.0;}return a*c/d+b*(d-c)/d;}
 fn ff_scl(v:f32,a:f32,b:f32,c:f32,d:f32)->f32{if(b==a){return 0.0;}return c+(d-c)*(v-a)/(b-a);}
+fn ff_bias(v0:f32,b0:f32)->f32{let v=clamp(v0,0.0,1.0);let b=clamp(select(b0/255.0,b0,abs(b0)<=1.0),0.001,0.999);return pow(v,log(b)/log(0.5));}
+fn ff_gain(v0:f32,g0:f32)->f32{let v=clamp(v0,0.0,1.0);let g=clamp(select(g0/255.0,g0,abs(g0)<=1.0),0.001,0.999);if(v<0.5){return ff_bias(v*2.0,g)*0.5;}return 1.0-ff_bias((1.0-v)*2.0,g)*0.5;}
+fn ff_hash01(x:f32,y:f32,seed:f32)->f32{var h=(bitcast<u32>(i32(trunc(x)))*374761393u)^(bitcast<u32>(i32(trunc(y)))*668265263u)^(bitcast<u32>(i32(trunc(seed)))*1442695041u);h=h^(h>>13u);h=h*1274126177u;h=h^(h>>16u);return f32(h)/4294967295.0;}
+fn ff_fade(t:f32)->f32{return t*t*t*(t*(t*6.0-15.0)+10.0);}
+fn ff_value_noise(x0:f32,y0:f32,scale0:f32,seed:f32)->f32{let scale=max(0.000001,abs(scale0));let x=x0/scale;let y=y0/scale;let ix=floor(x);let iy=floor(y);let tx=ff_fade(x-ix);let ty=ff_fade(y-iy);let a=ff_hash01(ix,iy,seed);let b=ff_hash01(ix+1.0,iy,seed);let c=ff_hash01(ix,iy+1.0,seed);let d=ff_hash01(ix+1.0,iy+1.0,seed);return mix(a,b,tx)*(1.0-ty)+mix(c,d,tx)*ty;}
+fn ff_grad_dot(ix:f32,iy:f32,x:f32,y:f32,seed:f32)->f32{let angle=ff_hash01(ix,iy,seed)*FF_TAU;return cos(angle)*(x-ix)+sin(angle)*(y-iy);}
+fn ff_perlin(x0:f32,y0:f32,scale0:f32,seed:f32)->f32{let scale=max(0.000001,abs(scale0));let x=x0/scale;let y=y0/scale;let ix=floor(x);let iy=floor(y);let tx=ff_fade(x-ix);let ty=ff_fade(y-iy);let n00=ff_grad_dot(ix,iy,x,y,seed);let n10=ff_grad_dot(ix+1.0,iy,x,y,seed);let n01=ff_grad_dot(ix,iy+1.0,x,y,seed);let n11=ff_grad_dot(ix+1.0,iy+1.0,x,y,seed);let nx0=mix(n00,n10,tx);let nx1=mix(n01,n11,tx);return clamp(0.5+mix(nx0,nx1,ty)*0.7071,0.0,1.0);}
+fn ff_worley(x0:f32,y0:f32,scale0:f32,seed:f32)->vec2<f32>{let scale=max(0.000001,abs(scale0));let x=x0/scale;let y=y0/scale;let ix=floor(x);let iy=floor(y);var f1=1000000000.0;var f2=1000000000.0;for(var yy:i32=-1;yy<=1;yy=yy+1){for(var xx:i32=-1;xx<=1;xx=xx+1){let cellX=ix+f32(xx);let cellY=iy+f32(yy);let cx=cellX+ff_hash01(cellX,cellY,seed);let cy=cellY+ff_hash01(cellX,cellY,seed+1013.0);let distance=length(vec2<f32>(x-cx,y-cy));if(distance<f1){f2=f1;f1=distance;}else if(distance<f2){f2=distance;}}}return clamp(vec2<f32>(f1,f2)/1.41421356,vec2<f32>(0.0),vec2<f32>(1.0));}
+fn ff_fbm(x:f32,y:f32,scale0:f32,octaves0:f32,lacunarity0:f32,gain0:f32,seed:f32)->f32{let octaves=clamp(i32(trunc(octaves0)),1,12);let lacunarity=max(1.01,abs(lacunarity0));let gain=clamp(gain0,0.01,0.99);var amplitude=1.0;var sum=0.0;var norm=0.0;var scale=scale0;for(var octave:i32=0;octave<octaves;octave=octave+1){sum=sum+ff_perlin(x,y,scale,seed+f32(octave)*101.0)*amplitude;norm=norm+amplitude;amplitude=amplitude*gain;scale=scale/lacunarity;}return select(0.0,sum/norm,norm!=0.0);}
+fn ff_turbulence(x:f32,y:f32,scale0:f32,octaves0:f32,seed:f32)->f32{let octaves=clamp(i32(trunc(octaves0)),1,12);var amplitude=1.0;var sum=0.0;var norm=0.0;var scale=scale0;for(var octave:i32=0;octave<octaves;octave=octave+1){sum=sum+abs(ff_perlin(x,y,scale,seed+f32(octave)*131.0)*2.0-1.0)*amplitude;norm=norm+amplitude;amplitude=amplitude*0.5;scale=scale/2.0;}return select(0.0,sum/norm,norm!=0.0);}
+fn ff_ridged(x:f32,y:f32,scale0:f32,octaves0:f32,seed:f32)->f32{let octaves=clamp(i32(trunc(octaves0)),1,12);var amplitude=1.0;var sum=0.0;var norm=0.0;var scale=scale0;for(var octave:i32=0;octave<octaves;octave=octave+1){let ridge=1.0-abs(ff_perlin(x,y,scale,seed+f32(octave)*151.0)*2.0-1.0);sum=sum+ridge*ridge*amplitude;norm=norm+amplitude;amplitude=amplitude*0.5;scale=scale/2.0;}return select(0.0,sum/norm,norm!=0.0);}
+fn ff_periodic_noise(x:f32,y:f32,periodX0:f32,periodY0:f32,seed:f32)->f32{let periodX=max(1.0,abs(periodX0));let periodY=max(1.0,abs(periodY0));let gx=ff_wrap(x,periodX)/periodX*8.0;let gy=ff_wrap(y,periodY)/periodY*8.0;let ix=floor(gx);let iy=floor(gy);let tx=ff_fade(gx-ix);let ty=ff_fade(gy-iy);let a=ff_hash01(ff_wrap(ix,8.0),ff_wrap(iy,8.0),seed);let b=ff_hash01(ff_wrap(ix+1.0,8.0),ff_wrap(iy,8.0),seed);let c=ff_hash01(ff_wrap(ix,8.0),ff_wrap(iy+1.0,8.0),seed);let d=ff_hash01(ff_wrap(ix+1.0,8.0),ff_wrap(iy+1.0,8.0),seed);return mix(a,b,tx)*(1.0-ty)+mix(c,d,tx)*ty;}
 fn ff_linear_grad(x:f32,y:f32,x0:f32,y0:f32,x1:f32,y1:f32)->f32{let dx=x1-x0;let dy=y1-y0;let den=dx*dx+dy*dy;if(den==0.0){return 0.0;}return clamp(((x-x0)*dx+(y-y0)*dy)/den,0.0,1.0);}
 fn ff_radial_grad(x:f32,y:f32,cx:f32,cy:f32,r:f32)->f32{return clamp(1.0-length(vec2<f32>(x-cx,y-cy))/max(0.000001,abs(r)),0.0,1.0);}
+fn ff_angular_grad(x:f32,y:f32,cx:f32,cy:f32,offset0:f32)->f32{let offset=select(offset0/1024.0,offset0,abs(offset0)<=1.0);return ff_wrap(atan2(y-cy,x-cx)/FF_TAU+offset,1.0);}
+fn ff_checker(x:f32,y:f32,width0:f32,height0:f32)->f32{let width=max(1.0,abs(width0));let height=max(1.0,abs(height0));let parity=(i32(floor(x/width))+i32(floor(y/height)))&1;return select(0.0,1.0,parity!=0);}
+fn ff_brick(x:f32,y:f32,width0:f32,height0:f32,mortar0:f32,offset0:f32)->f32{let width=max(1.0,abs(width0));let height=max(1.0,abs(height0));let mortar=clamp(abs(mortar0),0.0,min(width,height)*0.5);let row=i32(floor(y/height));let stagger=select(0.0,1.0,(row&1)!=0);let offset=select(offset0,offset0*width,abs(offset0)<=1.0);let localX=ff_wrap(x+offset*stagger,width);let localY=ff_wrap(y,height);return select(0.0,1.0,localX>=mortar&&localX<=width-mortar&&localY>=mortar&&localY<=height-mortar);}
 fn ff_opacity(base:f32,blend:f32,opacity:f32)->f32{let t=clamp(select(opacity,opacity/255.0,abs(opacity)>1.0),0.0,1.0);return mix(base,blend,t);}
 fn ff_blend_multiply(a0:f32,b0:f32,o:f32)->f32{let a=clamp(a0,0.0,255.0);let b=clamp(b0,0.0,255.0);return ff_opacity(a,a*b/255.0,o);}
 fn ff_blend_screen(a0:f32,b0:f32,o:f32)->f32{let a=clamp(a0,0.0,255.0);let b=clamp(b0,0.0,255.0);return ff_opacity(a,255.0-(255.0-a)*(255.0-b)/255.0,o);}

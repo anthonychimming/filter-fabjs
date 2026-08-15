@@ -4,7 +4,7 @@ This document describes the implementation currently present in the public repos
 
 ## Release
 
-- Application version: **2.1.2**
+- Application version: **2.2.1**
 - Native filter format: **version 2**
 - Typed IR: **version 1**
 - Development layout: native ES modules
@@ -37,7 +37,9 @@ The current formula engine includes:
 
 ## WebGPU compatibility
 
-The WebGPU backend currently supports a defined stateless subset of the formula language. Some procedural noise functions, convolution, polar sampling, shared cell operations, sequential random-state functions, and legacy integer compatibility remain CPU-only.
+The WebGPU backend supports the deterministic stateless formula language, including hash, value, Perlin, Worley, FBM, turbulence, ridged and periodic noise; procedural patterns; polar sampling; and fixed 3×3 convolution. All 25 native built-in filters are WebGPU-compatible.
+
+Sequential random-state functions (`rnd()` and `rst()`), shared cell operations (`get()` and `put()`), and legacy integer compatibility remain CPU-only by design.
 
 Compatibility is analyzed from typed IR before a render is dispatched.
 
@@ -60,6 +62,8 @@ The repository includes smoke tests for:
 
 - Formula parsing and typed IR compilation.
 - Built-in preset compilation.
+- Phase 3.5 WGSL call generation and explicit stateful fallback boundaries.
+- An optional browser parity suite comparing CPU and WebGPU pixels on actual WebGPU hardware.
 - Native JSON and AFS format handling.
 - CPU Worker pixel rendering.
 - Formula-editor event wiring and focus-safe render behavior.
@@ -72,6 +76,8 @@ Run all verification with:
 ```bash
 npm run verify
 ```
+
+For hardware parity, run `npm run dev` and open `http://localhost:8080/tests/webgpu-parity.html` in a WebGPU-capable browser.
 
 ## Known boundaries
 

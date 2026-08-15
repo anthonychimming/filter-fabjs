@@ -1,6 +1,6 @@
 # Architecture
 
-Filter FabJS v2.1.2 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
+Filter FabJS v2.2.1 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
 
 ```text
 Formula text
@@ -42,6 +42,6 @@ RGBA pixel output
 
 ## Current WebGPU boundary
 
-The current WebGPU subset covers common arithmetic, conditions, controls, image sampling, coordinate shaping, gradients, and blend operations. Operations outside that subset are identified by compatibility analysis and use the CPU Worker fallback.
+The Phase 3.5 WebGPU subset covers deterministic stateless operations: arithmetic, conditions, controls, image and polar sampling, coordinate shaping, gradients, procedural patterns, deterministic noise, blend operations, and fixed 3×3 convolution. Operations outside that subset are identified by compatibility analysis and use the CPU Worker fallback.
 
-The CPU renderer remains the compatibility backend for legacy integer-mode AFS filters and operations with sequential or shared mutable state.
+The CPU renderer remains the compatibility backend for legacy integer-mode AFS filters and operations with sequential or shared mutable state (`rnd()`, `rst()`, `get()`, and `put()`).
