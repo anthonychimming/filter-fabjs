@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Filter FabJS WebGPU parity</title>
+  <style>
+    :root{color-scheme:dark;font:15px/1.45 system-ui,sans-serif;background:#100818;color:#e4e8cf}
+    body{max-width:960px;margin:40px auto;padding:0 24px}h1{font-size:24px}p{color:#aeb89d}
+    table{width:100%;border-collapse:collapse;background:#180e23}th,td{padding:9px 12px;border-bottom:1px solid #372445;text-align:left;font-variant-numeric:tabular-nums}
+    .pass{color:#e1ec1a}.fail{color:#ff65b3}code{color:#6ce6ed}
+  </style>
+</head>
+<body>
+  <h1>Phase 3.5 CPU / WebGPU parity</h1>
+  <p id="summary">Requesting a WebGPU adapter…</p>
+  <table><thead><tr><th>Fixture</th><th>Max Δ</th><th>Mean Δ</th><th>Result</th></tr></thead><tbody id="results"></tbody></table>
+  <script type="module" src="./webgpu-parity.js"></script>
+</body>
+</html>

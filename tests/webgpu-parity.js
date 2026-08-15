@@ -1,0 +1,92 @@
+import { Parser } from '../src/core/formula-language.js';
+import { compileFilterProgram } from '../src/core/ir.js';
+import { CpuRenderer } from '../src/renderers/cpu-renderer.js';
+import { workerProgram } from '../src/renderers/cpu-worker-source.js';
+import { WebGpuRenderer } from '../src/renderers/webgpu-renderer.js';
+
+const summary = document.querySelector('#summary');
+const results = document.querySelector('#results');
+const width = 31;
+const height = 23;
+const controls = [43, 87, 129, 171, 213, 65, 107, 149];
+const source = new Uint8ClampedArray(width * height * 4);
+for (let y = 0; y < height; y += 1) {
+  for (let x = 0; x < width; x += 1) {
+    const offset = (y * width + x) * 4;
+    source[offset] = (x * 17 + y * 5) & 255;
+    source[offset + 1] = (x * 7 + y * 19) & 255;
+    source[offset + 2] = (x * 13 + y * 11) & 255;
+    source[offset + 3] = 64 + ((x * 3 + y * 5) % 192);
+  }
+}
+
+const fixtures = [
+  ['Hash', 'hash2(x,y,711)*255'],
+  ['Value noise', 'valueNoise(x,y,9.5,711)*255'],
+  ['Perlin', 'perlin(x,y,9.5,711)*255'],
+  ['Worley F1', 'worleyF1(x,y,9.5,711)*255'],
+  ['Worley F2', 'worleyF2(x,y,9.5,711)*255'],
+  ['FBM', 'fbm(x,y,14,5,2,0.5,711)*255'],
+  ['Turbulence', 'turbulence(x,y,14,5,711)*255'],
+  ['Ridged noise', 'ridged(x,y,14,5,711)*255'],
+  ['Periodic noise', 'periodicNoise(x,y,19,13,711)*255'],
+  ['Polar sample', 'rad(128,3,z)'],
+  ['3×3 convolution', 'clamp(cnv(0,-1,0,-1,5,-1,0,-1,0,1),0,255)'],
+  ['Angular gradient', 'angularGrad(x,y,X/2,Y/2,128)*255'],
+  ['Checker', 'checker(x,y,7,5)*255'],
+  ['Brick', 'brick(x,y,11,7,1,0.5)*255']
+];
+
+const programFor = formula => compileFilterProgram(
+  [formula, formula, formula, formula].map(sourceText => new Parser(sourceText).parse())
+);
+
+function compare(cpuPixels, gpuPixels) {
+  let max = 0;
+  let sum = 0;
+  for (let index = 0; index < cpuPixels.length; index += 1) {
+    const delta = Math.abs(cpuPixels[index] - gpuPixels[index]);
+    max = Math.max(max, delta);
+    sum += delta;
+  }
+  return { max, mean: sum / cpuPixels.length };
+}
+
+async function run() {
+  if (!navigator.gpu) throw new Error(WebGpuRenderer.unavailableReason() || 'WebGPU API unavailable');
+  const cpu = new CpuRenderer(workerProgram);
+  const gpu = new WebGpuRenderer();
+  let passed = 0;
+  try {
+    await Promise.all([
+      cpu.setSource(source, width, height),
+      gpu.setSource(source, width, height)
+    ]);
+    for (let index = 0; index < fixtures.length; index += 1) {
+      const [name, formula] = fixtures[index];
+      const program = programFor(formula);
+      const [cpuResult, gpuResult] = await Promise.all([
+        cpu.render({ id: index + 1, program, controls, legacyMath: false }),
+        gpu.render({ program, controls })
+      ]);
+      const delta = compare(cpuResult.pixels, gpuResult.pixels);
+      const ok = delta.max <= 3 && delta.mean <= 0.35;
+      if (ok) passed += 1;
+      const row = document.createElement('tr');
+      row.innerHTML = `<td><code>${name}</code></td><td>${delta.max}</td><td>${delta.mean.toFixed(4)}</td><td class="${ok ? 'pass' : 'fail'}">${ok ? 'PASS' : 'FAIL'}</td>`;
+      results.append(row);
+    }
+  } finally {
+    cpu.dispose();
+    gpu.dispose();
+  }
+  const ok = passed === fixtures.length;
+  summary.className = ok ? 'pass' : 'fail';
+  summary.textContent = `${passed}/${fixtures.length} fixtures passed on actual WebGPU hardware.`;
+}
+
+run().catch(error => {
+  summary.className = 'fail';
+  summary.textContent = `Parity test could not run: ${error.message}`;
+  console.error(error);
+});
