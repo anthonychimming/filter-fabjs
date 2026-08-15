@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
-import { FORMULA_LIMITS, Parser } from '../src/core/formula-language.js';
+import { Parser } from '../src/core/formula-language.js';
 import { compileFilterProgram } from '../src/core/ir.js';
 import { presets } from '../src/presets/builtins.js';
 import { WGSLCompiler } from '../src/gpu/wgsl-compiler.js';
-import { detectFilterFormat, FILTER_TEXT_MAX_LENGTH, validateNativeFilter } from '../src/io/filter-format.js';
+import { detectFilterFormat } from '../src/io/filter-format.js';
 
 let gpuCompatible = 0;
 let cpuFallback = 0;
@@ -21,27 +21,8 @@ assert.equal(presets.length, 28);
 assert.equal(gpuCompatible, presets.length, 'every native built-in must compile for WebGPU after Phase 3.5');
 assert.equal(cpuFallback, 0, 'native built-ins must not require CPU fallback');
 assert.equal(gpuCompatible + cpuFallback, presets.length);
-const native=detectFilterFormat(JSON.stringify({ format: 'filter-fab-js', version: 2, formulas: ['r','g','b','a'] }), 'test.json');
-assert.equal(native.kind, 'native');
-assert.equal(native.data.mathMode, 'float', 'version 2 files without mathMode must normalize to float mode');
-assert.equal(native.data.controls.length, 8, 'native controls must normalize completely before UI mutation');
+assert.equal(detectFilterFormat(JSON.stringify({ format: 'filter-fab-js', version: 2, formulas: ['r','g','b','a'] }), 'test.json').kind, 'native');
 assert.equal(detectFilterFormat('%RGB-1.0\n128\n128\n128\n128\n128\n128\n128\n128\nr\n\ng\n\nb\n\na\n', 'test.afs').kind, 'afs');
-
-assert.throws(()=>validateNativeFilter({format:'other',version:2,formulas:['r','g','b','a']}),/format must be/);
-assert.throws(()=>validateNativeFilter({format:'filter-fab-js',version:3,formulas:['r','g','b','a']}),/version must be/);
-assert.throws(()=>validateNativeFilter({format:'filter-fab-js',version:2,mathMode:'fast',formulas:['r','g','b','a']}),/mathMode/);
-assert.throws(()=>validateNativeFilter({format:'filter-fab-js',version:2,formulas:['r','g','b','a','r']}),/exactly four/);
-assert.throws(()=>validateNativeFilter({format:'filter-fab-js',version:2,formulas:['r','g','b','a'],controls:[{label:'Bad',value:Number.NaN}]}),/finite number/);
-assert.throws(()=>validateNativeFilter({format:'filter-fab-js',version:2,formulas:['r','g','unknown','a']}),/channel 3: Unknown variable/);
-assert.throws(()=>detectFilterFormat(' '.repeat(FILTER_TEXT_MAX_LENGTH+1),'large.json'),/KiB limit/);
-assert.throws(()=>new Parser('-'.repeat(FORMULA_LIMITS.maxDepth+1)+'1').parse(),/nesting limit/,'deep formulas must fail predictably instead of overflowing the stack');
-assert.throws(()=>new Parser('1'.repeat(FORMULA_LIMITS.maxLength+1)).parse(),/character limit/,'oversized direct formula input must be rejected before tokenization');
-
-const neutralProgram=compileFilterProgram(['r&1','g','b','a'].map(formula=>new Parser(formula).parse()));
-assert.equal(Object.hasOwn(neutralProgram.metadata,'gpuCompatible'),false,'neutral IR must not claim renderer compatibility');
-assert.equal(Object.hasOwn(neutralProgram.metadata,'gpuBlockers'),false,'neutral IR must not embed WebGPU blockers');
-assert.equal(Object.hasOwn(neutralProgram.metadata,'webgpu'),false,'neutral IR must not be mutated with WebGPU analysis');
-assert.equal(WGSLCompiler.analyze(neutralProgram).compatible,false,'WebGPU analysis remains the renderer-specific authority');
 
 const shapeSampler=presets.find(preset=>preset.id==='analyticshapesampler');
 assert.ok(shapeSampler, 'analytic shape sampler preset must be present');

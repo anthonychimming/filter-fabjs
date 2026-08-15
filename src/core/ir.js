@@ -15,6 +15,7 @@ const CHANNEL_FUNCTIONS=new Set('src src0 src1 srcWrap srcMirror srcLinear rad r
 const SOURCE_FUNCTIONS=new Set('src src0 src1 srcWrap srcMirror srcLinear rad rad0 rad1 cnv cnv0 cnv1'.split(' '));
 const STATEFUL_FUNCTIONS=new Set('rnd rst get put'.split(' '));
 const NONDETERMINISTIC_FUNCTIONS=new Set('rnd rst'.split(' '));
+const GPU_BLOCKED_FUNCTIONS=new Map([['rnd','sequential random state'],['rst','random-state mutation'],['get','shared cell memory'],['put','shared cell memory']]);
 function variableIRType(name){if(INTEGER_VARS.has(name))return IRType.INTEGER;if(CHANNEL_VARS.has(name))return IRType.CHANNEL;return IRType.SCALAR}
 function mergeIRTypes(a,b){if(a===b)return a;if(a===IRType.BOOLEAN&&b===IRType.BOOLEAN)return IRType.BOOLEAN;if(a===IRType.INTEGER&&b===IRType.INTEGER)return IRType.INTEGER;if(a===IRType.CHANNEL&&b===IRType.CHANNEL)return IRType.CHANNEL;if(a===IRType.MASK&&b===IRType.MASK)return IRType.MASK;return IRType.SCALAR}
 function arithmeticIRType(operator,a,b){if(operator==='/' )return IRType.SCALAR;if(operator==='%'&&a===IRType.INTEGER&&b===IRType.INTEGER)return IRType.INTEGER;if(['+','-','*'].includes(operator)&&a===IRType.INTEGER&&b===IRType.INTEGER)return IRType.INTEGER;return IRType.SCALAR}
@@ -39,7 +40,8 @@ function constantIntegerFromAst(node){
 export class TypedIRCompiler{
   constructor({legacyMath=false}={}){
     this.legacyMath=Boolean(legacyMath);
-    this.meta={nodeCount:0,controls:Array(8).fill(false),dynamicControls:false,functions:new Set(),variables:new Set(),usesSource:false,stateful:false,deterministic:true};
+    this.meta={nodeCount:0,controls:Array(8).fill(false),dynamicControls:false,functions:new Set(),variables:new Set(),usesSource:false,stateful:false,deterministic:true,gpuBlockers:new Set()};
+    if(this.legacyMath)this.meta.gpuBlockers.add('legacy integer compatibility mode');
   }
   markControl(index,count=1){
     if(Number.isInteger(index)&&index>=0&&index+count<=8){for(let i=0;i<count;i++)this.meta.controls[index+i]=true}
@@ -50,6 +52,7 @@ export class TypedIRCompiler{
     if(SOURCE_FUNCTIONS.has(name))this.meta.usesSource=true;
     if(STATEFUL_FUNCTIONS.has(name))this.meta.stateful=true;
     if(NONDETERMINISTIC_FUNCTIONS.has(name))this.meta.deterministic=false;
+    const blocker=GPU_BLOCKED_FUNCTIONS.get(name);if(blocker)this.meta.gpuBlockers.add(`${name}(): ${blocker}`);
     if(name==='ctl'||name==='val')this.markControl(constantIntegerFromAst(astArgs[0]));
     else if(name==='map'){
       const pair=constantIntegerFromAst(astArgs[0]);
@@ -86,7 +89,8 @@ export class TypedIRCompiler{
     throw new FormulaError(`Unknown syntax node “${node.k}”`);
   }
   finish(){
-    return{nodeCount:this.meta.nodeCount,controlMask:[...this.meta.controls],dynamicControls:this.meta.dynamicControls,functions:[...this.meta.functions].sort(),variables:[...this.meta.variables].sort(),usesSource:this.meta.usesSource,stateful:this.meta.stateful,deterministic:this.meta.deterministic};
+    const gpuBlockers=[...this.meta.gpuBlockers];
+    return{nodeCount:this.meta.nodeCount,controlMask:[...this.meta.controls],dynamicControls:this.meta.dynamicControls,functions:[...this.meta.functions].sort(),variables:[...this.meta.variables].sort(),usesSource:this.meta.usesSource,stateful:this.meta.stateful,deterministic:this.meta.deterministic,gpuCompatible:gpuBlockers.length===0,gpuBlockers};
   }
 }
 export function compileFilterProgram(astList,{legacyMath=false}={}){

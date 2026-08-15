@@ -14,7 +14,7 @@ This document describes the implementation currently present in the public repos
 
 Filter FabJS provides two rendering backends:
 
-- **WebGPU** — compiles supported typed IR into WGSL and renders in a full-frame compute dispatch.
+- **WebGPU** — compiles supported typed IR into WGSL and renders in tiled compute dispatches.
 - **CPU Worker** — compatibility renderer for unsupported WebGPU operations and legacy integer-mode filters.
 
 The **Auto** renderer selects WebGPU when the current program is compatible and WebGPU is available; otherwise it reports a fallback reason and uses the CPU Worker.

@@ -55,12 +55,6 @@ export class CpuRenderer extends RendererBackend{
     if(this.source&&this.width&&this.height){this.spawnWorker();this.postSource();this.readyPromise.catch(()=>{})}
     return hadWork;
   }
-  releaseSource(){
-    const error=new RenderCancelledError('Source released');
-    this.rejectReady?.(error);this.resolveReady=this.rejectReady=null;
-    this.rejectPending(error);this.worker?.terminate();this.worker=null;
-    this.source=null;this.width=this.height=0;this.readyPromise=Promise.resolve();
-  }
   dispose(){
     const error=new RenderCancelledError('Renderer disposed');
     this.rejectReady?.(error);this.resolveReady=this.rejectReady=null;
