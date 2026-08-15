@@ -78,4 +78,24 @@ assert.equal(programFor('rnd(0,255)').metadata.deterministic, false);
 assert.equal(programFor('get(0)').metadata.deterministic, true);
 assert.equal(WGSLCompiler.analyze(programFor('c', { legacyMath: true })).compatible, false);
 
+const powAnalysis = WGSLCompiler.analyze(programFor('pow(-2,2)'));
+assert.equal(powAnalysis.compatible, false, 'pow() must use CPU fallback until negative-base semantics are defined in WGSL');
+assert.ok(powAnalysis.blockers.includes('pow()'));
+
+const roundCode = WGSLCompiler.compile(programFor('round(0.5)*255')).code;
+const roundMain = roundCode.slice(roundCode.lastIndexOf('outPixels[index]'));
+assert.ok(roundMain.includes('ff_round(0.5)'), 'formula round() must use the JavaScript-compatible helper');
+assert.ok(roundCode.includes('fn ff_round(v:f32)'), 'generated WGSL must define the compatible round helper');
+assert.ok(roundCode.includes('fn ff_pack(v:vec4<f32>)->u32{let c=vec4<u32>(round('), 'pixel packing must retain ties-to-even clamping');
+
+const angleCode = WGSLCompiler.compile(programFor('c2d(0,0)+d')).code;
+assert.ok(angleCode.includes('fn ff_atan2(y:f32,x:f32)'), 'generated WGSL must guard signed-zero atan2 inputs');
+assert.ok(angleCode.includes('ff_atan2(0.0, 0.0)'), 'c2d() must use the guarded atan2 helper');
+assert.ok(angleCode.includes('let direction=ff_atan2(-dy,-dx)'), 'the direction variable must use the guarded atan2 helper');
+assert.ok(angleCode.includes('ff_wrap(ff_atan2(y-cy,x-cx)/FF_TAU+offset,1.0)'), 'angular gradients must use the guarded atan2 helper');
+
+const mirrorCode = WGSLCompiler.compile(programFor('srcMirror(X,y,z)')).code;
+assert.ok(mirrorCode.includes('min(u32(trunc(ff_mirror(x,f32(params.width)))),params.width-1u)'), 'mirrored x indices must clamp to the final column');
+assert.ok(mirrorCode.includes('min(u32(trunc(ff_mirror(y,f32(params.height)))),params.height-1u)'), 'mirrored y indices must clamp to the final row');
+
 console.log(`WGSL compiler smoke: ${statelessCases.length} Phase 3.5 functions pass; stateful fallbacks preserved.`);

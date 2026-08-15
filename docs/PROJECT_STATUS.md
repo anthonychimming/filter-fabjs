@@ -41,7 +41,7 @@ The current formula engine includes:
 
 The WebGPU backend supports the deterministic stateless formula language, including hash, value, Perlin, Worley, FBM, turbulence, ridged and periodic noise; procedural patterns; analytic shape and Sierpiński masks; polar sampling; and fixed 3×3 convolution. All 28 native built-in filters are WebGPU-compatible.
 
-Sequential random-state functions (`rnd()` and `rst()`), shared cell operations (`get()` and `put()`), and legacy integer compatibility remain CPU-only by design.
+Sequential random-state functions (`rnd()` and `rst()`), shared cell operations (`get()` and `put()`), direct `pow()` formulas, and legacy integer compatibility remain CPU-only by design.
 
 Compatibility is analyzed from typed IR before a render is dispatched.
 

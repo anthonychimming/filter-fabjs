@@ -42,6 +42,6 @@ RGBA pixel output
 
 ## Current WebGPU boundary
 
-The Phase 3.5 WebGPU subset covers deterministic stateless operations: arithmetic, conditions, controls, image and polar sampling, coordinate shaping, gradients, procedural patterns, analytic shape masks, deterministic noise, blend operations, and fixed 3×3 convolution. Operations outside that subset are identified by compatibility analysis and use the CPU Worker fallback.
+The Phase 3.5 WebGPU subset covers supported deterministic stateless operations: arithmetic, conditions, controls, image and polar sampling, coordinate shaping, gradients, procedural patterns, analytic shape masks, deterministic noise, blend operations, and fixed 3×3 convolution. Operations outside that subset are identified by compatibility analysis and use the CPU Worker fallback. `pow()` remains CPU-only because WGSL does not define JavaScript-compatible results for negative bases.
 
 The CPU renderer remains the compatibility backend for legacy integer-mode AFS filters and operations with sequential or shared mutable state (`rnd()`, `rst()`, `get()`, and `put()`).

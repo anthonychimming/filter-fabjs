@@ -6,7 +6,7 @@
 import { IR_VERSION } from '../core/ir.js';
 
 export class WGSLCompileError extends Error{constructor(message,blockers=[]){super(message);this.name='WGSLCompileError';this.blockers=blockers}}
-const WEBGPU_FUNCTIONS=new Set('src src0 src1 srcWrap srcMirror srcLinear rad rad0 rad1 cnv cnv0 cnv1 ctl val map min max abs add sub dif mix scl sqr sqrt sin cos tan r2x r2y c2d c2m pow clamp lerp step smoothstep floor ceil round fract sign bias gain hash2 valueNoise perlin worleyF1 worleyF2 fbm turbulence ridged periodicNoise wrap mirror linearGrad radialGrad angularGrad checker brick line circle ring box triangle grid sierpinski multiply screen overlay softLight difference'.split(' '));
+const WEBGPU_FUNCTIONS=new Set('src src0 src1 srcWrap srcMirror srcLinear rad rad0 rad1 cnv cnv0 cnv1 ctl val map min max abs add sub dif mix scl sqr sqrt sin cos tan r2x r2y c2d c2m clamp lerp step smoothstep floor ceil round fract sign bias gain hash2 valueNoise perlin worleyF1 worleyF2 fbm turbulence ridged periodicNoise wrap mirror linearGrad radialGrad angularGrad checker brick line circle ring box triangle grid sierpinski multiply screen overlay softLight difference'.split(' '));
 const WEBGPU_UNARY=new Set(['+','-','!']);
 const WEBGPU_BINARY=new Set(['+','-','*','/','%','<','<=','>','>=','==','!=','&&','||']);
 export class WGSLCompiler{
@@ -89,10 +89,10 @@ export class WGSLCompiler{
       case'sqr':return`(${A(0)} * ${A(0)})`;case'sqrt':return`sqrt(max(0.0, ${A(0)}))`;
       case'sin':return`(512.0 * sin(${A(0)} * FF_TAU / 1024.0))`;case'cos':return`(512.0 * cos(${A(0)} * FF_TAU / 1024.0))`;case'tan':return`(1024.0 * tan(${A(0)} * FF_TAU / 1024.0))`;
       case'r2x':return`(cos(${A(0)} * FF_TAU / 1024.0) * ${A(1)})`;case'r2y':return`(sin(${A(0)} * FF_TAU / 1024.0) * ${A(1)})`;
-      case'c2d':return`(atan2(${A(1)}, ${A(0)}) * 1024.0 / FF_TAU)`;case'c2m':return`length(vec2<f32>(${A(0)}, ${A(1)}))`;
-      case'pow':return`pow(${A(0)}, ${A(1)})`;case'clamp':return`ff_clamp(${A(0)}, ${A(1)}, ${A(2)})`;case'lerp':return`ff_lerp(${A(0)}, ${A(1)}, ${A(2)})`;
+      case'c2d':return`(ff_atan2(${A(1)}, ${A(0)}) * 1024.0 / FF_TAU)`;case'c2m':return`length(vec2<f32>(${A(0)}, ${A(1)}))`;
+      case'clamp':return`ff_clamp(${A(0)}, ${A(1)}, ${A(2)})`;case'lerp':return`ff_lerp(${A(0)}, ${A(1)}, ${A(2)})`;
       case'step':return`ff_step(${A(0)}, ${A(1)})`;case'smoothstep':return`ff_smoothstep(${A(0)}, ${A(1)}, ${A(2)})`;
-      case'floor':return`floor(${A(0)})`;case'ceil':return`ceil(${A(0)})`;case'round':return`round(${A(0)})`;case'fract':return`fract(${A(0)})`;case'sign':return`sign(${A(0)})`;
+      case'floor':return`floor(${A(0)})`;case'ceil':return`ceil(${A(0)})`;case'round':return`ff_round(${A(0)})`;case'fract':return`fract(${A(0)})`;case'sign':return`sign(${A(0)})`;
       case'bias':return`ff_bias(${A(0)}, ${A(1)})`;case'gain':return`ff_gain(${A(0)}, ${A(1)})`;
       case'hash2':return`ff_hash01(${A(0)}, ${A(1)}, ${A(2)})`;
       case'valueNoise':return`ff_value_noise(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)})`;
@@ -122,12 +122,16 @@ export class WGSLCompiler{
   }
   shader(expr){return String.raw`
 const FF_TAU : f32 = 6.283185307179586;
+const FF_PI : f32 = 3.141592653589793;
 struct Params { width:u32, height:u32, startRow:u32, rowCount:u32, controls:array<f32,8>, };
 @group(0) @binding(0) var<storage,read> srcPixels:array<u32>;
 @group(0) @binding(1) var<storage,read_write> outPixels:array<u32>;
 @group(0) @binding(2) var<storage,read> params:Params;
 fn ff_bool(v:f32)->bool{return v!=0.0;}
 fn ff_num(v:bool)->f32{return select(0.0,1.0,v);}
+fn ff_negative_zero()->f32{return bitcast<f32>(0x80000000u);}
+fn ff_round(v:f32)->f32{let rounded=floor(v+0.5);if(rounded==0.0&&(bitcast<u32>(v)&0x80000000u)!=0u){return ff_negative_zero();}return rounded;}
+fn ff_atan2(y:f32,x:f32)->f32{if(y==0.0&&x==0.0){let yNegative=(bitcast<u32>(y)&0x80000000u)!=0u;let xNegative=(bitcast<u32>(x)&0x80000000u)!=0u;if(xNegative){return select(FF_PI,-FF_PI,yNegative);}return select(0.0,ff_negative_zero(),yNegative);}return atan2(y,x);}
 fn ff_clamp(v:f32,lo:f32,hi:f32)->f32{return max(lo,min(hi,v));}
 fn ff_div(a:f32,b:f32)->f32{if(b==0.0){return 0.0;}return a/b;}
 fn ff_rem(a:f32,b:f32)->f32{if(b==0.0){return 0.0;}return a-b*trunc(a/b);}
@@ -138,7 +142,7 @@ fn ff_unpack(v:u32)->vec4<f32>{return vec4<f32>(f32(v&255u),f32((v>>8u)&255u),f3
 fn ff_pack(v:vec4<f32>)->u32{let c=vec4<u32>(round(clamp(v,vec4<f32>(0.0),vec4<f32>(255.0))));return c.x|(c.y<<8u)|(c.z<<16u)|(c.w<<24u);}
 fn ff_pixel_clamped(x:f32,y:f32)->vec4<f32>{let maxX=max(0.0,f32(params.width)-1.0);let maxY=max(0.0,f32(params.height)-1.0);let ix=u32(trunc(clamp(x,0.0,maxX)));let iy=u32(trunc(clamp(y,0.0,maxY)));return ff_unpack(srcPixels[iy*params.width+ix]);}
 fn ff_pixel_wrap(x:f32,y:f32)->vec4<f32>{let ix=u32(trunc(ff_wrap(x,f32(params.width))));let iy=u32(trunc(ff_wrap(y,f32(params.height))));return ff_unpack(srcPixels[iy*params.width+ix]);}
-fn ff_pixel_mirror(x:f32,y:f32)->vec4<f32>{let ix=u32(trunc(ff_mirror(x,f32(params.width))));let iy=u32(trunc(ff_mirror(y,f32(params.height))));return ff_unpack(srcPixels[iy*params.width+ix]);}
+fn ff_pixel_mirror(x:f32,y:f32)->vec4<f32>{let ix=min(u32(trunc(ff_mirror(x,f32(params.width)))),params.width-1u);let iy=min(u32(trunc(ff_mirror(y,f32(params.height)))),params.height-1u);return ff_unpack(srcPixels[iy*params.width+ix]);}
 fn ff_sample_nearest(x:f32,y:f32,z:f32)->f32{return ff_channel(ff_pixel_clamped(x,y),z);}
 fn ff_sample_wrap(x:f32,y:f32,z:f32)->f32{return ff_channel(ff_pixel_wrap(x,y),z);}
 fn ff_sample_mirror(x:f32,y:f32,z:f32)->f32{return ff_channel(ff_pixel_mirror(x,y),z);}
@@ -167,7 +171,7 @@ fn ff_ridged(x:f32,y:f32,scale0:f32,octaves0:f32,seed:f32)->f32{let octaves=clam
 fn ff_periodic_noise(x:f32,y:f32,periodX0:f32,periodY0:f32,seed:f32)->f32{let periodX=max(1.0,abs(periodX0));let periodY=max(1.0,abs(periodY0));let gx=ff_wrap(x,periodX)/periodX*8.0;let gy=ff_wrap(y,periodY)/periodY*8.0;let ix=floor(gx);let iy=floor(gy);let tx=ff_fade(gx-ix);let ty=ff_fade(gy-iy);let a=ff_hash01(ff_wrap(ix,8.0),ff_wrap(iy,8.0),seed);let b=ff_hash01(ff_wrap(ix+1.0,8.0),ff_wrap(iy,8.0),seed);let c=ff_hash01(ff_wrap(ix,8.0),ff_wrap(iy+1.0,8.0),seed);let d=ff_hash01(ff_wrap(ix+1.0,8.0),ff_wrap(iy+1.0,8.0),seed);return mix(a,b,tx)*(1.0-ty)+mix(c,d,tx)*ty;}
 fn ff_linear_grad(x:f32,y:f32,x0:f32,y0:f32,x1:f32,y1:f32)->f32{let dx=x1-x0;let dy=y1-y0;let den=dx*dx+dy*dy;if(den==0.0){return 0.0;}return clamp(((x-x0)*dx+(y-y0)*dy)/den,0.0,1.0);}
 fn ff_radial_grad(x:f32,y:f32,cx:f32,cy:f32,r:f32)->f32{return clamp(1.0-length(vec2<f32>(x-cx,y-cy))/max(0.000001,abs(r)),0.0,1.0);}
-fn ff_angular_grad(x:f32,y:f32,cx:f32,cy:f32,offset0:f32)->f32{let offset=select(offset0/1024.0,offset0,abs(offset0)<=1.0);return ff_wrap(atan2(y-cy,x-cx)/FF_TAU+offset,1.0);}
+fn ff_angular_grad(x:f32,y:f32,cx:f32,cy:f32,offset0:f32)->f32{let offset=select(offset0/1024.0,offset0,abs(offset0)<=1.0);return ff_wrap(ff_atan2(y-cy,x-cx)/FF_TAU+offset,1.0);}
 fn ff_checker(x:f32,y:f32,width0:f32,height0:f32)->f32{let width=max(1.0,abs(width0));let height=max(1.0,abs(height0));let parity=(i32(floor(x/width))+i32(floor(y/height)))&1;return select(0.0,1.0,parity!=0);}
 fn ff_brick(x:f32,y:f32,width0:f32,height0:f32,mortar0:f32,offset0:f32)->f32{let width=max(1.0,abs(width0));let height=max(1.0,abs(height0));let mortar=clamp(abs(mortar0),0.0,min(width,height)*0.5);let row=i32(floor(y/height));let stagger=select(0.0,1.0,(row&1)!=0);let offset=select(offset0,offset0*width,abs(offset0)<=1.0);let localX=ff_wrap(x+offset*stagger,width);let localY=ff_wrap(y,height);return select(0.0,1.0,localX>=mortar&&localX<=width-mortar&&localY>=mortar&&localY<=height-mortar);}
 fn ff_shape_mask(distance:f32,feather0:f32)->f32{let feather=max(0.0,abs(feather0));if(distance<=0.0){return 1.0;}if(feather==0.0){return 0.0;}return 1.0-ff_smoothstep(0.0,feather,distance);}
@@ -194,7 +198,7 @@ fn main(@builtin(global_invocation_id) gid:vec3<u32>){
   let luminance=(299.0*sourceColor.x+587.0*sourceColor.y+114.0*sourceColor.z)/1000.0;
   let chromaU=(-147407.0*sourceColor.x-289391.0*sourceColor.y+436798.0*sourceColor.z)/2000000.0;
   let chromaV=(614777.0*sourceColor.x-514799.0*sourceColor.y-99978.0*sourceColor.z)/2000000.0;
-  let dx=widthF*0.5-pixelX;let dy=heightF*0.5-pixelY;let radius=length(vec2<f32>(dx,dy));let maxRadius=length(vec2<f32>(widthF,heightF))*0.5;let direction=atan2(-dy,-dx)*1024.0/FF_TAU;
+  let dx=widthF*0.5-pixelX;let dy=heightF*0.5-pixelY;let radius=length(vec2<f32>(dx,dy));let maxRadius=length(vec2<f32>(widthF,heightF))*0.5;let direction=ff_atan2(-dy,-dx)*1024.0/FF_TAU;
   outPixels[index]=ff_pack(vec4<f32>(${expr[0]},${expr[1]},${expr[2]},${expr[3]}));
 }`}
 }

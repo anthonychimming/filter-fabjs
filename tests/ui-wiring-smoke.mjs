@@ -16,6 +16,11 @@ assert.match(app, /const scheduleRender=debounce\(\(\)=>\{if\(!state\.hasPending
 
 assert.match(app, /focusSnapshot=captureFocus\(\)/, 'render lock must capture focus');
 assert.match(app, /restoreFocus\(snapshot\)/, 'render unlock must restore focus');
+assert.match(app, /mathMode:state\.legacyMath\?'legacy':'float'/, 'filter serialization must preserve legacy math mode');
+assert.doesNotMatch(app, /mathMode:'float'/, 'filter serialization must not hard-code float math');
+assert.match(app, /const loadId=\+\+state\.imageLoadId/, 'image loading must use a latest-request generation');
+assert.match(app, /if\(loadId!==state\.imageLoadId\)return false/, 'stale image decodes must be discarded');
+assert.match(app, /finally\{bitmap\?\.close\?\.\(\);\}/, 'decoded image bitmaps must close on every exit path');
 assert.match(controls, /range\.oninput=\(\)=>update\(range\.value\)/, 'range input must update its displayed value continuously');
 assert.match(controls, /range\.onchange=\(\)=>scheduleRender\(\)/, 'range control must render only after the edit is committed');
 
