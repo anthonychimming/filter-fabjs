@@ -1,4 +1,4 @@
-# Filter FabJS v2.4.4
+# Filter FabJS v2.4.5
 
 Filter FabJS is an open-source, browser-native procedural RGBA image-filter editor. It combines a compact expression language with a typed intermediate representation, WebGPU compute rendering, and a CPU Worker fallback.
 
@@ -17,14 +17,14 @@ The project is under active development. This repository documents and develops 
 - WebGPU compute rendering for deterministic stateless formulas, including procedural noise, patterns, polar sampling, and fixed 3×3 convolution.
 - Analytic line, circle, ring, rotated-box, triangle, and grid masks with CPU/WebGPU parity.
 - Finite-depth Sierpiński-gasket masks generated through GPU-compatible child-triangle folding, including feathered internal holes.
-- Automatic, cancellation-safe CPU Worker fallback for unsupported, legacy, or failed GPU operations, including GPU work cancelled while queued.
+- Automatic, cancellation-safe CPU Worker fallback for unsupported, legacy, or failed GPU operations, including queued and already-submitted GPU work.
 - Memoized compact program keys and entry/byte-bounded compatibility, failure, WGSL-plan, and WebGPU-pipeline caches with control-only program reuse.
 - Auto / GPU / CPU renderer selection.
 - Size-bounded historic Filter Factory `.afs` import and strictly normalized native Filter FabJS JSON import/export.
 - Built-in procedural and image-processing filters, including the mask-driven **Midnight Tartan** textile generator.
 - Local custom presets.
 - Image drag-and-drop, clipboard copy/paste, PNG export, and alpha-aware preview.
-- Render cancellation and progress reporting.
+- Render cancellation and progress reporting, with lazy CPU Worker restart after cancellation.
 - Modular ES-module development source plus a standalone single-file release build.
 
 See [Project Status](docs/PROJECT_STATUS.md) for the current implementation and known boundaries.
@@ -56,7 +56,7 @@ npm run build
 Build output:
 
 - `dist/site/` — deployable static site with content-fingerprinted CSS and JavaScript assets to prevent mixed-version browser caches.
-- `dist/filter-fabjs-v2.4.4.html` — standalone single-file distribution.
+- `dist/filter-fabjs-v2.4.5.html` — standalone single-file distribution.
 
 The build uses Node.js and has no package dependencies.
 

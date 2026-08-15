@@ -4,13 +4,14 @@
  * Licensed GPL-2.0-or-later. See LICENSE and README.md.
  */
 import { RendererBackend, RenderCancelledError } from './renderer-backend.js';
+import { programCacheKey } from '../core/ir.js';
 
 export class CpuRenderer extends RendererBackend{
-  constructor(programFactory){super('cpu','CPU Worker');this.programFactory=programFactory;this.worker=null;this.source=null;this.width=0;this.height=0;this.pending=new Map();this.readyPromise=Promise.resolve();this.resolveReady=null;this.rejectReady=null}
+  constructor(programFactory){super('cpu','CPU Worker');this.programFactory=programFactory;this.worker=null;this.workerProgramKey=null;this.source=null;this.width=0;this.height=0;this.pending=new Map();this.readyPromise=Promise.resolve();this.resolveReady=null;this.rejectReady=null}
   spawnWorker(){
     this.worker?.terminate();
     const workerUrl=URL.createObjectURL(new Blob([this.programFactory()],{type:'application/javascript'}));
-    this.worker=new Worker(workerUrl);URL.revokeObjectURL(workerUrl);
+    this.worker=new Worker(workerUrl);this.workerProgramKey=null;URL.revokeObjectURL(workerUrl);
     this.readyPromise=new Promise((resolve,reject)=>{this.resolveReady=resolve;this.rejectReady=reject});
     this.worker.onmessage=e=>{
       const m=e.data;
@@ -31,6 +32,7 @@ export class CpuRenderer extends RendererBackend{
     const copy=this.source.slice();
     this.worker.postMessage({type:'init',width:this.width,height:this.height,buffer:copy.buffer},[copy.buffer]);
   }
+  ensureWorker(){if(!this.worker){this.spawnWorker();this.postSource()}return this.readyPromise}
   setSource(pixels,width,height){
     this.source=new Uint8ClampedArray(pixels);this.width=width;this.height=height;
     this.rejectPending(new RenderCancelledError('Source replaced'));
@@ -38,11 +40,11 @@ export class CpuRenderer extends RendererBackend{
   }
   async render({id,program,controls,legacyMath,onProgress}){
     if(!this.source||!this.width||!this.height)throw new Error('Renderer source is not initialized');
-    await this.readyPromise;
+    await this.ensureWorker();
     if(!this.worker)throw new Error(`${this.label} is unavailable`);
     return new Promise((resolve,reject)=>{
       this.pending.set(id,{resolve,reject,onProgress});
-      try{this.worker.postMessage({type:'render',id,program,controls,legacyMath})}
+      try{const key=programCacheKey(program),message={type:'render',id,programKey:key,controls,legacyMath};if(key!==this.workerProgramKey)message.program=program;this.worker.postMessage(message);this.workerProgramKey=key}
       catch(error){this.pending.delete(id);reject(error)}
     });
   }
@@ -51,20 +53,19 @@ export class CpuRenderer extends RendererBackend{
     const error=new RenderCancelledError();
     this.rejectReady?.(error);this.resolveReady=this.rejectReady=null;
     this.rejectPending(error);
-    this.worker?.terminate();this.worker=null;
-    if(this.source&&this.width&&this.height){this.spawnWorker();this.postSource();this.readyPromise.catch(()=>{})}
+    this.worker?.terminate();this.worker=null;this.workerProgramKey=null;this.readyPromise=Promise.resolve();
     return hadWork;
   }
   releaseSource(){
     const error=new RenderCancelledError('Source released');
     this.rejectReady?.(error);this.resolveReady=this.rejectReady=null;
-    this.rejectPending(error);this.worker?.terminate();this.worker=null;
+    this.rejectPending(error);this.worker?.terminate();this.worker=null;this.workerProgramKey=null;
     this.source=null;this.width=this.height=0;this.readyPromise=Promise.resolve();
   }
   dispose(){
     const error=new RenderCancelledError('Renderer disposed');
     this.rejectReady?.(error);this.resolveReady=this.rejectReady=null;
-    this.rejectPending(error);this.worker?.terminate();this.worker=null;
+    this.rejectPending(error);this.worker?.terminate();this.worker=null;this.workerProgramKey=null;
     this.source=null;this.width=this.height=0;
   }
 }

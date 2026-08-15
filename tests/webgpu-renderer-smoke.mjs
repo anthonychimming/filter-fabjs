@@ -11,7 +11,7 @@ const originalWarn=console.warn;
 
 function makeDevice({deferredMaps=0}={}){
   let resolveLost;
-  const mapResolvers=[],stats={buffers:[],dispatches:0,copies:0,submits:0,queueWaits:0};
+  const mapRequests=[],stats={buffers:[],writes:[],dispatches:0,copies:0,submits:0,queueWaits:0};
   const device={
     lost:new Promise(resolve=>{resolveLost=resolve}),
     addEventListener(){},
@@ -22,14 +22,15 @@ function makeDevice({deferredMaps=0}={}){
     createBindGroup(){return{}},
     createBuffer(){
       const data=new Uint32Array([0xff030201]).buffer;
-      const buffer={destroyed:false,mapState:'unmapped',destroy(){this.destroyed=true},async mapAsync(){if(deferredMaps>0){deferredMaps--;await new Promise(resolve=>mapResolvers.push(resolve))}this.mapState='mapped'},getMappedRange(){return data},unmap(){this.mapState='unmapped'}};
+      const pending=[];
+      const buffer={destroyed:false,mapState:'unmapped',destroy(){this.destroyed=true;for(const request of pending.splice(0))request.reject(new Error('Buffer was destroyed'))},async mapAsync(){if(this.destroyed)throw new Error('Buffer was destroyed');if(deferredMaps>0){deferredMaps--;await new Promise((resolve,reject)=>{const request={resolve,reject};pending.push(request);mapRequests.push(request)})}if(this.destroyed)throw new Error('Buffer was destroyed');this.mapState='mapped'},getMappedRange(){return data},unmap(){this.mapState='unmapped'}};
       stats.buffers.push(buffer);return buffer;
     },
     createCommandEncoder(){return{beginComputePass(){return{setPipeline(){},setBindGroup(){},dispatchWorkgroups(){stats.dispatches++},end(){}}},copyBufferToBuffer(){stats.copies++},finish(){return{}}}},
-    queue:{writeBuffer(){},submit(){stats.submits++},async onSubmittedWorkDone(){stats.queueWaits++}},
-    destroy(){this.destroyed=true}
+    queue:{writeBuffer(buffer,offset,data){stats.writes.push({buffer,offset,data,bytes:[...new Uint8Array(data.buffer,data.byteOffset,data.byteLength)]})},submit(){stats.submits++},async onSubmittedWorkDone(){stats.queueWaits++}},
+    destroy(){this.destroyed=true;for(const buffer of stats.buffers)buffer.destroy()}
   };
-  return{device,stats,resolveLost,resolveNextMap(){const resolve=mapResolvers.shift();if(!resolve)throw new Error('No deferred WebGPU map is pending');resolve()}};
+  return{device,stats,resolveLost,resolveNextMap(){const request=mapRequests.shift();if(!request)throw new Error('No deferred WebGPU map is pending');request.resolve()}};
 }
 
 try{
@@ -41,6 +42,8 @@ try{
 
   const renderer=new WebGpuRenderer();
   await renderer.setSource(new Uint8ClampedArray([1,2,3,255]),1,1);
+  assert.ok(first.stats.writes[0].data instanceof Uint8ClampedArray,'source upload must write the existing RGBA byte view without repacking it');
+  assert.deepEqual(first.stats.writes[0].bytes,[1,2,3,255]);
   const retainedSource=renderer.source,oldSourceBuffer=renderer.sourceBuffer;
   first.resolveLost({reason:'unknown',message:'test device loss'});
   await new Promise(resolve=>setImmediate(resolve));
@@ -93,20 +96,21 @@ try{
   assert.ok(byteBoundRenderer.pipelineCacheBytes<=8*1024*1024,'pipeline cache must remain within its byte budget');
   byteBoundRenderer.dispose();
 
-  const cancellationDevice=makeDevice({deferredMaps:1});
-  navigator.gpu.requestAdapter=async()=>({requestDevice:async()=>cancellationDevice.device});
+  const cancellationDevice=makeDevice({deferredMaps:1}),recoveryDevice=makeDevice(),cancellationDevices=[cancellationDevice.device,recoveryDevice.device];
+  navigator.gpu.requestAdapter=async()=>({requestDevice:async()=>cancellationDevices.shift()});
   const cancellationRenderer=new WebGpuRenderer();await cancellationRenderer.setSource(new Uint8ClampedArray([1,2,3,255]),1,1);
   const activeRender=cancellationRenderer.render({program,controls:Array(8).fill(128)});while(cancellationDevice.stats.dispatches<1)await new Promise(resolve=>setImmediate(resolve));
   const queuedRender=cancellationRenderer.render({program,controls:Array(8).fill(64)}),activeCancellation=assert.rejects(activeRender,error=>error?.name==='RenderCancelledError'),queuedCancellation=assert.rejects(queuedRender,error=>error?.name==='RenderCancelledError');
-  assert.equal(await cancellationRenderer.cancel(),true,'cancelling an active WebGPU render must report work');cancellationDevice.resolveNextMap();await Promise.all([activeCancellation,queuedCancellation]);
+  assert.equal(await cancellationRenderer.cancel(),true,'cancelling an active WebGPU render must report work');await Promise.all([activeCancellation,queuedCancellation]);
+  assert.equal(cancellationDevice.device.destroyed,true,'active cancellation must destroy the submitted device so pending readback stops');
   assert.equal(cancellationDevice.stats.dispatches,1,'a render queued before cancellation must not dispatch after the active render stops');
-  await cancellationRenderer.render({program,controls:Array(8).fill(32)});assert.equal(cancellationDevice.stats.dispatches,2,'a render queued after cancellation must use the new generation');
+  await cancellationRenderer.render({program,controls:Array(8).fill(32)});assert.equal(recoveryDevice.stats.dispatches,1,'a render queued after cancellation must reacquire a device and restore the retained source');
 
-  let releaseQueue;const buffersBeforeSourceChange=cancellationDevice.stats.buffers.length;cancellationRenderer.operationQueue=new Promise(resolve=>{releaseQueue=resolve});
+  let releaseQueue;const buffersBeforeSourceChange=recoveryDevice.stats.buffers.length;cancellationRenderer.operationQueue=new Promise(resolve=>{releaseQueue=resolve});
   const staleSource=cancellationRenderer.setSource(new Uint8ClampedArray([4,5,6,255]),1,1),staleSourceCancellation=assert.rejects(staleSource,error=>error?.name==='RenderCancelledError');
   const latestSource=cancellationRenderer.setSource(new Uint8ClampedArray([7,8,9,255]),1,1);releaseQueue();await Promise.all([staleSourceCancellation,latestSource]);
   assert.equal(cancellationRenderer.source[0],7,'only the latest queued WebGPU source upload may become current');
-  assert.equal(cancellationDevice.stats.buffers.length-buffersBeforeSourceChange,4,'a stale queued source upload must stop before allocating GPU buffers');
+  assert.equal(recoveryDevice.stats.buffers.length-buffersBeforeSourceChange,4,'a stale queued source upload must stop before allocating GPU buffers');
   cancellationRenderer.dispose();
 }finally{
   console.warn=originalWarn;

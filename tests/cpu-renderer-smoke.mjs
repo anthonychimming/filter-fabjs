@@ -37,6 +37,14 @@ const render = async (formulas,{legacyMath=false}={}) => {
   return new Uint8ClampedArray(message.buffer);
 };
 
+const renderProgram = async (program,programKey,includeProgram=true) => {
+  const id=++renderId,message={type:'render',id,programKey,controls:Array(8).fill(128)};
+  if(includeProgram)message.program=program;
+  worker.postMessage(message);
+  const result=await waitFor(candidate=>candidate.type==='result'&&candidate.id===id);
+  return new Uint8ClampedArray(result.buffer);
+};
+
 const result = await render(['255-r','255-g','255-b','a']);
 assert.deepEqual([...new Uint8ClampedArray(result.buffer)], [245,235,225,255, 155,145,135,128, 255,255,0,255, 0,255,255,255]);
 
@@ -58,14 +66,65 @@ assert.deepEqual([...legacyBounds.slice(0,4)],[legacyChroma.uMin,legacyChroma.uM
 const legacySpans=await render(['U','V','U','V'],{legacyMath:true});
 assert.deepEqual([...legacySpans.slice(0,4)],[legacyChroma.uSpan,legacyChroma.vSpan,legacyChroma.uSpan,legacyChroma.vSpan]);
 
+const cachedProgram=compileFilterProgram(['r','g','b','a'].map(formula=>new Parser(formula).parse()));
+const firstCachedResult=await renderProgram(cachedProgram,'identity-program');
+const reusedCachedResult=await renderProgram(null,'identity-program',false);
+assert.deepEqual([...reusedCachedResult],[...firstCachedResult],'the worker must reuse a previously validated IR program when only its cache key is sent');
+
 const sourceText = workerProgram();
 assert.doesNotMatch(sourceText, /const q=\{/, 'variable lookup must not allocate a complete variable object per access');
 assert.match(sourceText, /function vars\(n,e\)\{const p=e\.p,z=e\.z;switch\(n\)/, 'variable lookup must dispatch lazily');
-assert.match(sourceText,/legacyMath=program\?\.mathMode==='legacy'/,'CPU arithmetic and chroma bounds must use the IR program math mode as their shared authority');
+assert.match(sourceText,/legacyMath=program\.mathMode==='legacy'/,'CPU arithmetic and chroma bounds must use the IR program math mode as their shared authority');
+assert.doesNotMatch(sourceText,/n\.args\.map/,'CPU call evaluation must not allocate an argument array per call and pixel');
+assert.match(sourceText,/const pixel=\[0,0,0,0\],environment=\{x:0,y:0,z:0,p:pixel\}/,'CPU rendering must reuse its pixel and environment records');
 const variableBody = sourceText.match(/function vars\(n,e\)\{([\s\S]*?)\n\}return 0\}/)?.[1] || '';
 const handledVariables = new Set([...variableBody.matchAll(/case'([^']+)'/g)].map(match => match[1]));
 for (const name of VARS) assert.ok(handledVariables.has(name), `lazy CPU lookup must preserve variable ${name}`);
 await worker.terminate();
+
+const workerDescriptor=Object.getOwnPropertyDescriptor(globalThis,'Worker');
+const createObjectUrlDescriptor=Object.getOwnPropertyDescriptor(URL,'createObjectURL');
+const revokeObjectUrlDescriptor=Object.getOwnPropertyDescriptor(URL,'revokeObjectURL');
+const fakeWorkers=[];
+class FakeWorker{
+  constructor(){this.messages=[];this.terminated=false;fakeWorkers.push(this)}
+  postMessage(message){this.messages.push(message);if(message.type==='init')queueMicrotask(()=>this.onmessage?.({data:{type:'ready'}}))}
+  terminate(){this.terminated=true}
+  finish(id,pixels=[1,2,3,255]){const buffer=new Uint8ClampedArray(pixels).buffer;this.onmessage?.({data:{type:'result',id,buffer,ms:1}})}
+}
+Object.defineProperty(globalThis,'Worker',{configurable:true,value:FakeWorker});
+Object.defineProperty(URL,'createObjectURL',{configurable:true,value:()=> 'blob:cpu-worker-test'});
+Object.defineProperty(URL,'revokeObjectURL',{configurable:true,value:()=>{}});
+
+try{
+  const lifecycleRenderer=new CpuRenderer(()=> '');
+  const programA=compileFilterProgram(['r','g','b','a'].map(formula=>new Parser(formula).parse()));
+  const programB=compileFilterProgram(['255-r','g','b','a'].map(formula=>new Parser(formula).parse()));
+  await lifecycleRenderer.setSource(new Uint8ClampedArray([1,2,3,255]),1,1);
+  assert.equal(fakeWorkers.length,1);
+
+  const firstRender=lifecycleRenderer.render({id:1,program:programA,controls:Array(8).fill(128)});await new Promise(resolve=>setImmediate(resolve));
+  const firstRenderMessage=fakeWorkers[0].messages.at(-1);assert.equal(firstRenderMessage.type,'render');assert.equal(firstRenderMessage.program,programA,'the first render on a worker must send its IR program');fakeWorkers[0].finish(1);await firstRender;
+  const repeatedRender=lifecycleRenderer.render({id:2,program:programA,controls:Array(8).fill(64)});await new Promise(resolve=>setImmediate(resolve));
+  const repeatedRenderMessage=fakeWorkers[0].messages.at(-1);assert.equal(repeatedRenderMessage.type,'render');assert.equal('program' in repeatedRenderMessage,false,'control-only renders must not structured-clone unchanged IR');fakeWorkers[0].finish(2);await repeatedRender;
+  const changedRender=lifecycleRenderer.render({id:3,program:programB,controls:Array(8).fill(64)});await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(fakeWorkers[0].messages.at(-1).program,programB,'a changed formula program must be sent to the worker');fakeWorkers[0].finish(3);await changedRender;
+
+  const pendingRender=lifecycleRenderer.render({id:4,program:programB,controls:Array(8).fill(32)});await new Promise(resolve=>setImmediate(resolve));
+  const pendingCancellation=assert.rejects(pendingRender,error=>error?.name==='RenderCancelledError');assert.equal(await lifecycleRenderer.cancel(),true);await pendingCancellation;
+  assert.equal(fakeWorkers.length,1,'cancellation must not eagerly create a replacement worker');
+  assert.equal(fakeWorkers[0].terminated,true);
+
+  const resumedRender=lifecycleRenderer.render({id:5,program:programB,controls:Array(8).fill(16)});await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(fakeWorkers.length,2,'the next render must lazily replace the cancelled worker');
+  assert.equal(fakeWorkers[1].messages[0].type,'init','a replacement worker must receive the retained source before rendering');
+  assert.equal(fakeWorkers[1].messages.at(-1).program,programB,'a replacement worker must receive the full current IR program');fakeWorkers[1].finish(5);await resumedRender;
+  lifecycleRenderer.releaseSource();
+}finally{
+  if(workerDescriptor)Object.defineProperty(globalThis,'Worker',workerDescriptor);else delete globalThis.Worker;
+  if(createObjectUrlDescriptor)Object.defineProperty(URL,'createObjectURL',createObjectUrlDescriptor);else delete URL.createObjectURL;
+  if(revokeObjectUrlDescriptor)Object.defineProperty(URL,'revokeObjectURL',revokeObjectUrlDescriptor);else delete URL.revokeObjectURL;
+}
 
 const renderer=new CpuRenderer(()=> '');
 let terminated=false,pendingError=null,readyError=null;

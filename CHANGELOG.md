@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.4.5
+
+- Abort active WebGPU readback by destroying the submitted device on cancellation, then lazily reacquire a device and restore the retained source on the next render.
+- Upload and return RGBA byte views directly instead of allocating full-frame packing buffers and running JavaScript packing and unpacking loops.
+- Reuse CPU Worker pixel, evaluation-environment, and per-call argument storage across the render hot loop.
+- Cache the validated typed IR inside each CPU Worker and send only its compact key for control-only renders.
+- Leave a cancelled CPU Worker stopped and lazily recreate and initialize it only when another render is requested.
+
 ## 2.4.4
 
 - Replaced full serialized-IR cache keys with compact canonical keys memoized per program, and added payload-byte limits alongside cache entry limits.
