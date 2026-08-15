@@ -25,7 +25,14 @@ const statelessCases = [
   ['periodicNoise(x,y,16,12,7)', 'ff_periodic_noise('],
   ['angularGrad(x,y,X/2,Y/2,0)', 'ff_angular_grad('],
   ['checker(x,y,8,8)', 'ff_checker('],
-  ['brick(x,y,16,8,1,0.5)', 'ff_brick(']
+  ['brick(x,y,16,8,1,0.5)', 'ff_brick('],
+  ['line(x,y,0,0,X,Y,2,1)', 'ff_line('],
+  ['circle(x,y,X/2,Y/2,20,1)', 'ff_circle('],
+  ['ring(x,y,X/2,Y/2,20,3,1)', 'ff_ring('],
+  ['box(x,y,X/2,Y/2,30,20,128,1)', 'ff_box('],
+  ['triangle(x,y,0,Y,X/2,0,X,Y,1)', 'ff_triangle('],
+  ['grid(x,y,16,12,2,1)', 'ff_grid('],
+  ['sierpinski(x,y,X/2,Y/2,64,6,1)', 'ff_sierpinski(']
 ];
 
 for (const [formula, emittedCall] of statelessCases) {

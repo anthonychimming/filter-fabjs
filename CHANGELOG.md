@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.4.0
+
+- Added **Midnight Tartan**, a GPU-compatible procedural textile preset based on layered `grid()` and `checker()` masks.
+- Added controls for sett scale, stripe widths, weave density and angle, pattern strength, blue tone, and source-image mixing.
+- Added built-in compiler coverage for the new preset and documented its mask-compositing approach.
+
+## 2.3.1
+
+- Reissued the standalone build under a new versioned filename after replacing the old **Fractal Shape Study** preset identity with **Sierpiński Fractal**.
+
+## 2.3.0
+
+- Added GPU-compatible analytic mask functions for lines, filled circles, rings, rotated boxes, filled triangles, and grids.
+- Implemented matching anti-aliased geometry semantics in the CPU Worker and WGSL shader library.
+- Added a bounded `sierpinski()` mask that produces true self-similarity through coordinate folding without shader recursion.
+- Replaced the geometric-collage showcase with **Sierpiński Fractal** and moved the six primitive demonstrations into a separate **Analytic Shape Sampler**.
+- Expanded compiler, CPU semantic, built-in, and optional CPU/WebGPU parity coverage for the new vocabulary.
+
 ## 2.2.1
 
 - Fixed the generated WGSL hash expression by parenthesizing multiplicative terms before bitwise XOR.

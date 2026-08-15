@@ -1,4 +1,4 @@
-# Filter FabJS v2.2.1
+# Filter FabJS v2.4.0
 
 Filter FabJS is an open-source, browser-native procedural RGBA image-filter editor. It combines a compact expression language with a typed intermediate representation, WebGPU compute rendering, and a CPU Worker fallback.
 
@@ -13,10 +13,12 @@ The project is under active development. This repository documents and develops 
 - Branded aubergine UI with sage typography and restrained chartreuse, magenta, and cyan accents.
 - Typed IR between the formula parser and renderer backends.
 - WebGPU compute rendering for deterministic stateless formulas, including procedural noise, patterns, polar sampling, and fixed 3×3 convolution.
+- Analytic line, circle, ring, rotated-box, triangle, and grid masks with CPU/WebGPU parity.
+- Bounded Sierpiński-gasket masks generated through GPU-compatible coordinate folding.
 - Automatic CPU Worker fallback for unsupported or legacy operations.
 - Auto / GPU / CPU renderer selection.
 - Historic Filter Factory `.afs` import and native Filter FabJS JSON import/export.
-- Built-in procedural and image-processing filters.
+- Built-in procedural and image-processing filters, including the mask-driven **Midnight Tartan** textile generator.
 - Local custom presets.
 - Image drag-and-drop, clipboard copy/paste, PNG export, and alpha-aware preview.
 - Render cancellation and progress reporting.
@@ -51,7 +53,7 @@ npm run build
 Build output:
 
 - `dist/site/` — deployable static site with content-fingerprinted CSS and JavaScript assets to prevent mixed-version browser caches.
-- `dist/filter-fabjs-v2.2.1.html` — standalone single-file distribution.
+- `dist/filter-fabjs-v2.4.0.html` — standalone single-file distribution.
 
 The build uses Node.js and has no package dependencies.
 
@@ -69,6 +71,7 @@ src/
 ```
 
 Architecture details are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Brand tokens and usage rules are in [docs/BRAND_THEME.md](docs/BRAND_THEME.md).
+Analytic mask signatures and coordinate conventions are in [docs/ANALYTIC_SHAPES.md](docs/ANALYTIC_SHAPES.md).
 
 ## Feedback and contributions
 

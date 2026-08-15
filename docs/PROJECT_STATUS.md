@@ -4,7 +4,7 @@ This document describes the implementation currently present in the public repos
 
 ## Release
 
-- Application version: **2.2.1**
+- Application version: **2.4.0**
 - Native filter format: **version 2**
 - Typed IR: **version 1**
 - Development layout: native ES modules
@@ -32,12 +32,14 @@ The current formula engine includes:
 - Numeric shaping and coordinate helpers.
 - Procedural noise functions.
 - Gradients and patterns.
+- Anti-aliased analytic line, circle, ring, rotated-box, triangle, and grid masks.
+- Bounded Sierpiński masks with controllable subdivision depth.
 - Several blend modes.
 - Legacy Filter Factory functions used by imported AFS filters.
 
 ## WebGPU compatibility
 
-The WebGPU backend supports the deterministic stateless formula language, including hash, value, Perlin, Worley, FBM, turbulence, ridged and periodic noise; procedural patterns; polar sampling; and fixed 3×3 convolution. All 25 native built-in filters are WebGPU-compatible.
+The WebGPU backend supports the deterministic stateless formula language, including hash, value, Perlin, Worley, FBM, turbulence, ridged and periodic noise; procedural patterns; analytic shape and Sierpiński masks; polar sampling; and fixed 3×3 convolution. All 28 native built-in filters are WebGPU-compatible.
 
 Sequential random-state functions (`rnd()` and `rst()`), shared cell operations (`get()` and `put()`), and legacy integer compatibility remain CPU-only by design.
 
@@ -63,6 +65,7 @@ The repository includes smoke tests for:
 - Formula parsing and typed IR compilation.
 - Built-in preset compilation.
 - Phase 3.5 WGSL call generation and explicit stateful fallback boundaries.
+- Analytic shape-mask CPU semantics and optional CPU/WebGPU pixel parity.
 - An optional browser parity suite comparing CPU and WebGPU pixels on actual WebGPU hardware.
 - Native JSON and AFS format handling.
 - CPU Worker pixel rendering.

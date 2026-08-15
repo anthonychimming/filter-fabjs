@@ -34,7 +34,14 @@ const fixtures = [
   ['3×3 convolution', 'clamp(cnv(0,-1,0,-1,5,-1,0,-1,0,1),0,255)'],
   ['Angular gradient', 'angularGrad(x,y,X/2,Y/2,128)*255'],
   ['Checker', 'checker(x,y,7,5)*255'],
-  ['Brick', 'brick(x,y,11,7,1,0.5)*255']
+  ['Brick', 'brick(x,y,11,7,1,0.5)*255'],
+  ['Line mask', 'line(x,y,2,3,X-3,Y-4,2.5,1.25)*255'],
+  ['Circle mask', 'circle(x,y,X/2,Y/2,7.5,1.25)*255'],
+  ['Ring mask', 'ring(x,y,X/2,Y/2,7.5,2.5,1.25)*255'],
+  ['Rotated box mask', 'box(x,y,X/2,Y/2,13,9,137,1.25)*255'],
+  ['Triangle mask', 'triangle(x,y,3,Y-3,X/2,2,X-3,Y-4,1.25)*255'],
+  ['Grid mask', 'grid(x,y,9,7,1.5,1.25)*255'],
+  ['Sierpiński mask', 'sierpinski(x,y,X/2,Y/2,19,5,1.25)*255']
 ];
 
 const programFor = formula => compileFilterProgram(
