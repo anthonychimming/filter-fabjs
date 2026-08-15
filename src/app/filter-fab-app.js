@@ -11,7 +11,6 @@ import { workerProgram } from '../renderers/cpu-worker-source.js';
 import { CpuRenderer } from '../renderers/cpu-renderer.js';
 import { WebGpuRenderer } from '../renderers/webgpu-renderer.js';
 import { RendererManager } from '../renderers/renderer-manager.js';
-import { RenderCancelledError } from '../renderers/renderer-backend.js';
 import { presets } from '../presets/builtins.js';
 import { detectFilterFormat } from '../io/filter-format.js';
 import { imageFromClipboardData, alphaStats, renderedImageCanvas, canvasBlob, verifyPngAlpha, writePngClipboard } from '../io/image-io.js';
@@ -71,52 +70,25 @@ export function initFilterFabApp(){
     setUILocked(true,0,0,state.height||0);
     setStatus('Selecting renderer…','busy');
     el.renderInfo.textContent=`${irLabel} · selecting renderer…`;
-    let renderer=null,selection=null;
+    let selection=null,runtimeFallback=false;
     try{
-      selection=await state.rendererManager.select(program,state.rendererPreference);
-      state.lastGpuAnalysis=selection.analysis;
-      if(id!==state.renderId)return;
-      renderer=selection.renderer;
-      const fallback=selection.fallbackReason?' · CPU fallback':'';
-      setStatus(`Rendering with ${renderer.label}… 0%`,'busy');
-      el.renderInfo.textContent=`${renderer.label}${fallback} · ${irLabel} · preparing…`;
-      const result=await renderer.render({id,program,controls:[...state.controls],legacyMath:state.legacyMath,onProgress:message=>{
-        if(id!==state.renderId)return;
-        setProgress(message.pct,message.row,message.total);
-        setStatus(`Rendering with ${renderer.label}… ${Math.round(message.pct)}%`,'busy');
-        el.renderInfo.textContent=`${renderer.label}${fallback} · ${irLabel} · ${message.row} / ${message.total} rows`;
-      }});
+      const outcome=await state.rendererManager.renderWithFallback({id,program,preference:state.rendererPreference,controls:[...state.controls],legacyMath:state.legacyMath,isCurrent:()=>id===state.renderId,onSelection:(next,context)=>{
+        if(id!==state.renderId)return;selection=next;runtimeFallback=context.runtimeFallback;state.lastGpuAnalysis=next.analysis;const fallback=next.fallbackReason?' · CPU fallback':'';setStatus(runtimeFallback?'GPU failed; rendering on CPU… 0%':`Rendering with ${next.renderer.label}… 0%`,'busy');el.renderInfo.textContent=`${next.renderer.label}${fallback} · ${irLabel} · preparing…`;
+      },onProgress:message=>{
+        if(id!==state.renderId||!selection)return;const fallback=selection.fallbackReason?' · CPU fallback':'';setProgress(message.pct,message.row,message.total);setStatus(runtimeFallback?`GPU failed; CPU fallback… ${Math.round(message.pct)}%`:`Rendering with ${selection.renderer.label}… ${Math.round(message.pct)}%`,'busy');el.renderInfo.textContent=`${selection.renderer.label}${fallback} · ${irLabel} · ${message.row} / ${message.total} rows`;
+      }}),result=outcome.result;
       if(id!==state.renderId)return;
       state.filtered=result.pixels;
       canvasView.drawView();
       markPreviewCurrent();
-      setStatus(selection.fallbackReason?'Ready · CPU fallback':'Ready');
-      const reason=selection.fallbackReason?` · ${selection.fallbackReason}`:'';
+      setStatus(outcome.fallbackReason?'Ready · CPU fallback':'Ready');
+      const reason=outcome.fallbackReason?` · ${outcome.fallbackReason}`:'';
       el.renderInfo.textContent=`${result.label} · ${irLabel} · ${result.ms.toFixed(0)} ms${reason}`;
     }catch(error){
       if(id!==state.renderId||error?.name==='RenderCancelledError')return;
-      if(renderer?.id==='webgpu'){
-        console.error('WebGPU render failed; retrying on CPU',error);
-        try{
-          const cpu=await state.rendererManager.get('cpu');
-          state.rendererManager.active=cpu;
-          const result=await cpu.render({id,program,controls:[...state.controls],legacyMath:state.legacyMath,onProgress:message=>{
-            if(id!==state.renderId)return;
-            setProgress(message.pct,message.row,message.total);
-            setStatus(`GPU failed; CPU fallback… ${Math.round(message.pct)}%`,'busy');
-          }});
-          if(id!==state.renderId)return;
-          state.filtered=result.pixels;
-          canvasView.drawView();
-          markPreviewCurrent();
-          setStatus('Ready · CPU fallback');
-          el.renderInfo.textContent=`CPU Worker · ${irLabel} · ${result.ms.toFixed(0)} ms · GPU error: ${error.message}`;
-          return;
-        }catch(cpuError){error=new Error(`GPU: ${error.message}; CPU: ${cpuError.message}`);}
-      }
       console.error('Render failed',error);
       setStatus(`Renderer error: ${error.message}`,'error');
-      el.renderInfo.textContent=`${renderer?.label||'Renderer'} · ${irLabel} · error`;
+      el.renderInfo.textContent=`${selection?.renderer?.label||'Renderer'} · ${irLabel} · error`;
     }finally{
       if(id===state.renderId)setUILocked(false);
     }
@@ -191,7 +163,7 @@ export function initFilterFabApp(){
     window.addEventListener('beforeunload',()=>state.rendererManager?.dispose());
   }
 
-  window.FilterFabJS=Object.freeze({version:'2.4.0',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererPreference:()=>state.rendererPreference});
+  window.FilterFabJS=Object.freeze({version:'2.4.1',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererPreference:()=>state.rendererPreference});
   controlsController.buildSliders();populatePresets();wire();const demo=demoImage();initImage(demo.data,demo.width,demo.height);applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');
   return{state,render,applyFilter,loadImageFile};
 }

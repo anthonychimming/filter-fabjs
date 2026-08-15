@@ -1,6 +1,6 @@
 # Architecture
 
-Filter FabJS v2.4.0 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
+Filter FabJS v2.4.1 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
 
 ```text
 Formula text
@@ -23,8 +23,8 @@ RGBA pixel output
 - `src/gpu/wgsl-compiler.js` — WebGPU compatibility analysis and typed-IR-to-WGSL compilation.
 - `src/renderers/renderer-backend.js` — shared renderer contract.
 - `src/renderers/cpu-renderer.js` — CPU Worker lifecycle, rendering, progress, and cancellation.
-- `src/renderers/webgpu-renderer.js` — GPU buffers, compute pipelines, tiled dispatch, readback, and cancellation checks.
-- `src/renderers/renderer-manager.js` — renderer selection, source synchronization, and CPU fallback.
+- `src/renderers/webgpu-renderer.js` — recoverable GPU buffers, compute pipelines, full-frame dispatch/readback, and cancellation checks.
+- `src/renderers/renderer-manager.js` — renderer selection, source synchronization, cancellation-aware runtime CPU fallback, and repeated program-failure quarantine.
 - `src/presets/builtins.js` — built-in filter definitions.
 - `src/io/filter-format.js` — native JSON and historic AFS parsing/import logic.
 - `src/io/image-io.js` — image and clipboard encoding helpers.

@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.4.1
+
+- Restored WebGPU rendering after device loss by retaining and re-uploading the current source image on the replacement device.
+- Centralized runtime GPU-to-CPU fallback in `RendererManager`, preserving cancellation and quarantining repeated shader validation failures for the affected device/program pair.
+- Replaced serialized 128-row GPU tiles with one full-frame compute and readback submission.
+
 ## 2.4.0
 
 - Added **Midnight Tartan**, a GPU-compatible procedural textile preset based on layered `grid()` and `checker()` masks.

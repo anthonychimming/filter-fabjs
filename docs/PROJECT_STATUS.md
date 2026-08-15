@@ -4,7 +4,7 @@ This document describes the implementation currently present in the public repos
 
 ## Release
 
-- Application version: **2.4.0**
+- Application version: **2.4.1**
 - Native filter format: **version 2**
 - Typed IR: **version 1**
 - Development layout: native ES modules
@@ -14,10 +14,10 @@ This document describes the implementation currently present in the public repos
 
 Filter FabJS provides two rendering backends:
 
-- **WebGPU** — compiles supported typed IR into WGSL and renders in tiled compute dispatches.
+- **WebGPU** — compiles supported typed IR into WGSL and renders with a full-frame compute/readback submission. If the device is lost, the retained source is uploaded to the replacement device on the next GPU render.
 - **CPU Worker** — compatibility renderer for unsupported WebGPU operations and legacy integer-mode filters.
 
-The **Auto** renderer selects WebGPU when the current program is compatible and WebGPU is available; otherwise it reports a fallback reason and uses the CPU Worker.
+The **Auto** renderer selects WebGPU when the current program is compatible and WebGPU is available; otherwise it reports a fallback reason and uses the CPU Worker. Runtime GPU failures also fall back through the renderer manager, preserving cancellation and suppressing repeated validation attempts for the same device/program pair.
 
 ## Formula engine
 
