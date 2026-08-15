@@ -1,6 +1,6 @@
 # Architecture
 
-Filter FabJS v2.4.5 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
+Filter FabJS v2.4.6 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
 
 ```text
 Formula text
@@ -28,7 +28,7 @@ RGBA pixel output
 - `src/renderers/renderer-manager.js` — renderer selection, entry/byte-bounded compatibility analysis, lazy source synchronization, inactive-backend release, cancellation-aware runtime CPU fallback, and bounded repeated program-failure quarantine.
 - `src/presets/builtins.js` — built-in filter definitions.
 - `src/io/filter-format.js` — size-bounded native JSON and historic AFS validation, normalization, and parsing.
-- `src/io/image-io.js` — image and clipboard encoding helpers.
+- `src/io/image-io.js` — bounded image metadata/decode helpers plus Blob export and native PNG clipboard handling.
 - `src/ui/*` — DOM, controls, and canvas presentation.
 - `src/app/filter-fab-app.js` — application state and browser UI orchestration.
 
@@ -41,6 +41,7 @@ RGBA pixel output
 5. CPU fallback must remain explicit and report why GPU execution was unavailable or incompatible.
 6. File-format parsing belongs in `io/`; rendering code should not know how a filter was loaded.
 7. Shared application state should be coordinated by the app layer rather than mutated from renderer/compiler internals.
+8. Source pixel arrays are immutable after handoff and may be shared by main-thread renderer layers; ownership copies are reserved for worker transfer or GPU storage.
 
 ## Current WebGPU boundary
 

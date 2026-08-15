@@ -40,8 +40,9 @@ try{
   Object.defineProperty(globalThis,'GPUMapMode',{configurable:true,value:{READ:1}});
   console.warn=()=>{};
 
-  const renderer=new WebGpuRenderer();
-  await renderer.setSource(new Uint8ClampedArray([1,2,3,255]),1,1);
+  const renderer=new WebGpuRenderer(),sourcePixels=new Uint8ClampedArray([1,2,3,255]);
+  await renderer.setSource(sourcePixels,1,1);
+  assert.equal(renderer.source,sourcePixels,'the WebGPU renderer must share the immutable main-thread source buffer');
   assert.ok(first.stats.writes[0].data instanceof Uint8ClampedArray,'source upload must write the existing RGBA byte view without repacking it');
   assert.deepEqual(first.stats.writes[0].bytes,[1,2,3,255]);
   const retainedSource=renderer.source,oldSourceBuffer=renderer.sourceBuffer;

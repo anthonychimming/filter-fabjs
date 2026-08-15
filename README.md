@@ -1,4 +1,4 @@
-# Filter FabJS v2.4.5
+# Filter FabJS v2.4.6
 
 Filter FabJS is an open-source, browser-native procedural RGBA image-filter editor. It combines a compact expression language with a typed intermediate representation, WebGPU compute rendering, and a CPU Worker fallback.
 
@@ -23,7 +23,8 @@ The project is under active development. This repository documents and develops 
 - Size-bounded historic Filter Factory `.afs` import and strictly normalized native Filter FabJS JSON import/export.
 - Built-in procedural and image-processing filters, including the mask-driven **Midnight Tartan** textile generator.
 - Local custom presets.
-- Image drag-and-drop, clipboard copy/paste, PNG export, and alpha-aware preview.
+- Size- and dimension-bounded image loading with decode-time resize to the 1800px render limit.
+- Native PNG clipboard copy/paste, asynchronous Blob export, and alpha-aware preview without base64 image duplication.
 - Render cancellation and progress reporting, with lazy CPU Worker restart after cancellation.
 - Modular ES-module development source plus a standalone single-file release build.
 
@@ -56,7 +57,7 @@ npm run build
 Build output:
 
 - `dist/site/` — deployable static site with content-fingerprinted CSS and JavaScript assets to prevent mixed-version browser caches.
-- `dist/filter-fabjs-v2.4.5.html` — standalone single-file distribution.
+- `dist/filter-fabjs-v2.4.6.html` — standalone single-file distribution.
 
 The build uses Node.js and has no package dependencies.
 
