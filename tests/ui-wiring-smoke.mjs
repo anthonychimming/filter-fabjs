@@ -23,7 +23,16 @@ assert.match(app, /if\(loadId!==state\.imageLoadId\)return false/, 'stale image 
 assert.match(app, /finally\{bitmap\?\.close\?\.\(\);\}/, 'decoded image bitmaps must close on every exit path');
 assert.match(app, /rendererManager\.renderWithFallback\(/, 'the renderer manager must own runtime CPU fallback');
 assert.doesNotMatch(app, /rendererManager\.get\('cpu'\)|rendererManager\.active\s*=/, 'the app must not bypass manager-owned fallback state');
+assert.match(app, /function prepareFilter\(input\)/, 'filter definitions must be normalized before application state changes');
+assert.match(app, /function applyFilter\(definition,selection\)\{const next=prepareFilter\(definition\);state\.legacyMath=/, 'filter application must finish validation and compilation before mutating UI state');
+assert.match(app, /FILTER_FILE_MAX_BYTES/, 'filter imports must reject oversized files before reading them');
+assert.match(app, /lastProgramKey/, 'the app must retain a stable key for parsed-program reuse');
+assert.match(app, /state\.lastProgramKey===key\)\{controlsController\.updateControlUsage\(state\.lastProgram\);return state\.lastProgram\}/, 'control-only renders must reuse the last parsed IR program');
+assert.doesNotMatch(app, /WGSLCompiler\.analyze/, 'renderer compatibility analysis must not be repeated in the app layer');
 assert.match(controls, /range\.oninput=\(\)=>update\(range\.value\)/, 'range input must update its displayed value continuously');
 assert.match(controls, /range\.onchange=\(\)=>scheduleRender\(\)/, 'range control must render only after the edit is committed');
+assert.match(controls, /slider-label" type="text" maxlength="80"/, 'control labels must stay within the serialized metadata limit');
+assert.match(html, /id="filterName"[^>]+maxlength="120"/, 'filter names must be bounded in the editor');
+assert.match(html, /id="filterAuthor"[^>]+maxlength="120"/, 'filter authors must be bounded in the editor');
 
 console.log('UI wiring smoke checks passed.');

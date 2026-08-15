@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { Worker } from 'node:worker_threads';
 import { Parser, VARS } from '../src/core/formula-language.js';
 import { compileFilterProgram } from '../src/core/ir.js';
+import { CpuRenderer } from '../src/renderers/cpu-renderer.js';
 import { workerProgram } from '../src/renderers/cpu-worker-source.js';
 
 const wrapper = `
@@ -51,4 +52,18 @@ const variableBody = sourceText.match(/function vars\(n,e\)\{([\s\S]*?)\n\}retur
 const handledVariables = new Set([...variableBody.matchAll(/case'([^']+)'/g)].map(match => match[1]));
 for (const name of VARS) assert.ok(handledVariables.has(name), `lazy CPU lookup must preserve variable ${name}`);
 await worker.terminate();
+
+const renderer=new CpuRenderer(()=> '');
+let terminated=false,pendingError=null,readyError=null;
+renderer.source=new Uint8ClampedArray([1,2,3,255]);renderer.width=renderer.height=1;
+renderer.worker={terminate(){terminated=true}};
+renderer.pending.set(1,{reject:error=>{pendingError=error}});
+renderer.rejectReady=error=>{readyError=error};
+renderer.releaseSource();
+assert.equal(terminated,true,'CPU source release must terminate the image-owning worker');
+assert.equal(renderer.source,null,'CPU source release must drop the retained image copy');
+assert.equal(renderer.worker,null);
+assert.equal(renderer.pending.size,0);
+assert.equal(pendingError?.name,'RenderCancelledError');
+assert.equal(readyError?.name,'RenderCancelledError');
 console.log('CPU renderer smoke: pass.');

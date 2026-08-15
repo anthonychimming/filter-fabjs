@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.4.2
+
+- Validated and normalized native v1/v2 projects before UI mutation, with strict format and math-mode enums, finite bounded controls and metadata, a 256 KiB file cap, and formula text/token/node/depth budgets.
+- Added bounded LRU caches for WebGPU compatibility analysis and generated WGSL plans/pipelines, reused parsed IR on control-only renders, and stopped repeated analysis across the app, manager, and renderer.
+- Released retained CPU Worker and WebGPU image resources when the source changes so inactive backends no longer keep full-resolution copies and buffers.
+- Replaced the Sierpiński bit-overlap heuristic with finite-depth barycentric child folding and applied feathering to internal removed-hole edges in both CPU and WGSL paths.
+
 ## 2.4.1
 
 - Restored WebGPU rendering after device loss by retaining and re-uploading the current source image on the replacement device.

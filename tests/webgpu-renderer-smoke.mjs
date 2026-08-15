@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { Parser } from '../src/core/formula-language.js';
 import { compileFilterProgram } from '../src/core/ir.js';
+import { WGSLCompiler } from '../src/gpu/wgsl-compiler.js';
 import { WebGpuRenderer } from '../src/renderers/webgpu-renderer.js';
 
 const navigatorDescriptor=Object.getOwnPropertyDescriptor(globalThis,'navigator');
@@ -62,6 +63,26 @@ try{
   assert.equal(second.stats.submits,1,'compute and readback must use one queue submission');
   assert.equal(second.stats.queueWaits,0,'rendering must not serialize tiles with queue completion waits');
   assert.deepEqual(progress,[{row:1,total:1,pct:100}]);
+
+  assert.equal(renderer.pipelineCache.size,1,'the first formula render must cache its WGSL plan and pipeline');
+  const cachedEntry=renderer.pipelineCache.values().next().value;
+  assert.ok(cachedEntry.plan?.code&&cachedEntry.pipeline,'pipeline cache entries must retain both the generated plan and pipeline');
+  const originalCompile=WGSLCompiler.compile;
+  WGSLCompiler.compile=()=>{throw new Error('cached control render unexpectedly regenerated WGSL')};
+  try{await renderer.render({program,controls:Array(8).fill(64)})}finally{WGSLCompiler.compile=originalCompile}
+  assert.equal(second.stats.dispatches,2,'a control-only render must reuse the cached formula pipeline and still dispatch');
+
+  for(let index=0;index<40;index++)renderer.rememberPipeline({key:`plan-${index}`,code:'',analysis:{}},{id:index});
+  assert.equal(renderer.pipelineCache.size,32,'WebGPU plans and pipelines must use a bounded cache');
+  assert.equal(renderer.pipelineCache.has('plan-0'),false,'the bounded cache must evict least-recently-used entries');
+  assert.equal(renderer.pipelineCache.has('plan-39'),true);
+
+  const releasedSourceBuffer=renderer.sourceBuffer;
+  await renderer.releaseSource();
+  assert.equal(renderer.source,null,'source release must drop the retained image copy');
+  assert.equal(renderer.sourceBuffer,null,'source release must clear GPU image buffers');
+  assert.equal(releasedSourceBuffer.destroyed,true,'source release must destroy the prior GPU allocation');
+  assert.equal(renderer.pipelineCache.size,32,'source release may retain only the bounded formula cache for reuse');
   renderer.dispose();
 }finally{
   console.warn=originalWarn;

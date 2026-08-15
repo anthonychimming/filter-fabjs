@@ -6,13 +6,12 @@
 import { $, $$, clamp, debounce, storageGet, storageSet, escapeHtml, slug } from '../core/utils.js';
 import { Parser } from '../core/formula-language.js';
 import { IR_VERSION, compileFilterProgram } from '../core/ir.js';
-import { WGSLCompiler } from '../gpu/wgsl-compiler.js';
 import { workerProgram } from '../renderers/cpu-worker-source.js';
 import { CpuRenderer } from '../renderers/cpu-renderer.js';
 import { WebGpuRenderer } from '../renderers/webgpu-renderer.js';
 import { RendererManager } from '../renderers/renderer-manager.js';
 import { presets } from '../presets/builtins.js';
-import { detectFilterFormat } from '../io/filter-format.js';
+import { detectFilterFormat, FILTER_FILE_MAX_BYTES, validateNativeFilter } from '../io/filter-format.js';
 import { imageFromClipboardData, alphaStats, renderedImageCanvas, canvasBlob, verifyPngAlpha, writePngClipboard } from '../io/image-io.js';
 import { getDom } from '../ui/dom.js';
 import { createCanvasView } from '../ui/canvas-view.js';
@@ -20,7 +19,7 @@ import { createControlsController } from '../ui/controls.js';
 
 export function initFilterFabApp(){
   const {el,ctx}=getDom();
-  const state={source:null,filtered:null,width:0,height:0,view:'filtered',split:50,zoom:'fit',zoomLevel:1,controls:Array(8).fill(128),labels:Array.from({length:8},(_,i)=>`Control ${i+1}`),renderId:0,imageLoadId:0,rendererManager:null,rendererPreference:storageGet('ffw-renderer','auto'),lastProgram:null,lastWGSL:null,lastGpuAnalysis:null,isRendering:false,usedControls:Array(8).fill(false),legacyMath:false,hasPendingFormulaChanges:false,focusSnapshot:null};
+  const state={source:null,filtered:null,width:0,height:0,view:'filtered',split:50,zoom:'fit',zoomLevel:1,controls:Array(8).fill(128),labels:Array.from({length:8},(_,i)=>`Control ${i+1}`),renderId:0,imageLoadId:0,rendererManager:null,rendererPreference:storageGet('ffw-renderer','auto'),lastProgram:null,lastProgramKey:null,lastWGSL:null,lastGpuAnalysis:null,isRendering:false,usedControls:Array(8).fill(false),legacyMath:false,hasPendingFormulaChanges:false,focusSnapshot:null};
   const canvasView=createCanvasView({state,el,ctx});
   let controlsController;
 
@@ -45,17 +44,40 @@ export function initFilterFabApp(){
   function initializeRendererSource(){if(!state.source||!state.width||!state.height)return Promise.resolve();return state.rendererManager.setSource(state.source,state.width,state.height);}
   async function cancelRender(){if(!state.isRendering)return false;state.renderId++;try{await state.rendererManager?.cancelActive();}catch(error){console.error('Renderer cancellation failed',error);}setUILocked(false);setProgress(0,0,state.height||0);setStatus('Render cancelled');el.renderInfo.textContent=`${state.rendererManager?.active?.label||'Renderer'} · cancelled`;toast('Rendering cancelled');return true;}
 
-  function compileCurrentProgram(){const astList=el.formulas.map(field=>new Parser(field.value).parse());return compileFilterProgram(astList,{legacyMath:state.legacyMath});}
+  function currentProgramKey(){return JSON.stringify([state.legacyMath,...el.formulas.map(field=>field.value)])}
+  function compileCurrentProgram(){const key=currentProgramKey();if(!state.hasPendingFormulaChanges&&state.lastProgram&&state.lastProgramKey===key)return state.lastProgram;const astList=el.formulas.map(field=>new Parser(field.value).parse());return compileFilterProgram(astList,{legacyMath:state.legacyMath});}
   const scheduleRender=debounce(()=>{if(!state.hasPendingFormulaChanges)render();},110);
   const scheduleFormulaValidation=debounce(validatePendingFormulas,220);
   controlsController=createControlsController({state,el,scheduleRender,applyInteractionLocks,compileCurrentProgram});
 
-  function customList(){try{return JSON.parse(storageGet('ffw-custom-presets','[]'));}catch{return[];}}
+  function customList(){try{const list=JSON.parse(storageGet('ffw-custom-presets','[]'));return Array.isArray(list)?list.filter(item=>item&&typeof item==='object'&&!Array.isArray(item)&&typeof item.name==='string'):[]}catch{return[];}}
   function populatePresets(){const selected=el.preset.value,custom=customList();el.preset.innerHTML='<optgroup label="Built-in">'+[...presets].sort((a,b)=>a.name.localeCompare(b.name)).map(preset=>`<option value="builtin:${preset.id}">${preset.name}</option>`).join('')+'</optgroup>'+(custom.length?'<optgroup label="My presets">'+custom.map((preset,index)=>`<option value="custom:${index}">${escapeHtml(preset.name)}</option>`).join('')+'</optgroup>':'');if(selected&&Array.from(el.preset.options).some(option=>option.value===selected))el.preset.value=selected;updatePresetDeleteState();}
-  function currentFilter(){return{format:'filter-fab-js',version:2,mathMode:state.legacyMath?'legacy':'float',name:$('#filterName').value.trim()||'Untitled Filter',author:$('#filterAuthor').value.trim(),formulas:el.formulas.map(field=>field.value.trim()),controls:state.controls.map((value,index)=>({label:state.labels[index],value}))};}
-  function applyFilter(definition,selection){state.legacyMath=definition.mathMode==='legacy'||(definition.format==='filter-fab-js'&&!definition.mathMode&&Number(definition.version||1)<=1);const formulas=definition.formulas||definition.f||['r','g','b','a'];el.formulas.forEach((field,index)=>field.value=formulas[index]??['r','g','b','a'][index]);const values=definition.controls?definition.controls.map(control=>typeof control==='number'?control:control.value):definition.values||Array(8).fill(128),labels=definition.controls?definition.controls.map((control,index)=>typeof control==='number'?`Control ${index+1}`:(control.label||`Control ${index+1}`)):definition.labels||Array.from({length:8},(_,index)=>`Control ${index+1}`);state.controls=Array.from({length:8},(_,index)=>clamp(Number(values[index]??128),0,255));state.labels=Array.from({length:8},(_,index)=>labels[index]||`Control ${index+1}`);$('#filterName').value=definition.name||'Untitled Filter';$('#filterAuthor').value=definition.author||'';controlsController.syncSliders();controlsController.refreshControlUsage();if(selection)el.preset.value=selection;updatePresetDeleteState();markFormulaPending();render();}
+  function currentFilter(){return{format:'filter-fab-js',version:2,mathMode:state.legacyMath?'legacy':'float',name:$('#filterName').value.trim().slice(0,120)||'Untitled Filter',author:$('#filterAuthor').value.trim().slice(0,120),formulas:el.formulas.map(field=>field.value.trim()),controls:state.controls.map((value,index)=>({label:String(state.labels[index]??'').slice(0,80)||`Control ${index+1}`,value}))};}
+  function prepareFilter(input){
+    if(!input||typeof input!=='object'||Array.isArray(input))throw new Error('Filter definition must be an object');
+    const definition=input.format==='filter-fab-js'?validateNativeFilter(input):input,mathMode=definition.mathMode??'float';
+    if(!['float','legacy'].includes(mathMode))throw new Error('Filter mathMode must be “float” or “legacy”');
+    const legacyMath=mathMode==='legacy',formulas=definition.formulas||definition.f;
+    if(!Array.isArray(formulas)||formulas.length!==4||formulas.some(formula=>typeof formula!=='string'||!formula.trim()))throw new Error('Filter definition must contain exactly four formulas');
+    const normalizedFormulas=formulas.map(formula=>formula.trim()),program=compileFilterProgram(normalizedFormulas.map(formula=>new Parser(formula).parse()),{legacyMath});
+    let rawValues,rawLabels;
+    if(definition.controls!==undefined){
+      if(!Array.isArray(definition.controls)||definition.controls.length>8)throw new Error('Filter definition may contain at most eight controls');
+      rawValues=definition.controls.map((control,index)=>{if(typeof control==='number')return control;if(!control||typeof control!=='object'||Array.isArray(control))throw new Error(`Control ${index+1} is malformed`);return control.value});
+      rawLabels=definition.controls.map((control,index)=>typeof control==='number'?`Control ${index+1}`:control.label);
+    }else{
+      rawValues=definition.values??[];rawLabels=definition.labels??[];
+      if(!Array.isArray(rawValues)||!Array.isArray(rawLabels)||rawValues.length>8||rawLabels.length>8)throw new Error('Filter definition may contain at most eight controls');
+    }
+    const controls=Array.from({length:8},(_,index)=>{const value=rawValues[index]??128;if(typeof value!=='number'||!Number.isFinite(value))throw new Error(`Control ${index+1} must be a finite number`);return clamp(value,0,255)});
+    const labels=Array.from({length:8},(_,index)=>{const value=rawLabels[index]??`Control ${index+1}`;if(typeof value!=='string')throw new Error(`Control ${index+1} label must be a string`);const label=value.trim();if(label.length>80)throw new Error(`Control ${index+1} label exceeds 80 characters`);return label||`Control ${index+1}`});
+    if(definition.name!==undefined&&typeof definition.name!=='string')throw new Error('Filter name must be a string');if(definition.author!==undefined&&typeof definition.author!=='string')throw new Error('Filter author must be a string');
+    const name=String(definition.name??'').trim()||'Untitled Filter',author=String(definition.author??'').trim();if(name.length>120||author.length>120)throw new Error('Filter name and author are limited to 120 characters');
+    return{legacyMath,formulas:normalizedFormulas,controls,labels,name,author,program};
+  }
+  function applyFilter(definition,selection){const next=prepareFilter(definition);state.legacyMath=next.legacyMath;el.formulas.forEach((field,index)=>field.value=next.formulas[index]);state.controls=next.controls;state.labels=next.labels;$('#filterName').value=next.name;$('#filterAuthor').value=next.author;controlsController.syncSliders();controlsController.updateControlUsage(next.program);if(selection)el.preset.value=selection;updatePresetDeleteState();markFormulaPending();render();}
 
-  function compileAll({cache=true}={}){const astList=[];let ok=true;el.formulas.forEach(field=>{const box=field.closest('.formula'),icon=$('.formula-state',box),errorElement=$('.formula-error',box);try{astList.push(new Parser(field.value).parse());field.classList.remove('invalid');field.setAttribute('aria-invalid','false');icon.textContent='✓';icon.classList.remove('bad','pending');errorElement.textContent='';errorElement.classList.remove('show');}catch(error){ok=false;astList.push(null);field.classList.add('invalid');field.setAttribute('aria-invalid','true');icon.textContent='!';icon.classList.remove('pending');icon.classList.add('bad');errorElement.textContent=`${error.message} at character ${(error.pos??0)+1}`;errorElement.classList.add('show');}});if(!ok){controlsController.updateControlUsage(null);return null;}try{const program=compileFilterProgram(astList,{legacyMath:state.legacyMath});program.metadata.webgpu=WGSLCompiler.analyze(program);if(cache){state.lastProgram=program;state.lastGpuAnalysis=program.metadata.webgpu;}controlsController.updateControlUsage(program);return program;}catch(error){console.error('IR compilation failed',error);setStatus(`Compiler error: ${error.message}`,'error');controlsController.updateControlUsage(null);return null;}}
+  function compileAll({cache=true}={}){const key=currentProgramKey();if(cache&&!state.hasPendingFormulaChanges&&state.lastProgram&&state.lastProgramKey===key){controlsController.updateControlUsage(state.lastProgram);return state.lastProgram}const astList=[];let ok=true;el.formulas.forEach(field=>{const box=field.closest('.formula'),icon=$('.formula-state',box),errorElement=$('.formula-error',box);try{astList.push(new Parser(field.value).parse());field.classList.remove('invalid');field.setAttribute('aria-invalid','false');icon.textContent='✓';icon.classList.remove('bad','pending');errorElement.textContent='';errorElement.classList.remove('show');}catch(error){ok=false;astList.push(null);field.classList.add('invalid');field.setAttribute('aria-invalid','true');icon.textContent='!';icon.classList.remove('pending');icon.classList.add('bad');errorElement.textContent=`${error.message} at character ${(error.pos??0)+1}`;errorElement.classList.add('show');}});if(!ok){controlsController.updateControlUsage(null);return null;}try{const program=compileFilterProgram(astList,{legacyMath:state.legacyMath});if(cache){state.lastProgram=program;state.lastProgramKey=key}controlsController.updateControlUsage(program);return program;}catch(error){console.error('IR compilation failed',error);setStatus(`Compiler error: ${error.message}`,'error');controlsController.updateControlUsage(null);return null;}}
   function showFormulaFailure(){const hasFieldError=el.formulas.some(field=>field.classList.contains('invalid'));setFormulaEditStatus('invalid',hasFieldError?'Fix formula errors':'Compiler error');if(hasFieldError)setStatus('Fix formula errors before rendering','error');}
   function validatePendingFormulas(){if(!state.hasPendingFormulaChanges||state.isRendering)return;const program=compileAll({cache:false});if(program){setFormulaEditStatus('pending','Ready to render');setStatus('Formula valid · render to update preview','pending');}else showFormulaFailure();}
   async function render({focusInvalid=false}={}){
@@ -107,8 +129,8 @@ export function initFilterFabApp(){
   function exportPNG(){if(!state.filtered||!state.width||!state.height){toast('Load and render an image before exporting');return;}try{const canvas=renderedImageCanvas(state.filtered,state.width,state.height),name=slug($('#filterName').value||'filtered-image')+'.png',dataUrl=canvas.toDataURL('image/png');if(!dataUrl||dataUrl==='data:,')throw new Error('The browser could not encode the PNG');triggerDownload(dataUrl,name,false);}catch(error){console.error('PNG export failed',error);toast(`PNG export failed: ${error.message}`);}}
   function exportFilter(){const filter=currentFilter(),base=slug(filter.name);try{downloadBlob(new Blob([JSON.stringify(filter,null,2)+'\n'],{type:'application/json;charset=utf-8'}),base+'.json');}catch(error){console.error('Filter export failed',error);toast(`Filter export failed: ${error.message}`);}}
   function deletePreset(){const[type,id]=el.preset.value.split(':');if(type!=='custom')return;const list=customList(),index=Number(id),preset=list[index];if(!preset){populatePresets();toast('Preset could not be found');return;}if(!confirm(`Delete “${preset.name}” from My presets?`))return;list.splice(index,1);if(!storageSet('ffw-custom-presets',JSON.stringify(list))){toast('Browser storage is unavailable');return;}populatePresets();applyFilter(presets.find(item=>item.id==='pass'),'builtin:pass');toast(`Deleted “${preset.name}”`);}
-  async function importFilterFile(file){if(!file)return;try{const text=await file.text(),result=detectFilterFormat(text,file.name);applyFilter(result.data);toast(result.kind==='afs'?'AFS filter imported · CPU legacy mode':'Filter FabJS project imported');}catch(error){console.error('Filter import failed',error);toast(`Import failed: ${error.message}`);}finally{el.filterInput.value='';}}
-  function savePreset(){const filter=currentFilter(),name=prompt('Preset name',filter.name);if(!name)return;filter.name=name;const list=customList(),index=list.findIndex(item=>item.name.toLowerCase()===name.toLowerCase());if(index>=0)list[index]=filter;else list.push(filter);if(storageSet('ffw-custom-presets',JSON.stringify(list))){populatePresets();el.preset.value=`custom:${index>=0?index:list.length-1}`;updatePresetDeleteState();toast('Preset saved in this browser');}else toast('Browser storage is unavailable');}
+  async function importFilterFile(file){if(!file)return;try{if(Number.isFinite(Number(file.size))&&Number(file.size)>FILTER_FILE_MAX_BYTES)throw new Error(`Filter file exceeds the ${FILTER_FILE_MAX_BYTES/1024} KiB limit`);const text=await file.text(),result=detectFilterFormat(text,file.name);applyFilter(result.data);toast(result.kind==='afs'?'AFS filter imported · CPU legacy mode':'Filter FabJS project imported');}catch(error){console.error('Filter import failed',error);toast(`Import failed: ${error.message}`);}finally{el.filterInput.value='';}}
+  function savePreset(){const filter=currentFilter(),name=prompt('Preset name',filter.name)?.trim();if(!name)return;if(name.length>120){toast('Preset names are limited to 120 characters');return;}filter.name=name;const list=customList(),index=list.findIndex(item=>typeof item?.name==='string'&&item.name.toLowerCase()===name.toLowerCase());if(index>=0)list[index]=filter;else list.push(filter);if(storageSet('ffw-custom-presets',JSON.stringify(list))){populatePresets();el.preset.value=`custom:${index>=0?index:list.length-1}`;updatePresetDeleteState();toast('Preset saved in this browser');}else toast('Browser storage is unavailable');}
 
   function wire(){
     el.rendererSelect.value=['auto','webgpu','cpu'].includes(state.rendererPreference)?state.rendererPreference:'auto';
@@ -163,7 +185,7 @@ export function initFilterFabApp(){
     window.addEventListener('beforeunload',()=>state.rendererManager?.dispose());
   }
 
-  window.FilterFabJS=Object.freeze({version:'2.4.1',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererPreference:()=>state.rendererPreference});
+  window.FilterFabJS=Object.freeze({version:'2.4.2',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererPreference:()=>state.rendererPreference});
   controlsController.buildSliders();populatePresets();wire();const demo=demoImage();initImage(demo.data,demo.width,demo.height);applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');
   return{state,render,applyFilter,loadImageFile};
 }

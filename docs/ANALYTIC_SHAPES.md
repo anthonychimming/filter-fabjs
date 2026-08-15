@@ -14,7 +14,7 @@ All coordinates, dimensions, stroke widths, and feather values are measured in p
 | `box(x,y,cx,cy,width,height,rotation,feather)` | Filled rectangle. Rotation uses the existing Filter FabJS angle scale: `0–1024` is one full turn. |
 | `triangle(x,y,ax,ay,bx,by,cx,cy,feather)` | Filled triangle defined by three vertices. A zero-area triangle returns `0`. |
 | `grid(x,y,cellWidth,cellHeight,lineWidth,feather)` | Repeating horizontal and vertical grid lines. |
-| `sierpinski(x,y,cx,cy,size,depth,feather)` | Equilateral Sierpiński gasket. `depth` is clamped to `0–10`; coordinate folding keeps it stateless and GPU-compatible. |
+| `sierpinski(x,y,cx,cy,size,depth,feather)` | Equilateral Sierpiński gasket. `depth` is clamped to `0–10`; barycentric child folding keeps every finite depth coherent and GPU-compatible. `feather` applies to the outer boundary and internal holes. |
 
 ## Compositing masks
 

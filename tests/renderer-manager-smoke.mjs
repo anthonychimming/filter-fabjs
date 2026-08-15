@@ -41,6 +41,38 @@ assert.equal(await secondGet, renderer);
 assert.equal(manager.instanceVersions.get('cpu'), 2, 'only the uploaded source generation may be recorded');
 manager.dispose();
 
+class RetainingRenderer {
+  constructor(id){this.id=id;this.releaseCalls=0;this.source=null}
+  async setSource(pixels,width,height){this.source=new Uint8ClampedArray(pixels);this.width=width;this.height=height}
+  releaseSource(){this.releaseCalls++;this.source=null;this.width=this.height=0}
+  cancel(){return false}
+  dispose(){}
+}
+const retainedCpu=new RetainingRenderer('cpu'),retainedGpu=new RetainingRenderer('webgpu'),resourceManager=new RendererManager({cpu:()=>retainedCpu,webgpu:()=>retainedGpu});
+await resourceManager.setSource(new Uint8ClampedArray([3,0,0,255]),1,1);
+await Promise.all([resourceManager.get('cpu'),resourceManager.get('webgpu')]);
+assert.equal(retainedCpu.source[0],3);assert.equal(retainedGpu.source[0],3);
+await resourceManager.setSource(new Uint8ClampedArray([4,0,0,255]),1,1);
+assert.equal(retainedCpu.releaseCalls,1,'a new image must release the inactive CPU source');
+assert.equal(retainedGpu.releaseCalls,1,'a new image must release the inactive WebGPU source');
+assert.equal(retainedCpu.source,null);assert.equal(retainedGpu.source,null);
+await resourceManager.get('cpu');
+assert.equal(retainedCpu.source[0],4,'only the selected backend must lazily receive the replacement image');
+assert.equal(retainedGpu.source,null,'inactive backends must not retain the replacement image');
+assert.throws(()=>resourceManager.setSource(new Uint8ClampedArray(4),2,1),/pixel length/);
+resourceManager.dispose();
+
+const analysisManager=new RendererManager({});
+const analysisProgram=compileFilterProgram(['r','g','b','a'].map(formula=>new Parser(formula).parse()));
+const cachedAnalysis=analysisManager.analyze(analysisProgram);
+assert.equal(analysisManager.analyze(analysisProgram),cachedAnalysis,'compatibility analysis must be reused for an unchanged program');
+const legacyProgram=compileFilterProgram(['r','g','b','a'].map(formula=>new Parser(formula).parse()),{legacyMath:true});
+assert.notEqual(analysisManager.programKey(analysisProgram),analysisManager.programKey(legacyProgram),'analysis keys must include arithmetic mode');
+for(let index=0;index<70;index++){const formula=String(index),program=compileFilterProgram([formula,formula,formula,formula].map(value=>new Parser(value).parse()));analysisManager.analyze(program)}
+assert.equal(analysisManager.analysisCache.size,64,'compatibility analyses must use a bounded LRU cache');
+assert.equal(analysisManager.analysisCache.has(analysisManager.programKey(analysisProgram)),false,'least-recently-used analyses must be evicted');
+analysisManager.dispose();
+
 const navigatorDescriptor=Object.getOwnPropertyDescriptor(globalThis,'navigator');
 const originalConsoleError=console.error;
 Object.defineProperty(globalThis,'navigator',{configurable:true,value:{gpu:{}}});
@@ -50,7 +82,7 @@ try{
   class FakeRenderer {
     constructor(id,{render}={}){this.id=id;this.label=id==='webgpu'?'WebGPU':'CPU Worker';this.renderImpl=render;this.renderCalls=0;this.device=id==='webgpu'?{}:null;this.deviceGeneration=id==='webgpu'?1:0}
     async setSource(pixels,width,height){this.source=new Uint8ClampedArray(pixels);this.width=width;this.height=height}
-    async render(args){this.renderCalls++;return this.renderImpl?.(args)??{pixels:this.source.slice(),ms:1,backend:this.id,label:this.label}}
+    async render(args){this.renderCalls++;this.lastArgs=args;return this.renderImpl?.(args)??{pixels:this.source.slice(),ms:1,backend:this.id,label:this.label}}
     cancel(){return false}
     dispose(){}
   }
@@ -63,6 +95,7 @@ try{
   assert.equal(first.result.backend,'cpu','runtime WebGPU failure must be recovered by manager-owned CPU fallback');
   assert.deepEqual(selections,[['webgpu',false],['cpu',true]],'the manager must report initial selection and runtime fallback');
   assert.match(first.fallbackReason,/pipeline validation failed/);
+  assert.equal(gpu.lastArgs.webgpuAnalysis?.compatible,true,'the manager must pass its cached compatibility analysis into WGSL planning');
 
   const second=await fallbackManager.renderWithFallback({id:2,program,controls:Array(8).fill(128),legacyMath:false,isCurrent:()=>true});
   assert.equal(second.result.backend,'cpu');
