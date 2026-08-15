@@ -7,6 +7,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const order = [
   'src/core/utils.js',
   'src/core/formula-language.js',
+  'src/core/chroma.js',
   'src/core/ir.js',
   'src/presets/builtins.js',
   'src/renderers/cpu-worker-source.js',

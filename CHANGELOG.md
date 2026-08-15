@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.4.3
+
+- Split chroma bounds by math mode: native float formulas now use signed `u`/`v` minima and maxima with coherent `U=110` and `V=156` spans, while legacy imports retain the complete historic Filter Factory `0–255` constant contract.
+- Removed renderer-specific compatibility claims from neutral typed-IR metadata and made `WGSLCompiler.analyze()` the sole authority for WebGPU selection and fallback reasons.
+- Added CPU, WGSL-generation, compatibility-boundary, and optional hardware-parity coverage for chroma normalization and previously misreported bitwise/comma expressions.
+
 ## 2.4.2
 
 - Validated and normalized native v1/v2 projects before UI mutation, with strict format and math-mode enums, finite bounded controls and metadata, a 256 KiB file cap, and formula text/token/node/depth budgets.

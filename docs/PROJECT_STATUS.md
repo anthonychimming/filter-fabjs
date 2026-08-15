@@ -4,7 +4,7 @@ This document describes the implementation currently present in the public repos
 
 ## Release
 
-- Application version: **2.4.2**
+- Application version: **2.4.3**
 - Native filter format: **version 2**
 - Typed IR: **version 1**
 - Development layout: native ES modules
@@ -17,7 +17,7 @@ Filter FabJS provides two rendering backends:
 - **WebGPU** — compiles supported typed IR into WGSL and renders with a full-frame compute/readback submission. If the device is lost, the retained source is uploaded to the replacement device on the next GPU render. Generated plans and pipelines use a 32-entry LRU cache.
 - **CPU Worker** — compatibility renderer for unsupported WebGPU operations and legacy integer-mode filters.
 
-The **Auto** renderer selects WebGPU when the current program is compatible and WebGPU is available; otherwise it reports a fallback reason and uses the CPU Worker. Runtime GPU failures also fall back through the renderer manager, preserving cancellation and suppressing repeated validation attempts for the same device/program pair. Compatibility analysis uses a 64-entry LRU cache, and unchanged parsed IR is reused for control-only renders. When a new image is loaded, both backends release the previous source and only the selected backend receives the replacement lazily.
+The **Auto** renderer selects WebGPU when the current program is compatible and WebGPU is available; otherwise it reports a fallback reason and uses the CPU Worker. Runtime GPU failures also fall back through the renderer manager, preserving cancellation and suppressing repeated validation attempts for the same device/program pair. `WGSLCompiler.analyze()` is the sole WebGPU-capability authority; renderer-neutral IR metadata records semantic facts without predicting backend support. Compatibility analysis uses a 64-entry LRU cache, and unchanged parsed IR is reused for control-only renders. When a new image is loaded, both backends release the previous source and only the selected backend receives the replacement lazily.
 
 ## Formula engine
 
@@ -28,6 +28,7 @@ Each formula is limited to 8,192 characters, 4,096 tokens, 4,096 syntax nodes, a
 The current formula engine includes:
 
 - RGBA/source-channel variables and image coordinates.
+- Signed YUV chroma variables with coherent native-float bounds and spans; legacy imports retain the historic Filter Factory constant model.
 - Arithmetic, comparisons, logical operations, and ternary selection.
 - Controls and value mapping.
 - Nearest, wrapped, mirrored, and bilinear image sampling.
@@ -43,7 +44,7 @@ The current formula engine includes:
 
 The WebGPU backend supports the deterministic stateless formula language, including hash, value, Perlin, Worley, FBM, turbulence, ridged and periodic noise; procedural patterns; analytic shape and Sierpiński masks; polar sampling; and fixed 3×3 convolution. All 28 native built-in filters are WebGPU-compatible.
 
-Sequential random-state functions (`rnd()` and `rst()`), shared cell operations (`get()` and `put()`), direct `pow()` formulas, and legacy integer compatibility remain CPU-only by design.
+Sequential random-state functions (`rnd()` and `rst()`), shared cell operations (`get()` and `put()`), bitwise/shift/comma expressions, direct `pow()` formulas, and legacy integer compatibility remain CPU-only by design.
 
 Compatibility is analyzed from typed IR before a render is dispatched.
 
@@ -77,6 +78,8 @@ The repository includes smoke tests for:
 - Import-size, schema, metadata, and parser-resource limits.
 - Bounded renderer caches, inactive-source release, and control-only reuse.
 - Stable finite-depth Sierpiński holes and internal-edge feathering.
+- Math-mode-specific chroma bounds, primary-colour normalization, and optional CPU/WebGPU chroma parity.
+- Renderer-neutral IR metadata plus authoritative WGSL rejection of bitwise and comma expressions.
 - JavaScript syntax and production builds.
 
 Run all verification with:

@@ -3,8 +3,11 @@
  * Modular source extracted from v2.0.7; modular architecture v2.1.0.
  * Licensed GPL-2.0-or-later. See LICENSE and README.md.
  */
-export function workerProgram(){return String.raw`
-let srcPixels=null,W=0,H=0,controls=Array(8).fill(128),rngSeed=691204,cells=new Float64Array(256),legacyMath=false;
+import { CHROMA_MODELS } from '../core/chroma.js';
+
+export function workerProgram(){const float=CHROMA_MODELS.float,legacy=CHROMA_MODELS.legacy;return String.raw`
+const FLOAT_CHROMA={uMin:${float.uMin},uMax:${float.uMax},uSpan:${float.uSpan},vMin:${float.vMin},vMax:${float.vMax},vSpan:${float.vSpan}},LEGACY_CHROMA={uMin:${legacy.uMin},uMax:${legacy.uMax},uSpan:${legacy.uSpan},vMin:${legacy.vMin},vMax:${legacy.vMax},vSpan:${legacy.vSpan}};
+let srcPixels=null,W=0,H=0,controls=Array(8).fill(128),rngSeed=691204,cells=new Float64Array(256),legacyMath=false,chroma=FLOAT_CHROMA;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),int=v=>Number.isFinite(v)?Math.trunc(v):0,div=(a,b)=>b===0?0:a/b,mod=(v,m)=>m===0?0:((v%m)+m)%m;
 function coordWrap(v,size){size=Math.max(1,Math.abs(size));return mod(v,size)}
 function coordMirror(v,size){size=Math.max(1,Math.abs(size));const p=mod(v,size*2);return p<size?p:size*2-p-1e-9}
@@ -37,8 +40,8 @@ case'r':case'r0':case'r1':return p[0];case'g':case'g0':case'g1':return p[1];case
 case'i':case'i0':case'i1':return(299*p[0]+587*p[1]+114*p[2])/1000;case'u':case'u0':case'u1':return(-147407*p[0]-289391*p[1]+436798*p[2])/2000000;case'v':case'v0':case'v1':return(614777*p[0]-514799*p[1]-99978*p[2])/2000000;
 case'x':return e.x;case'y':return e.y;case'z':case'p':return z;case'd':case'd0':case'd1':{const dx=W/2-e.x,dy=H/2-e.y;return Math.atan2(-dy,-dx)*1024/(2*Math.PI)}case'm':case'm0':case'm1':return Math.hypot(W/2-e.x,H/2-e.y);
 case'X':case'xmax':return W;case'Y':case'ymax':return H;case'Z':case'P':case'pmax':case'zmax':return 4;case'D':return 1024;case'M':case'mmax':return Math.hypot(W,H)/2;
-case'R':case'G':case'B':case'A':case'C':case'I':case'U':case'V':case'rmax':case'gmax':case'bmax':case'amax':case'cmax':case'imax':case'umax':case'vmax':return 255;case'dmax':return 512;
-case'umin':return-55;case'vmin':return-78;case'dmin':return-512;case'tmax':case'total':return 1;
+case'R':case'G':case'B':case'A':case'C':case'I':case'rmax':case'gmax':case'bmax':case'amax':case'cmax':case'imax':return 255;case'U':return chroma.uSpan;case'V':return chroma.vSpan;case'umax':return chroma.uMax;case'vmax':return chroma.vMax;case'dmax':return 512;
+case'umin':return chroma.uMin;case'vmin':return chroma.vMin;case'dmin':return-512;case'tmax':case'total':return 1;
 case't':case'rmin':case'gmin':case'bmin':case'amin':case'cmin':case'imin':case'mmin':case'pmin':case'xmin':case'ymin':case'zmin':case'tmin':return 0;
 }return 0}
 function call(n,a,e){const A=i=>a[i];switch(n){
@@ -72,4 +75,4 @@ case'binary':{
 }
 case'call':{const v=call(n.fn,n.args.map(x=>ev(x,e)),e);return legacyMath?int(v):v}
 }return 0}
-onmessage=e=>{const m=e.data;if(m.type=='init'){W=m.width;H=m.height;srcPixels=new Uint8ClampedArray(m.buffer);postMessage({type:'ready'});return}if(m.type=='render'){const start=performance.now();controls=m.controls;legacyMath=Boolean(m.legacyMath);rngSeed=691204;cells.fill(0);const out=new Uint8ClampedArray(W*H*4),program=m.program,outputs=program?.outputs,step=Math.max(1,Math.floor(H/24));if(!program||program.kind!=='filter-fab-program'||program.irVersion!==1||!Array.isArray(outputs)||outputs.length!==4)throw new Error('Invalid or unsupported Filter FabJS IR program');for(let y=0;y<H;y++){for(let x=0;x<W;x++){const idx=(y*W+x)*4,p=[srcPixels[idx],srcPixels[idx+1],srcPixels[idx+2],srcPixels[idx+3]];for(let z=0;z<4;z++)out[idx+z]=clamp(ev(outputs[z].expression,{x,y,z,p}),0,255)}if(((y+1)%step===0)||y===H-1)postMessage({type:'progress',id:m.id,row:y+1,total:H,pct:((y+1)/H)*100})}postMessage({type:'result',id:m.id,buffer:out.buffer,ms:performance.now()-start},[out.buffer])}};`}
+onmessage=e=>{const m=e.data;if(m.type=='init'){W=m.width;H=m.height;srcPixels=new Uint8ClampedArray(m.buffer);postMessage({type:'ready'});return}if(m.type=='render'){const start=performance.now(),program=m.program;controls=m.controls;legacyMath=program?.mathMode==='legacy';chroma=legacyMath?LEGACY_CHROMA:FLOAT_CHROMA;rngSeed=691204;cells.fill(0);const out=new Uint8ClampedArray(W*H*4),outputs=program?.outputs,step=Math.max(1,Math.floor(H/24));if(!program||program.kind!=='filter-fab-program'||program.irVersion!==1||!Array.isArray(outputs)||outputs.length!==4)throw new Error('Invalid or unsupported Filter FabJS IR program');for(let y=0;y<H;y++){for(let x=0;x<W;x++){const idx=(y*W+x)*4,p=[srcPixels[idx],srcPixels[idx+1],srcPixels[idx+2],srcPixels[idx+3]];for(let z=0;z<4;z++)out[idx+z]=clamp(ev(outputs[z].expression,{x,y,z,p}),0,255)}if(((y+1)%step===0)||y===H-1)postMessage({type:'progress',id:m.id,row:y+1,total:H,pct:((y+1)/H)*100})}postMessage({type:'result',id:m.id,buffer:out.buffer,ms:performance.now()-start},[out.buffer])}};`}

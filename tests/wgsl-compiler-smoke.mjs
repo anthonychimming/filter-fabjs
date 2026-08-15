@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { CHROMA_MODELS } from '../src/core/chroma.js';
 import { Parser } from '../src/core/formula-language.js';
 import { compileFilterProgram } from '../src/core/ir.js';
 import { WGSLCompiler } from '../src/gpu/wgsl-compiler.js';
@@ -78,6 +79,14 @@ assert.equal(programFor('rnd(0,255)').metadata.deterministic, false);
 assert.equal(programFor('get(0)').metadata.deterministic, true);
 assert.equal(WGSLCompiler.analyze(programFor('c', { legacyMath: true })).compatible, false);
 
+for(const [formula,blocker] of [['c&1','operator &'],['~c','operator ~'],['c,255','comma sequencing']]){
+  const program=programFor(formula),analysis=WGSLCompiler.analyze(program);
+  assert.equal('gpuCompatible' in program.metadata,false,'renderer-neutral IR metadata must not predict WebGPU support');
+  assert.equal('gpuBlockers' in program.metadata,false,'renderer-neutral IR metadata must not contain WebGPU blockers');
+  assert.equal(analysis.compatible,false,`${formula} must be rejected by the authoritative WGSL analyzer`);
+  assert.ok(analysis.blockers.includes(blocker));
+}
+
 const powAnalysis = WGSLCompiler.analyze(programFor('pow(-2,2)'));
 assert.equal(powAnalysis.compatible, false, 'pow() must use CPU fallback until negative-base semantics are defined in WGSL');
 assert.ok(powAnalysis.blockers.includes('pow()'));
@@ -97,6 +106,19 @@ assert.ok(angleCode.includes('ff_wrap(ff_atan2(y-cy,x-cx)/FF_TAU+offset,1.0)'), 
 const mirrorCode = WGSLCompiler.compile(programFor('srcMirror(X,y,z)')).code;
 assert.ok(mirrorCode.includes('min(u32(trunc(ff_mirror(x,f32(params.width)))),params.width-1u)'), 'mirrored x indices must clamp to the final column');
 assert.ok(mirrorCode.includes('min(u32(trunc(ff_mirror(y,f32(params.height)))),params.height-1u)'), 'mirrored y indices must clamp to the final row');
+
+const chromaProgram=compileFilterProgram([
+  'scl(u,umin,umax,0,255)',
+  'scl(v,vmin,vmax,0,255)',
+  'U',
+  'V'
+].map(formula=>new Parser(formula).parse()));
+const chromaCode=WGSLCompiler.compile(chromaProgram).code;
+const chromaMain=chromaCode.slice(chromaCode.lastIndexOf('outPixels[index]'));
+const chroma=CHROMA_MODELS.float;
+assert.ok(chromaMain.includes(`ff_scl(chromaU, ${chroma.uMin}.0, ${chroma.uMax}.0, 0.0, 255.0)`),'WGSL U normalization must use the signed float bounds');
+assert.ok(chromaMain.includes(`ff_scl(chromaV, ${chroma.vMin}.0, ${chroma.vMax}.0, 0.0, 255.0)`),'WGSL V normalization must use the signed float bounds');
+assert.ok(chromaMain.includes(`${chroma.uSpan}.0,${chroma.vSpan}.0`),'WGSL U and V variables must expose the corrected spans');
 
 const sierpinskiCode = WGSLCompiler.compile(programFor('sierpinski(x,y,X/2,Y/2,64,4,2)')).code;
 assert.ok(sierpinskiCode.includes('let w=1.0-u-v'), 'Sierpiński subdivision must fold barycentric child coordinates');

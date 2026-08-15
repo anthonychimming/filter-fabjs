@@ -19,6 +19,7 @@ for (let y = 0; y < height; y += 1) {
     source[offset + 3] = 64 + ((x * 3 + y * 5) % 192);
   }
 }
+source.set([0,0,255,255,255,0,0,255],0);
 
 const fixtures = [
   ['Hash', 'hash2(x,y,711)*255'],
@@ -33,6 +34,8 @@ const fixtures = [
   ['Polar sample', 'rad(128,3,z)'],
   ['Mirror boundary', 'srcMirror(X,y,z)'],
   ['3×3 convolution', 'clamp(cnv(0,-1,0,-1,5,-1,0,-1,0,1),0,255)'],
+  ['Chroma U bounds', 'scl(u,umin,umax,0,255)'],
+  ['Chroma V bounds', 'scl(v,vmin,vmax,0,255)'],
   ['Round half tie', 'round(0.5)*255'],
   ['Signed-zero angle', 'c2d(-0,0)/4'],
   ['Angular gradient', 'angularGrad(x,y,X/2,Y/2,128)*255'],

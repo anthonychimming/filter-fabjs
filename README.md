@@ -1,4 +1,4 @@
-# Filter FabJS v2.4.2
+# Filter FabJS v2.4.3
 
 Filter FabJS is an open-source, browser-native procedural RGBA image-filter editor. It combines a compact expression language with a typed intermediate representation, WebGPU compute rendering, and a CPU Worker fallback.
 
@@ -12,6 +12,8 @@ The project is under active development. This repository documents and develops 
 - Focus-safe formula entry with debounced validation and explicit preview rendering.
 - Branded aubergine UI with sage typography and restrained chartreuse, magenta, and cyan accents.
 - Typed IR between the formula parser and renderer backends.
+- Renderer-neutral IR metadata with WebGPU capability decisions owned by the WGSL analyzer.
+- Math-mode-specific YUV chroma bounds: coherent signed ranges for native float filters and historic constants for legacy imports.
 - WebGPU compute rendering for deterministic stateless formulas, including procedural noise, patterns, polar sampling, and fixed 3×3 convolution.
 - Analytic line, circle, ring, rotated-box, triangle, and grid masks with CPU/WebGPU parity.
 - Finite-depth Sierpiński-gasket masks generated through GPU-compatible child-triangle folding, including feathered internal holes.
@@ -54,7 +56,7 @@ npm run build
 Build output:
 
 - `dist/site/` — deployable static site with content-fingerprinted CSS and JavaScript assets to prevent mixed-version browser caches.
-- `dist/filter-fabjs-v2.4.2.html` — standalone single-file distribution.
+- `dist/filter-fabjs-v2.4.3.html` — standalone single-file distribution.
 
 The build uses Node.js and has no package dependencies.
 

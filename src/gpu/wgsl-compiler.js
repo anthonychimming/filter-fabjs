@@ -3,6 +3,7 @@
  * Modular source extracted from v2.0.7; modular architecture v2.1.0.
  * Licensed GPL-2.0-or-later. See LICENSE and README.md.
  */
+import { CHROMA_MODELS } from '../core/chroma.js';
 import { IR_VERSION } from '../core/ir.js';
 
 export class WGSLCompileError extends Error{constructor(message,blockers=[]){super(message);this.name='WGSLCompileError';this.blockers=blockers}}
@@ -49,7 +50,7 @@ export class WGSLCompiler{
     return`ff_bool(${this.value(node,channel)})`;
   }
   variable(name,channel){
-    const direct={r:'sourceColor.x',g:'sourceColor.y',b:'sourceColor.z',a:'sourceColor.w',c:`ff_channel(sourceColor, ${channel}.0)`,i:'luminance',u:'chromaU',v:'chromaV',x:'pixelX',y:'pixelY',z:`${channel}.0`,p:`${channel}.0`,d:'direction',m:'radius',X:'widthF',Y:'heightF',Z:'4.0',P:'4.0',D:'1024.0',M:'maxRadius',R:'255.0',G:'255.0',B:'255.0',A:'255.0',C:'255.0',I:'255.0',U:'255.0',V:'255.0',t:'0.0',rmax:'255.0',gmax:'255.0',bmax:'255.0',amax:'255.0',cmax:'255.0',imax:'255.0',umax:'255.0',vmax:'255.0',dmax:'512.0',mmax:'maxRadius',pmax:'4.0',xmax:'widthF',ymax:'heightF',zmax:'4.0',rmin:'0.0',gmin:'0.0',bmin:'0.0',amin:'0.0',cmin:'0.0',imin:'0.0',umin:'-55.0',vmin:'-78.0',dmin:'-512.0',mmin:'0.0',pmin:'0.0',xmin:'0.0',ymin:'0.0',zmin:'0.0',tmin:'0.0',tmax:'1.0',total:'1.0'};
+    const chroma=CHROMA_MODELS.float,direct={r:'sourceColor.x',g:'sourceColor.y',b:'sourceColor.z',a:'sourceColor.w',c:`ff_channel(sourceColor, ${channel}.0)`,i:'luminance',u:'chromaU',v:'chromaV',x:'pixelX',y:'pixelY',z:`${channel}.0`,p:`${channel}.0`,d:'direction',m:'radius',X:'widthF',Y:'heightF',Z:'4.0',P:'4.0',D:'1024.0',M:'maxRadius',R:'255.0',G:'255.0',B:'255.0',A:'255.0',C:'255.0',I:'255.0',U:this.number(chroma.uSpan),V:this.number(chroma.vSpan),t:'0.0',rmax:'255.0',gmax:'255.0',bmax:'255.0',amax:'255.0',cmax:'255.0',imax:'255.0',umax:this.number(chroma.uMax),vmax:this.number(chroma.vMax),dmax:'512.0',mmax:'maxRadius',pmax:'4.0',xmax:'widthF',ymax:'heightF',zmax:'4.0',rmin:'0.0',gmin:'0.0',bmin:'0.0',amin:'0.0',cmin:'0.0',imin:'0.0',umin:this.number(chroma.uMin),vmin:this.number(chroma.vMin),dmin:'-512.0',mmin:'0.0',pmin:'0.0',xmin:'0.0',ymin:'0.0',zmin:'0.0',tmin:'0.0',tmax:'1.0',total:'1.0'};
     if(name in direct)return direct[name];
     const alias={r0:'r',g0:'g',b0:'b',a0:'a',c0:'c',i0:'i',u0:'u',v0:'v',d0:'d',m0:'m',r1:'r',g1:'g',b1:'b',a1:'a',c1:'c',i1:'i',u1:'u',v1:'v',d1:'d',m1:'m'}[name];
     if(alias)return this.variable(alias,channel);

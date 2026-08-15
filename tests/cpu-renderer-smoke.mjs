@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { Worker } from 'node:worker_threads';
+import { CHROMA_MODELS } from '../src/core/chroma.js';
 import { Parser, VARS } from '../src/core/formula-language.js';
 import { compileFilterProgram } from '../src/core/ir.js';
 import { CpuRenderer } from '../src/renderers/cpu-renderer.js';
@@ -23,31 +24,44 @@ const waitFor = predicate => new Promise((resolve, reject) => {
   worker.on('message', onMessage);
 });
 
-const source = new Uint8ClampedArray([10,20,30,255, 100,110,120,128]);
-worker.postMessage({ type: 'init', width: 2, height: 1, buffer: source.buffer }, [source.buffer]);
+const source = new Uint8ClampedArray([10,20,30,255, 100,110,120,128, 0,0,255,255, 255,0,0,255]);
+worker.postMessage({ type: 'init', width: 4, height: 1, buffer: source.buffer }, [source.buffer]);
 await waitFor(message => message.type === 'ready');
 
 let renderId = 0;
-const render = async formulas => {
+const render = async (formulas,{legacyMath=false}={}) => {
   const id = ++renderId;
-  const program = compileFilterProgram(formulas.map(formula => new Parser(formula).parse()));
-  worker.postMessage({ type: 'render', id, program, controls: Array(8).fill(128), legacyMath: false });
+  const program = compileFilterProgram(formulas.map(formula => new Parser(formula).parse()),{legacyMath});
+  worker.postMessage({ type: 'render', id, program, controls: Array(8).fill(128), legacyMath });
   const message = await waitFor(result => result.type === 'result' && result.id === id);
   return new Uint8ClampedArray(message.buffer);
 };
 
 const result = await render(['255-r','255-g','255-b','a']);
-assert.deepEqual([...new Uint8ClampedArray(result.buffer)], [245,235,225,255, 155,145,135,128]);
+assert.deepEqual([...new Uint8ClampedArray(result.buffer)], [245,235,225,255, 155,145,135,128, 255,255,0,255, 0,255,255,255]);
 
 const numericEdges = await render(['round(0.5)*255','pow(-2,2)','c2d(0,0)','a']);
-assert.deepEqual([...numericEdges], [255,4,0,255, 255,4,0,128], 'CPU fallback semantics must remain defined at GPU edge cases');
+assert.deepEqual([...numericEdges], [255,4,0,255, 255,4,0,128, 255,4,0,255, 255,4,0,255], 'CPU fallback semantics must remain defined at GPU edge cases');
 
 const mirroredEdge = await render(['srcMirror(X,y,0)','srcMirror(X,y,1)','srcMirror(X,y,2)','srcMirror(X,y,3)']);
-assert.deepEqual([...mirroredEdge], [100,110,120,128, 100,110,120,128], 'CPU mirror sampling at X must select the final source column');
+assert.deepEqual([...mirroredEdge], Array(4).fill([255,0,0,255]).flat(), 'CPU mirror sampling at X must select the final source column');
+
+const {float:floatChroma,legacy:legacyChroma}=CHROMA_MODELS;
+const floatBounds=await render(['umin+128','umax','vmin+128','vmax']);
+assert.deepEqual([...floatBounds.slice(0,4)],[floatChroma.uMin+128,floatChroma.uMax,floatChroma.vMin+128,floatChroma.vMax],'float chroma minima and maxima must form signed bounds');
+const floatSpans=await render(['U','V','scl(u,umin,umax,0,255)','scl(v,vmin,vmax,0,255)']);
+assert.deepEqual([...floatSpans.slice(8,10)],[floatChroma.uSpan,floatChroma.vSpan],'float U and V must equal their signed chroma spans');
+assert.equal(floatSpans[10],255,'pure blue must map to the top of the float U range');
+assert.equal(floatSpans[15],255,'pure red must map to the top of the float V range');
+const legacyBounds=await render(['umin','umax','vmin','vmax'],{legacyMath:true});
+assert.deepEqual([...legacyBounds.slice(0,4)],[legacyChroma.uMin,legacyChroma.uMax,legacyChroma.vMin,legacyChroma.vMax],'legacy math must retain the complete Filter Factory chroma-bound contract');
+const legacySpans=await render(['U','V','U','V'],{legacyMath:true});
+assert.deepEqual([...legacySpans.slice(0,4)],[legacyChroma.uSpan,legacyChroma.vSpan,legacyChroma.uSpan,legacyChroma.vSpan]);
 
 const sourceText = workerProgram();
 assert.doesNotMatch(sourceText, /const q=\{/, 'variable lookup must not allocate a complete variable object per access');
 assert.match(sourceText, /function vars\(n,e\)\{const p=e\.p,z=e\.z;switch\(n\)/, 'variable lookup must dispatch lazily');
+assert.match(sourceText,/legacyMath=program\?\.mathMode==='legacy'/,'CPU arithmetic and chroma bounds must use the IR program math mode as their shared authority');
 const variableBody = sourceText.match(/function vars\(n,e\)\{([\s\S]*?)\n\}return 0\}/)?.[1] || '';
 const handledVariables = new Set([...variableBody.matchAll(/case'([^']+)'/g)].map(match => match[1]));
 for (const name of VARS) assert.ok(handledVariables.has(name), `lazy CPU lookup must preserve variable ${name}`);
