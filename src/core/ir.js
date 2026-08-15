@@ -15,6 +15,25 @@ const CHANNEL_FUNCTIONS=new Set('src src0 src1 srcWrap srcMirror srcLinear rad r
 const SOURCE_FUNCTIONS=new Set('src src0 src1 srcWrap srcMirror srcLinear rad rad0 rad1 cnv cnv0 cnv1'.split(' '));
 const STATEFUL_FUNCTIONS=new Set('rnd rst get put'.split(' '));
 const NONDETERMINISTIC_FUNCTIONS=new Set('rnd rst'.split(' '));
+const PROGRAM_CACHE_KEYS=new WeakMap();
+function appendKeyText(chunks,value){const text=String(value??'');chunks.push(String(text.length),':',text)}
+function appendExpressionKey(chunks,node){
+  if(!node||typeof node!=='object'){chunks.push('0');return}
+  switch(node.op){
+    case'const':chunks.push('N');appendKeyText(chunks,Object.is(node.value,-0)?'-0':node.value);return;
+    case'var':chunks.push('V');appendKeyText(chunks,node.name);return;
+    case'unary':chunks.push('U');appendKeyText(chunks,node.operator);appendExpressionKey(chunks,node.input);return;
+    case'binary':chunks.push('B');appendKeyText(chunks,node.operator);appendExpressionKey(chunks,node.left);appendExpressionKey(chunks,node.right);return;
+    case'select':chunks.push('S');appendExpressionKey(chunks,node.condition);appendExpressionKey(chunks,node.whenTrue);appendExpressionKey(chunks,node.whenFalse);return;
+    case'call':{const args=Array.isArray(node.args)?node.args:[];chunks.push('F');appendKeyText(chunks,node.fn);chunks.push(String(args.length),';');args.forEach(arg=>appendExpressionKey(chunks,arg));return}
+    default:chunks.push('X');appendKeyText(chunks,node.op);
+  }
+}
+export function programCacheKey(program){
+  if(program&&typeof program==='object'){const cached=PROGRAM_CACHE_KEYS.get(program);if(cached)return cached}
+  const chunks=['P'];appendKeyText(chunks,program?.kind);appendKeyText(chunks,program?.irVersion);appendKeyText(chunks,program?.mathMode);const outputs=Array.isArray(program?.outputs)?program.outputs:[];chunks.push(String(outputs.length),';');outputs.forEach(output=>appendExpressionKey(chunks,output?.expression));const key=chunks.join('');
+  if(program&&typeof program==='object')PROGRAM_CACHE_KEYS.set(program,key);return key;
+}
 function variableIRType(name){if(INTEGER_VARS.has(name))return IRType.INTEGER;if(CHANNEL_VARS.has(name))return IRType.CHANNEL;return IRType.SCALAR}
 function mergeIRTypes(a,b){if(a===b)return a;if(a===IRType.BOOLEAN&&b===IRType.BOOLEAN)return IRType.BOOLEAN;if(a===IRType.INTEGER&&b===IRType.INTEGER)return IRType.INTEGER;if(a===IRType.CHANNEL&&b===IRType.CHANNEL)return IRType.CHANNEL;if(a===IRType.MASK&&b===IRType.MASK)return IRType.MASK;return IRType.SCALAR}
 function arithmeticIRType(operator,a,b){if(operator==='/' )return IRType.SCALAR;if(operator==='%'&&a===IRType.INTEGER&&b===IRType.INTEGER)return IRType.INTEGER;if(['+','-','*'].includes(operator)&&a===IRType.INTEGER&&b===IRType.INTEGER)return IRType.INTEGER;return IRType.SCALAR}

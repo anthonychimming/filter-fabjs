@@ -4,7 +4,7 @@ This document describes the implementation currently present in the public repos
 
 ## Release
 
-- Application version: **2.4.3**
+- Application version: **2.4.4**
 - Native filter format: **version 2**
 - Typed IR: **version 1**
 - Development layout: native ES modules
@@ -14,10 +14,10 @@ This document describes the implementation currently present in the public repos
 
 Filter FabJS provides two rendering backends:
 
-- **WebGPU** — compiles supported typed IR into WGSL and renders with a full-frame compute/readback submission. If the device is lost, the retained source is uploaded to the replacement device on the next GPU render. Generated plans and pipelines use a 32-entry LRU cache.
+- **WebGPU** — compiles supported typed IR into WGSL and renders with a full-frame compute/readback submission. If the device is lost, the retained source is uploaded to the replacement device on the next GPU render. Generated plans and pipelines use an entry- and payload-bounded LRU cache.
 - **CPU Worker** — compatibility renderer for unsupported WebGPU operations and legacy integer-mode filters.
 
-The **Auto** renderer selects WebGPU when the current program is compatible and WebGPU is available; otherwise it reports a fallback reason and uses the CPU Worker. Runtime GPU failures also fall back through the renderer manager, preserving cancellation and suppressing repeated validation attempts for the same device/program pair. `WGSLCompiler.analyze()` is the sole WebGPU-capability authority; renderer-neutral IR metadata records semantic facts without predicting backend support. Compatibility analysis uses a 64-entry LRU cache, and unchanged parsed IR is reused for control-only renders. When a new image is loaded, both backends release the previous source and only the selected backend receives the replacement lazily.
+The **Auto** renderer selects WebGPU when the current program is compatible and WebGPU is available; otherwise it reports a fallback reason and uses the CPU Worker. Runtime GPU failures also fall back through the renderer manager, preserving cancellation and suppressing repeated validation attempts for the same device/program pair. WebGPU render and source-upload generations are captured when work is queued, so cancellation prevents stale queued work from starting. `WGSLCompiler.analyze()` is the sole WebGPU-capability authority; renderer-neutral IR metadata records semantic facts without predicting backend support. Compatibility analysis reuses compact memoized program keys in an entry- and payload-bounded LRU cache, and unchanged parsed IR is reused for control-only renders. When a new image is loaded, both backends release the previous source and only the selected backend receives the replacement lazily.
 
 ## Formula engine
 
@@ -58,7 +58,7 @@ Current workflows include:
 - Clipboard image paste.
 - RGBA PNG copy where browser clipboard support permits it.
 - PNG export.
-- Original, filtered, and split preview modes.
+- Original, filtered, and split preview modes with zero-copy cached `ImageData` wrappers and animation-frame-coalesced split redraws.
 - Transparency checkerboard preview.
 
 ## Tests
@@ -76,7 +76,8 @@ The repository includes smoke tests for:
 - Brand-token contrast, neutral preview-canvas treatment, and the GitHub profile target.
 - Fingerprinted production-asset references and a self-contained standalone build.
 - Import-size, schema, metadata, and parser-resource limits.
-- Bounded renderer caches, inactive-source release, and control-only reuse.
+- Compact canonical program keys; entry/byte-bounded renderer caches; inactive-source release; and control-only reuse.
+- Queued WebGPU render/source cancellation and zero-copy, coalesced split-preview redraws.
 - Stable finite-depth Sierpiński holes and internal-edge feathering.
 - Math-mode-specific chroma bounds, primary-colour normalization, and optional CPU/WebGPU chroma parity.
 - Renderer-neutral IR metadata plus authoritative WGSL rejection of bitwise and comma expressions.

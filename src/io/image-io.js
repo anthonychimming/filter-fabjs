@@ -18,7 +18,7 @@ export function alphaStats(pixels){
   for(let i=3;i<pixels.length;i+=4){const value=pixels[i];min=Math.min(min,value);max=Math.max(max,value);if(value===0)transparent++;else if(value===255)opaque++;else translucent++;}
   return{min,max,transparent,translucent,opaque,hasAlpha:min<255,total:Math.floor(pixels.length/4)};
 }
-export function imageDataFromPixels(pixels,width,height){return new ImageData(new Uint8ClampedArray(pixels),width,height);}
+export function imageDataFromPixels(pixels,width,height){return new ImageData(pixels instanceof Uint8ClampedArray?pixels:new Uint8ClampedArray(pixels),width,height);}
 export function renderedImageCanvas(pixels,width,height){
   if(!pixels||!width||!height)throw new Error('Load and render an image first');
   const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;

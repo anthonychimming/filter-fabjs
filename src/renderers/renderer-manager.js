@@ -7,10 +7,13 @@ import { WGSLCompiler } from '../gpu/wgsl-compiler.js';
 import { RenderCancelledError } from './renderer-backend.js';
 import { WebGpuRenderer } from './webgpu-renderer.js';
 
-const MAX_ANALYSES=64,MAX_GPU_FAILURES=64;
+const MAX_ANALYSES=64,MAX_GPU_FAILURES=64,MAX_ANALYSIS_CACHE_BYTES=2*1024*1024,MAX_GPU_FAILURE_CACHE_BYTES=2*1024*1024;
+const textBytes=value=>String(value??'').length*2;
+const analysisEntryBytes=(key,analysis)=>textBytes(key)+textBytes(analysis?.subset)+(analysis?.blockers||[]).reduce((total,blocker)=>total+textBytes(blocker),0);
+const gpuFailureEntryBytes=(key,failure)=>textBytes(key)+textBytes(failure?.reason);
 
 export class RendererManager{
-  constructor(factories){this.factories=factories;this.instances=new Map();this.instanceVersions=new Map();this.syncPromises=new Map();this.source=null;this.width=0;this.height=0;this.sourceVersion=0;this.active=null;this.analysisCache=new Map();this.gpuFailures=new Map()}
+  constructor(factories){this.factories=factories;this.instances=new Map();this.instanceVersions=new Map();this.syncPromises=new Map();this.source=null;this.width=0;this.height=0;this.sourceVersion=0;this.active=null;this.analysisCache=new Map();this.analysisCacheBytes=0;this.gpuFailures=new Map();this.gpuFailureCacheBytes=0}
   setSource(pixels,width,height){
     if(!Number.isInteger(width)||!Number.isInteger(height)||width<1||height<1)throw new Error('Renderer source dimensions must be positive integers');
     const count=width*height;if(!Number.isSafeInteger(count)||pixels?.length!==count*4)throw new Error('Renderer source pixel length does not match its dimensions');
@@ -25,18 +28,18 @@ export class RendererManager{
   async syncSource(id,renderer){const source=this.source,width=this.width,height=this.height,version=this.sourceVersion;await renderer.setSource(source,width,height);if(version===this.sourceVersion)this.instanceVersions.set(id,version)}
   async get(id){let renderer=this.instances.get(id);if(!renderer){const factory=this.factories[id];if(!factory)throw new Error(`Unknown renderer backend “${id}”`);renderer=factory();this.instances.set(id,renderer)}while(this.source&&this.instanceVersions.get(id)!==this.sourceVersion){let sync=this.syncPromises.get(id);if(!sync){sync={version:this.sourceVersion,promise:this.syncSource(id,renderer)};this.syncPromises.set(id,sync)}try{await sync.promise}catch(error){if(sync.version===this.sourceVersion)throw error}finally{if(this.syncPromises.get(id)===sync)this.syncPromises.delete(id)}}return renderer}
   programKey(program){return WGSLCompiler.key(program)}
-  analyze(program){const key=this.programKey(program),cached=this.analysisCache.get(key);if(cached){this.analysisCache.delete(key);this.analysisCache.set(key,cached);return cached}const analysis=WGSLCompiler.analyze(program);this.analysisCache.set(key,analysis);while(this.analysisCache.size>MAX_ANALYSES)this.analysisCache.delete(this.analysisCache.keys().next().value);return analysis}
+  analyze(program){const key=this.programKey(program),cached=this.analysisCache.get(key);if(cached){this.analysisCache.delete(key);this.analysisCache.set(key,cached);return cached}const analysis=WGSLCompiler.analyze(program),bytes=analysisEntryBytes(key,analysis);if(bytes<=MAX_ANALYSIS_CACHE_BYTES){this.analysisCache.set(key,analysis);this.analysisCacheBytes+=bytes;while(this.analysisCache.size>MAX_ANALYSES||this.analysisCacheBytes>MAX_ANALYSIS_CACHE_BYTES){const oldestKey=this.analysisCache.keys().next().value,oldest=this.analysisCache.get(oldestKey);this.analysisCache.delete(oldestKey);this.analysisCacheBytes-=analysisEntryBytes(oldestKey,oldest)}}return analysis}
   gpuFailure(program){
     const key=this.programKey(program),failure=this.gpuFailures.get(key),renderer=this.instances.get('webgpu');
     if(!failure)return'';
-    if(!renderer?.device||renderer.deviceGeneration!==failure.deviceGeneration){this.gpuFailures.delete(key);return''}
+    if(!renderer?.device||renderer.deviceGeneration!==failure.deviceGeneration){this.gpuFailures.delete(key);this.gpuFailureCacheBytes-=gpuFailureEntryBytes(key,failure);return''}
     return failure.reason;
   }
   rememberGpuFailure(program,renderer,error){
     const message=error?.message||'WebGPU render failed',persistent=error?.name==='WGSLCompileError'||(error?.name==='WebGPUValidationError'&&!/(?:device\s+(?:is\s+)?lost|destroyed|out\s+of\s+memory|internal)/i.test(message));
     if(!persistent)return;
-    const key=this.programKey(program);this.gpuFailures.delete(key);this.gpuFailures.set(key,{deviceGeneration:renderer?.deviceGeneration??0,reason:`GPU error: ${message}`});
-    while(this.gpuFailures.size>MAX_GPU_FAILURES)this.gpuFailures.delete(this.gpuFailures.keys().next().value);
+    const key=this.programKey(program),prior=this.gpuFailures.get(key);if(prior){this.gpuFailures.delete(key);this.gpuFailureCacheBytes-=gpuFailureEntryBytes(key,prior)}const failure={deviceGeneration:renderer?.deviceGeneration??0,reason:`GPU error: ${message}`},bytes=gpuFailureEntryBytes(key,failure);if(bytes>MAX_GPU_FAILURE_CACHE_BYTES)return;this.gpuFailures.set(key,failure);this.gpuFailureCacheBytes+=bytes;
+    while(this.gpuFailures.size>MAX_GPU_FAILURES||this.gpuFailureCacheBytes>MAX_GPU_FAILURE_CACHE_BYTES){const oldestKey=this.gpuFailures.keys().next().value,oldest=this.gpuFailures.get(oldestKey);this.gpuFailures.delete(oldestKey);this.gpuFailureCacheBytes-=gpuFailureEntryBytes(oldestKey,oldest)}
   }
   assertCurrent(isCurrent){if(typeof isCurrent==='function'&&!isCurrent())throw new RenderCancelledError()}
   throwIfCancelled(error,isCurrent){if(error?.name==='RenderCancelledError')throw error;this.assertCurrent(isCurrent)}
@@ -68,5 +71,5 @@ export class RendererManager{
   }
   fallbackError(gpuError,cpuError){const error=new Error(`GPU: ${gpuError.message}; CPU: ${cpuError.message}`);error.name='RendererFallbackError';error.gpuError=gpuError;error.cpuError=cpuError;return error}
   async cancelActive(){return this.active?.cancel?.()??false}
-  dispose(){for(const renderer of this.instances.values())renderer.dispose();this.instances.clear();this.instanceVersions.clear();this.syncPromises.clear();this.analysisCache.clear();this.gpuFailures.clear();this.active=null;this.source=null;this.width=this.height=0}
+  dispose(){for(const renderer of this.instances.values())renderer.dispose();this.instances.clear();this.instanceVersions.clear();this.syncPromises.clear();this.analysisCache.clear();this.analysisCacheBytes=0;this.gpuFailures.clear();this.gpuFailureCacheBytes=0;this.active=null;this.source=null;this.width=this.height=0}
 }

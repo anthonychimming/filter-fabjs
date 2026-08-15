@@ -1,13 +1,13 @@
 {
   "name": "filter-fabjs",
-  "version": "2.4.3",
+  "version": "2.4.4",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev-server.mjs",
     "build": "node scripts/build.mjs",
     "check": "node scripts/check.mjs",
-    "test": "node tests/core-smoke.mjs && node tests/wgsl-compiler-smoke.mjs && node tests/cpu-renderer-smoke.mjs && node tests/webgpu-renderer-smoke.mjs && node tests/renderer-manager-smoke.mjs && node tests/analytic-shapes-smoke.mjs && node tests/ui-wiring-smoke.mjs && node tests/theme-smoke.mjs",
+    "test": "node tests/core-smoke.mjs && node tests/wgsl-compiler-smoke.mjs && node tests/cpu-renderer-smoke.mjs && node tests/webgpu-renderer-smoke.mjs && node tests/renderer-manager-smoke.mjs && node tests/analytic-shapes-smoke.mjs && node tests/canvas-view-smoke.mjs && node tests/ui-wiring-smoke.mjs && node tests/theme-smoke.mjs",
     "verify": "npm run check && npm test && npm run build && node tests/build-output-smoke.mjs"
   }
 }

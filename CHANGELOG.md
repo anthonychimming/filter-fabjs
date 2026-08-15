@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.4.4
+
+- Replaced full serialized-IR cache keys with compact canonical keys memoized per program, and added payload-byte limits alongside cache entry limits.
+- Captured WebGPU cancellation generations when render and source-upload work is queued so stale jobs stop before planning, dispatch, or GPU allocation.
+- Reused clamped pixel arrays directly in cached `ImageData` wrappers and coalesced split-slider redraws to one animation frame.
+
 ## 2.4.3
 
 - Split chroma bounds by math mode: native float formulas now use signed `u`/`v` minima and maxima with coherent `U=110` and `V=156` spans, while legacy imports retain the complete historic Filter Factory `0–255` constant contract.

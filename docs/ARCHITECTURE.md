@@ -1,6 +1,6 @@
 # Architecture
 
-Filter FabJS v2.4.3 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
+Filter FabJS v2.4.4 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
 
 ```text
 Formula text
@@ -20,12 +20,12 @@ RGBA pixel output
 
 - `src/core/formula-language.js` — tokenization, parsing, formula validation, and syntax trees.
 - `src/core/chroma.js` — math-mode-specific chroma bounds shared by CPU and WebGPU code generation.
-- `src/core/ir.js` — conversion from syntax trees to renderer-neutral typed IR plus semantic metadata.
+- `src/core/ir.js` — conversion from syntax trees to renderer-neutral typed IR, semantic metadata, and memoized canonical program keys.
 - `src/gpu/wgsl-compiler.js` — WebGPU compatibility analysis and typed-IR-to-WGSL compilation.
 - `src/renderers/renderer-backend.js` — shared renderer contract.
 - `src/renderers/cpu-renderer.js` — CPU Worker lifecycle, rendering, progress, and cancellation.
-- `src/renderers/webgpu-renderer.js` — recoverable GPU buffers, bounded WGSL-plan/pipeline reuse, full-frame dispatch/readback, source release, and cancellation checks.
-- `src/renderers/renderer-manager.js` — renderer selection, bounded compatibility analysis, lazy source synchronization, inactive-backend release, cancellation-aware runtime CPU fallback, and repeated program-failure quarantine.
+- `src/renderers/webgpu-renderer.js` — recoverable GPU buffers, entry/byte-bounded WGSL-plan/pipeline reuse, full-frame dispatch/readback, source release, and enqueue-generation cancellation checks.
+- `src/renderers/renderer-manager.js` — renderer selection, entry/byte-bounded compatibility analysis, lazy source synchronization, inactive-backend release, cancellation-aware runtime CPU fallback, and bounded repeated program-failure quarantine.
 - `src/presets/builtins.js` — built-in filter definitions.
 - `src/io/filter-format.js` — size-bounded native JSON and historic AFS validation, normalization, and parsing.
 - `src/io/image-io.js` — image and clipboard encoding helpers.

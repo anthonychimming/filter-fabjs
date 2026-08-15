@@ -9,6 +9,15 @@ const programFor = (formula, options = {}) => compileFilterProgram(
   options
 );
 
+const largeFormula=Array(2048).fill('r').join('+'),largeProgram=programFor(largeFormula),largeKey=WGSLCompiler.key(largeProgram);
+const serializedIrKey=JSON.stringify([largeProgram.kind,largeProgram.irVersion,largeProgram.mathMode,largeProgram.outputs.map(output=>output.expression)]);
+assert.ok(largeKey.length<serializedIrKey.length/10,`canonical IR key must stay compact (${largeKey.length} versus ${serializedIrKey.length} characters)`);
+assert.equal(WGSLCompiler.key(programFor(largeFormula)),largeKey,'equivalent programs must share a canonical cache key');
+assert.notEqual(WGSLCompiler.key(programFor(`${largeFormula.slice(0,-1)}g`)),largeKey,'different programs must not share a cache key');
+assert.notEqual(WGSLCompiler.key(programFor(largeFormula,{legacyMath:true})),largeKey,'cache keys must include arithmetic mode');
+let keyReads=0;const observedExpression={get op(){keyReads++;return'var'},get name(){keyReads++;return'r'}},observedProgram={kind:'filter-fab-program',irVersion:1,mathMode:'float',outputs:[{expression:observedExpression}]};
+WGSLCompiler.key(observedProgram);const readsAfterFirstKey=keyReads;WGSLCompiler.key(observedProgram);assert.equal(keyReads,readsAfterFirstKey,'a program cache key must be computed only once per IR object');
+
 const statelessCases = [
   ['rad(0,2,z)', 'ff_sample_polar('],
   ['cnv(0,0,0,0,1,0,0,0,0,1)', 'ff_convolve3x3(pixelX, pixelY, 0.0'],

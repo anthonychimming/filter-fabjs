@@ -4,7 +4,7 @@
  * Licensed GPL-2.0-or-later. See LICENSE and README.md.
  */
 import { CHROMA_MODELS } from '../core/chroma.js';
-import { IR_VERSION } from '../core/ir.js';
+import { IR_VERSION, programCacheKey } from '../core/ir.js';
 
 export class WGSLCompileError extends Error{constructor(message,blockers=[]){super(message);this.name='WGSLCompileError';this.blockers=blockers}}
 const WEBGPU_FUNCTIONS=new Set('src src0 src1 srcWrap srcMirror srcLinear rad rad0 rad1 cnv cnv0 cnv1 ctl val map min max abs add sub dif mix scl sqr sqrt sin cos tan r2x r2y c2d c2m clamp lerp step smoothstep floor ceil round fract sign bias gain hash2 valueNoise perlin worleyF1 worleyF2 fbm turbulence ridged periodicNoise wrap mirror linearGrad radialGrad angularGrad checker brick line circle ring box triangle grid sierpinski multiply screen overlay softLight difference'.split(' '));
@@ -30,7 +30,7 @@ export class WGSLCompiler{
     const unique=[...new Set(blockers)];
     return{compatible:unique.length===0,blockers:unique,subset:'phase-3.5-stateless'};
   }
-  static key(program){return JSON.stringify([program?.kind,program?.irVersion,program?.mathMode,program?.outputs?.map(output=>output.expression)])}
+  static key(program){return programCacheKey(program)}
   static compile(program,analysis=this.analyze(program)){
     if(!analysis.compatible)throw new WGSLCompileError(`WebGPU subset does not support: ${analysis.blockers.join(', ')}`,analysis.blockers);
     const compiler=new WGSLCompiler(program),expressions=program.outputs.map((output,channel)=>compiler.value(output.expression,channel));

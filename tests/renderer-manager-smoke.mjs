@@ -71,6 +71,14 @@ assert.notEqual(analysisManager.programKey(analysisProgram),analysisManager.prog
 for(let index=0;index<70;index++){const formula=String(index),program=compileFilterProgram([formula,formula,formula,formula].map(value=>new Parser(value).parse()));analysisManager.analyze(program)}
 assert.equal(analysisManager.analysisCache.size,64,'compatibility analyses must use a bounded LRU cache');
 assert.equal(analysisManager.analysisCache.has(analysisManager.programKey(analysisProgram)),false,'least-recently-used analyses must be evicted');
+const longKeySuffix='x'.repeat(600_000);analysisManager.programKey=program=>program.testKey;
+for(let index=0;index<3;index++)analysisManager.analyze({kind:'filter-fab-program',irVersion:1,mathMode:'float',outputs:[],testKey:`${index}:${longKeySuffix}`});
+assert.equal(analysisManager.analysisCache.size,1,'analysis cache payload must be byte-bounded as well as entry-bounded');
+assert.ok(analysisManager.analysisCacheBytes<=2*1024*1024,'analysis cache must remain within its byte budget');
+const failedGpu={device:{},deviceGeneration:1,dispose(){}};analysisManager.instances.set('webgpu',failedGpu);const persistentError=new Error('validation failed');persistentError.name='WGSLCompileError';
+for(let index=0;index<3;index++)analysisManager.rememberGpuFailure({testKey:`failure-${index}:${longKeySuffix}`},failedGpu,persistentError);
+assert.equal(analysisManager.gpuFailures.size,1,'GPU-failure cache payload must be byte-bounded as well as entry-bounded');
+assert.ok(analysisManager.gpuFailureCacheBytes<=2*1024*1024,'GPU-failure cache must remain within its byte budget');
 analysisManager.dispose();
 
 const navigatorDescriptor=Object.getOwnPropertyDescriptor(globalThis,'navigator');

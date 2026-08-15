@@ -29,6 +29,7 @@ assert.match(app, /FILTER_FILE_MAX_BYTES/, 'filter imports must reject oversized
 assert.match(app, /lastProgramKey/, 'the app must retain a stable key for parsed-program reuse');
 assert.match(app, /state\.lastProgramKey===key\)\{controlsController\.updateControlUsage\(state\.lastProgram\);return state\.lastProgram\}/, 'control-only renders must reuse the last parsed IR program');
 assert.doesNotMatch(app, /WGSLCompiler\.analyze/, 'renderer compatibility analysis must not be repeated in the app layer');
+assert.match(app, /el\.split\.oninput=\(\)=>\{state\.split=Number\(el\.split\.value\);canvasView\.requestDraw\(\);\}/, 'split-preview input must coalesce redraws through animation frames');
 assert.match(controls, /range\.oninput=\(\)=>update\(range\.value\)/, 'range input must update its displayed value continuously');
 assert.match(controls, /range\.onchange=\(\)=>scheduleRender\(\)/, 'range control must render only after the edit is committed');
 assert.match(controls, /slider-label" type="text" maxlength="80"/, 'control labels must stay within the serialized metadata limit');

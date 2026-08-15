@@ -9,9 +9,9 @@ const usageDescriptor=Object.getOwnPropertyDescriptor(globalThis,'GPUBufferUsage
 const mapModeDescriptor=Object.getOwnPropertyDescriptor(globalThis,'GPUMapMode');
 const originalWarn=console.warn;
 
-function makeDevice(){
+function makeDevice({deferredMaps=0}={}){
   let resolveLost;
-  const stats={buffers:[],dispatches:0,copies:0,submits:0,queueWaits:0};
+  const mapResolvers=[],stats={buffers:[],dispatches:0,copies:0,submits:0,queueWaits:0};
   const device={
     lost:new Promise(resolve=>{resolveLost=resolve}),
     addEventListener(){},
@@ -22,14 +22,14 @@ function makeDevice(){
     createBindGroup(){return{}},
     createBuffer(){
       const data=new Uint32Array([0xff030201]).buffer;
-      const buffer={destroyed:false,mapState:'unmapped',destroy(){this.destroyed=true},async mapAsync(){this.mapState='mapped'},getMappedRange(){return data},unmap(){this.mapState='unmapped'}};
+      const buffer={destroyed:false,mapState:'unmapped',destroy(){this.destroyed=true},async mapAsync(){if(deferredMaps>0){deferredMaps--;await new Promise(resolve=>mapResolvers.push(resolve))}this.mapState='mapped'},getMappedRange(){return data},unmap(){this.mapState='unmapped'}};
       stats.buffers.push(buffer);return buffer;
     },
     createCommandEncoder(){return{beginComputePass(){return{setPipeline(){},setBindGroup(){},dispatchWorkgroups(){stats.dispatches++},end(){}}},copyBufferToBuffer(){stats.copies++},finish(){return{}}}},
     queue:{writeBuffer(){},submit(){stats.submits++},async onSubmittedWorkDone(){stats.queueWaits++}},
     destroy(){this.destroyed=true}
   };
-  return{device,stats,resolveLost};
+  return{device,stats,resolveLost,resolveNextMap(){const resolve=mapResolvers.shift();if(!resolve)throw new Error('No deferred WebGPU map is pending');resolve()}};
 }
 
 try{
@@ -84,6 +84,30 @@ try{
   assert.equal(releasedSourceBuffer.destroyed,true,'source release must destroy the prior GPU allocation');
   assert.equal(renderer.pipelineCache.size,32,'source release may retain only the bounded formula cache for reuse');
   renderer.dispose();
+
+  const byteBoundRenderer=new WebGpuRenderer(),largeCode='x'.repeat(3*1024*1024);
+  byteBoundRenderer.rememberPipeline({key:'large-plan-1',code:largeCode,analysis:{}},{id:1});
+  byteBoundRenderer.rememberPipeline({key:'large-plan-2',code:largeCode,analysis:{}},{id:2});
+  assert.equal(byteBoundRenderer.pipelineCache.size,1,'pipeline cache payload must be byte-bounded as well as entry-bounded');
+  assert.equal(byteBoundRenderer.pipelineCache.has('large-plan-2'),true,'pipeline byte eviction must retain the most recent entry');
+  assert.ok(byteBoundRenderer.pipelineCacheBytes<=8*1024*1024,'pipeline cache must remain within its byte budget');
+  byteBoundRenderer.dispose();
+
+  const cancellationDevice=makeDevice({deferredMaps:1});
+  navigator.gpu.requestAdapter=async()=>({requestDevice:async()=>cancellationDevice.device});
+  const cancellationRenderer=new WebGpuRenderer();await cancellationRenderer.setSource(new Uint8ClampedArray([1,2,3,255]),1,1);
+  const activeRender=cancellationRenderer.render({program,controls:Array(8).fill(128)});while(cancellationDevice.stats.dispatches<1)await new Promise(resolve=>setImmediate(resolve));
+  const queuedRender=cancellationRenderer.render({program,controls:Array(8).fill(64)}),activeCancellation=assert.rejects(activeRender,error=>error?.name==='RenderCancelledError'),queuedCancellation=assert.rejects(queuedRender,error=>error?.name==='RenderCancelledError');
+  assert.equal(await cancellationRenderer.cancel(),true,'cancelling an active WebGPU render must report work');cancellationDevice.resolveNextMap();await Promise.all([activeCancellation,queuedCancellation]);
+  assert.equal(cancellationDevice.stats.dispatches,1,'a render queued before cancellation must not dispatch after the active render stops');
+  await cancellationRenderer.render({program,controls:Array(8).fill(32)});assert.equal(cancellationDevice.stats.dispatches,2,'a render queued after cancellation must use the new generation');
+
+  let releaseQueue;const buffersBeforeSourceChange=cancellationDevice.stats.buffers.length;cancellationRenderer.operationQueue=new Promise(resolve=>{releaseQueue=resolve});
+  const staleSource=cancellationRenderer.setSource(new Uint8ClampedArray([4,5,6,255]),1,1),staleSourceCancellation=assert.rejects(staleSource,error=>error?.name==='RenderCancelledError');
+  const latestSource=cancellationRenderer.setSource(new Uint8ClampedArray([7,8,9,255]),1,1);releaseQueue();await Promise.all([staleSourceCancellation,latestSource]);
+  assert.equal(cancellationRenderer.source[0],7,'only the latest queued WebGPU source upload may become current');
+  assert.equal(cancellationDevice.stats.buffers.length-buffersBeforeSourceChange,4,'a stale queued source upload must stop before allocating GPU buffers');
+  cancellationRenderer.dispose();
 }finally{
   console.warn=originalWarn;
   if(navigatorDescriptor)Object.defineProperty(globalThis,'navigator',navigatorDescriptor);else delete globalThis.navigator;
