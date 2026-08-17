@@ -30,6 +30,8 @@ The project is under active development. This repository documents and develops 
 
 See [Project Status](docs/PROJECT_STATUS.md) for the current implementation and known boundaries.
 
+For the formula language, function reference, renderer compatibility notes, and worked filter examples, see the **[Filter FabJS Programming Guide (PDF)](docs/Filter_FabJS_Programming_Guide_v2.4.6.pdf)**.
+
 ## Run locally
 
 ```bash
