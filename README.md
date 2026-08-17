@@ -79,4 +79,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidance.
 
 Filter FabJS is distributed under the GNU General Public License v2.0 or later. See [LICENSE](LICENSE).
 
-The project is inspired by the open-source Filter Foundry project and preserves the relevant attribution in the source.
+The project is inspired by the open-source [Filter Foundry project](https://github.com/danielmarschall/filter_foundry) and preserves the relevant attribution in the source.
