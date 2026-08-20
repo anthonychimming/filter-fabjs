@@ -29,10 +29,10 @@ worker.postMessage({ type: 'init', width: 4, height: 1, buffer: source.buffer },
 await waitFor(message => message.type === 'ready');
 
 let renderId = 0;
-const render = async (formulas,{legacyMath=false}={}) => {
+const render = async (formulas,{legacyMath=false,controls=Array(8).fill(128)}={}) => {
   const id = ++renderId;
   const program = compileFilterProgram(formulas.map(formula => new Parser(formula).parse()),{legacyMath});
-  worker.postMessage({ type: 'render', id, program, controls: Array(8).fill(128), legacyMath });
+  worker.postMessage({ type: 'render', id, program, controls, legacyMath });
   const message = await waitFor(result => result.type === 'result' && result.id === id);
   return new Uint8ClampedArray(message.buffer);
 };
@@ -50,6 +50,20 @@ assert.deepEqual([...new Uint8ClampedArray(result.buffer)], [245,235,225,255, 15
 
 const numericEdges = await render(['round(0.5)*255','pow(-2,2)','c2d(0,0)','a']);
 assert.deepEqual([...numericEdges], [255,4,0,255, 255,4,0,128, 255,4,0,255, 255,4,0,255], 'CPU fallback semantics must remain defined at GPU edge cases');
+
+const nativeSquare=await render(['sqr(4)','sqr(4)','sqr(4)','a']);
+assert.deepEqual([...nativeSquare.slice(0,4)],[16,16,16,255],'native float sqr() must retain its documented square operation');
+const legacyRoots=await render(['sqr(16)','sqr(0)','sqr(-4)+5','sqrt(81)'],{legacyMath:true});
+assert.deepEqual([...legacyRoots.slice(0,4)],[4,0,1,9],'legacy sqr()/sqrt() must use Filter Factory integer square-root semantics, including negative inputs');
+const legacyArithmetic=await render(['val(0,1,0)','mix(1,1,1,2)','scl(1,0,2,1,0)','2147483647+1<0?255:0'],{legacyMath:true});
+assert.deepEqual([...legacyArithmetic.slice(0,4)],[1,0,1,255],'legacy helpers and expression arithmetic must truncate at integer boundaries and wrap signed 32-bit results');
+const legacyMap=await render(['map(0,128)','map(0,128)','map(0,128)','a'],{legacyMath:true,controls:[255.9,0.9,...Array(6).fill(128)]});
+assert.deepEqual([...legacyMap.slice(0,3)],[128,128,128],'legacy map() must use integer control values and integer division');
+const legacyMultiplyAndPow=await render(['1073741824*2<0?255:0','pow(2,-1)','pow(5,0)','a'],{legacyMath:true});
+assert.deepEqual([...legacyMultiplyAndPow.slice(0,4)],[255,1,1,255],'legacy multiplication must use signed 32-bit products and pow() must use legacy rounding');
+
+const exactNoiseSeed=await render(Array(3).fill('hash2(x,y,16777217)*255').concat('a'));
+assert.equal(exactNoiseSeed[0],253,'CPU fallback must preserve exact integer noise seeds that f32 cannot represent');
 
 const mirroredEdge = await render(['srcMirror(X,y,0)','srcMirror(X,y,1)','srcMirror(X,y,2)','srcMirror(X,y,3)']);
 assert.deepEqual([...mirroredEdge], Array(4).fill([255,0,0,255]).flat(), 'CPU mirror sampling at X must select the final source column');

@@ -8,15 +8,25 @@ const programFor = (formula, options = {}) => compileFilterProgram(
   [formula, formula, formula, formula].map(source => new Parser(source).parse()),
   options
 );
+const expressionNodeCount=node=>node.op==='const'||node.op==='var'?1:node.op==='unary'?1+expressionNodeCount(node.input):node.op==='binary'?1+expressionNodeCount(node.left)+expressionNodeCount(node.right):node.op==='select'?1+expressionNodeCount(node.condition)+expressionNodeCount(node.whenTrue)+expressionNodeCount(node.whenFalse):node.op==='call'?1+node.args.reduce((total,arg)=>total+expressionNodeCount(arg),0):1;
+const jsonLength=value=>{let length=0,stack=[value];while(stack.length){const current=stack.pop();if(current===null){length+=4;continue}if(Array.isArray(current)){length+=2+Math.max(0,current.length-1);for(const item of current)stack.push(item);continue}if(typeof current==='object'){const entries=Object.entries(current);length+=2+Math.max(0,entries.length-1);for(const[key,item]of entries){length+=JSON.stringify(key).length+1;stack.push(item)}continue}length+=JSON.stringify(current).length}return length};
 
 const largeFormula=Array(2048).fill('r').join('+'),largeProgram=programFor(largeFormula),largeKey=WGSLCompiler.key(largeProgram);
-const serializedIrKey=JSON.stringify([largeProgram.kind,largeProgram.irVersion,largeProgram.mathMode,largeProgram.outputs.map(output=>output.expression)]);
-assert.ok(largeKey.length<serializedIrKey.length/10,`canonical IR key must stay compact (${largeKey.length} versus ${serializedIrKey.length} characters)`);
+const serializedIrKeyLength=jsonLength([largeProgram.kind,largeProgram.irVersion,largeProgram.mathMode,largeProgram.outputs.map(output=>output.expression)]);
+assert.ok(largeKey.length<serializedIrKeyLength/10,`canonical IR key must stay compact (${largeKey.length} versus ${serializedIrKeyLength} characters)`);
 assert.equal(WGSLCompiler.key(programFor(largeFormula)),largeKey,'equivalent programs must share a canonical cache key');
 assert.notEqual(WGSLCompiler.key(programFor(`${largeFormula.slice(0,-1)}g`)),largeKey,'different programs must not share a cache key');
 assert.notEqual(WGSLCompiler.key(programFor(largeFormula,{legacyMath:true})),largeKey,'cache keys must include arithmetic mode');
 let keyReads=0;const observedExpression={get op(){keyReads++;return'var'},get name(){keyReads++;return'r'}},observedProgram={kind:'filter-fab-program',irVersion:1,mathMode:'float',outputs:[{expression:observedExpression}]};
 WGSLCompiler.key(observedProgram);const readsAfterFirstKey=keyReads;WGSLCompiler.key(observedProgram);assert.equal(keyReads,readsAfterFirstKey,'a program cache key must be computed only once per IR object');
+
+const logicalChain=Array.from({length:20},(_,index)=>`x==${index}`).join('&&'),logicalProgram=programFor(logicalChain),logicalExpression=logicalProgram.outputs[0].expression;
+class CountingWGSLCompiler extends WGSLCompiler{
+  constructor(program){super(program);this.valueVisits=0}
+  value(node,channel){this.valueVisits++;return super.value(node,channel)}
+}
+const countingCompiler=new CountingWGSLCompiler(logicalProgram);countingCompiler.value(logicalExpression,0);
+assert.equal(countingCompiler.valueVisits,expressionNodeCount(logicalExpression),'logical/comparison WGSL lowering must visit each IR node once instead of regenerating operands exponentially');
 
 const statelessCases = [
   ['rad(0,2,z)', 'ff_sample_polar('],
@@ -99,6 +109,20 @@ for(const [formula,blocker] of [['c&1','operator &'],['~c','operator ~'],['c,255
 const powAnalysis = WGSLCompiler.analyze(programFor('pow(-2,2)'));
 assert.equal(powAnalysis.compatible, false, 'pow() must use CPU fallback until negative-base semantics are defined in WGSL');
 assert.ok(powAnalysis.blockers.includes('pow()'));
+
+const exactSeedAnalysis=WGSLCompiler.analyze(programFor('hash2(x,y,16777217)*255'));
+assert.equal(exactSeedAnalysis.compatible,false,'integer noise inputs that are not exactly representable as f32 must use CPU fallback');
+assert.ok(exactSeedAnalysis.blockers.some(blocker=>blocker.includes('16777217')&&blocker.includes('not exactly representable as f32')));
+assert.equal(WGSLCompiler.analyze(programFor('hash2(x,y,16777216)*255')).compatible,true,'adjacent exactly representable integer noise inputs must remain GPU-compatible');
+
+const outOfRangeLiteral=`1${'0'.repeat(40)}`,outOfRangeAnalysis=WGSLCompiler.analyze(programFor(outOfRangeLiteral));
+assert.equal(outOfRangeAnalysis.compatible,false,'finite JavaScript literals outside f32 range must be rejected before shader creation');
+assert.ok(outOfRangeAnalysis.blockers.some(blocker=>blocker.includes('outside f32 range')));
+assert.throws(()=>WGSLCompiler.compile(programFor(outOfRangeLiteral)),error=>error?.name==='WGSLCompileError'&&error.blockers.some(blocker=>blocker.includes('outside f32 range')));
+
+const underflowLiteral=`0.${'0'.repeat(45)}1`,underflowAnalysis=WGSLCompiler.analyze(programFor(underflowLiteral));
+assert.equal(underflowAnalysis.compatible,false,'nonzero literals that underflow f32 must be rejected before shader creation');
+assert.ok(underflowAnalysis.blockers.some(blocker=>blocker.includes('underflows f32')));
 
 const roundCode = WGSLCompiler.compile(programFor('round(0.5)*255')).code;
 const roundMain = roundCode.slice(roundCode.lastIndexOf('outPixels[index]'));

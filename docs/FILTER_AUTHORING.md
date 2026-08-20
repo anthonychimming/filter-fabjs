@@ -1,6 +1,6 @@
 # Filter FabJS Filter Authoring Guide
 
-**Applies to Filter FabJS v2.4.6**
+**Applies to Filter FabJS v2.4.7**
 
 This guide is for designing new Filter FabJS filters efficiently and with predictable CPU/WebGPU behavior. It assumes the formula syntax in [FORMULA_REFERENCE.md](FORMULA_REFERENCE.md).
 
@@ -640,7 +640,9 @@ Before considering a new filter complete, check:
 
 ## 25. Common authoring mistakes
 
-### Using `sqr()` as square root
+### Using `sqr()` as square root in native filters
+
+The following guidance applies to native float filters. Historic AFS/legacy filters retain Filter Factory's integer square-root meaning for `sqr()` (with `sqrt()` as an alias).
 
 Wrong:
 
