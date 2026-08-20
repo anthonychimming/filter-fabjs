@@ -1,6 +1,6 @@
 # Filter FabJS Formula Reference
 
-**Applies to Filter FabJS v2.4.6 · native filter format v2 · typed IR v1**
+**Applies to Filter FabJS v2.4.7 · native filter format v2 · typed IR v1**
 
 This is the compact, implementation-oriented reference for writing Filter FabJS formulas. For worked explanations and tutorials, see the [Filter FabJS Programming Guide (PDF)](Filter_FabJS_Programming_Guide_v2.4.6.pdf). For analytic mask details, see [ANALYTIC_SHAPES.md](ANALYTIC_SHAPES.md).
 
@@ -155,8 +155,8 @@ cnv(1,1,1,1,1,1,1,1,1,9)
 | `dif(a,b)` | `abs(a-b)` | Yes |
 | `mix(a,b,n,d)` | `a*n/d + b*(d-n)/d`; `d=0` gives `0` | Yes |
 | `scl(v,inLo,inHi,outLo,outHi)` | Linear range mapping; zero input span gives `0` | Yes |
-| `sqr(x)` | **Square: `x*x`** | Yes |
-| `sqrt(x)` | `sqrt(max(0,x))` | Yes |
+| `sqr(x)` | Native float: square (`x*x`). Legacy mode: Filter Factory integer square root. | Yes in native float mode |
+| `sqrt(x)` | Native float: `sqrt(max(0,x))`. Legacy mode: alias of the Filter Factory integer square root. | Yes in native float mode |
 | `clamp(v,lo,hi)` | Clamp to range | Yes |
 | `lerp(a,b,t)` | Linear interpolation; `t` is `0..1` if `abs(t)<=1`, otherwise interpreted as `t/255`, then clamped | Yes |
 | `step(edge,x)` | `0` below edge, otherwise `1` | Yes |
@@ -169,7 +169,7 @@ cnv(1,1,1,1,1,1,1,1,1,9)
 | `wrap(v,size)` | Positive modulo coordinate | Yes |
 | `mirror(v,size)` | Ping-pong coordinate | Yes |
 
-**Important:** Filter FabJS uses `sqr(x)` for squaring. Use `sqrt(x)` for square root.
+**Important:** Native float filters use `sqr(x)` for squaring and `sqrt(x)` for square root. Historic AFS/legacy programs retain Filter Factory's `sqr(x)` square-root semantics; `sqrt(x)` is its legacy alias.
 
 ## 7. Angles and polar helpers
 
@@ -359,8 +359,8 @@ Missing control entries are filled to eight controls with value `128`. Native fi
 
 ## 16. Common correctness traps
 
-- `sqr(x)` is square, not square root.
-- `sqrt(x)` is the square-root function.
+- In native float filters, `sqr(x)` is square and `sqrt(x)` is square root.
+- In historic AFS/legacy filters, both `sqr(x)` and `sqrt(x)` use Filter Factory's integer square-root behavior.
 - `lerp()` accepts either normalized opacity (`0..1`) or control-style opacity (`0..255`).
 - Noise, gradients, and masks are normalized; multiply by `255` before using them directly as image channels.
 - `src()` is nearest/clamped; use `srcLinear()` for smooth subpixel displacement.

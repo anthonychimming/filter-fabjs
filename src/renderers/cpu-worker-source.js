@@ -9,7 +9,9 @@ export function workerProgram(){const float=CHROMA_MODELS.float,legacy=CHROMA_MO
 const FLOAT_CHROMA={uMin:${float.uMin},uMax:${float.uMax},uSpan:${float.uSpan},vMin:${float.vMin},vMax:${float.vMax},vSpan:${float.vSpan}},LEGACY_CHROMA={uMin:${legacy.uMin},uMax:${legacy.uMax},uSpan:${legacy.uSpan},vMin:${legacy.vMin},vMax:${legacy.vMax},vSpan:${legacy.vSpan}};
 let srcPixels=null,W=0,H=0,controls=Array(8).fill(128),rngSeed=691204,cells=new Float64Array(256),legacyMath=false,chroma=FLOAT_CHROMA,currentProgram=null,currentProgramKey=null;
 const pixel=[0,0,0,0],environment={x:0,y:0,z:0,p:pixel};
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),int=v=>Number.isFinite(v)?Math.trunc(v):0,div=(a,b)=>b===0?0:a/b,mod=(v,m)=>m===0?0:((v%m)+m)%m;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),int=v=>Number.isFinite(v)?Math.trunc(v):0,toI32=v=>Number.isFinite(v)?Math.trunc(v)|0:0,i32Div=(a,b)=>{a=toI32(a);b=toI32(b);return b===0?0:toI32(a/b)},i32Abs=v=>toI32(Math.abs(toI32(v))),div=(a,b)=>b===0?0:a/b,mod=(v,m)=>m===0?0:((v%m)+m)%m;
+function legacySqrt(v){let root=toI32(v);if(root>1){const input=root;root>>=1;let estimate=2;while(root>estimate){estimate=i32Div(input,root);root=toI32(root+estimate)>>1}}return root}
+function legacyPow(base,exponent){const value=Math.pow(toI32(base),toI32(exponent));if(!Number.isFinite(value))return 0;const floor=Math.floor(value);return toI32(floor+(value-floor>=0.5?1:0))}
 function coordWrap(v,size){size=Math.max(1,Math.abs(size));return mod(v,size)}
 function coordMirror(v,size){size=Math.max(1,Math.abs(size));const p=mod(v,size*2);return p<size?p:size*2-p-1e-9}
 function sampleMode(x,y,z,mode='clamp'){z=int(z);if(z<0||z>3)return 0;if(mode==='wrap'){x=coordWrap(x,W);y=coordWrap(y,H)}else if(mode==='mirror'){x=coordMirror(x,W);y=coordMirror(y,H)}else{x=clamp(x,0,W-1);y=clamp(y,0,H-1)}x=clamp(int(x),0,W-1);y=clamp(int(y),0,H-1);return srcPixels[(y*W+x)*4+z]}
@@ -62,18 +64,42 @@ case'linearGrad':{const dx=A(4)-A(2),dy=A(5)-A(3),den=dx*dx+dy*dy;return den?cla
 case'line':return lineMask(A(0),A(1),A(2),A(3),A(4),A(5),A(6),A(7));case'circle':return circleMask(A(0),A(1),A(2),A(3),A(4),A(5));case'ring':return ringMask(A(0),A(1),A(2),A(3),A(4),A(5),A(6));case'box':return boxMask(A(0),A(1),A(2),A(3),A(4),A(5),A(6),A(7));case'triangle':return triangleMask(A(0),A(1),A(2),A(3),A(4),A(5),A(6),A(7),A(8));case'grid':return gridMask(A(0),A(1),A(2),A(3),A(4),A(5));case'sierpinski':return sierpinskiMask(A(0),A(1),A(2),A(3),A(4),A(5),A(6));
 case'multiply':case'screen':case'overlay':case'softLight':case'difference':return opacityMix(A(0),blendMode(n,A(0),A(1)),a.length>2?A(2):undefined)
 }return 0}
-function ev(n,e){switch(n.op){
-case'const':return legacyMath?int(n.value):Number(n.value);
-case'var':{const v=vars(n.name,e);return legacyMath?int(v):v}
-case'unary':{const v=ev(n.input,e);return n.operator=='+'?v:n.operator=='-'?(legacyMath?int(-v):-v):n.operator=='!'?(v?0:1):~int(v)}
-case'select':return ev(n.condition,e)?ev(n.whenTrue,e):ev(n.whenFalse,e);
+function callLegacy(n,a,e){const A=i=>toI32(a[i]);switch(n){
+case'val':{const i=A(0),c=i>=0&&i<8?toI32(controls[i]):0;return toI32(i32Div(Math.imul(c,toI32(A(2)-A(1))),255)+A(1))}
+case'map':{const i=A(0),v=clamp(A(1),0,255);if(i<0||i>3)return 0;const hi=toI32(controls[i*2]),lo=toI32(controls[i*2+1]);if(hi===lo)return v<hi?0:255;if(lo>hi){if(v<=hi)return 255;if(v>=lo)return 0}else{if(v<=lo)return 0;if(v>=hi)return 255}return i32Div(Math.imul(toI32(v-lo),255),toI32(hi-lo))}
+case'add':return Math.min(toI32(A(0)+A(1)),A(2));case'sub':return Math.max(i32Abs(toI32(A(0)-A(1))),A(2));case'dif':return i32Abs(toI32(A(0)-A(1)));case'abs':return i32Abs(A(0));
+case'mix':return A(3)===0?0:toI32(i32Div(Math.imul(A(0),A(2)),A(3))+i32Div(Math.imul(A(1),toI32(A(3)-A(2))),A(3)));
+case'scl':return A(2)===A(1)?0:toI32(A(3)+i32Div(Math.imul(toI32(A(4)-A(3)),toI32(A(0)-A(1))),toI32(A(2)-A(1))));
+case'sqr':case'sqrt':return legacySqrt(A(0));case'pow':return legacyPow(A(0),A(1));
+case'cnv':case'cnv0':case'cnv1':{const d=A(9);if(d===0)return 0;let total=0,k=0;for(let yy=-1;yy<=1;yy++)for(let xx=-1;xx<=1;xx++)total=toI32(total+Math.imul(A(k++),sampleMode(e.x+xx,e.y+yy,e.z)));return i32Div(total,d)}
+}return toI32(call(n,a,e))}
+function evFloat(n,e){switch(n.op){
+case'const':return Number(n.value);
+case'var':return vars(n.name,e);
+case'unary':{const v=evFloat(n.input,e);return n.operator=='+'?v:n.operator=='-'?-v:n.operator=='!'?(v?0:1):~int(v)}
+case'select':return evFloat(n.condition,e)?evFloat(n.whenTrue,e):evFloat(n.whenFalse,e);
 case'binary':{
-  if(n.operator=='&&')return ev(n.left,e)?(ev(n.right,e)?1:0):0;
-  if(n.operator=='||')return ev(n.left,e)?1:(ev(n.right,e)?1:0);
-  if(n.operator==','){ev(n.left,e);return ev(n.right,e)}
-  const a=ev(n.left,e),b=ev(n.right,e),num=v=>legacyMath?int(v):v;
-  switch(n.operator){case'+':return num(a+b);case'-':return num(a-b);case'*':return num(a*b);case'/':return b===0?0:num(a/b);case'%':return b===0?0:(legacyMath?int(a)%int(b):a%b);case'<':return a<b?1:0;case'<=':return a<=b?1:0;case'>':return a>b?1:0;case'>=':return a>=b?1:0;case'==':return a===b?1:0;case'!=':return a!==b?1:0;case'&':return int(a)&int(b);case'^':return int(a)^int(b);case'|':return int(a)|int(b);case'<<':return int(a)<<int(b);case'>>':return int(a)>>int(b)}return 0
+  if(n.operator=='&&')return evFloat(n.left,e)?(evFloat(n.right,e)?1:0):0;
+  if(n.operator=='||')return evFloat(n.left,e)?1:(evFloat(n.right,e)?1:0);
+  if(n.operator==','){evFloat(n.left,e);return evFloat(n.right,e)}
+  const a=evFloat(n.left,e),b=evFloat(n.right,e);
+  switch(n.operator){case'+':return a+b;case'-':return a-b;case'*':return a*b;case'/':return b===0?0:a/b;case'%':return b===0?0:a%b;case'<':return a<b?1:0;case'<=':return a<=b?1:0;case'>':return a>b?1:0;case'>=':return a>=b?1:0;case'==':return a===b?1:0;case'!=':return a!==b?1:0;case'&':return int(a)&int(b);case'^':return int(a)^int(b);case'|':return int(a)|int(b);case'<<':return int(a)<<int(b);case'>>':return int(a)>>int(b)}return 0
 }
-case'call':{const a=n.argumentValues||(n.argumentValues=new Float64Array(n.args.length));for(let i=0;i<n.args.length;i++)a[i]=ev(n.args[i],e);const v=call(n.fn,a,e);return legacyMath?int(v):v}
+case'call':{const a=n.argumentValues||(n.argumentValues=new Float64Array(n.args.length));for(let i=0;i<n.args.length;i++)a[i]=evFloat(n.args[i],e);return call(n.fn,a,e)}
 }return 0}
+function evLegacy(n,e){switch(n.op){
+case'const':return toI32(n.value);
+case'var':return toI32(vars(n.name,e));
+case'unary':{const v=evLegacy(n.input,e);return n.operator=='+'?v:n.operator=='-'?toI32(-v):n.operator=='!'?(v?0:1):~v}
+case'select':return evLegacy(n.condition,e)?evLegacy(n.whenTrue,e):evLegacy(n.whenFalse,e);
+case'binary':{
+  if(n.operator=='&&')return evLegacy(n.left,e)?(evLegacy(n.right,e)?1:0):0;
+  if(n.operator=='||')return evLegacy(n.left,e)?1:(evLegacy(n.right,e)?1:0);
+  if(n.operator==','){evLegacy(n.left,e);return evLegacy(n.right,e)}
+  const a=evLegacy(n.left,e),b=evLegacy(n.right,e);
+  switch(n.operator){case'+':return toI32(a+b);case'-':return toI32(a-b);case'*':return Math.imul(a,b);case'/':return i32Div(a,b);case'%':return b===0?0:toI32(a%b);case'<':return a<b?1:0;case'<=':return a<=b?1:0;case'>':return a>b?1:0;case'>=':return a>=b?1:0;case'==':return a===b?1:0;case'!=':return a!==b?1:0;case'&':return a&b;case'^':return a^b;case'|':return a|b;case'<<':return a<<b;case'>>':return a>>b}return 0
+}
+case'call':{const a=n.argumentValues||(n.argumentValues=new Float64Array(n.args.length));for(let i=0;i<n.args.length;i++)a[i]=evLegacy(n.args[i],e);return callLegacy(n.fn,a,e)}
+}return 0}
+function ev(n,e){return legacyMath?evLegacy(n,e):evFloat(n,e)}
 onmessage=e=>{const m=e.data;if(m.type=='init'){W=m.width;H=m.height;srcPixels=new Uint8ClampedArray(m.buffer);postMessage({type:'ready'});return}if(m.type=='render'){const program=m.program||(m.programKey===currentProgramKey?currentProgram:null),outputs=program?.outputs;if(!program||program.kind!=='filter-fab-program'||program.irVersion!==1||!Array.isArray(outputs)||outputs.length!==4)throw new Error('Invalid or unsupported Filter FabJS IR program');if(m.program){currentProgram=program;currentProgramKey=m.programKey}const start=performance.now();controls=m.controls;legacyMath=program.mathMode==='legacy';chroma=legacyMath?LEGACY_CHROMA:FLOAT_CHROMA;rngSeed=691204;cells.fill(0);const out=new Uint8ClampedArray(W*H*4),step=Math.max(1,Math.floor(H/24));for(let y=0;y<H;y++){environment.y=y;for(let x=0;x<W;x++){const idx=(y*W+x)*4;environment.x=x;pixel[0]=srcPixels[idx];pixel[1]=srcPixels[idx+1];pixel[2]=srcPixels[idx+2];pixel[3]=srcPixels[idx+3];for(let z=0;z<4;z++){environment.z=z;out[idx+z]=clamp(ev(outputs[z].expression,environment),0,255)}}if(((y+1)%step===0)||y===H-1)postMessage({type:'progress',id:m.id,row:y+1,total:H,pct:((y+1)/H)*100})}postMessage({type:'result',id:m.id,buffer:out.buffer,ms:performance.now()-start},[out.buffer])}};`}

@@ -4,25 +4,40 @@
  * Licensed GPL-2.0-or-later. See LICENSE and README.md.
  */
 import { CHROMA_MODELS } from '../core/chroma.js';
-import { IR_VERSION, programCacheKey } from '../core/ir.js';
+import { IR_VERSION, IRType, programCacheKey } from '../core/ir.js';
 
 export class WGSLCompileError extends Error{constructor(message,blockers=[]){super(message);this.name='WGSLCompileError';this.blockers=blockers}}
 const WEBGPU_FUNCTIONS=new Set('src src0 src1 srcWrap srcMirror srcLinear rad rad0 rad1 cnv cnv0 cnv1 ctl val map min max abs add sub dif mix scl sqr sqrt sin cos tan r2x r2y c2d c2m clamp lerp step smoothstep floor ceil round fract sign bias gain hash2 valueNoise perlin worleyF1 worleyF2 fbm turbulence ridged periodicNoise wrap mirror linearGrad radialGrad angularGrad checker brick line circle ring box triangle grid sierpinski multiply screen overlay softLight difference'.split(' '));
 const WEBGPU_UNARY=new Set(['+','-','!']);
 const WEBGPU_BINARY=new Set(['+','-','*','/','%','<','<=','>','>=','==','!=','&&','||']);
+const WEBGPU_BOOLEAN_BINARY=new Set(['<','<=','>','>=','==','!=','&&','||']);
+const EXACT_INTEGER_NOISE_FUNCTIONS=new Set(['hash2','valueNoise','perlin','worleyF1','worleyF2','fbm','turbulence','ridged','periodicNoise']);
 export class WGSLCompiler{
   static analyze(program){
     const blockers=[];
     if(!program||program.kind!=='filter-fab-program'||program.irVersion!==IR_VERSION)blockers.push('unsupported IR program');
     if(program?.mathMode!=='float')blockers.push('legacy integer compatibility mode');
-    const walk=node=>{
+    const walk=(node,exactIntegerContext=false)=>{
       if(!node)return;
       switch(node.op){
-        case'const':case'var':return;
-        case'unary':if(!WEBGPU_UNARY.has(node.operator))blockers.push(`operator ${node.operator}`);walk(node.input);return;
-        case'binary':if(!WEBGPU_BINARY.has(node.operator))blockers.push(node.operator===','?'comma sequencing':`operator ${node.operator}`);walk(node.left);walk(node.right);return;
-        case'select':walk(node.condition);walk(node.whenTrue);walk(node.whenFalse);return;
-        case'call':if(!WEBGPU_FUNCTIONS.has(node.fn))blockers.push(`${node.fn}()`);node.args.forEach(walk);return;
+        case'const':{
+          const value=Number(node.value),rounded=Math.fround(value),label=String(node.value);
+          if(!Number.isFinite(value))blockers.push(`constant ${label} is not finite`);
+          else if(!Number.isFinite(rounded))blockers.push(`constant ${label} is outside f32 range`);
+          else if(value!==0&&rounded===0)blockers.push(`constant ${label} underflows f32`);
+          else if(exactIntegerContext&&node.type===IRType.INTEGER&&rounded!==value)blockers.push(`integer constant ${label} is not exactly representable as f32`);
+          return;
+        }
+        case'var':return;
+        case'unary':if(!WEBGPU_UNARY.has(node.operator))blockers.push(`operator ${node.operator}`);walk(node.input,exactIntegerContext);return;
+        case'binary':if(!WEBGPU_BINARY.has(node.operator))blockers.push(node.operator===','?'comma sequencing':`operator ${node.operator}`);walk(node.left,exactIntegerContext);walk(node.right,exactIntegerContext);return;
+        case'select':walk(node.condition);walk(node.whenTrue,exactIntegerContext);walk(node.whenFalse,exactIntegerContext);return;
+        case'call':{
+          if(!WEBGPU_FUNCTIONS.has(node.fn))blockers.push(`${node.fn}()`);
+          const exactNoiseIntegers=EXACT_INTEGER_NOISE_FUNCTIONS.has(node.fn);
+          node.args.forEach(arg=>walk(arg,exactIntegerContext||(exactNoiseIntegers&&arg.type===IRType.INTEGER)));
+          return;
+        }
         default:blockers.push(`IR operation ${node.op}`);
       }
     };
@@ -41,7 +56,7 @@ export class WGSLCompiler{
     if(malformed?.length)throw new WGSLCompileError('Generated WGSL contains an unterminated return statement',[...new Set(malformed)]);
   }
   constructor(program){this.program=program}
-  number(value){value=Number(value);if(!Number.isFinite(value))throw new WGSLCompileError('WGSL constants must be finite');const raw=String(value);return/[.eE]/.test(raw)?raw:`${raw}.0`}
+  number(value){value=Number(value);if(!Number.isFinite(value))throw new WGSLCompileError('WGSL constants must be finite');const rounded=Math.fround(value);if(!Number.isFinite(rounded))throw new WGSLCompileError(`WGSL constant ${value} is outside f32 range`);if(value!==0&&rounded===0)throw new WGSLCompileError(`WGSL constant ${value} underflows f32`);const raw=String(value);return/[.eE]/.test(raw)?raw:`${raw}.0`}
   bool(node,channel){
     if(node.op==='binary'&&['<','<=','>','>=','==','!='].includes(node.operator))return`(${this.value(node.left,channel)} ${node.operator} ${this.value(node.right,channel)})`;
     if(node.op==='binary'&&node.operator==='&&')return`(ff_bool(${this.value(node.left,channel)}) && ff_bool(${this.value(node.right,channel)}))`;
@@ -62,10 +77,10 @@ export class WGSLCompiler{
       case'var':return this.variable(node.name,channel);
       case'unary':if(node.operator==='+')return`(${this.value(node.input,channel)})`;if(node.operator==='-')return`(-${this.value(node.input,channel)})`;return`ff_num(${this.bool(node,channel)})`;
       case'binary':{
+        if(WEBGPU_BOOLEAN_BINARY.has(node.operator))return`ff_num(${this.bool(node,channel)})`;
         const a=this.value(node.left,channel),b=this.value(node.right,channel);
         if(node.operator==='/')return`ff_div(${a}, ${b})`;
         if(node.operator==='%')return`ff_rem(${a}, ${b})`;
-        if(['<','<=','>','>=','==','!=','&&','||'].includes(node.operator))return`ff_num(${this.bool(node,channel)})`;
         return`(${a} ${node.operator} ${b})`;
       }
       case'select':return`select(${this.value(node.whenFalse,channel)}, ${this.value(node.whenTrue,channel)}, ${this.bool(node.condition,channel)})`;

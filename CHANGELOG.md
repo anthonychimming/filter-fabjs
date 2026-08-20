@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.4.7
+
+- Restored Filter Factory-compatible signed 32-bit arithmetic, helper truncation, integer square-root behavior, and power rounding for historic AFS/legacy filters.
+- Routed numeric literals outside the WebGPU f32 range, nonzero f32 underflows, and inexact integer noise arguments through the CPU fallback instead of generating incompatible shaders.
+- Lowered chained logical and comparison expressions to WGSL in a single traversal instead of repeatedly regenerating their operands.
+
 ## 2.4.6
 
 - Share one immutable source pixel array across the app, renderer manager, and main-thread renderer state instead of retaining full-frame duplicates.
