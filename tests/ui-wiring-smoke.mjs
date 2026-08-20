@@ -21,6 +21,10 @@ assert.doesNotMatch(app, /mathMode:'float'/, 'filter serialization must not hard
 assert.match(app, /const loadId=\+\+state\.imageLoadId/, 'image loading must use a latest-request generation');
 assert.match(app, /if\(loadId!==state\.imageLoadId\)return false/, 'stale image decodes must be discarded');
 assert.match(app, /finally\{bitmap\?\.close\?\.\(\);\}/, 'decoded image bitmaps must close on every exit path');
+assert.match(app, /state\.filtered=state\.source/, 'initial source and filtered preview must share the immutable pixel buffer');
+assert.match(app, /async function exportPNG\(\)/, 'PNG export must use the asynchronous encoding path');
+assert.match(app, /blob=await canvasBlob\(canvas,'image\/png'\)/, 'PNG export must download an encoded Blob');
+assert.doesNotMatch(app, /toDataURL\(/, 'PNG export must not block on a base64 data URL');
 assert.match(app, /rendererManager\.renderWithFallback\(/, 'the renderer manager must own runtime CPU fallback');
 assert.doesNotMatch(app, /rendererManager\.get\('cpu'\)|rendererManager\.active\s*=/, 'the app must not bypass manager-owned fallback state');
 assert.match(app, /function prepareFilter\(input\)/, 'filter definitions must be normalized before application state changes');

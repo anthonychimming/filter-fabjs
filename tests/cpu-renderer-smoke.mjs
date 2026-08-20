@@ -100,7 +100,8 @@ try{
   const lifecycleRenderer=new CpuRenderer(()=> '');
   const programA=compileFilterProgram(['r','g','b','a'].map(formula=>new Parser(formula).parse()));
   const programB=compileFilterProgram(['255-r','g','b','a'].map(formula=>new Parser(formula).parse()));
-  await lifecycleRenderer.setSource(new Uint8ClampedArray([1,2,3,255]),1,1);
+  const lifecycleSource=new Uint8ClampedArray([1,2,3,255]);await lifecycleRenderer.setSource(lifecycleSource,1,1);
+  assert.equal(lifecycleRenderer.source,lifecycleSource,'the CPU renderer must share the immutable main-thread source buffer');
   assert.equal(fakeWorkers.length,1);
 
   const firstRender=lifecycleRenderer.render({id:1,program:programA,controls:Array(8).fill(128)});await new Promise(resolve=>setImmediate(resolve));

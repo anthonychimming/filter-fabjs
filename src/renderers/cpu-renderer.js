@@ -34,7 +34,7 @@ export class CpuRenderer extends RendererBackend{
   }
   ensureWorker(){if(!this.worker){this.spawnWorker();this.postSource()}return this.readyPromise}
   setSource(pixels,width,height){
-    this.source=new Uint8ClampedArray(pixels);this.width=width;this.height=height;
+    this.source=pixels instanceof Uint8ClampedArray?pixels:new Uint8ClampedArray(pixels);this.width=width;this.height=height;
     this.rejectPending(new RenderCancelledError('Source replaced'));
     this.spawnWorker();this.postSource();return this.readyPromise;
   }

@@ -4,7 +4,7 @@ This document describes the implementation currently present in the public repos
 
 ## Release
 
-- Application version: **2.4.5**
+- Application version: **2.4.6**
 - Native filter format: **version 2**
 - Typed IR: **version 1**
 - Development layout: native ES modules
@@ -17,7 +17,7 @@ Filter FabJS provides two rendering backends:
 - **WebGPU** — compiles supported typed IR into WGSL and renders with a full-frame compute/readback submission using direct RGBA byte views. If the device is lost or destroyed to abort active work, the retained source is uploaded to the replacement device on the next GPU render. Generated plans and pipelines use an entry- and payload-bounded LRU cache.
 - **CPU Worker** — compatibility renderer for unsupported WebGPU operations and legacy integer-mode filters. It reuses hot-loop evaluation storage and keeps the current validated IR so control-only renders send only a compact key.
 
-The **Auto** renderer selects WebGPU when the current program is compatible and WebGPU is available; otherwise it reports a fallback reason and uses the CPU Worker. Runtime GPU failures also fall back through the renderer manager, preserving cancellation and suppressing repeated validation attempts for the same device/program pair. WebGPU render and source-upload generations are captured when work is queued, so cancellation prevents stale queued work from starting; cancelling submitted work destroys the device to interrupt pending readback. `WGSLCompiler.analyze()` is the sole WebGPU-capability authority; renderer-neutral IR metadata records semantic facts without predicting backend support. Compatibility analysis reuses compact memoized program keys in an entry- and payload-bounded LRU cache, and unchanged parsed IR is reused for control-only renders. When a new image is loaded, both backends release the previous source and only the selected backend receives the replacement lazily. A cancelled CPU Worker remains stopped until the next render request.
+The **Auto** renderer selects WebGPU when the current program is compatible and WebGPU is available; otherwise it reports a fallback reason and uses the CPU Worker. Runtime GPU failures also fall back through the renderer manager, preserving cancellation and suppressing repeated validation attempts for the same device/program pair. WebGPU render and source-upload generations are captured when work is queued, so cancellation prevents stale queued work from starting; cancelling submitted work destroys the device to interrupt pending readback. `WGSLCompiler.analyze()` is the sole WebGPU-capability authority; renderer-neutral IR metadata records semantic facts without predicting backend support. Compatibility analysis reuses compact memoized program keys in an entry- and payload-bounded LRU cache, and unchanged parsed IR is reused for control-only renders. The app, renderer manager, and main-thread renderer state share one immutable source pixel array; the CPU Worker receives its own transferable copy. When a new image is loaded, both backends release the previous source and only the selected backend receives the replacement lazily. A cancelled CPU Worker remains stopped until the next render request.
 
 ## Formula engine
 
@@ -57,7 +57,7 @@ Current workflows include:
 - Image loading and drag-and-drop.
 - Clipboard image paste.
 - RGBA PNG copy where browser clipboard support permits it.
-- PNG export.
+- Asynchronous Blob-based PNG export.
 - Original, filtered, and split preview modes with zero-copy cached `ImageData` wrappers and animation-frame-coalesced split redraws.
 - Transparency checkerboard preview.
 
@@ -78,6 +78,7 @@ The repository includes smoke tests for:
 - Import-size, schema, metadata, and parser-resource limits.
 - Compact canonical program keys; entry/byte-bounded renderer caches; inactive-source release; and control-only reuse.
 - Queued and active WebGPU cancellation, direct RGBA GPU transfer, CPU Worker IR reuse/lazy restart, and zero-copy coalesced split-preview redraws.
+- Shared immutable source ownership and asynchronous PNG export.
 - Stable finite-depth Sierpiński holes and internal-edge feathering.
 - Math-mode-specific chroma bounds, primary-colour normalization, and optional CPU/WebGPU chroma parity.
 - Renderer-neutral IR metadata plus authoritative WGSL rejection of bitwise and comma expressions.

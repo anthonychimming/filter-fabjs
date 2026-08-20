@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.4.6
+
+- Share one immutable source pixel array across the app, renderer manager, and main-thread renderer state instead of retaining full-frame duplicates.
+- Export PNGs through asynchronous Blob encoding instead of blocking on a base64-expanded data URL.
+
 ## 2.4.5
 
 - Abort active WebGPU readback by destroying the submitted device on cancellation, then lazily reacquire a device and restore the retained source on the next render.
