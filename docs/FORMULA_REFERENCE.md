@@ -2,7 +2,7 @@
 
 **Applies to Filter FabJS v2.4.7 · native filter format v2 · typed IR v1**
 
-This is the compact, implementation-oriented reference for writing Filter FabJS formulas. For worked explanations and tutorials, see the [Filter FabJS Programming Guide (PDF)](Filter_FabJS_Programming_Guide_v2.4.6.pdf). For analytic mask details, see [ANALYTIC_SHAPES.md](ANALYTIC_SHAPES.md).
+This is the compact, implementation-oriented reference for writing Filter FabJS formulas. For worked explanations and tutorials, see the [Filter FabJS Programming Guide (PDF)](Filter_FabJS_Programming_Guide_v2.4.7.pdf). For analytic mask details, see [ANALYTIC_SHAPES.md](ANALYTIC_SHAPES.md).
 
 The shipping parser in `src/core/formula-language.js`, CPU evaluator in `src/renderers/cpu-worker-source.js`, and WebGPU compiler in `src/gpu/wgsl-compiler.js` are the implementation source of truth.
 

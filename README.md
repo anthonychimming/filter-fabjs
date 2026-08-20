@@ -19,7 +19,7 @@ The project is under active development.
 
 See [Project Status](docs/PROJECT_STATUS.md) for implementation details, compatibility notes, and current boundaries.
 
-For the formula language, function reference, renderer compatibility notes, and worked filter examples, see the **[Filter FabJS Programming Guide (PDF)](docs/Filter_FabJS_Programming_Guide_v2.4.6.pdf)**.
+For the formula language, function reference, renderer compatibility notes, and worked filter examples, see the **[Filter FabJS Programming Guide (PDF)](docs/Filter_FabJS_Programming_Guide_v2.4.7.pdf)**.
 
 ## Run locally
 
