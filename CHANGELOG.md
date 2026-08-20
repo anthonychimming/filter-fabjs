@@ -1,12 +1,5 @@
 # Changelog
 
-## 2.4.6
-
-- Preflight image byte and pixel dimensions before bitmap creation and request decode-time resizing to the 1800px render boundary.
-- Share the immutable source pixel array across the app, renderer manager, and main-thread renderer state instead of retaining full-frame duplicates.
-- Export PNGs through asynchronous Blob encoding rather than blocking on a base64-expanded data URL.
-- Verify the encoded PNG alpha channel from its bounded header and write native PNG clipboard representations without a second decode or base64 HTML copy.
-
 ## 2.4.5
 
 - Abort active WebGPU readback by destroying the submitted device on cancellation, then lazily reacquire a device and restore the retained source on the next render.

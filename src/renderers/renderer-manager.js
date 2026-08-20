@@ -22,7 +22,7 @@ export class RendererManager{
       this.instanceVersions.delete(id);
       try{const release=typeof renderer.releaseSource==='function'?renderer.releaseSource():renderer.cancel?.();if(release)releases.push(Promise.resolve(release).catch(error=>console.warn(`${renderer.label||id} source release failed`,error)))}catch(error){console.warn(`${renderer.label||id} source release failed`,error)}
     }
-    this.active=null;this.source=pixels instanceof Uint8ClampedArray?pixels:new Uint8ClampedArray(pixels);this.width=width;this.height=height;this.sourceVersion++;
+    this.active=null;this.source=new Uint8ClampedArray(pixels);this.width=width;this.height=height;this.sourceVersion++;
     return Promise.all(releases).then(()=>undefined);
   }
   async syncSource(id,renderer){const source=this.source,width=this.width,height=this.height,version=this.sourceVersion;await renderer.setSource(source,width,height);if(version===this.sourceVersion)this.instanceVersions.set(id,version)}

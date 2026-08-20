@@ -4,7 +4,7 @@ This document describes the implementation currently present in the public repos
 
 ## Release
 
-- Application version: **2.4.6**
+- Application version: **2.4.5**
 - Native filter format: **version 2**
 - Typed IR: **version 1**
 - Development layout: native ES modules
@@ -56,9 +56,8 @@ Current workflows include:
 - Historic `.afs` import with legacy integer math and the same formula budgets.
 - Image loading and drag-and-drop.
 - Clipboard image paste.
-- RGBA PNG copy through native clipboard representations where browser support permits it, without base64 HTML duplication.
-- Asynchronous Blob-based PNG export.
-- Image byte/dimension preflight and decode-time resize to the 1800px render boundary.
+- RGBA PNG copy where browser clipboard support permits it.
+- PNG export.
 - Original, filtered, and split preview modes with zero-copy cached `ImageData` wrappers and animation-frame-coalesced split redraws.
 - Transparency checkerboard preview.
 
@@ -79,7 +78,6 @@ The repository includes smoke tests for:
 - Import-size, schema, metadata, and parser-resource limits.
 - Compact canonical program keys; entry/byte-bounded renderer caches; inactive-source release; and control-only reuse.
 - Queued and active WebGPU cancellation, direct RGBA GPU transfer, CPU Worker IR reuse/lazy restart, and zero-copy coalesced split-preview redraws.
-- Pre-decode image bounds, shared immutable source ownership, asynchronous PNG export, and bounded clipboard alpha verification.
 - Stable finite-depth Sierpiński holes and internal-edge feathering.
 - Math-mode-specific chroma bounds, primary-colour normalization, and optional CPU/WebGPU chroma parity.
 - Renderer-neutral IR metadata plus authoritative WGSL rejection of bitwise and comma expressions.

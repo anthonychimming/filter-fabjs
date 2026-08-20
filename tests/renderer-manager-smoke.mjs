@@ -22,8 +22,7 @@ class DeferredRenderer {
 const renderer = new DeferredRenderer();
 const manager = new RendererManager({ cpu: () => renderer });
 
-const firstSource=new Uint8ClampedArray([1,0,0,255]);await manager.setSource(firstSource,1,1);
-assert.equal(manager.source,firstSource,'the manager must retain the immutable clamped source without copying it');
+await manager.setSource(new Uint8ClampedArray([1, 0, 0, 255]), 1, 1);
 const firstGet = manager.get('cpu');
 await Promise.resolve();
 assert.deepEqual(renderer.calls, [{ first: 1, width: 1, height: 1 }]);
