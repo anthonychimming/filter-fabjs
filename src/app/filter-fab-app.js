@@ -17,9 +17,53 @@ import { getDom } from '../ui/dom.js';
 import { createCanvasView } from '../ui/canvas-view.js';
 import { createControlsController } from '../ui/controls.js';
 
+export async function importLatestFilterFile(file,{state,cancelRender,applyFilter}){
+  if(!file)return null;
+  const loadId=++state.filterLoadId;
+  try{
+    if(Number.isFinite(Number(file.size))&&Number(file.size)>FILTER_FILE_MAX_BYTES)throw new Error(`Filter file exceeds the ${FILTER_FILE_MAX_BYTES/1024} KiB limit`);
+    const text=await file.text();
+    if(loadId!==state.filterLoadId)return null;
+    const result=detectFilterFormat(text,file.name);
+    if(state.isRendering){await cancelRender();if(loadId!==state.filterLoadId)return null;}
+    applyFilter(result.data);
+    return result;
+  }catch(error){if(loadId!==state.filterLoadId)return null;throw error;}
+}
+
+export function validateFilterForPersistence(filter,onError=()=>{}){try{return validateNativeFilter(filter);}catch(error){onError(error);return null;}}
+
+export function applyPresetSafely(definition,selection,{applyFilter,updatePresetDeleteState,onError}){
+  updatePresetDeleteState();
+  try{applyFilter(definition,selection);return true;}catch(error){updatePresetDeleteState();onError(error);return false;}
+}
+
+export function initializeImagePreview(data,width,height,{state,canvasView,canvas}){
+  canvasView.invalidatePixels();state.width=width;state.height=height;state.source=data instanceof Uint8ClampedArray?data:new Uint8ClampedArray(data);state.filtered=state.source;canvas.width=width;canvas.height=height;canvasView.fitCanvas();canvasView.drawView();
+}
+
+const CUSTOM_PRESET_ID_PATTERN=/^[A-Za-z0-9_-]{1,80}$/;
+export function createCustomPresetId(){try{const uuid=globalThis.crypto?.randomUUID?.();if(uuid)return`preset-${uuid}`}catch{}return`preset-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,12)||'0'}`}
+function isValidCustomPresetId(value){return typeof value==='string'&&CUSTOM_PRESET_ID_PATTERN.test(value)}
+function allocateCustomPresetId(used,idFactory){for(let attempt=0;attempt<100;attempt++){const id=idFactory();if(isValidCustomPresetId(id)&&!used.has(id))return id}throw new Error('Could not create a unique custom preset ID')}
+export function normalizeCustomPresetList(value,idFactory=createCustomPresetId){
+  if(!Array.isArray(value))return{presets:[],storageList:[],migrated:false};
+  const presets=[],storageList=[],used=new Set();let migrated=false;
+  value.forEach(item=>{
+    if(!item||typeof item!=='object'||Array.isArray(item)||typeof item.name!=='string'){storageList.push(item);return}
+    let id=item.id;if(!isValidCustomPresetId(id)||used.has(id)){id=allocateCustomPresetId(used,idFactory);migrated=true}
+    const preset=id===item.id?item:{...item,id};used.add(id);presets.push(preset);storageList.push(preset);
+  });
+  return{presets,storageList,migrated};
+}
+export function findCustomPresetById(list,id){return Array.isArray(list)?list.find(preset=>preset.id===id)||null:null}
+export function upsertCustomPreset(list,filter,name,idFactory=createCustomPresetId){
+  const next=[...list],index=next.findIndex(item=>item.name.toLowerCase()===name.toLowerCase()),used=new Set(next.map(item=>item.id)),id=index>=0?next[index].id:allocateCustomPresetId(used,idFactory),preset={...filter,name,id};if(index>=0)next[index]=preset;else next.push(preset);return{list:next,preset};
+}
+
 export function initFilterFabApp(){
   const {el,ctx}=getDom();
-  const state={source:null,filtered:null,width:0,height:0,view:'filtered',split:50,zoom:'fit',zoomLevel:1,controls:Array(8).fill(128),labels:Array.from({length:8},(_,i)=>`Control ${i+1}`),renderId:0,imageLoadId:0,rendererManager:null,rendererPreference:storageGet('ffw-renderer','auto'),lastProgram:null,lastProgramKey:null,lastWGSL:null,lastGpuAnalysis:null,isRendering:false,usedControls:Array(8).fill(false),legacyMath:false,hasPendingFormulaChanges:false,focusSnapshot:null};
+  const state={source:null,filtered:null,width:0,height:0,view:'filtered',split:50,zoom:'fit',zoomLevel:1,controls:Array(8).fill(128),labels:Array.from({length:8},(_,i)=>`Control ${i+1}`),renderId:0,imageLoadId:0,filterLoadId:0,rendererManager:null,rendererPreference:storageGet('ffw-renderer','auto'),lastProgram:null,lastProgramKey:null,lastWGSL:null,lastGpuAnalysis:null,isRendering:false,usedControls:Array(8).fill(false),legacyMath:false,hasPendingFormulaChanges:false,focusSnapshot:null};
   const canvasView=createCanvasView({state,el,ctx});
   let controlsController;
 
@@ -50,8 +94,8 @@ export function initFilterFabApp(){
   const scheduleFormulaValidation=debounce(validatePendingFormulas,220);
   controlsController=createControlsController({state,el,scheduleRender,applyInteractionLocks,compileCurrentProgram});
 
-  function customList(){try{const list=JSON.parse(storageGet('ffw-custom-presets','[]'));return Array.isArray(list)?list.filter(item=>item&&typeof item==='object'&&!Array.isArray(item)&&typeof item.name==='string'):[]}catch{return[];}}
-  function populatePresets(){const selected=el.preset.value,custom=customList();el.preset.innerHTML='<optgroup label="Built-in">'+[...presets].sort((a,b)=>a.name.localeCompare(b.name)).map(preset=>`<option value="builtin:${preset.id}">${preset.name}</option>`).join('')+'</optgroup>'+(custom.length?'<optgroup label="My presets">'+custom.map((preset,index)=>`<option value="custom:${index}">${escapeHtml(preset.name)}</option>`).join('')+'</optgroup>':'');if(selected&&Array.from(el.preset.options).some(option=>option.value===selected))el.preset.value=selected;updatePresetDeleteState();}
+  function customList(){try{const normalized=normalizeCustomPresetList(JSON.parse(storageGet('ffw-custom-presets','[]')));if(normalized.migrated)storageSet('ffw-custom-presets',JSON.stringify(normalized.storageList));return normalized.presets}catch{return[];}}
+  function populatePresets(){const selected=el.preset.value,custom=customList();el.preset.innerHTML='<optgroup label="Built-in">'+[...presets].sort((a,b)=>a.name.localeCompare(b.name)).map(preset=>`<option value="builtin:${preset.id}">${preset.name}</option>`).join('')+'</optgroup>'+(custom.length?'<optgroup label="My presets">'+custom.map(preset=>`<option value="custom:${escapeHtml(preset.id)}">${escapeHtml(preset.name)}</option>`).join('')+'</optgroup>':'');if(selected&&Array.from(el.preset.options).some(option=>option.value===selected))el.preset.value=selected;updatePresetDeleteState();}
   function currentFilter(){return{format:'filter-fab-js',version:2,mathMode:state.legacyMath?'legacy':'float',name:$('#filterName').value.trim().slice(0,120)||'Untitled Filter',author:$('#filterAuthor').value.trim().slice(0,120),formulas:el.formulas.map(field=>field.value.trim()),controls:state.controls.map((value,index)=>({label:String(state.labels[index]??'').slice(0,80)||`Control ${index+1}`,value}))};}
   function prepareFilter(input){
     if(!input||typeof input!=='object'||Array.isArray(input))throw new Error('Filter definition must be an object');
@@ -79,6 +123,7 @@ export function initFilterFabApp(){
 
   function compileAll({cache=true}={}){const key=currentProgramKey();if(cache&&state.lastProgram&&state.lastProgramKey===key){controlsController.updateControlUsage(state.lastProgram);return state.lastProgram}const astList=[];let ok=true;el.formulas.forEach(field=>{const box=field.closest('.formula'),icon=$('.formula-state',box),errorElement=$('.formula-error',box);try{astList.push(new Parser(field.value).parse());field.classList.remove('invalid');field.setAttribute('aria-invalid','false');icon.textContent='✓';icon.classList.remove('bad','pending');errorElement.textContent='';errorElement.classList.remove('show');}catch(error){ok=false;astList.push(null);field.classList.add('invalid');field.setAttribute('aria-invalid','true');icon.textContent='!';icon.classList.remove('pending');icon.classList.add('bad');errorElement.textContent=`${error.message} at character ${(error.pos??0)+1}`;errorElement.classList.add('show');}});if(!ok){controlsController.updateControlUsage(null);return null;}try{const program=compileFilterProgram(astList,{legacyMath:state.legacyMath});if(cache){state.lastProgram=program;state.lastProgramKey=key}controlsController.updateControlUsage(program);return program;}catch(error){console.error('IR compilation failed',error);setStatus(`Compiler error: ${error.message}`,'error');controlsController.updateControlUsage(null);return null;}}
   function showFormulaFailure(){const hasFieldError=el.formulas.some(field=>field.classList.contains('invalid'));setFormulaEditStatus('invalid',hasFieldError?'Fix formula errors':'Compiler error');if(hasFieldError)setStatus('Fix formula errors before rendering','error');}
+  function validatedCurrentFilter(){return validateFilterForPersistence(currentFilter(),error=>{console.error('Filter validation failed',error);compileAll();showFormulaFailure();setStatus(`Filter validation error: ${error.message}`,'error');toast(`Filter validation failed: ${error.message}`);});}
   function validatePendingFormulas(){if(!state.hasPendingFormulaChanges||state.isRendering)return;const program=compileAll({cache:false});if(program){setFormulaEditStatus('pending','Ready to render');setStatus('Formula valid · render to update preview','pending');}else showFormulaFailure();}
   async function render({focusInvalid=false}={}){
     if(!state.source||state.isRendering)return;
@@ -116,7 +161,7 @@ export function initFilterFabApp(){
     }
   }
 
-  function initImage(data,width,height){state.renderId++;if(state.isRendering)setUILocked(false);canvasView.invalidatePixels();state.width=width;state.height=height;state.source=data instanceof Uint8ClampedArray?data:new Uint8ClampedArray(data);state.filtered=state.source;initializeRendererSource().catch(error=>{console.error('Renderer initialization failed',error);setStatus(`Renderer error: ${error.message}`,'error');});el.canvas.width=width;el.canvas.height=height;el.imageInfo.textContent=`${width} × ${height} px`;canvasView.fitCanvas();render();}
+  function initImage(data,width,height){state.renderId++;if(state.isRendering)setUILocked(false);initializeImagePreview(data,width,height,{state,canvasView,canvas:el.canvas});el.imageInfo.textContent=`${width} × ${height} px`;initializeRendererSource().catch(error=>{console.error('Renderer initialization failed',error);setStatus(`Renderer error: ${error.message}`,'error');});render();}
   function demoImage(){const width=960,height=640,canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const context=canvas.getContext('2d'),background=context.createLinearGradient(0,0,width,height);background.addColorStop(0,'#08050d');background.addColorStop(.48,'#6c47b1');background.addColorStop(1,'#c429a3');context.fillStyle=background;context.fillRect(0,0,width,height);for(let i=0;i<18;i++){context.globalAlpha=.09;context.fillStyle=i%2?'#fff':'#07111f';context.beginPath();context.arc(90+i*58,90+(i%4)*130,60+(i%3)*35,0,Math.PI*2);context.fill();}context.globalAlpha=1;context.fillStyle='rgba(6,16,5,.82)';context.roundRect(84,94,792,452,36);context.fill();context.fillStyle='#f6efc4';context.font='700 62px system-ui';context.fillText('FILTER',132,245);context.fillStyle='#e1ec1a';context.fillText('FABJS',132,316);context.font='24px system-ui';context.fillStyle='#cdddb7';context.fillText('Open an image or experiment with this demo.',136,370);const gradient=context.createLinearGradient(136,0,790,0);gradient.addColorStop(0,'#e45a87');gradient.addColorStop(.5,'#9fd36a');gradient.addColorStop(1,'#38a9d4');context.fillStyle=gradient;context.fillRect(136,412,654,18);return context.getImageData(0,0,width,height);}
   async function loadImageFile(file,{successMessage='Image loaded'}={}){if(!file||!String(file.type||'').startsWith('image/')){toast('Choose a valid image file');return false;}const loadId=++state.imageLoadId;let bitmap=null;setStatus('Loading image…','busy');try{bitmap=await createImageBitmap(file);if(loadId!==state.imageLoadId)return false;const maximum=1800,scale=Math.min(1,maximum/Math.max(bitmap.width,bitmap.height)),width=Math.max(1,Math.round(bitmap.width*scale)),height=Math.max(1,Math.round(bitmap.height*scale)),canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const context=canvas.getContext('2d',{willReadFrequently:true});if(!context)throw new Error('Canvas image loading is unavailable');context.drawImage(bitmap,0,0,width,height);const pixels=context.getImageData(0,0,width,height).data;if(loadId!==state.imageLoadId)return false;initImage(pixels,width,height);toast(scale<1?`${successMessage} · resized to 1800 px`:successMessage);return true;}catch(error){if(loadId!==state.imageLoadId)return false;setStatus('Could not load image','error');toast(error.message||'Could not load image');return false;}finally{bitmap?.close?.();}}
 
@@ -127,10 +172,10 @@ export function initFilterFabApp(){
   function triggerDownload(href,name,revoke=false){try{const anchor=document.createElement('a');anchor.href=href;anchor.download=name;anchor.rel='noopener';anchor.style.display='none';document.body.appendChild(anchor);anchor.click();setTimeout(()=>{anchor.remove();if(revoke)URL.revokeObjectURL(href);},10000);toast(`Download started: ${name}`);return true;}catch(error){console.error('Download failed',error);toast(`Download failed: ${error.message||'browser blocked the file'}`);return false;}}
   function downloadBlob(blob,name){if(!(blob instanceof Blob)||!blob.size){toast('Nothing was generated to download');return false;}return triggerDownload(URL.createObjectURL(blob),name,true);}
   async function exportPNG(){if(!state.filtered||!state.width||!state.height){toast('Load and render an image before exporting');return;}setStatus('Encoding PNG…','busy');try{const canvas=renderedImageCanvas(state.filtered,state.width,state.height),name=slug($('#filterName').value||'filtered-image')+'.png',blob=await canvasBlob(canvas,'image/png');if(downloadBlob(blob,name))setStatus('Ready');}catch(error){console.error('PNG export failed',error);setStatus('PNG export failed','error');toast(`PNG export failed: ${error.message}`);}}
-  function exportFilter(){const filter=currentFilter(),base=slug(filter.name);try{downloadBlob(new Blob([JSON.stringify(filter,null,2)+'\n'],{type:'application/json;charset=utf-8'}),base+'.json');}catch(error){console.error('Filter export failed',error);toast(`Filter export failed: ${error.message}`);}}
-  function deletePreset(){const[type,id]=el.preset.value.split(':');if(type!=='custom')return;const list=customList(),index=Number(id),preset=list[index];if(!preset){populatePresets();toast('Preset could not be found');return;}if(!confirm(`Delete “${preset.name}” from My presets?`))return;list.splice(index,1);if(!storageSet('ffw-custom-presets',JSON.stringify(list))){toast('Browser storage is unavailable');return;}populatePresets();applyFilter(presets.find(item=>item.id==='pass'),'builtin:pass');toast(`Deleted “${preset.name}”`);}
-  async function importFilterFile(file){if(!file)return;try{if(Number.isFinite(Number(file.size))&&Number(file.size)>FILTER_FILE_MAX_BYTES)throw new Error(`Filter file exceeds the ${FILTER_FILE_MAX_BYTES/1024} KiB limit`);const text=await file.text(),result=detectFilterFormat(text,file.name);applyFilter(result.data);toast(result.kind==='afs'?'AFS filter imported · CPU legacy mode':'Filter FabJS project imported');}catch(error){console.error('Filter import failed',error);toast(`Import failed: ${error.message}`);}finally{el.filterInput.value='';}}
-  function savePreset(){const filter=currentFilter(),name=prompt('Preset name',filter.name)?.trim();if(!name)return;if(name.length>120){toast('Preset names are limited to 120 characters');return;}filter.name=name;const list=customList(),index=list.findIndex(item=>typeof item?.name==='string'&&item.name.toLowerCase()===name.toLowerCase());if(index>=0)list[index]=filter;else list.push(filter);if(storageSet('ffw-custom-presets',JSON.stringify(list))){populatePresets();el.preset.value=`custom:${index>=0?index:list.length-1}`;updatePresetDeleteState();toast('Preset saved in this browser');}else toast('Browser storage is unavailable');}
+  function exportFilter(){const filter=validatedCurrentFilter();if(!filter)return;const base=slug(filter.name);try{downloadBlob(new Blob([JSON.stringify(filter,null,2)+'\n'],{type:'application/json;charset=utf-8'}),base+'.json');}catch(error){console.error('Filter export failed',error);toast(`Filter export failed: ${error.message}`);}}
+  function deletePreset(){const[type,id]=el.preset.value.split(':');if(type!=='custom')return;const list=customList(),index=list.findIndex(preset=>preset.id===id),preset=list[index];if(!preset){populatePresets();toast('Preset could not be found');return;}if(!confirm(`Delete “${preset.name}” from My presets?`))return;list.splice(index,1);if(!storageSet('ffw-custom-presets',JSON.stringify(list))){toast('Browser storage is unavailable');return;}populatePresets();applyFilter(presets.find(item=>item.id==='pass'),'builtin:pass');toast(`Deleted “${preset.name}”`);}
+  async function importFilterFile(file){if(!file)return;try{const result=await importLatestFilterFile(file,{state,cancelRender,applyFilter});if(!result)return;toast(result.kind==='afs'?'AFS filter imported · CPU legacy mode':'Filter FabJS project imported');}catch(error){console.error('Filter import failed',error);toast(`Import failed: ${error.message}`);}finally{el.filterInput.value='';}}
+  function savePreset(){const filter=validatedCurrentFilter();if(!filter)return;const name=prompt('Preset name',filter.name)?.trim();if(!name)return;if(name.length>120){toast('Preset names are limited to 120 characters');return;}const saved=upsertCustomPreset(customList(),filter,name);if(storageSet('ffw-custom-presets',JSON.stringify(saved.list))){populatePresets();el.preset.value=`custom:${saved.preset.id}`;updatePresetDeleteState();toast('Preset saved in this browser');}else toast('Browser storage is unavailable');}
 
   function wire(){
     el.rendererSelect.value=['auto','webgpu','cpu'].includes(state.rendererPreference)?state.rendererPreference:'auto';
@@ -147,7 +192,7 @@ export function initFilterFabApp(){
     el.deletePreset.onclick=deletePreset;
     el.renderBtn.onclick=()=>render({focusInvalid:true});
     $('#resetBtn').onclick=()=>applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');
-    el.preset.onchange=()=>{const[type,id]=el.preset.value.split(':');if(type==='builtin')applyFilter(presets.find(preset=>preset.id===id),el.preset.value);else{const preset=customList()[Number(id)];if(preset)applyFilter(preset,el.preset.value);}};
+    el.preset.onchange=()=>{const selection=el.preset.value,[type,id]=selection.split(':'),definition=type==='builtin'?presets.find(preset=>preset.id===id):findCustomPresetById(customList(),id);if(!definition){updatePresetDeleteState();return;}applyPresetSafely(definition,selection,{applyFilter,updatePresetDeleteState,onError:error=>{console.error('Preset application failed',error);setStatus(`Preset error: ${error.message}`,'error');toast(`Preset could not be loaded: ${error.message}`);}});};
     el.formulas.forEach(field=>{
       field.oninput=()=>{
         const box=field.closest('.formula'),icon=$('.formula-state',box),errorElement=$('.formula-error',box);
@@ -182,10 +227,11 @@ export function initFilterFabApp(){
     window.addEventListener('blur',hideDrop);
     $('#helpBtn').onclick=()=>$('#helpDialog').showModal();
     $('#closeHelp').onclick=()=>$('#helpDialog').close();
+    window.addEventListener('storage',event=>{if(event.key===null||event.key==='ffw-custom-presets')populatePresets();});
     window.addEventListener('beforeunload',()=>state.rendererManager?.dispose());
   }
 
-  window.FilterFabJS=Object.freeze({version:'2.5.0',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererPreference:()=>state.rendererPreference});
+  window.FilterFabJS=Object.freeze({version:'2.5.4',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererPreference:()=>state.rendererPreference});
   controlsController.buildSliders();populatePresets();wire();const demo=demoImage();initImage(demo.data,demo.width,demo.height);applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');
   return{state,render,applyFilter,loadImageFile};
 }

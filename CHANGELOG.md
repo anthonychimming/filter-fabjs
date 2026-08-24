@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.5.4
+
+- Migrated browser-local custom presets to stable IDs, resolved selection and deletion by ID instead of array position, and refreshed the preset menu after cross-tab storage changes.
+
+## 2.5.3
+
+- Recovered from CPU Worker startup and message failures by terminating and clearing the failed instance so the next render can lazily create a replacement.
+
+## 2.5.2
+
+- Drew newly loaded source pixels immediately after sizing the canvas so the preview remains visible while rendering is pending or when formula or renderer validation fails.
+
+## 2.5.1
+
+- Prevented stale overlapping filter imports from overwriting newer editor state and cancelled active renders before applying the latest import.
+- Validated the current native filter before browser-preset saves or JSON exports so invalid formulas cannot be persisted.
+- Kept malformed custom presets selected and deletable while reporting their validation errors without an uncaught event failure.
+
 ## 2.5.0
 
 - Rejected historic AFS control lines containing numeric prefixes, decimals, exponents, or unsafe integers while preserving signed whole integers, surrounding whitespace, and legacy 0–255 clamping.
