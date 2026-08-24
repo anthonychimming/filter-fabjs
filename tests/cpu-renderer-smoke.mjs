@@ -120,6 +120,8 @@ class FakeWorker{
   postMessage(message){this.messages.push(message);if(message.type==='init')queueMicrotask(()=>this.onmessage?.({data:{type:'ready'}}))}
   terminate(){this.terminated=true}
   finish(id,pixels=[1,2,3,255]){const buffer=new Uint8ClampedArray(pixels).buffer;this.onmessage?.({data:{type:'result',id,buffer,ms:1}})}
+  fail(message='Worker startup failed'){this.onerror?.({message})}
+  failMessage(message='Worker message failed'){this.onmessageerror?.({message})}
 }
 Object.defineProperty(globalThis,'Worker',{configurable:true,value:FakeWorker});
 Object.defineProperty(URL,'createObjectURL',{configurable:true,value:()=> 'blob:cpu-worker-test'});
@@ -150,6 +152,28 @@ try{
   assert.equal(fakeWorkers[1].messages[0].type,'init','a replacement worker must receive the retained source before rendering');
   assert.equal(fakeWorkers[1].messages.at(-1).program,programB,'a replacement worker must receive the full current IR program');fakeWorkers[1].finish(5);await resumedRender;
   lifecycleRenderer.releaseSource();
+
+  const startupRecoveryRenderer=new CpuRenderer(()=> ''),startupSource=new Uint8ClampedArray([4,5,6,255]),startupWorkerCount=fakeWorkers.length;
+  const startupReady=startupRecoveryRenderer.setSource(startupSource,1,1),startupFailure=assert.rejects(startupReady,/Worker startup failed/),failedStartupWorker=fakeWorkers.at(-1);
+  failedStartupWorker.fail();await startupFailure;
+  assert.equal(failedStartupWorker.terminated,true,'a startup error must terminate the failed CPU Worker');
+  assert.equal(startupRecoveryRenderer.worker,null,'a startup error must clear the failed Worker instance');
+  assert.equal(startupRecoveryRenderer.workerProgramKey,null,'a startup error must clear the failed Worker program cache');
+  await startupRecoveryRenderer.readyPromise;
+  const recoveredStartupRender=startupRecoveryRenderer.render({id:6,program:programA,controls:Array(8).fill(128)});await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(fakeWorkers.length,startupWorkerCount+2,'the next render must lazily replace a Worker that failed during startup');
+  const startupReplacement=fakeWorkers.at(-1);assert.equal(startupReplacement.messages[0].type,'init');assert.equal(startupReplacement.messages.at(-1).program,programA);startupReplacement.finish(6);await recoveredStartupRender;
+  startupRecoveryRenderer.releaseSource();
+
+  const messageRecoveryRenderer=new CpuRenderer(()=> ''),messageSource=new Uint8ClampedArray([7,8,9,255]);await messageRecoveryRenderer.setSource(messageSource,1,1);
+  const failedMessageWorker=fakeWorkers.at(-1),failedMessageRender=messageRecoveryRenderer.render({id:7,program:programA,controls:Array(8).fill(128)});await new Promise(resolve=>setImmediate(resolve));
+  const messageFailure=assert.rejects(failedMessageRender,/Worker message failed/);failedMessageWorker.failMessage();await messageFailure;
+  assert.equal(failedMessageWorker.terminated,true,'a message error must terminate the failed CPU Worker');
+  assert.equal(messageRecoveryRenderer.worker,null,'a message error must clear the failed Worker instance');
+  assert.equal(messageRecoveryRenderer.workerProgramKey,null,'a message error must clear the failed Worker program cache');
+  const recoveredMessageRender=messageRecoveryRenderer.render({id:8,program:programA,controls:Array(8).fill(128)});await new Promise(resolve=>setImmediate(resolve));
+  const messageReplacement=fakeWorkers.at(-1);assert.notEqual(messageReplacement,failedMessageWorker,'the next render must replace a Worker that raised a message error');assert.equal(messageReplacement.messages[0].type,'init');messageReplacement.finish(8);await recoveredMessageRender;
+  messageRecoveryRenderer.releaseSource();
 }finally{
   if(workerDescriptor)Object.defineProperty(globalThis,'Worker',workerDescriptor);else delete globalThis.Worker;
   if(createObjectUrlDescriptor)Object.defineProperty(URL,'createObjectURL',createObjectUrlDescriptor);else delete URL.createObjectURL;

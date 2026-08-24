@@ -29,21 +29,20 @@ export class CpuRenderer extends RendererBackend{
   spawnWorker(){
     this.worker?.terminate();
     const workerUrl=URL.createObjectURL(new Blob([this.programFactory()],{type:'application/javascript'}));
-    this.worker=new Worker(workerUrl);this.workerProgramKey=null;URL.revokeObjectURL(workerUrl);
+    const worker=new Worker(workerUrl);this.worker=worker;this.workerProgramKey=null;URL.revokeObjectURL(workerUrl);
     this.readyPromise=new Promise((resolve,reject)=>{this.resolveReady=resolve;this.rejectReady=reject});
-    this.worker.onmessage=e=>{
+    worker.onmessage=e=>{
+      if(this.worker!==worker)return;
       const m=e.data;
       if(m.type==='ready'){this.resolveReady?.();this.resolveReady=this.rejectReady=null;return}
       const job=this.pending.get(m.id);if(!job)return;
       if(m.type==='progress'){job.onProgress?.(m);return}
       if(m.type==='result'){this.pending.delete(m.id);job.resolve({pixels:new Uint8ClampedArray(m.buffer),ms:m.ms,backend:this.id,label:this.label})}
     };
-    this.worker.onerror=e=>{
-      const error=new Error(e.message||`${this.label} failed`);
-      this.rejectReady?.(error);this.resolveReady=this.rejectReady=null;
-      this.rejectPending(error);
-    };
+    worker.onerror=e=>this.failWorker(worker,new Error(e.message||`${this.label} failed`));
+    worker.onmessageerror=e=>this.failWorker(worker,new Error(e.message||`${this.label} message failed`));
   }
+  failWorker(worker,error){if(this.worker!==worker)return;this.worker=null;this.workerProgramKey=null;this.rejectReady?.(error);this.resolveReady=this.rejectReady=null;this.rejectPending(error);worker.terminate();this.readyPromise=Promise.resolve()}
   rejectPending(error){for(const job of this.pending.values())job.reject(error);this.pending.clear()}
   postSource(){
     if(!this.worker||!this.source||!this.width||!this.height)return;
