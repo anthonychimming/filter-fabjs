@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { CHROMA_MODELS } from '../src/core/chroma.js';
 import { CONTROL_COUNT } from '../src/core/controls.js';
-import { Parser } from '../src/core/formula-language.js';
+import { MAX_FRACTAL_ITERATIONS, Parser } from '../src/core/formula-language.js';
 import { compileFilterProgram } from '../src/core/ir.js';
 import { WGSLCompiler } from '../src/gpu/wgsl-compiler.js';
 import { WEBGPU_CONTROL_SLOT_COUNT } from '../src/gpu/params-layout.js';
@@ -48,6 +48,8 @@ const statelessCases = [
   ['turbulence(x,y,16,4,7)', 'ff_turbulence('],
   ['ridged(x,y,16,4,7)', 'ff_ridged('],
   ['periodicNoise(x,y,16,12,7)', 'ff_periodic_noise('],
+  ['mandelbrot(cx,cy,96)', 'ff_mandelbrot(centeredX, centeredY, 96.0)'],
+  ['julia(cx,cy,-0.8,0.156,96)', 'ff_julia(centeredX, centeredY, (-0.8), 0.156, 96.0)'],
   ['radius(cx,cy)', 'length(vec2<f32>(centeredX, centeredY))'],
   ['angle(cx,cy)', 'ff_atan2(centeredY, centeredX)'],
   ['repeat(-1,4)', 'ff_wrap((-1.0), 4.0)'],
@@ -90,6 +92,13 @@ assert.ok(
   noiseCode.includes('var h=(bitcast<u32>(i32(trunc(x)))*374761393u)^(bitcast<u32>(i32(trunc(y)))*668265263u)^(bitcast<u32>(i32(trunc(seed)))*1442695041u);'),
   'hash multiplication terms must be parenthesized before WGSL bitwise XOR'
 );
+
+const fractalCode=WGSLCompiler.compile(programFor('mandelbrot(cx,cy,val(0,1,9999))+julia(cx,cy,-0.8,0.156,9999)')).code;
+assert.ok(fractalCode.includes(`const FF_MAX_FRACTAL_ITERATIONS : i32 = ${MAX_FRACTAL_ITERATIONS};`),'WGSL must expose the shared fractal iteration ceiling');
+assert.ok(fractalCode.includes('let limit=clamp(i32(trunc(iterations0)),1,FF_MAX_FRACTAL_ITERATIONS)'),'requested fractal iterations must truncate and clamp before execution');
+assert.ok(fractalCode.includes('iteration<FF_MAX_FRACTAL_ITERATIONS'),'generated fractal loops must retain a static upper bound');
+assert.ok(fractalCode.includes('if(iteration>=limit){break;}'),'generated fractal loops must stop at the clamped requested limit');
+assert.ok(fractalCode.includes('return f32(iteration)/f32(limit)'),'escaped fractal points must return a normalized iteration field');
 
 const statefulCases = [
   ['rnd(0,255)', 'rnd()'],

@@ -1,6 +1,6 @@
 # Filter FabJS Formula Reference
 
-**Applies to Filter FabJS v2.6.0 · native filter format v2 · typed IR v1**
+**Applies to Filter FabJS v2.6.1 · native filter format v2 · typed IR v1**
 
 This is the compact, implementation-oriented reference for writing Filter FabJS formulas. For worked explanations and tutorials, see the [Filter FabJS Programming Guide (PDF)](Filter_FabJS_Programming_Guide_v2.4.7.pdf). For analytic mask details, see [ANALYTIC_SHAPES.md](ANALYTIC_SHAPES.md).
 
@@ -204,7 +204,7 @@ For unit direction vectors, use radius `1`:
 x+r2x(val(0,0,1024),1)*20
 ```
 
-## 8. Noise and procedural fields
+## 8. Noise, fractals, and procedural fields
 
 These deterministic functions return normalized values in approximately `0..1` and are WebGPU-compatible.
 
@@ -219,11 +219,21 @@ These deterministic functions return normalized values in approximately `0..1` a
 | `turbulence(x,y,scale,octaves,seed)` | Absolute-value fractal noise |
 | `ridged(x,y,scale,octaves,seed)` | Ridged fractal noise |
 | `periodicNoise(x,y,periodX,periodY,seed)` | Seamless periodic noise |
+| `mandelbrot(x,y,iterations)` | Normalized Mandelbrot escape-time field; iterations clamp to `1..256` |
+| `julia(x,y,cx,cy,iterations)` | Normalized Julia escape-time field for constant `cx,cy`; iterations clamp to `1..256` |
 
 Convert normalized fields to channel range explicitly when needed:
 
 ```text
 fbm(x,y,64,5,2,0.5,1234)*255
+```
+
+`mandelbrot()` and `julia()` return `0` for a point that escapes on the first iteration, an intermediate normalized escape time for later escapes, and `1` for a point that remains bounded through the requested limit. Both are deterministic, stateless, WebGPU-compatible intrinsics; the iteration loop is bounded inside the CPU and WGSL backends rather than exposed as formula-language control flow.
+
+Aspect-correct Mandelbrot coordinates can be written with the centered variables:
+
+```text
+mandelbrot(cx*X/min(X,Y)*1.5-0.5,cy*Y/min(X,Y)*1.5,128)
 ```
 
 ## 9. Gradients and patterns

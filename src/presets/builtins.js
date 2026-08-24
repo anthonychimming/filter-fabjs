@@ -50,6 +50,15 @@ const tartanFormulas=[
   `lerp(b,${tartanTarget(35,74,45)},ctl(7))`,
   'a'
 ];
+const mandelbrotX='cx*X/min(X,Y)*val(0,1,2)+val(1,-1.5,0.5)';
+const mandelbrotY='cy*Y/min(X,Y)*val(0,1,2)+val(2,-1,1)';
+const mandelbrotField=`sqrt(mandelbrot(${mandelbrotX},${mandelbrotY},val(3,24,192)))`;
+const mandelbrotFormulas=[
+  `lerp(r,gradient4(${mandelbrotField},4,ctl(4),242,ctl(6)),ctl(7))`,
+  `lerp(g,gradient4(${mandelbrotField},8,40,190,ctl(6)),ctl(7))`,
+  `lerp(b,gradient4(${mandelbrotField},32,ctl(5),110,ctl(6)),ctl(7))`,
+  'a'
+];
 
 export const presets=[
 {id:'pass',name:'Pass Through',values:[128,128,128,128,128,128,128,128],labels:Array.from({length:8},(_,i)=>`Control ${i+1}`),f:['r','g','b','a']},
@@ -67,6 +76,7 @@ export const presets=[
 {id:'fractalclouds',name:'Fractal Clouds',values:[58,135,190,128,128,128,128,128],labels:['Scale','Seed','Blend','Control 4','Control 5','Control 6','Control 7','Control 8'],f:Array(3).fill('lerp(c,fbm(x,y,val(0,12,180),5,2,0.5,val(1,1,9999))*255,ctl(2))').concat('a')},
 {id:'sierpinskifractal',name:'Sierpiński Fractal',values:[174,208,32,238,232,214,8,255],labels:['Recursion Depth','Fractal Scale','Edge Softness','Foreground R','Foreground G','Foreground B','Background','Effect Mix'],f:sierpinskiFormulas},
 {id:'halftone',name:'Halftone Dots',values:[72,150,34,128,128,128,128,128],labels:['Cell Size','Dot Size','Softness','Control 4','Control 5','Control 6','Control 7','Control 8'],f:Array(3).fill('(1-smoothstep((255-i)/255*val(1,1,14),(255-i)/255*val(1,1,14)+val(2,0,4),c2m(wrap(x,val(0,4,32))-val(0,4,32)/2,wrap(y,val(0,4,32))-val(0,4,32)/2)))*255').concat('a')},
+{id:'mandelbrotatlas',name:'Mandelbrot Atlas',values:[128,96,128,128,190,220,8,255],labels:['Scale','Center X','Center Y','Iterations','Red Accent','Blue Accent','Interior','Effect Mix'],f:mandelbrotFormulas},
 {id:'mirrorx',name:'Mirror Horizontal',values:Array(8).fill(128),labels:Array.from({length:8},(_,i)=>`Control ${i+1}`),f:['src(X-1-x,y,0)','src(X-1-x,y,1)','src(X-1-x,y,2)','src(X-1-x,y,3)']},
 {id:'midnighttartan',name:'Midnight Tartan',values:[150,130,100,75,215,128,124,255],labels:['Sett Scale','Broad Stripe','Fine Thread','Weave Spacing','Pattern Strength','Weave Angle','Blue Tone','Effect Mix'],f:tartanFormulas},
 {id:'mosaic',name:'Mosaic',values:[35,35,128,128,128,128,128,128],labels:['Block Width','Block Height','Control 3','Control 4','Control 5','Control 6','Control 7','Control 8'],f:Array(4).fill('srcLinear(floor(x/val(0,2,64))*val(0,2,64)+val(0,2,64)/2,floor(y/val(1,2,64))*val(1,2,64)+val(1,2,64)/2,z)')},

@@ -4,7 +4,7 @@ This document describes the implementation currently present in the public repos
 
 ## Release
 
-- Application version: **2.6.0**
+- Application version: **2.6.1**
 - Native filter format: **version 2**
 - Typed IR: **version 1**
 - Development layout: native ES modules
@@ -36,6 +36,7 @@ The current formula engine includes:
 - Nearest, wrapped, mirrored, and bilinear image sampling.
 - Numeric shaping and coordinate helpers.
 - Procedural noise functions.
+- Deterministic Mandelbrot and Julia escape-time fields with a shared 256-iteration ceiling.
 - Gradients and patterns.
 - Anti-aliased analytic line, circle, ring, rotated-box, triangle, and grid masks.
 - Finite-depth Sierpiński masks with coherent barycentric child folding and feathered outer and internal edges.
@@ -44,7 +45,7 @@ The current formula engine includes:
 
 ## WebGPU compatibility
 
-The WebGPU backend supports the deterministic stateless formula language, including ten controls; normalized and centered coordinates; radius, angle, repeat, mirror-repeat, and scalar palette-ramp helpers; hash, value, Perlin, Worley, FBM, turbulence, ridged and periodic noise; procedural patterns; analytic shape and Sierpiński masks; polar sampling; and fixed 3×3 convolution. All 28 native built-in filters are WebGPU-compatible.
+The WebGPU backend supports the deterministic stateless formula language, including ten controls; normalized and centered coordinates; radius, angle, repeat, mirror-repeat, and scalar palette-ramp helpers; hash, value, Perlin, Worley, FBM, turbulence, ridged and periodic noise; bounded Mandelbrot and Julia fields; procedural patterns; analytic shape and Sierpiński masks; polar sampling; and fixed 3×3 convolution. All 29 native built-in filters are WebGPU-compatible.
 
 Sequential random-state functions (`rnd()` and `rst()`), shared cell operations (`get()` and `put()`), bitwise/shift/comma expressions, direct `pow()` formulas, and legacy integer compatibility remain CPU-only by design.
 
@@ -74,6 +75,7 @@ The repository includes smoke tests for:
 - An optional browser parity suite comparing CPU and WebGPU pixels on actual WebGPU hardware.
 - Native JSON and AFS format handling.
 - Ten-control normalization, indices 8/9, fifth-pair mapping, and aligned twelve-slot WebGPU parameter packing.
+- Bounded Mandelbrot/Julia parser, typed-IR, CPU, WGSL, render-budget, built-in, and optional hardware-parity coverage.
 - CPU Worker pixel rendering.
 - Formula-editor event wiring and focus-safe render behavior.
 - Brand-token contrast, neutral preview-canvas treatment, and the GitHub profile target.

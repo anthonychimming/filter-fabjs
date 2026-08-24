@@ -1,4 +1,4 @@
-# Filter FabJS v2.6.0
+# Filter FabJS v2.6.1
 
 Filter FabJS is an open-source, browser-native procedural RGBA image-filter editor. It combines a compact expression language with WebGPU rendering and a CPU Worker fallback.
 
@@ -11,7 +11,7 @@ The project is under active development.
 - Four-channel RGBA formula editing with live validation and preview rendering.
 - Ten data-driven formula controls plus normalized/centered coordinates, coordinate repetition, polar helpers, and palette ramps.
 - WebGPU acceleration with automatic CPU fallback for unsupported or legacy formulas.
-- Built-in image-processing and procedural filters, including analytic shapes, patterns, gradients, noise, convolution, and fractal masks.
+- Built-in image-processing and procedural filters, including analytic shapes, patterns, gradients, noise, convolution, bounded Mandelbrot/Julia fields, and fractal masks.
 - Auto / GPU / CPU renderer selection, render progress, and cancellation.
 - Native Filter FabJS JSON import/export plus historic Filter Factory `.afs` import.
 - Custom local presets.
@@ -49,7 +49,7 @@ npm run build
 Build output:
 
 - `dist/site/` — deployable static site.
-- `dist/filter-fabjs-v2.6.0.html` — standalone single-file distribution.
+- `dist/filter-fabjs-v2.6.1.html` — standalone single-file distribution.
 
 The build uses Node.js and has no package dependencies.
 

@@ -32,6 +32,8 @@ const fixtures = [
   ['Turbulence', 'turbulence(x,y,14,5,711)*255'],
   ['Ridged noise', 'ridged(x,y,14,5,711)*255'],
   ['Periodic noise', 'periodicNoise(x,y,19,13,711)*255'],
+  ['Mandelbrot field', 'mandelbrot(cx*1.5-0.5,cy,96)*255'],
+  ['Julia field', 'julia(cx*1.4,cy*1.4,-0.8,0.156,96)*255'],
   ['Control 8', 'ctl(8)'],
   ['Control 9', 'val(9,0,255)'],
   ['Control pair 4', 'map(4,c)'],
