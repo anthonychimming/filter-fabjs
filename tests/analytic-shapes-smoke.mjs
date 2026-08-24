@@ -107,5 +107,51 @@ assert.equal(pixel(fourth,101,41,58,2),255,'depth zero must preserve the base tr
 const featheredHole=pixel(fourth,101,39,69,3);
 assert.ok(featheredHole>0&&featheredHole<255,'internal Sierpiński edges must honor feathering');
 
+const sdfSource = new Uint8ClampedArray(7 * 7 * 4);
+worker.postMessage({ type: 'init', width: 7, height: 7, buffer: sdfSource.buffer }, [sdfSource.buffer]);
+await waitFor(message => message.type === 'ready');
+worker.postMessage({
+  type: 'render',
+  id: 5,
+  program: programFor([
+    'sdfFill(sdfCircle(x,y,3,3,2))*255',
+    'sdfOutline(sdfCircle(x,y,3,3,2),2)*255',
+    'sdfFill(sdfSmoothUnion(sdfCircle(x,y,1,3,1),sdfCircle(x,y,5,3,1),4))*255',
+    'sdfFill(sdfSubtract(sdfBox(x,y,3,3,6,6,0),sdfCircle(x,y,3,3,1)))*255'
+  ]),
+  controls: defaultControlValues(),
+  legacyMath: false
+});
+const fifth = new Uint8ClampedArray((await waitFor(message => message.type === 'result' && message.id === 5)).buffer);
+assert.equal(pixel(fifth,7,3,3,0),255,'SDF fill must include negative circle distances');
+assert.equal(pixel(fifth,7,0,0,0),0,'SDF fill must exclude positive circle distances');
+assert.equal(pixel(fifth,7,3,3,1),0,'SDF outline must leave the deep interior empty');
+assert.equal(pixel(fifth,7,5,3,1),255,'SDF outline must cover the signed-distance boundary');
+assert.equal(pixel(fifth,7,3,3,2),255,'smooth union must bridge nearby signed-distance fields');
+assert.equal(pixel(fifth,7,3,0,2),0,'smooth union must retain a bounded exterior');
+assert.equal(pixel(fifth,7,3,3,3),0,'SDF subtraction must remove the second field');
+assert.equal(pixel(fifth,7,1,1,3),255,'SDF subtraction must retain the uncut first field');
+
+worker.postMessage({
+  type: 'render',
+  id: 6,
+  program: programFor([
+    'sdfFill(sdfUnion(sdfCircle(x,y,2,3,1),sdfCircle(x,y,4,3,1)))*255',
+    'sdfFill(sdfIntersect(sdfCircle(x,y,3,3,3),sdfBox(x,y,3,3,4,4,0)))*255',
+    'sdfFill(sdfLine(x,y,0,0,6,6,1))*255',
+    'sdfFill(sdfCircle(x,y,3,3,2),2)*255'
+  ]),
+  controls: defaultControlValues(),
+  legacyMath: false
+});
+const sixth = new Uint8ClampedArray((await waitFor(message => message.type === 'result' && message.id === 6)).buffer);
+assert.equal(pixel(sixth,7,2,3,0),255,'SDF union must include either input field');
+assert.equal(pixel(sixth,7,3,3,1),255,'SDF intersection must include shared interior');
+assert.equal(pixel(sixth,7,3,0,1),0,'SDF intersection must exclude points outside either field');
+assert.equal(pixel(sixth,7,5,5,2),255,'SDF line distance must include its stroked segment');
+assert.equal(pixel(sixth,7,5,4,2),0,'SDF line distance must exclude points beyond its hard edge');
+const featheredSdf=pixel(sixth,7,6,3,3);
+assert.ok(featheredSdf>0&&featheredSdf<255,'SDF fill must support outward feathering');
+
 await worker.terminate();
 console.log('Analytic shapes CPU smoke: pass.');

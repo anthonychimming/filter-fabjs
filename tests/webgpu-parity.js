@@ -58,7 +58,12 @@ const fixtures = [
   ['Rotated box mask', 'box(x,y,X/2,Y/2,13,9,137,1.25)*255'],
   ['Triangle mask', 'triangle(x,y,3,Y-3,X/2,2,X-3,Y-4,1.25)*255'],
   ['Grid mask', 'grid(x,y,9,7,1.5,1.25)*255'],
-  ['Sierpiński mask', 'sierpinski(x,y,X/2,Y/2,19,5,1.25)*255']
+  ['Sierpiński mask', 'sierpinski(x,y,X/2,Y/2,19,5,1.25)*255'],
+  ['SDF fill', 'sdfFill(sdfCircle(x,y,X/2,Y/2,7.5),1.25)*255'],
+  ['SDF outline', 'sdfOutline(sdfBox(x,y,X/2,Y/2,13,9,137),2.5,1.25)*255'],
+  ['SDF boolean composition', 'sdfFill(sdfSubtract(sdfUnion(sdfCircle(x,y,10,11,6),sdfBox(x,y,20,11,9,9,64)),sdfCircle(x,y,15,11,2)),1)*255'],
+  ['SDF smooth union', 'sdfFill(sdfSmoothUnion(sdfCircle(x,y,10,11,5),sdfCircle(x,y,20,11,5),4),1)*255'],
+  ['Domain-warped SDF', 'sdfFill(sdfCircle(x+(valueNoise(x,y,9,711)-0.5)*4,y+(valueNoise(x+31,y+47,9,711)-0.5)*4,X/2,Y/2,7),1)*255']
 ];
 
 const programFor = formula => compileFilterProgram(

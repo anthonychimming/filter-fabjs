@@ -1,6 +1,6 @@
 # Filter FabJS Formula Reference
 
-**Applies to Filter FabJS v2.6.1 · native filter format v2 · typed IR v1**
+**Applies to Filter FabJS v2.6.3 · native filter format v2 · typed IR v1**
 
 This is the compact, implementation-oriented reference for writing Filter FabJS formulas. For worked explanations and tutorials, see the [Filter FabJS Programming Guide (PDF)](Filter_FabJS_Programming_Guide_v2.4.7.pdf). For analytic mask details, see [ANALYTIC_SHAPES.md](ANALYTIC_SHAPES.md).
 
@@ -284,6 +284,40 @@ clamp(circle(x,y,X/2,Y/2,80,1)-circle(x,y,X/2,Y/2,60,1),0,1)*255
 
 Use `max()` for union, multiplication for intersection, and clamped subtraction for cutouts.
 
+### Signed-distance composition
+
+Signed-distance primitives return pixel distances rather than masks: values are negative inside, `0` at the mathematical boundary, and positive outside. They are scalar, deterministic, stateless, and supported on CPU and WebGPU.
+
+| Function | Meaning |
+| --- | --- |
+| `sdfLine(x,y,ax,ay,bx,by,width)` | Distance to a stroked line segment; `width` is the full stroke width |
+| `sdfCircle(x,y,cx,cy,radius)` | Distance to a filled circle |
+| `sdfBox(x,y,cx,cy,width,height,rotation)` | Distance to a rotated rectangle; rotation uses 1024 units/turn |
+| `sdfUnion(a,b)` | Exact union: `min(a,b)` |
+| `sdfIntersect(a,b)` | Exact intersection: `max(a,b)` |
+| `sdfSubtract(a,b)` | Remove field `b` from field `a`: `max(a,-b)` |
+| `sdfSmoothUnion(a,b,radius)` | Polynomial smooth union; radius is absolute and `0` reduces to exact union |
+| `sdfFill(distance)` / `sdfFill(distance,feather)` | Convert a field to a filled `0..1` mask |
+| `sdfOutline(distance,width)` / `sdfOutline(distance,width,feather)` | Convert the zero boundary to a centred outline mask; `width` is the full stroke width |
+
+Fill and outline feathering defaults to `0`, treats negative values as absolute, and extends outward from the generated edge. Existing `circle()`, `line()`, and `box()` continue to return masks; their behavior is unchanged.
+
+Example:
+
+```text
+sdfFill(
+  sdfSubtract(
+    sdfSmoothUnion(
+      sdfCircle(x,y,X/2,Y/2,80),
+      sdfBox(x,y,X/2,Y/2,120,70,128),
+      16
+    ),
+    sdfCircle(x,y,X/2,Y/2,28)
+  ),
+  1
+)*255
+```
+
 ## 11. Blend functions
 
 The blend helpers operate in channel space (`0..255`). The optional opacity may be `0..1` or `0..255`.
@@ -326,7 +360,7 @@ WebGPU supports:
 - arithmetic, comparisons, logical operators, and ternary selection;
 - ten controls and five-pair mapping;
 - source sampling and 3×3 convolution;
-- normalized/centered coordinates and numeric, polar, repeat, palette-ramp, noise, gradient, pattern, shape-mask, and blend functions listed above.
+- normalized/centered coordinates and numeric, polar, repeat, palette-ramp, noise, gradient, pattern, shape-mask, signed-distance, and blend functions listed above.
 
 WebGPU rejects:
 
@@ -347,6 +381,7 @@ Keep these ranges explicit when composing formulas:
 | Image channels (`r g b a c i`) | `0..255` |
 | Raw controls (`ctl`) | `0..255` |
 | Noise / gradients / masks | `0..1` |
+| Signed-distance fields | pixels; negative inside and positive outside |
 | Blend channels | `0..255` |
 | Angles | `0..1024` per turn |
 | Coordinates / sizes | pixels |

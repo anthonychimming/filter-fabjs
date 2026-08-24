@@ -1,6 +1,6 @@
 # Architecture
 
-Filter FabJS v2.6.1 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
+Filter FabJS v2.6.3 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
 
 ```text
 Formula text
@@ -46,6 +46,6 @@ RGBA pixel output
 
 ## Current WebGPU boundary
 
-The Phase 3.5 WebGPU subset covers supported deterministic stateless operations: arithmetic, conditions, ten controls, image and polar sampling, normalized and centered coordinates, coordinate shaping and repetition, scalar palette ramps, gradients, procedural patterns, analytic shape masks, deterministic noise, bounded Mandelbrot and Julia fields, blend operations, and fixed 3×3 convolution. Fractal iteration is encapsulated inside compiler intrinsics with a shared 256-step ceiling; the formula language does not expose general-purpose loops. Operations outside the subset are identified by compatibility analysis and use the CPU Worker fallback. `pow()` remains CPU-only because WGSL does not define JavaScript-compatible results for negative bases.
+The Phase 3.5 WebGPU subset covers supported deterministic stateless operations: arithmetic, conditions, ten controls, image and polar sampling, normalized and centered coordinates, coordinate shaping and repetition, scalar palette ramps, gradients, procedural patterns, analytic shape masks, signed-distance primitives and composition, deterministic noise, bounded Mandelbrot and Julia fields, blend operations, and fixed 3×3 convolution. Signed-distance fields remain ordinary scalar expressions inside the current one-pass program and become masks only through explicit fill/outline helpers; domain warping is coordinate composition rather than a second execution model. Fractal iteration is encapsulated inside compiler intrinsics with a shared 256-step ceiling; the formula language does not expose general-purpose loops. Operations outside the subset are identified by compatibility analysis and use the CPU Worker fallback. `pow()` remains CPU-only because WGSL does not define JavaScript-compatible results for negative bases.
 
 The CPU renderer remains the compatibility backend for legacy integer-mode AFS filters, bitwise/shift/comma expressions, and operations with sequential or shared mutable state (`rnd()`, `rst()`, `get()`, and `put()`).

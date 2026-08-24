@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.6.3
+
+- Added WebGPU-compatible signed-distance primitives for circles, stroked line segments, and rotated boxes plus union, intersection, subtraction, and polynomial smooth-union composition.
+- Added `sdfFill()` and `sdfOutline()` mask helpers with optional outward feathering while preserving the existing analytic-mask vocabulary and typed IR v1.
+- Added the GPU-compatible **Warped SDF Bloom** built-in as a deterministic domain-warp example, bringing the native preset collection to 30, with parser, IR, CPU, WGSL, render-budget, and optional hardware-parity coverage.
+
 ## 2.6.1
 
 - Added deterministic, stateless `mandelbrot(x,y,iterations)` and `julia(x,y,cx,cy,iterations)` intrinsics that return normalized escape-time fields and clamp requested work to 1–256 iterations.

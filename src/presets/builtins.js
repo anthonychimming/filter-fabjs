@@ -59,6 +59,19 @@ const mandelbrotFormulas=[
   `lerp(b,gradient4(${mandelbrotField},32,ctl(5),110,ctl(6)),ctl(7))`,
   'a'
 ];
+const warpedSdfScale='val(1,20,110)',warpedSdfAmount='val(0,0,30)',warpedSdfSeed='val(2,1,9999)';
+const warpedSdfX=`x+(valueNoise(x,y,${warpedSdfScale},${warpedSdfSeed})-0.5)*${warpedSdfAmount}`;
+const warpedSdfY=`y+(valueNoise(x+431,y+719,${warpedSdfScale},${warpedSdfSeed})-0.5)*${warpedSdfAmount}`;
+const warpedSdfSize='min(X,Y)*val(3,0.12,0.32)',warpedSdfSmooth='val(4,0,28)',warpedSdfCutout='min(X,Y)*val(5,0.03,0.16)';
+const warpedSdfOuter=`sdfSmoothUnion(sdfCircle(${warpedSdfX},${warpedSdfY},X/2,Y/2,${warpedSdfSize}),sdfBox(${warpedSdfX},${warpedSdfY},X/2,Y/2,${warpedSdfSize}*1.55,${warpedSdfSize}*1.05,128),${warpedSdfSmooth})`;
+const warpedSdfField=`sdfSubtract(${warpedSdfOuter},sdfCircle(${warpedSdfX},${warpedSdfY},X/2,Y/2,${warpedSdfCutout}))`;
+const warpedSdfFill=`sdfFill(${warpedSdfField},val(7,0,3))`,warpedSdfOutline=`sdfOutline(${warpedSdfField},val(6,0.5,8),val(7,0,3))`,warpedSdfHue='val(8,0,1)';
+const warpedSdfFormulas=[
+  `lerp(r,clamp(10+${warpedSdfFill}*(80+${warpedSdfHue}*130),0,255),ctl(9))`,
+  `lerp(g,clamp(12+${warpedSdfOutline}*(70+${warpedSdfHue}*130),0,255),ctl(9))`,
+  `lerp(b,clamp(22+${warpedSdfFill}*(230-${warpedSdfHue}*80),0,255),ctl(9))`,
+  'a'
+];
 
 export const presets=[
 {id:'pass',name:'Pass Through',values:[128,128,128,128,128,128,128,128],labels:Array.from({length:8},(_,i)=>`Control ${i+1}`),f:['r','g','b','a']},
@@ -89,5 +102,6 @@ export const presets=[
 {id:'swirl',name:'Swirl',values:[165,128,128,128,128,128,128,128],labels:['Twist','Control 2','Control 3','Control 4','Control 5','Control 6','Control 7','Control 8'],f:['rad(d+((M-m)*val(0,-260,260))/max(1,M),m,0)','rad(d+((M-m)*val(0,-260,260))/max(1,M),m,1)','rad(d+((M-m)*val(0,-260,260))/max(1,M),m,2)','a']},
 {id:'thresholddither',name:'Threshold Dither',values:[128,60,80,128,128,128,128,128],labels:['Threshold','Pattern Size','Dither Amount','Control 4','Control 5','Control 6','Control 7','Control 8'],f:Array(3).fill('i+(checker(x,y,val(1,2,16),val(1,2,16))*2-1)*val(2,0,64)>=ctl(0)?255:0').concat('a')},
 {id:'vignettepro',name:'Vignette Pro',values:[160,105,128,128,128,128,128,128],labels:['Strength','Radius','Control 3','Control 4','Control 5','Control 6','Control 7','Control 8'],f:Array(3).fill('clamp(c*(1-smoothstep(val(1,0,M),M,m)*val(0,0,100)/100),0,255)').concat('a')},
+{id:'warpedsdfbloom',name:'Warped SDF Bloom',values:[80,100,73,150,100,75,80,48,115,255],labels:['Warp Amount','Warp Scale','Seed','Shape Size','Smooth Union','Cutout Size','Outline Width','Edge Softness','Colour Shift','Effect Mix'],f:warpedSdfFormulas},
 {id:'warmcool',name:'Warm–Cool Gradient',values:[120,120,128,128,128,128,128,128],labels:['Warm Strength','Cool Strength','Control 3','Control 4','Control 5','Control 6','Control 7','Control 8'],f:['clamp(r+linearGrad(x,y,0,0,X,Y)*val(0,0,70)-val(1,0,30),0,255)','g','clamp(b+(1-linearGrad(x,y,0,0,X,Y))*val(1,0,70)-val(0,0,30),0,255)','a']}
 ];

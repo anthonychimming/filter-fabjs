@@ -10,7 +10,7 @@ import { IR_VERSION, IRType, programCacheKey } from '../core/ir.js';
 import { WEBGPU_CONTROL_SLOT_COUNT } from './params-layout.js';
 
 export class WGSLCompileError extends Error{constructor(message,blockers=[]){super(message);this.name='WGSLCompileError';this.blockers=blockers}}
-const WEBGPU_FUNCTIONS=new Set('src src0 src1 srcWrap srcMirror srcLinear rad rad0 rad1 cnv cnv0 cnv1 ctl val map min max abs add sub dif mix scl sqr sqrt sin cos tan r2x r2y c2d c2m radius angle clamp lerp step smoothstep floor ceil round fract sign bias gain hash2 valueNoise perlin worleyF1 worleyF2 fbm turbulence ridged periodicNoise mandelbrot julia wrap mirror repeat mirrorRepeat gradient3 gradient4 linearGrad radialGrad angularGrad checker brick line circle ring box triangle grid sierpinski multiply screen overlay softLight difference'.split(' '));
+const WEBGPU_FUNCTIONS=new Set('src src0 src1 srcWrap srcMirror srcLinear rad rad0 rad1 cnv cnv0 cnv1 ctl val map min max abs add sub dif mix scl sqr sqrt sin cos tan r2x r2y c2d c2m radius angle clamp lerp step smoothstep floor ceil round fract sign bias gain hash2 valueNoise perlin worleyF1 worleyF2 fbm turbulence ridged periodicNoise mandelbrot julia wrap mirror repeat mirrorRepeat gradient3 gradient4 linearGrad radialGrad angularGrad checker brick line circle ring box triangle grid sierpinski sdfLine sdfCircle sdfBox sdfUnion sdfIntersect sdfSubtract sdfSmoothUnion sdfFill sdfOutline multiply screen overlay softLight difference'.split(' '));
 const WEBGPU_UNARY=new Set(['+','-','!']);
 const WEBGPU_BINARY=new Set(['+','-','*','/','%','<','<=','>','>=','==','!=','&&','||']);
 const WEBGPU_BOOLEAN_BINARY=new Set(['<','<=','>','>=','==','!=','&&','||']);
@@ -141,6 +141,13 @@ export class WGSLCompiler{
       case'triangle':return`ff_triangle(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)}, ${A(5)}, ${A(6)}, ${A(7)}, ${A(8)})`;
       case'grid':return`ff_grid(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)}, ${A(5)})`;
       case'sierpinski':return`ff_sierpinski(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)}, ${A(5)}, ${A(6)})`;
+      case'sdfLine':return`ff_line_distance(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)}, ${A(5)}, ${A(6)})`;
+      case'sdfCircle':return`ff_circle_distance(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
+      case'sdfBox':return`ff_box_distance(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)}, ${A(5)}, ${A(6)})`;
+      case'sdfUnion':return`min(${A(0)}, ${A(1)})`;case'sdfIntersect':return`max(${A(0)}, ${A(1)})`;case'sdfSubtract':return`max(${A(0)}, -(${A(1)}))`;
+      case'sdfSmoothUnion':return`ff_sdf_smooth_union(${A(0)}, ${A(1)}, ${A(2)})`;
+      case'sdfFill':return`ff_shape_mask(${A(0)}, ${a.length>1?A(1):'0.0'})`;
+      case'sdfOutline':return`ff_sdf_outline(${A(0)}, ${A(1)}, ${a.length>2?A(2):'0.0'})`;
       case'multiply':case'screen':case'overlay':case'softLight':case'difference':return`ff_blend_${name}(${A(0)}, ${A(1)}, ${a.length>2?A(2):'255.0'})`;
     }
     throw new WGSLCompileError(`Function ${name}() is not implemented in WGSL`,[`${name}()`]);
@@ -208,10 +215,15 @@ fn ff_checker(x:f32,y:f32,width0:f32,height0:f32)->f32{let width=max(1.0,abs(wid
 fn ff_brick(x:f32,y:f32,width0:f32,height0:f32,mortar0:f32,offset0:f32)->f32{let width=max(1.0,abs(width0));let height=max(1.0,abs(height0));let mortar=clamp(abs(mortar0),0.0,min(width,height)*0.5);let row=i32(floor(y/height));let stagger=select(0.0,1.0,(row&1)!=0);let offset=select(offset0,offset0*width,abs(offset0)<=1.0);let localX=ff_wrap(x+offset*stagger,width);let localY=ff_wrap(y,height);return select(0.0,1.0,localX>=mortar&&localX<=width-mortar&&localY>=mortar&&localY<=height-mortar);}
 fn ff_shape_mask(distance:f32,feather0:f32)->f32{let feather=max(0.0,abs(feather0));if(distance<=0.0){return 1.0;}if(feather==0.0){return 0.0;}return 1.0-ff_smoothstep(0.0,feather,distance);}
 fn ff_segment_distance(p:vec2<f32>,a:vec2<f32>,b:vec2<f32>)->f32{let delta=b-a;let den=dot(delta,delta);if(den<=0.000000000001){return length(p-a);}let t=clamp(dot(p-a,delta)/den,0.0,1.0);return length(p-(a+delta*t));}
-fn ff_line(x:f32,y:f32,ax:f32,ay:f32,bx:f32,by:f32,width:f32,feather:f32)->f32{return ff_shape_mask(ff_segment_distance(vec2<f32>(x,y),vec2<f32>(ax,ay),vec2<f32>(bx,by))-abs(width)*0.5,feather);}
-fn ff_circle(x:f32,y:f32,cx:f32,cy:f32,radius:f32,feather:f32)->f32{return ff_shape_mask(length(vec2<f32>(x-cx,y-cy))-abs(radius),feather);}
+fn ff_line_distance(x:f32,y:f32,ax:f32,ay:f32,bx:f32,by:f32,width:f32)->f32{return ff_segment_distance(vec2<f32>(x,y),vec2<f32>(ax,ay),vec2<f32>(bx,by))-abs(width)*0.5;}
+fn ff_circle_distance(x:f32,y:f32,cx:f32,cy:f32,radius:f32)->f32{return length(vec2<f32>(x-cx,y-cy))-abs(radius);}
+fn ff_box_distance(x:f32,y:f32,cx:f32,cy:f32,width:f32,height:f32,rotation:f32)->f32{let angle=rotation*FF_TAU/1024.0;let co=cos(angle);let si=sin(angle);let delta=vec2<f32>(x-cx,y-cy);let q=abs(vec2<f32>(co*delta.x+si*delta.y,-si*delta.x+co*delta.y))-vec2<f32>(abs(width),abs(height))*0.5;return length(max(q,vec2<f32>(0.0)))+min(max(q.x,q.y),0.0);}
+fn ff_sdf_smooth_union(a:f32,b:f32,radius0:f32)->f32{let radius=abs(radius0);if(radius==0.0){return min(a,b);}let h=clamp(0.5+0.5*(b-a)/radius,0.0,1.0);return mix(b,a,h)-radius*h*(1.0-h);}
+fn ff_sdf_outline(distance:f32,width:f32,feather:f32)->f32{return ff_shape_mask(abs(distance)-abs(width)*0.5,feather);}
+fn ff_line(x:f32,y:f32,ax:f32,ay:f32,bx:f32,by:f32,width:f32,feather:f32)->f32{return ff_shape_mask(ff_line_distance(x,y,ax,ay,bx,by,width),feather);}
+fn ff_circle(x:f32,y:f32,cx:f32,cy:f32,radius:f32,feather:f32)->f32{return ff_shape_mask(ff_circle_distance(x,y,cx,cy,radius),feather);}
 fn ff_ring(x:f32,y:f32,cx:f32,cy:f32,radius:f32,width:f32,feather:f32)->f32{return ff_shape_mask(abs(length(vec2<f32>(x-cx,y-cy))-abs(radius))-abs(width)*0.5,feather);}
-fn ff_box(x:f32,y:f32,cx:f32,cy:f32,width:f32,height:f32,rotation:f32,feather:f32)->f32{let angle=rotation*FF_TAU/1024.0;let co=cos(angle);let si=sin(angle);let delta=vec2<f32>(x-cx,y-cy);let q=abs(vec2<f32>(co*delta.x+si*delta.y,-si*delta.x+co*delta.y))-vec2<f32>(abs(width),abs(height))*0.5;let distance=length(max(q,vec2<f32>(0.0)))+min(max(q.x,q.y),0.0);return ff_shape_mask(distance,feather);}
+fn ff_box(x:f32,y:f32,cx:f32,cy:f32,width:f32,height:f32,rotation:f32,feather:f32)->f32{return ff_shape_mask(ff_box_distance(x,y,cx,cy,width,height,rotation),feather);}
 fn ff_triangle(x:f32,y:f32,ax:f32,ay:f32,bx:f32,by:f32,cx:f32,cy:f32,feather:f32)->f32{let p=vec2<f32>(x,y);let a=vec2<f32>(ax,ay);let b=vec2<f32>(bx,by);let c=vec2<f32>(cx,cy);let area=(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);if(abs(area)<=0.000000001){return 0.0;}let e0=(p.x-a.x)*(b.y-a.y)-(p.y-a.y)*(b.x-a.x);let e1=(p.x-b.x)*(c.y-b.y)-(p.y-b.y)*(c.x-b.x);let e2=(p.x-c.x)*(a.y-c.y)-(p.y-c.y)*(a.x-c.x);let hasNeg=e0<0.0||e1<0.0||e2<0.0;let hasPos=e0>0.0||e1>0.0||e2>0.0;let inside=!(hasNeg&&hasPos);let distance=min(ff_segment_distance(p,a,b),min(ff_segment_distance(p,b,c),ff_segment_distance(p,c,a)));return ff_shape_mask(select(distance,-distance,inside),feather);}
 fn ff_grid(x:f32,y:f32,width0:f32,height0:f32,lineWidth:f32,feather:f32)->f32{let width=max(1.0,abs(width0));let height=max(1.0,abs(height0));let lx=ff_wrap(x,width);let ly=ff_wrap(y,height);let distance=min(min(lx,width-lx),min(ly,height-ly))-abs(lineWidth)*0.5;return ff_shape_mask(distance,feather);}
 fn ff_sierpinski(x:f32,y:f32,cx:f32,cy:f32,size0:f32,depth0:f32,feather:f32)->f32{let size=max(0.000001,abs(size0));let height=size*0.8660254037844386;let top=cy-height*0.5;let bottom=cy+height*0.5;let base=ff_triangle(x,y,cx,top,cx-size*0.5,bottom,cx+size*0.5,bottom,feather);if(base<=0.0){return 0.0;}let yy=(y-top)/height;var u=yy*0.5-(x-cx)/size;var v=yy*0.5+(x-cx)/size;if(u<0.0||v<0.0||u+v>1.0){return base;}let depth=clamp(i32(trunc(depth0)),0,10);var localHeight=height;for(var level:i32=0;level<depth;level=level+1){let w=1.0-u-v;if(u<0.5&&v<0.5&&w<0.5){let holeDistance=min(0.5-u,min(0.5-v,0.5-w))*localHeight;return ff_shape_mask(holeDistance,feather);}if(u>=0.5){u=u*2.0-1.0;v=v*2.0;}else if(v>=0.5){u=u*2.0;v=v*2.0-1.0;}else{u=u*2.0;v=v*2.0;}localHeight=localHeight*0.5;}return base;}

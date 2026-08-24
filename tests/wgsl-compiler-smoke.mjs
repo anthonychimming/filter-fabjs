@@ -65,7 +65,16 @@ const statelessCases = [
   ['box(x,y,X/2,Y/2,30,20,128,1)', 'ff_box('],
   ['triangle(x,y,0,Y,X/2,0,X,Y,1)', 'ff_triangle('],
   ['grid(x,y,16,12,2,1)', 'ff_grid('],
-  ['sierpinski(x,y,X/2,Y/2,64,6,1)', 'ff_sierpinski(']
+  ['sierpinski(x,y,X/2,Y/2,64,6,1)', 'ff_sierpinski('],
+  ['sdfLine(x,y,0,0,X,Y,2)', 'ff_line_distance('],
+  ['sdfCircle(x,y,X/2,Y/2,20)', 'ff_circle_distance('],
+  ['sdfBox(x,y,X/2,Y/2,30,20,128)', 'ff_box_distance('],
+  ['sdfUnion(1,2)', 'min(1.0, 2.0)'],
+  ['sdfIntersect(1,2)', 'max(1.0, 2.0)'],
+  ['sdfSubtract(1,2)', 'max(1.0, -(2.0))'],
+  ['sdfSmoothUnion(1,2,3)', 'ff_sdf_smooth_union(1.0, 2.0, 3.0)'],
+  ['sdfFill(1)', 'ff_shape_mask(1.0, 0.0)'],
+  ['sdfOutline(1,2,3)', 'ff_sdf_outline(1.0, 2.0, 3.0)']
 ];
 
 for (const [formula, emittedCall] of statelessCases) {
@@ -99,6 +108,12 @@ assert.ok(fractalCode.includes('let limit=clamp(i32(trunc(iterations0)),1,FF_MAX
 assert.ok(fractalCode.includes('iteration<FF_MAX_FRACTAL_ITERATIONS'),'generated fractal loops must retain a static upper bound');
 assert.ok(fractalCode.includes('if(iteration>=limit){break;}'),'generated fractal loops must stop at the clamped requested limit');
 assert.ok(fractalCode.includes('return f32(iteration)/f32(limit)'),'escaped fractal points must return a normalized iteration field');
+
+const sdfCode=WGSLCompiler.compile(programFor('sdfFill(sdfSubtract(sdfSmoothUnion(sdfCircle(x,y,4,4,2),sdfBox(x,y,4,4,4,4,0),2),sdfLine(x,y,0,4,8,4,1)),1)')).code;
+assert.ok(sdfCode.includes('fn ff_sdf_smooth_union(a:f32,b:f32,radius0:f32)'),'WGSL must define bounded smooth-min composition for signed distances');
+assert.ok(sdfCode.includes('if(radius==0.0){return min(a,b);}'),'zero-radius smooth unions must reduce to exact unions without division by zero');
+assert.ok(sdfCode.includes('return mix(b,a,h)-radius*h*(1.0-h)'),'WGSL smooth unions must use the documented polynomial blend');
+assert.ok(sdfCode.includes('fn ff_sdf_outline(distance:f32,width:f32,feather:f32)'),'WGSL must convert signed-distance boundaries into outline masks');
 
 const statefulCases = [
   ['rnd(0,255)', 'rnd()'],

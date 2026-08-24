@@ -18,7 +18,7 @@ for (const preset of presets) {
   else cpuFallback += 1;
 }
 
-assert.equal(presets.length, 29);
+assert.equal(presets.length, 30);
 assert.equal(gpuCompatible, presets.length, 'every native built-in must compile for WebGPU after Phase 3.5');
 assert.equal(cpuFallback, 0, 'native built-ins must not require CPU fallback');
 assert.equal(gpuCompatible + cpuFallback, presets.length);
@@ -27,6 +27,11 @@ assert.equal(mandelbrotPreset?.name,'Mandelbrot Atlas','Phase 3.5B must include 
 const mandelbrotPresetProgram=compileFilterProgram(mandelbrotPreset.f.map(formula=>new Parser(formula).parse()));
 assert.ok(mandelbrotPresetProgram.metadata.functions.includes('mandelbrot'),'the Mandelbrot reference preset must use the public intrinsic');
 assert.equal(WGSLCompiler.analyze(mandelbrotPresetProgram).compatible,true,'the Mandelbrot reference preset must remain GPU-compatible');
+const warpedSdfPreset=presets.find(preset=>preset.id==='warpedsdfbloom');
+assert.equal(warpedSdfPreset?.name,'Warped SDF Bloom','Phase 3.5C must include the domain-warped SDF reference preset');
+const warpedSdfPresetProgram=compileFilterProgram(warpedSdfPreset.f.map(formula=>new Parser(formula).parse()));
+for(const name of ['sdfCircle','sdfBox','sdfSmoothUnion','sdfSubtract','sdfFill','sdfOutline','valueNoise'])assert.ok(warpedSdfPresetProgram.metadata.functions.includes(name),`the Phase 3.5C reference preset must use ${name}()`);
+assert.equal(WGSLCompiler.analyze(warpedSdfPresetProgram).compatible,true,'the domain-warped SDF reference preset must remain GPU-compatible');
 const native=detectFilterFormat(JSON.stringify({ format: 'filter-fab-js', version: 2, formulas: ['r','g','b','a'] }), 'test.json');
 assert.equal(native.kind, 'native');
 assert.equal(native.data.mathMode, 'float', 'version 2 files without mathMode must normalize to float mode');
@@ -59,6 +64,20 @@ assert.equal(phase35bProgram.metadata.deterministic,true,'bounded fractal intrin
 assert.doesNotThrow(()=>WGSLCompiler.compile(phase35bProgram),'Phase 3.5B vocabulary must compile for WebGPU');
 assert.throws(()=>new Parser('mandelbrot(0,0)').parse(),/expects 3 arguments/,'mandelbrot() arity must be validated before compilation');
 assert.throws(()=>new Parser('julia(0,0,0,0)').parse(),/expects 5 arguments/,'julia() arity must be validated before compilation');
+const phase35cProgram=compileFilterProgram([
+  'sdfFill(sdfSubtract(sdfSmoothUnion(sdfCircle(x,y,8,8,4),sdfBox(x,y,8,8,6,6,0),2),sdfLine(x,y,4,8,12,8,2)),1)',
+  'sdfOutline(sdfUnion(sdfCircle(x,y,4,4,2),sdfBox(x,y,8,8,4,4,0)),2,1)',
+  'sdfFill(sdfIntersect(sdfCircle(x,y,8,8,6),sdfBox(x,y,8,8,8,8,0)))',
+  'a'
+].map(formula=>new Parser(formula).parse()));
+assert.equal(phase35cProgram.outputs[0].expression.type,IRType.MASK,'sdfFill() must convert a signed distance into a normalized mask');
+assert.equal(phase35cProgram.outputs[1].expression.type,IRType.MASK,'sdfOutline() must convert a signed distance into a normalized outline mask');
+for(const name of ['sdfBox','sdfCircle','sdfFill','sdfIntersect','sdfLine','sdfOutline','sdfSmoothUnion','sdfSubtract','sdfUnion'])assert.ok(phase35cProgram.metadata.functions.includes(name),`Phase 3.5C program must track ${name}()`);
+assert.equal(phase35cProgram.metadata.stateful,false,'SDF composition must remain stateless');
+assert.equal(phase35cProgram.metadata.deterministic,true,'SDF composition must remain deterministic');
+assert.doesNotThrow(()=>WGSLCompiler.compile(phase35cProgram),'Phase 3.5C vocabulary must compile for WebGPU');
+assert.throws(()=>new Parser('sdfCircle(0,0,0,0)').parse(),/expects 5 arguments/,'SDF primitive arity must be validated before compilation');
+assert.throws(()=>new Parser('sdfOutline(0)').parse(),/expects 2 or 3 arguments/,'SDF outline arity must be validated before compilation');
 const afsHeader='%RGB-1.0\n128\n128\n128\n128\n128\n128\n128\n128\n';
 const afsWithFirstControl=value=>`%RGB-1.0\n${value}\n128\n128\n128\n128\n128\n128\n128\nr\ng\nb\na\n`;
 const fourGroupAfs=parseAFS(`${afsHeader}r\n\ng\n\nb\n\na\n`,'test.afs');

@@ -1,6 +1,6 @@
 # Filter FabJS Filter Authoring Guide
 
-**Applies to Filter FabJS v2.6.1**
+**Applies to Filter FabJS v2.6.3**
 
 This guide is for designing new Filter FabJS filters efficiently and with predictable CPU/WebGPU behavior. It assumes the formula syntax in [FORMULA_REFERENCE.md](FORMULA_REFERENCE.md).
 
@@ -21,6 +21,7 @@ Use these freely:
 - deterministic noise;
 - gradients and patterns;
 - analytic masks;
+- signed-distance primitives and composition;
 - blend modes.
 
 Avoid these unless CPU-only behavior is intentional:
@@ -313,6 +314,21 @@ The coordinate offsets (`+431`, `+719`) decorrelate the two fields without requi
 
 Expose `scale`, `strength`, and `seed` as controls for a reusable distortion filter.
 
+The same pattern can warp procedural geometry without adding a separate rendering pass. Build decorrelated coordinates, then pass them to signed-distance primitives:
+
+```text
+sdfFill(
+  sdfCircle(
+    x+(valueNoise(x,y,48,1234)-0.5)*24,
+    y+(valueNoise(x+431,y+719,48,1234)-0.5)*24,
+    X/2,Y/2,80
+  ),
+  1
+)
+```
+
+The built-in **Warped SDF Bloom** combines this domain-warp pattern with smooth union, subtraction, fill, and outline masks while remaining a single deterministic pass.
+
 ## 11. Shape masks as building blocks
 
 Analytic masks return `0..1` and can be composed directly.
@@ -354,6 +370,19 @@ lerp(c,target,ctl(7))
 ```
 
 Feather values should generally remain small in pixel terms. A hard `0` edge is appropriate for deliberately pixel-sharp geometry; otherwise a small positive feather reduces aliasing.
+
+### Signed-distance composition
+
+Use signed distances when shapes need reusable boolean structure or smooth joins. `sdfCircle()`, `sdfLine()`, and `sdfBox()` return distances in pixels. Compose those scalar fields before converting them to a mask:
+
+```text
+field = sdfSubtract(
+  sdfSmoothUnion(circleField,boxField,16),
+  cutoutField
+)
+```
+
+The formula language has no assignment syntax; `field =` above is explanatory shorthand. Inline the expression in an actual channel formula, then use `sdfFill(field,feather)` or `sdfOutline(field,width,feather)`. Prefer `sdfUnion`, `sdfIntersect`, and `sdfSubtract` to hand-written `min`/`max` expressions when authoring SDFs because the names make inside/outside intent explicit.
 
 ## 12. Pattern construction
 
