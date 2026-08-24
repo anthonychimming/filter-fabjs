@@ -12,6 +12,9 @@ const expressionNodeCount=node=>node.op==='const'||node.op==='var'?1:node.op==='
 const jsonLength=value=>{let length=0,stack=[value];while(stack.length){const current=stack.pop();if(current===null){length+=4;continue}if(Array.isArray(current)){length+=2+Math.max(0,current.length-1);for(const item of current)stack.push(item);continue}if(typeof current==='object'){const entries=Object.entries(current);length+=2+Math.max(0,entries.length-1);for(const[key,item]of entries){length+=JSON.stringify(key).length+1;stack.push(item)}continue}length+=JSON.stringify(current).length}return length};
 
 const largeFormula=Array(2048).fill('r').join('+'),largeProgram=programFor(largeFormula),largeKey=WGSLCompiler.key(largeProgram);
+const largeAnalysis=WGSLCompiler.analyze(largeProgram);
+assert.equal(largeAnalysis.compatible,false,'oversized IR programs must use the CPU path instead of generating unbounded WGSL');
+assert.ok(largeAnalysis.blockers.some(blocker=>blocker.includes('program complexity')&&blocker.includes('WebGPU limit')));
 const serializedIrKeyLength=jsonLength([largeProgram.kind,largeProgram.irVersion,largeProgram.mathMode,largeProgram.outputs.map(output=>output.expression)]);
 assert.ok(largeKey.length<serializedIrKeyLength/10,`canonical IR key must stay compact (${largeKey.length} versus ${serializedIrKeyLength} characters)`);
 assert.equal(WGSLCompiler.key(programFor(largeFormula)),largeKey,'equivalent programs must share a canonical cache key');

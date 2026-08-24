@@ -12,13 +12,15 @@ const WEBGPU_UNARY=new Set(['+','-','!']);
 const WEBGPU_BINARY=new Set(['+','-','*','/','%','<','<=','>','>=','==','!=','&&','||']);
 const WEBGPU_BOOLEAN_BINARY=new Set(['<','<=','>','>=','==','!=','&&','||']);
 const EXACT_INTEGER_NOISE_FUNCTIONS=new Set(['hash2','valueNoise','perlin','worleyF1','worleyF2','fbm','turbulence','ridged','periodicNoise']);
+export const MAX_WEBGPU_IR_NODES=4096;
 export class WGSLCompiler{
   static analyze(program){
-    const blockers=[];
+    const blockers=[];let nodeCount=0;
     if(!program||program.kind!=='filter-fab-program'||program.irVersion!==IR_VERSION)blockers.push('unsupported IR program');
     if(program?.mathMode!=='float')blockers.push('legacy integer compatibility mode');
     const walk=(node,exactIntegerContext=false)=>{
       if(!node)return;
+      nodeCount++;
       switch(node.op){
         case'const':{
           const value=Number(node.value),rounded=Math.fround(value),label=String(node.value);
@@ -42,6 +44,7 @@ export class WGSLCompiler{
       }
     };
     program?.outputs?.forEach(output=>walk(output.expression));
+    if(nodeCount>MAX_WEBGPU_IR_NODES)blockers.push(`program complexity ${nodeCount} exceeds WebGPU limit ${MAX_WEBGPU_IR_NODES}`);
     const unique=[...new Set(blockers)];
     return{compatible:unique.length===0,blockers:unique,subset:'phase-3.5-stateless'};
   }

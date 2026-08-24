@@ -1,6 +1,6 @@
 # Architecture
 
-Filter FabJS v2.4.7 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
+Filter FabJS v2.4.8 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
 
 ```text
 Formula text
