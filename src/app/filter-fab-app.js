@@ -11,7 +11,7 @@ import { CpuRenderer } from '../renderers/cpu-renderer.js';
 import { WebGpuRenderer } from '../renderers/webgpu-renderer.js';
 import { RendererManager } from '../renderers/renderer-manager.js';
 import { presets } from '../presets/builtins.js';
-import { detectFilterFormat, FILTER_FILE_MAX_BYTES, validateNativeFilter } from '../io/filter-format.js';
+import { detectFilterFormat, FILTER_FILE_MAX_BYTES, getValidatedFormulaAsts, validateNativeFilter } from '../io/filter-format.js';
 import { imageFromClipboardData, alphaStats, renderedImageCanvas, canvasBlob, verifyPngAlpha, writePngClipboard } from '../io/image-io.js';
 import { getDom } from '../ui/dom.js';
 import { createCanvasView } from '../ui/canvas-view.js';
@@ -45,7 +45,7 @@ export function initFilterFabApp(){
   async function cancelRender(){if(!state.isRendering)return false;state.renderId++;try{await state.rendererManager?.cancelActive();}catch(error){console.error('Renderer cancellation failed',error);}setUILocked(false);setProgress(0,0,state.height||0);setStatus('Render cancelled');el.renderInfo.textContent=`${state.rendererManager?.active?.label||'Renderer'} · cancelled`;toast('Rendering cancelled');return true;}
 
   function currentProgramKey(){return JSON.stringify([state.legacyMath,...el.formulas.map(field=>field.value)])}
-  function compileCurrentProgram(){const key=currentProgramKey();if(!state.hasPendingFormulaChanges&&state.lastProgram&&state.lastProgramKey===key)return state.lastProgram;const astList=el.formulas.map(field=>new Parser(field.value).parse());return compileFilterProgram(astList,{legacyMath:state.legacyMath});}
+  function compileCurrentProgram(){const key=currentProgramKey();if(state.lastProgram&&state.lastProgramKey===key)return state.lastProgram;const astList=el.formulas.map(field=>new Parser(field.value).parse());return compileFilterProgram(astList,{legacyMath:state.legacyMath});}
   const scheduleRender=debounce(()=>{if(!state.hasPendingFormulaChanges)render();},110);
   const scheduleFormulaValidation=debounce(validatePendingFormulas,220);
   controlsController=createControlsController({state,el,scheduleRender,applyInteractionLocks,compileCurrentProgram});
@@ -55,11 +55,11 @@ export function initFilterFabApp(){
   function currentFilter(){return{format:'filter-fab-js',version:2,mathMode:state.legacyMath?'legacy':'float',name:$('#filterName').value.trim().slice(0,120)||'Untitled Filter',author:$('#filterAuthor').value.trim().slice(0,120),formulas:el.formulas.map(field=>field.value.trim()),controls:state.controls.map((value,index)=>({label:String(state.labels[index]??'').slice(0,80)||`Control ${index+1}`,value}))};}
   function prepareFilter(input){
     if(!input||typeof input!=='object'||Array.isArray(input))throw new Error('Filter definition must be an object');
-    const definition=input.format==='filter-fab-js'?validateNativeFilter(input):input,mathMode=definition.mathMode??'float';
+    const inputAsts=getValidatedFormulaAsts(input),definition=inputAsts?input:input.format==='filter-fab-js'?validateNativeFilter(input):input,mathMode=definition.mathMode??'float';
     if(!['float','legacy'].includes(mathMode))throw new Error('Filter mathMode must be “float” or “legacy”');
     const legacyMath=mathMode==='legacy',formulas=definition.formulas||definition.f;
     if(!Array.isArray(formulas)||formulas.length!==4||formulas.some(formula=>typeof formula!=='string'||!formula.trim()))throw new Error('Filter definition must contain exactly four formulas');
-    const normalizedFormulas=formulas.map(formula=>formula.trim()),program=compileFilterProgram(normalizedFormulas.map(formula=>new Parser(formula).parse()),{legacyMath});
+    const normalizedFormulas=formulas.map(formula=>formula.trim()),astList=inputAsts||getValidatedFormulaAsts(definition)||normalizedFormulas.map(formula=>new Parser(formula).parse()),program=compileFilterProgram(astList,{legacyMath});
     let rawValues,rawLabels;
     if(definition.controls!==undefined){
       if(!Array.isArray(definition.controls)||definition.controls.length>8)throw new Error('Filter definition may contain at most eight controls');
@@ -75,9 +75,9 @@ export function initFilterFabApp(){
     const name=String(definition.name??'').trim()||'Untitled Filter',author=String(definition.author??'').trim();if(name.length>120||author.length>120)throw new Error('Filter name and author are limited to 120 characters');
     return{legacyMath,formulas:normalizedFormulas,controls,labels,name,author,program};
   }
-  function applyFilter(definition,selection){const next=prepareFilter(definition);state.legacyMath=next.legacyMath;el.formulas.forEach((field,index)=>field.value=next.formulas[index]);state.controls=next.controls;state.labels=next.labels;$('#filterName').value=next.name;$('#filterAuthor').value=next.author;controlsController.syncSliders();controlsController.updateControlUsage(next.program);if(selection)el.preset.value=selection;updatePresetDeleteState();markFormulaPending();render();}
+  function applyFilter(definition,selection){const next=prepareFilter(definition);state.legacyMath=next.legacyMath;el.formulas.forEach((field,index)=>field.value=next.formulas[index]);state.controls=next.controls;state.labels=next.labels;state.lastProgram=next.program;state.lastProgramKey=currentProgramKey();$('#filterName').value=next.name;$('#filterAuthor').value=next.author;controlsController.syncSliders();controlsController.updateControlUsage(next.program);if(selection)el.preset.value=selection;updatePresetDeleteState();markFormulaPending();render();}
 
-  function compileAll({cache=true}={}){const key=currentProgramKey();if(cache&&!state.hasPendingFormulaChanges&&state.lastProgram&&state.lastProgramKey===key){controlsController.updateControlUsage(state.lastProgram);return state.lastProgram}const astList=[];let ok=true;el.formulas.forEach(field=>{const box=field.closest('.formula'),icon=$('.formula-state',box),errorElement=$('.formula-error',box);try{astList.push(new Parser(field.value).parse());field.classList.remove('invalid');field.setAttribute('aria-invalid','false');icon.textContent='✓';icon.classList.remove('bad','pending');errorElement.textContent='';errorElement.classList.remove('show');}catch(error){ok=false;astList.push(null);field.classList.add('invalid');field.setAttribute('aria-invalid','true');icon.textContent='!';icon.classList.remove('pending');icon.classList.add('bad');errorElement.textContent=`${error.message} at character ${(error.pos??0)+1}`;errorElement.classList.add('show');}});if(!ok){controlsController.updateControlUsage(null);return null;}try{const program=compileFilterProgram(astList,{legacyMath:state.legacyMath});if(cache){state.lastProgram=program;state.lastProgramKey=key}controlsController.updateControlUsage(program);return program;}catch(error){console.error('IR compilation failed',error);setStatus(`Compiler error: ${error.message}`,'error');controlsController.updateControlUsage(null);return null;}}
+  function compileAll({cache=true}={}){const key=currentProgramKey();if(cache&&state.lastProgram&&state.lastProgramKey===key){controlsController.updateControlUsage(state.lastProgram);return state.lastProgram}const astList=[];let ok=true;el.formulas.forEach(field=>{const box=field.closest('.formula'),icon=$('.formula-state',box),errorElement=$('.formula-error',box);try{astList.push(new Parser(field.value).parse());field.classList.remove('invalid');field.setAttribute('aria-invalid','false');icon.textContent='✓';icon.classList.remove('bad','pending');errorElement.textContent='';errorElement.classList.remove('show');}catch(error){ok=false;astList.push(null);field.classList.add('invalid');field.setAttribute('aria-invalid','true');icon.textContent='!';icon.classList.remove('pending');icon.classList.add('bad');errorElement.textContent=`${error.message} at character ${(error.pos??0)+1}`;errorElement.classList.add('show');}});if(!ok){controlsController.updateControlUsage(null);return null;}try{const program=compileFilterProgram(astList,{legacyMath:state.legacyMath});if(cache){state.lastProgram=program;state.lastProgramKey=key}controlsController.updateControlUsage(program);return program;}catch(error){console.error('IR compilation failed',error);setStatus(`Compiler error: ${error.message}`,'error');controlsController.updateControlUsage(null);return null;}}
   function showFormulaFailure(){const hasFieldError=el.formulas.some(field=>field.classList.contains('invalid'));setFormulaEditStatus('invalid',hasFieldError?'Fix formula errors':'Compiler error');if(hasFieldError)setStatus('Fix formula errors before rendering','error');}
   function validatePendingFormulas(){if(!state.hasPendingFormulaChanges||state.isRendering)return;const program=compileAll({cache:false});if(program){setFormulaEditStatus('pending','Ready to render');setStatus('Formula valid · render to update preview','pending');}else showFormulaFailure();}
   async function render({focusInvalid=false}={}){
@@ -185,7 +185,7 @@ export function initFilterFabApp(){
     window.addEventListener('beforeunload',()=>state.rendererManager?.dispose());
   }
 
-  window.FilterFabJS=Object.freeze({version:'2.4.8',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererPreference:()=>state.rendererPreference});
+  window.FilterFabJS=Object.freeze({version:'2.5.0',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererPreference:()=>state.rendererPreference});
   controlsController.buildSliders();populatePresets();wire();const demo=demoImage();initImage(demo.data,demo.width,demo.height);applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');
   return{state,render,applyFilter,loadImageFile};
 }

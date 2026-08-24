@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.5.0
+
+- Rejected historic AFS control lines containing numeric prefixes, decimals, exponents, or unsafe integers while preserving signed whole integers, surrounding whitespace, and legacy 0–255 clamping.
+- Reused validated formula syntax trees during filter preparation and seeded the prepared program cache before rendering so imports no longer repeat formula parsing and compilation.
+
+## 2.4.9
+
+- Rejected malformed AFS imports containing fewer or more than four reconstructed channel formulas instead of silently truncating appended formula groups.
+- Preserved physical `//` comment boundaries and comment-safe parenthesis tracking during multiline AFS reconstruction while retaining historic explicit continuation handling.
+
 ## 2.4.8
 
 - Matched historic AFS/legacy `rnd()` and `rst()` behavior with Filter Factory's 56-entry subtractive random-number generator while preserving native random behavior.

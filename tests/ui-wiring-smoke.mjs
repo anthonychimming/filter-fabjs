@@ -29,9 +29,12 @@ assert.match(app, /rendererManager\.renderWithFallback\(/, 'the renderer manager
 assert.doesNotMatch(app, /rendererManager\.get\('cpu'\)|rendererManager\.active\s*=/, 'the app must not bypass manager-owned fallback state');
 assert.match(app, /function prepareFilter\(input\)/, 'filter definitions must be normalized before application state changes');
 assert.match(app, /function applyFilter\(definition,selection\)\{const next=prepareFilter\(definition\);state\.legacyMath=/, 'filter application must finish validation and compilation before mutating UI state');
+assert.match(app, /astList=inputAsts\|\|getValidatedFormulaAsts\(definition\)\|\|normalizedFormulas\.map/, 'filter preparation must reuse ASTs already produced by import validation');
+assert.match(app, /state\.lastProgram=next\.program;state\.lastProgramKey=currentProgramKey\(\)/, 'applying a prepared filter must seed the exact-key render cache');
 assert.match(app, /FILTER_FILE_MAX_BYTES/, 'filter imports must reject oversized files before reading them');
 assert.match(app, /lastProgramKey/, 'the app must retain a stable key for parsed-program reuse');
 assert.match(app, /state\.lastProgramKey===key\)\{controlsController\.updateControlUsage\(state\.lastProgram\);return state\.lastProgram\}/, 'control-only renders must reuse the last parsed IR program');
+assert.doesNotMatch(app, /!state\.hasPendingFormulaChanges&&state\.lastProgram&&state\.lastProgramKey===key/, 'an exact prepared-program key must be reusable while its immediate render is pending');
 assert.doesNotMatch(app, /WGSLCompiler\.analyze/, 'renderer compatibility analysis must not be repeated in the app layer');
 assert.match(app, /el\.split\.oninput=\(\)=>\{state\.split=Number\(el\.split\.value\);canvasView\.requestDraw\(\);\}/, 'split-preview input must coalesce redraws through animation frames');
 assert.match(controls, /range\.oninput=\(\)=>update\(range\.value\)/, 'range input must update its displayed value continuously');
