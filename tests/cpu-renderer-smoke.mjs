@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { Worker } from 'node:worker_threads';
 import { CHROMA_MODELS } from '../src/core/chroma.js';
+import { CONTROL_COUNT, defaultControlValues } from '../src/core/controls.js';
 import { Parser, VARS } from '../src/core/formula-language.js';
 import { compileFilterProgram } from '../src/core/ir.js';
 import { presets } from '../src/presets/builtins.js';
@@ -30,7 +31,7 @@ worker.postMessage({ type: 'init', width: 4, height: 1, buffer: source.buffer },
 await waitFor(message => message.type === 'ready');
 
 let renderId = 0;
-const render = async (formulas,{legacyMath=false,controls=Array(8).fill(128)}={}) => {
+const render = async (formulas,{legacyMath=false,controls=defaultControlValues()}={}) => {
   const id = ++renderId;
   const program = compileFilterProgram(formulas.map(formula => new Parser(formula).parse()),{legacyMath});
   worker.postMessage({ type: 'render', id, program, controls, legacyMath });
@@ -39,7 +40,7 @@ const render = async (formulas,{legacyMath=false,controls=Array(8).fill(128)}={}
 };
 
 const renderProgram = async (program,programKey,includeProgram=true) => {
-  const id=++renderId,message={type:'render',id,programKey,controls:Array(8).fill(128)};
+  const id=++renderId,message={type:'render',id,programKey,controls:defaultControlValues()};
   if(includeProgram)message.program=program;
   worker.postMessage(message);
   const result=await waitFor(candidate=>candidate.type==='result'&&candidate.id===id);
@@ -52,13 +53,23 @@ assert.deepEqual([...new Uint8ClampedArray(result.buffer)], [245,235,225,255, 15
 const numericEdges = await render(['round(0.5)*255','pow(-2,2)','c2d(0,0)','a']);
 assert.deepEqual([...numericEdges], [255,4,0,255, 255,4,0,128, 255,4,0,255, 255,4,0,255], 'CPU fallback semantics must remain defined at GPU edge cases');
 
+const expandedControls=defaultControlValues();expandedControls[8]=255;expandedControls[9]=0;
+const expandedControlResult=await render(['ctl(8)','val(9,0,255)','map(4,128)','255'],{controls:expandedControls});
+assert.deepEqual([...expandedControlResult.slice(0,4)],[255,0,128,255],'CPU formulas must expose controls 8 and 9 plus the fifth map pair');
+const normalizedCoordinates=await render(['nx*255','ny*255','(cx+1)*127.5','(cy+1)*127.5']);
+assert.deepEqual([...normalizedCoordinates],[0,128,0,128,85,128,85,128,170,128,170,128,255,128,255,128],'normalized and centered coordinates must span the image and center singleton dimensions');
+const coordinateHelpers=await render(['radius(3,4)*20','angle(0,1)/4','repeat(-1,4)*50','mirrorRepeat(5,4)*50']);
+assert.deepEqual([...coordinateHelpers.slice(0,4)],[100,64,150,150],'coordinate helper aliases must retain positive-repeat and 1024-angle semantics');
+const paletteRamps=await render(['gradient3(0.25,0,100,200)','gradient4(0.5,0,60,180,240)','gradient3(-1,0,100,200)','gradient4(2,0,60,180,240)']);
+assert.deepEqual([...paletteRamps.slice(0,4)],[50,120,0,240],'three- and four-stop palette ramps must clamp and interpolate normalized positions');
+
 const nativeSquare=await render(['sqr(4)','sqr(4)','sqr(4)','a']);
 assert.deepEqual([...nativeSquare.slice(0,4)],[16,16,16,255],'native float sqr() must retain its documented square operation');
 const legacyRoots=await render(['sqr(16)','sqr(0)','sqr(-4)+5','sqrt(81)'],{legacyMath:true});
 assert.deepEqual([...legacyRoots.slice(0,4)],[4,0,1,9],'legacy sqr()/sqrt() must use Filter Factory integer square-root semantics, including negative inputs');
 const legacyArithmetic=await render(['val(0,1,0)','mix(1,1,1,2)','scl(1,0,2,1,0)','2147483647+1<0?255:0'],{legacyMath:true});
 assert.deepEqual([...legacyArithmetic.slice(0,4)],[1,0,1,255],'legacy helpers and expression arithmetic must truncate at integer boundaries and wrap signed 32-bit results');
-const legacyMap=await render(['map(0,128)','map(0,128)','map(0,128)','a'],{legacyMath:true,controls:[255.9,0.9,...Array(6).fill(128)]});
+const legacyMap=await render(['map(0,128)','map(0,128)','map(0,128)','a'],{legacyMath:true,controls:[255.9,0.9,...Array(CONTROL_COUNT-2).fill(128)]});
 assert.deepEqual([...legacyMap.slice(0,3)],[128,128,128],'legacy map() must use integer control values and integer division');
 const legacyMultiplyAndPow=await render(['1073741824*2<0?255:0','pow(2,-1)','pow(5,0)','a'],{legacyMath:true});
 assert.deepEqual([...legacyMultiplyAndPow.slice(0,4)],[255,1,1,255],'legacy multiplication must use signed 32-bit products and pow() must use legacy rounding');
@@ -135,19 +146,19 @@ try{
   assert.equal(lifecycleRenderer.source,lifecycleSource,'the CPU renderer must share the immutable main-thread source buffer');
   assert.equal(fakeWorkers.length,1);
 
-  const firstRender=lifecycleRenderer.render({id:1,program:programA,controls:Array(8).fill(128)});await new Promise(resolve=>setImmediate(resolve));
+  const firstRender=lifecycleRenderer.render({id:1,program:programA,controls:defaultControlValues()});await new Promise(resolve=>setImmediate(resolve));
   const firstRenderMessage=fakeWorkers[0].messages.at(-1);assert.equal(firstRenderMessage.type,'render');assert.equal(firstRenderMessage.program,programA,'the first render on a worker must send its IR program');fakeWorkers[0].finish(1);await firstRender;
-  const repeatedRender=lifecycleRenderer.render({id:2,program:programA,controls:Array(8).fill(64)});await new Promise(resolve=>setImmediate(resolve));
+  const repeatedRender=lifecycleRenderer.render({id:2,program:programA,controls:Array(CONTROL_COUNT).fill(64)});await new Promise(resolve=>setImmediate(resolve));
   const repeatedRenderMessage=fakeWorkers[0].messages.at(-1);assert.equal(repeatedRenderMessage.type,'render');assert.equal('program' in repeatedRenderMessage,false,'control-only renders must not structured-clone unchanged IR');fakeWorkers[0].finish(2);await repeatedRender;
-  const changedRender=lifecycleRenderer.render({id:3,program:programB,controls:Array(8).fill(64)});await new Promise(resolve=>setImmediate(resolve));
+  const changedRender=lifecycleRenderer.render({id:3,program:programB,controls:Array(CONTROL_COUNT).fill(64)});await new Promise(resolve=>setImmediate(resolve));
   assert.equal(fakeWorkers[0].messages.at(-1).program,programB,'a changed formula program must be sent to the worker');fakeWorkers[0].finish(3);await changedRender;
 
-  const pendingRender=lifecycleRenderer.render({id:4,program:programB,controls:Array(8).fill(32)});await new Promise(resolve=>setImmediate(resolve));
+  const pendingRender=lifecycleRenderer.render({id:4,program:programB,controls:Array(CONTROL_COUNT).fill(32)});await new Promise(resolve=>setImmediate(resolve));
   const pendingCancellation=assert.rejects(pendingRender,error=>error?.name==='RenderCancelledError');assert.equal(await lifecycleRenderer.cancel(),true);await pendingCancellation;
   assert.equal(fakeWorkers.length,1,'cancellation must not eagerly create a replacement worker');
   assert.equal(fakeWorkers[0].terminated,true);
 
-  const resumedRender=lifecycleRenderer.render({id:5,program:programB,controls:Array(8).fill(16)});await new Promise(resolve=>setImmediate(resolve));
+  const resumedRender=lifecycleRenderer.render({id:5,program:programB,controls:Array(CONTROL_COUNT).fill(16)});await new Promise(resolve=>setImmediate(resolve));
   assert.equal(fakeWorkers.length,2,'the next render must lazily replace the cancelled worker');
   assert.equal(fakeWorkers[1].messages[0].type,'init','a replacement worker must receive the retained source before rendering');
   assert.equal(fakeWorkers[1].messages.at(-1).program,programB,'a replacement worker must receive the full current IR program');fakeWorkers[1].finish(5);await resumedRender;
@@ -160,18 +171,18 @@ try{
   assert.equal(startupRecoveryRenderer.worker,null,'a startup error must clear the failed Worker instance');
   assert.equal(startupRecoveryRenderer.workerProgramKey,null,'a startup error must clear the failed Worker program cache');
   await startupRecoveryRenderer.readyPromise;
-  const recoveredStartupRender=startupRecoveryRenderer.render({id:6,program:programA,controls:Array(8).fill(128)});await new Promise(resolve=>setImmediate(resolve));
+  const recoveredStartupRender=startupRecoveryRenderer.render({id:6,program:programA,controls:defaultControlValues()});await new Promise(resolve=>setImmediate(resolve));
   assert.equal(fakeWorkers.length,startupWorkerCount+2,'the next render must lazily replace a Worker that failed during startup');
   const startupReplacement=fakeWorkers.at(-1);assert.equal(startupReplacement.messages[0].type,'init');assert.equal(startupReplacement.messages.at(-1).program,programA);startupReplacement.finish(6);await recoveredStartupRender;
   startupRecoveryRenderer.releaseSource();
 
   const messageRecoveryRenderer=new CpuRenderer(()=> ''),messageSource=new Uint8ClampedArray([7,8,9,255]);await messageRecoveryRenderer.setSource(messageSource,1,1);
-  const failedMessageWorker=fakeWorkers.at(-1),failedMessageRender=messageRecoveryRenderer.render({id:7,program:programA,controls:Array(8).fill(128)});await new Promise(resolve=>setImmediate(resolve));
+  const failedMessageWorker=fakeWorkers.at(-1),failedMessageRender=messageRecoveryRenderer.render({id:7,program:programA,controls:defaultControlValues()});await new Promise(resolve=>setImmediate(resolve));
   const messageFailure=assert.rejects(failedMessageRender,/Worker message failed/);failedMessageWorker.failMessage();await messageFailure;
   assert.equal(failedMessageWorker.terminated,true,'a message error must terminate the failed CPU Worker');
   assert.equal(messageRecoveryRenderer.worker,null,'a message error must clear the failed Worker instance');
   assert.equal(messageRecoveryRenderer.workerProgramKey,null,'a message error must clear the failed Worker program cache');
-  const recoveredMessageRender=messageRecoveryRenderer.render({id:8,program:programA,controls:Array(8).fill(128)});await new Promise(resolve=>setImmediate(resolve));
+  const recoveredMessageRender=messageRecoveryRenderer.render({id:8,program:programA,controls:defaultControlValues()});await new Promise(resolve=>setImmediate(resolve));
   const messageReplacement=fakeWorkers.at(-1);assert.notEqual(messageReplacement,failedMessageWorker,'the next render must replace a Worker that raised a message error');assert.equal(messageReplacement.messages[0].type,'init');messageReplacement.finish(8);await recoveredMessageRender;
   messageRecoveryRenderer.releaseSource();
 }finally{

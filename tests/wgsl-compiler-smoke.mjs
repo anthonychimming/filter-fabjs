@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import { CHROMA_MODELS } from '../src/core/chroma.js';
+import { CONTROL_COUNT } from '../src/core/controls.js';
 import { Parser } from '../src/core/formula-language.js';
 import { compileFilterProgram } from '../src/core/ir.js';
 import { WGSLCompiler } from '../src/gpu/wgsl-compiler.js';
+import { WEBGPU_CONTROL_SLOT_COUNT } from '../src/gpu/params-layout.js';
 
 const programFor = (formula, options = {}) => compileFilterProgram(
   [formula, formula, formula, formula].map(source => new Parser(source).parse()),
@@ -34,7 +36,7 @@ assert.equal(countingCompiler.valueVisits,expressionNodeCount(logicalExpression)
 const statelessCases = [
   ['rad(0,2,z)', 'ff_sample_polar('],
   ['cnv(0,0,0,0,1,0,0,0,0,1)', 'ff_convolve3x3(pixelX, pixelY, 0.0'],
-  ['map(0,c)', 'ff_map('],
+  ['map(4,c)', 'ff_map(4.0,'],
   ['bias(c/255,128)', 'ff_bias('],
   ['gain(c/255,128)', 'ff_gain('],
   ['hash2(x,y,7)', 'ff_hash01(pixelX, pixelY, 7.0)'],
@@ -46,6 +48,12 @@ const statelessCases = [
   ['turbulence(x,y,16,4,7)', 'ff_turbulence('],
   ['ridged(x,y,16,4,7)', 'ff_ridged('],
   ['periodicNoise(x,y,16,12,7)', 'ff_periodic_noise('],
+  ['radius(cx,cy)', 'length(vec2<f32>(centeredX, centeredY))'],
+  ['angle(cx,cy)', 'ff_atan2(centeredY, centeredX)'],
+  ['repeat(-1,4)', 'ff_wrap((-1.0), 4.0)'],
+  ['mirrorRepeat(5,4)', 'ff_mirror(5.0, 4.0)'],
+  ['gradient3(nx,0,128,255)', 'ff_gradient3(normalizedX, 0.0, 128.0, 255.0)'],
+  ['gradient4(ny,0,64,192,255)', 'ff_gradient4(normalizedY, 0.0, 64.0, 192.0, 255.0)'],
   ['angularGrad(x,y,X/2,Y/2,0)', 'ff_angular_grad('],
   ['checker(x,y,8,8)', 'ff_checker('],
   ['brick(x,y,16,8,1,0.5)', 'ff_brick('],
@@ -138,6 +146,13 @@ assert.ok(angleCode.includes('fn ff_atan2(y:f32,x:f32)'), 'generated WGSL must g
 assert.ok(angleCode.includes('ff_atan2(0.0, 0.0)'), 'c2d() must use the guarded atan2 helper');
 assert.ok(angleCode.includes('let direction=ff_atan2(-dy,-dx)'), 'the direction variable must use the guarded atan2 helper');
 assert.ok(angleCode.includes('ff_wrap(ff_atan2(y-cy,x-cx)/FF_TAU+offset,1.0)'), 'angular gradients must use the guarded atan2 helper');
+
+const phase35aCode=WGSLCompiler.compile(programFor('ctl(9)+map(4,c)+nx+ny+cx+cy')).code;
+assert.ok(phase35aCode.includes(`controls:array<f32,${WEBGPU_CONTROL_SLOT_COUNT}>`),'WebGPU parameters must reserve aligned headroom beyond the ten public controls');
+assert.ok(phase35aCode.includes(`i>=${CONTROL_COUNT}`),'WGSL control lookup must enforce the public ten-control boundary');
+assert.ok(phase35aCode.includes('i>=5'),'WGSL map() must expose all five control pairs');
+assert.ok(phase35aCode.includes('let normalizedX=ff_normalized_coordinate(pixelX,widthF)'),'WGSL must derive normalized coordinates once per pixel');
+assert.ok(phase35aCode.includes('let centeredY=normalizedY*2.0-1.0'),'WGSL must derive centered coordinates from normalized coordinates');
 
 const mirrorCode = WGSLCompiler.compile(programFor('srcMirror(X,y,z)')).code;
 assert.ok(mirrorCode.includes('min(u32(trunc(ff_mirror(x,f32(params.width)))),params.width-1u)'), 'mirrored x indices must clamp to the final column');

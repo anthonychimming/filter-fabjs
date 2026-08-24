@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.6.0
+
+- Expanded native formula controls from eight to ten through shared control definitions, preserving eight-control filters and historic AFS imports while adding a fifth `map()` pair.
+- Added normalized `nx`/`ny` and centered `cx`/`cy` coordinates plus GPU-compatible `radius()`, `angle()`, `repeat()`, and `mirrorRepeat()` helpers without changing the existing chroma meanings of `U` and `V`.
+- Added GPU-compatible three- and four-stop scalar palette ramps through `gradient3()` and `gradient4()`, with focused parser, IR, CPU, WGSL, import, UI, uniform-layout, and optional hardware-parity coverage.
+
 ## 2.5.4
 
 - Migrated browser-local custom presets to stable IDs, resolved selection and deletion by ID instead of array position, and refreshed the preset menu after cross-tab storage changes.

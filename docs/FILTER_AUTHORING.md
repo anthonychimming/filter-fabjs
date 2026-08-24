@@ -1,6 +1,6 @@
 # Filter FabJS Filter Authoring Guide
 
-**Applies to Filter FabJS v2.5.4**
+**Applies to Filter FabJS v2.6.0**
 
 This guide is for designing new Filter FabJS filters efficiently and with predictable CPU/WebGPU behavior. It assumes the formula syntax in [FORMULA_REFERENCE.md](FORMULA_REFERENCE.md).
 
@@ -17,6 +17,7 @@ Use these freely:
 - `src()`, `srcWrap()`, `srcMirror()`, `srcLinear()`, `rad()`;
 - `cnv()`;
 - numeric shaping and coordinate helpers;
+- normalized/centered coordinates, repeat helpers, and scalar palette ramps;
 - deterministic noise;
 - gradients and patterns;
 - analytic masks;
@@ -103,15 +104,17 @@ Avoid exposing implementation details such as `Octave Multiplier 2` unless the f
 
 A practical pattern is:
 
-- controls 0–5: effect-specific parameters;
-- control 6: tone/color/detail parameter if needed;
-- control 7: global effect mix.
+- controls 0–7: effect-specific parameters;
+- control 8: tone/color/detail parameter if needed;
+- control 9: global effect mix.
 
 This is a convention, not an engine requirement.
 
 ## 5. Prefer resolution-independent formulas
 
 Use `X`, `Y`, and `min(X,Y)` rather than hard-coded canvas dimensions.
+
+For normalized procedural layouts, use `nx`/`ny` (`0..1`) or `cx`/`cy` (`-1..1`) so the formula naturally follows image dimensions.
 
 Examples:
 

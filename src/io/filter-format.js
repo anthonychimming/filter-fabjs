@@ -4,6 +4,7 @@
  * Licensed GPL-2.0-or-later. See LICENSE and README.md.
  */
 import { clamp } from '../core/utils.js';
+import { CONTROL_COUNT, CONTROL_DEFINITIONS } from '../core/controls.js';
 import { FORMULA_LIMITS, Parser } from '../core/formula-language.js';
 
 export const FILTER_FILE_MAX_BYTES=256*1024;
@@ -33,19 +34,19 @@ function controlValue(value,index){if(typeof value!=='number'||!Number.isFinite(
 function controlLabel(value,index){if(value===undefined||value===null||value==='')return`Control ${index+1}`;if(typeof value!=='string')throw new Error(`Native filter control ${index+1} label must be a string`);const label=value.trim();if(label.length>80)throw new Error(`Native filter control ${index+1} label exceeds 80 characters`);return label||`Control ${index+1}`}
 function normalizeNativeControls(data){
   if(data.controls!==undefined){
-    if(!Array.isArray(data.controls)||data.controls.length>8)throw new Error('Native filter controls must be an array of at most eight entries');
+    if(!Array.isArray(data.controls)||data.controls.length>CONTROL_COUNT)throw new Error(`Native filter controls must be an array of at most ${CONTROL_COUNT} entries`);
     const controls=data.controls.map((control,index)=>{
       if(typeof control==='number')return{label:`Control ${index+1}`,value:controlValue(control,index)};
       if(!control||typeof control!=='object'||Array.isArray(control))throw new Error(`Native filter control ${index+1} must be a number or object`);
       return{label:controlLabel(control.label,index),value:controlValue(control.value,index)};
     });
-    while(controls.length<8)controls.push({label:`Control ${controls.length+1}`,value:128});
+    while(controls.length<CONTROL_COUNT){const definition=CONTROL_DEFINITIONS[controls.length];controls.push({label:definition.defaultLabel,value:definition.defaultValue});}
     return controls;
   }
   const values=data.values===undefined?[]:data.values,labels=data.labels===undefined?[]:data.labels;
-  if(!Array.isArray(values)||values.length>8)throw new Error('Native filter values must be an array of at most eight entries');
-  if(!Array.isArray(labels)||labels.length>8)throw new Error('Native filter labels must be an array of at most eight entries');
-  return Array.from({length:8},(_,index)=>({label:controlLabel(labels[index],index),value:index<values.length?controlValue(values[index],index):128}));
+  if(!Array.isArray(values)||values.length>CONTROL_COUNT)throw new Error(`Native filter values must be an array of at most ${CONTROL_COUNT} entries`);
+  if(!Array.isArray(labels)||labels.length>CONTROL_COUNT)throw new Error(`Native filter labels must be an array of at most ${CONTROL_COUNT} entries`);
+  return CONTROL_DEFINITIONS.map((definition,index)=>({label:controlLabel(labels[index],index),value:index<values.length?controlValue(values[index],index):definition.defaultValue}));
 }
 export function validateNativeFilter(data){
   if(!data||typeof data!=='object'||Array.isArray(data))throw new Error('Native filter JSON must contain an object');

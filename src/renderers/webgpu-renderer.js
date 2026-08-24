@@ -4,6 +4,8 @@
  * Licensed GPL-2.0-or-later. See LICENSE and README.md.
  */
 import { WGSLCompiler, WGSLCompileError } from '../gpu/wgsl-compiler.js';
+import { CONTROL_COUNT, DEFAULT_CONTROL_VALUE } from '../core/controls.js';
+import { WEBGPU_CONTROL_SLOT_COUNT, WEBGPU_PARAMS_BYTES } from '../gpu/params-layout.js';
 import { RendererBackend, RenderCancelledError } from './renderer-backend.js';
 
 const MAX_PIPELINES=32,MAX_PIPELINE_CACHE_BYTES=8*1024*1024;
@@ -29,12 +31,12 @@ export class WebGpuRenderer extends RendererBackend{
   async uploadSource(token=this.cancelVersion){
     this.assertGeneration(token,'Stale WebGPU source upload');if(!this.source||!this.width||!this.height)throw new Error('WebGPU source is not initialized');const device=await this.ensureDevice();this.assertGeneration(token,'Stale WebGPU source upload');if(device!==this.device)throw new RenderCancelledError('WebGPU device changed during source upload');this.destroyBuffers();
     const size=Math.max(4,this.width*this.height*4);
-    try{this.sourceBuffer=device.createBuffer({label:'Filter FabJS source',size,usage:GPUBufferUsage.STORAGE|GPUBufferUsage.COPY_DST});this.outputBuffer=device.createBuffer({label:'Filter FabJS output',size,usage:GPUBufferUsage.STORAGE|GPUBufferUsage.COPY_SRC});this.readbackBuffer=device.createBuffer({label:'Filter FabJS readback',size,usage:GPUBufferUsage.COPY_DST|GPUBufferUsage.MAP_READ});this.paramsBuffer=device.createBuffer({label:'Filter FabJS params',size:48,usage:GPUBufferUsage.STORAGE|GPUBufferUsage.COPY_DST});device.queue.writeBuffer(this.sourceBuffer,0,this.source);this.bufferGeneration=this.deviceGeneration}catch(error){this.destroyBuffers();throw error}
+    try{this.sourceBuffer=device.createBuffer({label:'Filter FabJS source',size,usage:GPUBufferUsage.STORAGE|GPUBufferUsage.COPY_DST});this.outputBuffer=device.createBuffer({label:'Filter FabJS output',size,usage:GPUBufferUsage.STORAGE|GPUBufferUsage.COPY_SRC});this.readbackBuffer=device.createBuffer({label:'Filter FabJS readback',size,usage:GPUBufferUsage.COPY_DST|GPUBufferUsage.MAP_READ});this.paramsBuffer=device.createBuffer({label:'Filter FabJS params',size:WEBGPU_PARAMS_BYTES,usage:GPUBufferUsage.STORAGE|GPUBufferUsage.COPY_DST});device.queue.writeBuffer(this.sourceBuffer,0,this.source);this.bufferGeneration=this.deviceGeneration}catch(error){this.destroyBuffers();throw error}
     return device;
   }
   async ensureSourceBuffers(token=this.cancelVersion){this.assertGeneration(token);if(!this.source||!this.width||!this.height)throw new Error('WebGPU source is not initialized');if(this.device&&this.bufferGeneration===this.deviceGeneration&&this.sourceBuffer&&this.outputBuffer&&this.readbackBuffer&&this.paramsBuffer)return this.device;return this.uploadSource(token)}
   releaseSource(){this.cancelVersion++;const job=this.operationQueue.then(()=>{this.active=false;this.destroyBuffers();this.source=null;this.width=this.height=0});this.operationQueue=job.catch(()=>{});return job}
-  writeParams(device,paramsBuffer,startRow,rowCount,controls){const data=new ArrayBuffer(48),view=new DataView(data);view.setUint32(0,this.width,true);view.setUint32(4,this.height,true);view.setUint32(8,startRow,true);view.setUint32(12,rowCount,true);for(let i=0;i<8;i++)view.setFloat32(16+i*4,Number(controls[i]??128),true);device.queue.writeBuffer(paramsBuffer,0,data)}
+  writeParams(device,paramsBuffer,startRow,rowCount,controls){const data=new ArrayBuffer(WEBGPU_PARAMS_BYTES),view=new DataView(data);view.setUint32(0,this.width,true);view.setUint32(4,this.height,true);view.setUint32(8,startRow,true);view.setUint32(12,rowCount,true);for(let i=0;i<WEBGPU_CONTROL_SLOT_COUNT;i++)view.setFloat32(16+i*4,Number(i<CONTROL_COUNT?controls?.[i]??DEFAULT_CONTROL_VALUE:DEFAULT_CONTROL_VALUE),true);device.queue.writeBuffer(paramsBuffer,0,data)}
   clearPipelineCache(){this.pipelineCache.clear();this.pipelineCacheBytes=0}
   cachedPipeline(key){const entry=this.pipelineCache.get(key);if(!entry)return null;this.pipelineCache.delete(key);this.pipelineCache.set(key,entry);return entry}
   rememberPipeline(plan,pipeline,deviceGeneration=this.deviceGeneration){const prior=this.pipelineCache.get(plan.key);if(prior){this.pipelineCache.delete(plan.key);this.pipelineCacheBytes-=prior.cacheBytes}const cacheBytes=pipelineEntryBytes(plan);if(cacheBytes>MAX_PIPELINE_CACHE_BYTES)return;this.pipelineCache.set(plan.key,{plan,pipeline,deviceGeneration,cacheBytes});this.pipelineCacheBytes+=cacheBytes;while(this.pipelineCache.size>MAX_PIPELINES||this.pipelineCacheBytes>MAX_PIPELINE_CACHE_BYTES){const oldestKey=this.pipelineCache.keys().next().value,oldest=this.pipelineCache.get(oldestKey);this.pipelineCache.delete(oldestKey);this.pipelineCacheBytes-=oldest.cacheBytes}}

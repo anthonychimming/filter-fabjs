@@ -4,10 +4,12 @@
  * Licensed GPL-2.0-or-later. See LICENSE and README.md.
  */
 import { CHROMA_MODELS } from '../core/chroma.js';
+import { CONTROL_COUNT, CONTROL_PAIR_COUNT } from '../core/controls.js';
 import { IR_VERSION, IRType, programCacheKey } from '../core/ir.js';
+import { WEBGPU_CONTROL_SLOT_COUNT } from './params-layout.js';
 
 export class WGSLCompileError extends Error{constructor(message,blockers=[]){super(message);this.name='WGSLCompileError';this.blockers=blockers}}
-const WEBGPU_FUNCTIONS=new Set('src src0 src1 srcWrap srcMirror srcLinear rad rad0 rad1 cnv cnv0 cnv1 ctl val map min max abs add sub dif mix scl sqr sqrt sin cos tan r2x r2y c2d c2m clamp lerp step smoothstep floor ceil round fract sign bias gain hash2 valueNoise perlin worleyF1 worleyF2 fbm turbulence ridged periodicNoise wrap mirror linearGrad radialGrad angularGrad checker brick line circle ring box triangle grid sierpinski multiply screen overlay softLight difference'.split(' '));
+const WEBGPU_FUNCTIONS=new Set('src src0 src1 srcWrap srcMirror srcLinear rad rad0 rad1 cnv cnv0 cnv1 ctl val map min max abs add sub dif mix scl sqr sqrt sin cos tan r2x r2y c2d c2m radius angle clamp lerp step smoothstep floor ceil round fract sign bias gain hash2 valueNoise perlin worleyF1 worleyF2 fbm turbulence ridged periodicNoise wrap mirror repeat mirrorRepeat gradient3 gradient4 linearGrad radialGrad angularGrad checker brick line circle ring box triangle grid sierpinski multiply screen overlay softLight difference'.split(' '));
 const WEBGPU_UNARY=new Set(['+','-','!']);
 const WEBGPU_BINARY=new Set(['+','-','*','/','%','<','<=','>','>=','==','!=','&&','||']);
 const WEBGPU_BOOLEAN_BINARY=new Set(['<','<=','>','>=','==','!=','&&','||']);
@@ -68,7 +70,7 @@ export class WGSLCompiler{
     return`ff_bool(${this.value(node,channel)})`;
   }
   variable(name,channel){
-    const chroma=CHROMA_MODELS.float,direct={r:'sourceColor.x',g:'sourceColor.y',b:'sourceColor.z',a:'sourceColor.w',c:`ff_channel(sourceColor, ${channel}.0)`,i:'luminance',u:'chromaU',v:'chromaV',x:'pixelX',y:'pixelY',z:`${channel}.0`,p:`${channel}.0`,d:'direction',m:'radius',X:'widthF',Y:'heightF',Z:'4.0',P:'4.0',D:'1024.0',M:'maxRadius',R:'255.0',G:'255.0',B:'255.0',A:'255.0',C:'255.0',I:'255.0',U:this.number(chroma.uSpan),V:this.number(chroma.vSpan),t:'0.0',rmax:'255.0',gmax:'255.0',bmax:'255.0',amax:'255.0',cmax:'255.0',imax:'255.0',umax:this.number(chroma.uMax),vmax:this.number(chroma.vMax),dmax:'512.0',mmax:'maxRadius',pmax:'4.0',xmax:'widthF',ymax:'heightF',zmax:'4.0',rmin:'0.0',gmin:'0.0',bmin:'0.0',amin:'0.0',cmin:'0.0',imin:'0.0',umin:this.number(chroma.uMin),vmin:this.number(chroma.vMin),dmin:'-512.0',mmin:'0.0',pmin:'0.0',xmin:'0.0',ymin:'0.0',zmin:'0.0',tmin:'0.0',tmax:'1.0',total:'1.0'};
+    const chroma=CHROMA_MODELS.float,direct={r:'sourceColor.x',g:'sourceColor.y',b:'sourceColor.z',a:'sourceColor.w',c:`ff_channel(sourceColor, ${channel}.0)`,i:'luminance',u:'chromaU',v:'chromaV',x:'pixelX',y:'pixelY',nx:'normalizedX',ny:'normalizedY',cx:'centeredX',cy:'centeredY',z:`${channel}.0`,p:`${channel}.0`,d:'direction',m:'radius',X:'widthF',Y:'heightF',Z:'4.0',P:'4.0',D:'1024.0',M:'maxRadius',R:'255.0',G:'255.0',B:'255.0',A:'255.0',C:'255.0',I:'255.0',U:this.number(chroma.uSpan),V:this.number(chroma.vSpan),t:'0.0',rmax:'255.0',gmax:'255.0',bmax:'255.0',amax:'255.0',cmax:'255.0',imax:'255.0',umax:this.number(chroma.uMax),vmax:this.number(chroma.vMax),dmax:'512.0',mmax:'maxRadius',pmax:'4.0',xmax:'widthF',ymax:'heightF',zmax:'4.0',rmin:'0.0',gmin:'0.0',bmin:'0.0',amin:'0.0',cmin:'0.0',imin:'0.0',umin:this.number(chroma.uMin),vmin:this.number(chroma.vMin),dmin:'-512.0',mmin:'0.0',pmin:'0.0',xmin:'0.0',ymin:'0.0',zmin:'0.0',tmin:'0.0',tmax:'1.0',total:'1.0'};
     if(name in direct)return direct[name];
     const alias={r0:'r',g0:'g',b0:'b',a0:'a',c0:'c',i0:'i',u0:'u',v0:'v',d0:'d',m0:'m',r1:'r',g1:'g',b1:'b',a1:'a',c1:'c',i1:'i',u1:'u',v1:'v',d1:'d',m1:'m'}[name];
     if(alias)return this.variable(alias,channel);
@@ -108,7 +110,7 @@ export class WGSLCompiler{
       case'sqr':return`(${A(0)} * ${A(0)})`;case'sqrt':return`sqrt(max(0.0, ${A(0)}))`;
       case'sin':return`(512.0 * sin(${A(0)} * FF_TAU / 1024.0))`;case'cos':return`(512.0 * cos(${A(0)} * FF_TAU / 1024.0))`;case'tan':return`(1024.0 * tan(${A(0)} * FF_TAU / 1024.0))`;
       case'r2x':return`(cos(${A(0)} * FF_TAU / 1024.0) * ${A(1)})`;case'r2y':return`(sin(${A(0)} * FF_TAU / 1024.0) * ${A(1)})`;
-      case'c2d':return`(ff_atan2(${A(1)}, ${A(0)}) * 1024.0 / FF_TAU)`;case'c2m':return`length(vec2<f32>(${A(0)}, ${A(1)}))`;
+      case'c2d':case'angle':return`(ff_atan2(${A(1)}, ${A(0)}) * 1024.0 / FF_TAU)`;case'c2m':case'radius':return`length(vec2<f32>(${A(0)}, ${A(1)}))`;
       case'clamp':return`ff_clamp(${A(0)}, ${A(1)}, ${A(2)})`;case'lerp':return`ff_lerp(${A(0)}, ${A(1)}, ${A(2)})`;
       case'step':return`ff_step(${A(0)}, ${A(1)})`;case'smoothstep':return`ff_smoothstep(${A(0)}, ${A(1)}, ${A(2)})`;
       case'floor':return`floor(${A(0)})`;case'ceil':return`ceil(${A(0)})`;case'round':return`ff_round(${A(0)})`;case'fract':return`fract(${A(0)})`;case'sign':return`sign(${A(0)})`;
@@ -122,7 +124,8 @@ export class WGSLCompiler{
       case'turbulence':return`ff_turbulence(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
       case'ridged':return`ff_ridged(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
       case'periodicNoise':return`ff_periodic_noise(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
-      case'wrap':return`ff_wrap(${A(0)}, ${A(1)})`;case'mirror':return`ff_mirror(${A(0)}, ${A(1)})`;
+      case'wrap':case'repeat':return`ff_wrap(${A(0)}, ${A(1)})`;case'mirror':case'mirrorRepeat':return`ff_mirror(${A(0)}, ${A(1)})`;
+      case'gradient3':return`ff_gradient3(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)})`;case'gradient4':return`ff_gradient4(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
       case'linearGrad':return`ff_linear_grad(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)}, ${A(5)})`;
       case'radialGrad':return`ff_radial_grad(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
       case'angularGrad':return`ff_angular_grad(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
@@ -142,7 +145,7 @@ export class WGSLCompiler{
   shader(expr){return String.raw`
 const FF_TAU : f32 = 6.283185307179586;
 const FF_PI : f32 = 3.141592653589793;
-struct Params { width:u32, height:u32, startRow:u32, rowCount:u32, controls:array<f32,8>, };
+struct Params { width:u32, height:u32, startRow:u32, rowCount:u32, controls:array<f32,${WEBGPU_CONTROL_SLOT_COUNT}>, };
 @group(0) @binding(0) var<storage,read> srcPixels:array<u32>;
 @group(0) @binding(1) var<storage,read_write> outPixels:array<u32>;
 @group(0) @binding(2) var<storage,read> params:Params;
@@ -152,10 +155,13 @@ fn ff_negative_zero()->f32{return bitcast<f32>(0x80000000u);}
 fn ff_round(v:f32)->f32{let rounded=floor(v+0.5);if(rounded==0.0&&(bitcast<u32>(v)&0x80000000u)!=0u){return ff_negative_zero();}return rounded;}
 fn ff_atan2(y:f32,x:f32)->f32{if(y==0.0&&x==0.0){let yNegative=(bitcast<u32>(y)&0x80000000u)!=0u;let xNegative=(bitcast<u32>(x)&0x80000000u)!=0u;if(xNegative){return select(FF_PI,-FF_PI,yNegative);}return select(0.0,ff_negative_zero(),yNegative);}return atan2(y,x);}
 fn ff_clamp(v:f32,lo:f32,hi:f32)->f32{return max(lo,min(hi,v));}
+fn ff_normalized_coordinate(v:f32,size:f32)->f32{if(size<=1.0){return 0.5;}return v/(size-1.0);}
 fn ff_div(a:f32,b:f32)->f32{if(b==0.0){return 0.0;}return a/b;}
 fn ff_rem(a:f32,b:f32)->f32{if(b==0.0){return 0.0;}return a-b*trunc(a/b);}
 fn ff_wrap(v:f32,size:f32)->f32{let s=max(1.0,abs(size));return ff_rem(ff_rem(v,s)+s,s);}
 fn ff_mirror(v:f32,size:f32)->f32{let s=max(1.0,abs(size));let p=ff_wrap(v,s*2.0);if(p<s){return p;}return s*2.0-p-0.000000001;}
+fn ff_gradient3(t0:f32,a:f32,b:f32,c:f32)->f32{let t=clamp(t0,0.0,1.0);if(t<=0.5){return mix(a,b,t*2.0);}return mix(b,c,t*2.0-1.0);}
+fn ff_gradient4(t0:f32,a:f32,b:f32,c:f32,d:f32)->f32{let t=clamp(t0,0.0,1.0);if(t<=0.3333333333333333){return mix(a,b,t*3.0);}if(t<=0.6666666666666666){return mix(b,c,t*3.0-1.0);}return mix(c,d,t*3.0-2.0);}
 fn ff_channel(p:vec4<f32>,z:f32)->f32{let i=i32(trunc(z));if(i==0){return p.x;}if(i==1){return p.y;}if(i==2){return p.z;}if(i==3){return p.w;}return 0.0;}
 fn ff_unpack(v:u32)->vec4<f32>{return vec4<f32>(f32(v&255u),f32((v>>8u)&255u),f32((v>>16u)&255u),f32((v>>24u)&255u));}
 fn ff_pack(v:vec4<f32>)->u32{let c=vec4<u32>(round(clamp(v,vec4<f32>(0.0),vec4<f32>(255.0))));return c.x|(c.y<<8u)|(c.z<<16u)|(c.w<<24u);}
@@ -168,9 +174,9 @@ fn ff_sample_mirror(x:f32,y:f32,z:f32)->f32{return ff_channel(ff_pixel_mirror(x,
 fn ff_sample_linear(x:f32,y:f32,z:f32)->f32{let x0=floor(x);let y0=floor(y);let tx=x-x0;let ty=y-y0;let a=ff_sample_nearest(x0,y0,z);let b=ff_sample_nearest(x0+1.0,y0,z);let c=ff_sample_nearest(x0,y0+1.0,z);let d=ff_sample_nearest(x0+1.0,y0+1.0,z);return mix(a,b,tx)*(1.0-ty)+mix(c,d,tx)*ty;}
 fn ff_sample_polar(angle:f32,distance:f32,z:f32)->f32{let radians=angle*FF_TAU/1024.0;return ff_sample_nearest(f32(params.width)*0.5+cos(radians)*distance,f32(params.height)*0.5+sin(radians)*distance,z);}
 fn ff_convolve3x3(x:f32,y:f32,z:f32,k00:f32,k01:f32,k02:f32,k10:f32,k11:f32,k12:f32,k20:f32,k21:f32,k22:f32,divisor:f32)->f32{if(divisor==0.0){return 0.0;}let total=k00*ff_sample_nearest(x-1.0,y-1.0,z)+k01*ff_sample_nearest(x,y-1.0,z)+k02*ff_sample_nearest(x+1.0,y-1.0,z)+k10*ff_sample_nearest(x-1.0,y,z)+k11*ff_sample_nearest(x,y,z)+k12*ff_sample_nearest(x+1.0,y,z)+k20*ff_sample_nearest(x-1.0,y+1.0,z)+k21*ff_sample_nearest(x,y+1.0,z)+k22*ff_sample_nearest(x+1.0,y+1.0,z);return total/divisor;}
-fn ff_ctl(index:f32)->f32{let i=i32(trunc(index));if(i<0||i>=8){return 0.0;}return params.controls[u32(i)];}
+fn ff_ctl(index:f32)->f32{let i=i32(trunc(index));if(i<0||i>=${CONTROL_COUNT}){return 0.0;}return params.controls[u32(i)];}
 fn ff_val(index:f32,a:f32,b:f32)->f32{return ff_ctl(index)*(b-a)/255.0+a;}
-fn ff_map(index:f32,v0:f32)->f32{let i=i32(trunc(index));if(i<0||i>=4){return 0.0;}let v=clamp(v0,0.0,255.0);let hi=params.controls[u32(i*2)];let lo=params.controls[u32(i*2+1)];if(hi==lo){return select(255.0,0.0,v<hi);}if(lo>hi){if(v<=hi){return 255.0;}if(v>=lo){return 0.0;}}else{if(v<=lo){return 0.0;}if(v>=hi){return 255.0;}}return (v-lo)*255.0/(hi-lo);}
+fn ff_map(index:f32,v0:f32)->f32{let i=i32(trunc(index));if(i<0||i>=${CONTROL_PAIR_COUNT}){return 0.0;}let v=clamp(v0,0.0,255.0);let hi=params.controls[u32(i*2)];let lo=params.controls[u32(i*2+1)];if(hi==lo){return select(255.0,0.0,v<hi);}if(lo>hi){if(v<=hi){return 255.0;}if(v>=lo){return 0.0;}}else{if(v<=lo){return 0.0;}if(v>=hi){return 255.0;}}return (v-lo)*255.0/(hi-lo);}
 fn ff_lerp(a:f32,b:f32,t0:f32)->f32{let t=clamp(select(t0,t0/255.0,abs(t0)>1.0),0.0,1.0);return mix(a,b,t);}
 fn ff_step(edge:f32,v:f32)->f32{return select(0.0,1.0,v>=edge);}
 fn ff_smoothstep(a:f32,b:f32,v:f32)->f32{if(a==b){return select(0.0,1.0,v>=a);}let t=clamp((v-a)/(b-a),0.0,1.0);return t*t*(3.0-2.0*t);}
@@ -213,7 +219,7 @@ fn main(@builtin(global_invocation_id) gid:vec3<u32>){
   if(gid.x>=params.width||gid.y>=params.rowCount){return;}
   let px=gid.x;let py=params.startRow+gid.y;if(py>=params.height){return;}
   let index=py*params.width+px;let sourceColor=ff_unpack(srcPixels[index]);
-  let pixelX=f32(px);let pixelY=f32(py);let widthF=f32(params.width);let heightF=f32(params.height);
+  let pixelX=f32(px);let pixelY=f32(py);let widthF=f32(params.width);let heightF=f32(params.height);let normalizedX=ff_normalized_coordinate(pixelX,widthF);let normalizedY=ff_normalized_coordinate(pixelY,heightF);let centeredX=normalizedX*2.0-1.0;let centeredY=normalizedY*2.0-1.0;
   let luminance=(299.0*sourceColor.x+587.0*sourceColor.y+114.0*sourceColor.z)/1000.0;
   let chromaU=(-147407.0*sourceColor.x-289391.0*sourceColor.y+436798.0*sourceColor.z)/2000000.0;
   let chromaV=(614777.0*sourceColor.x-514799.0*sourceColor.y-99978.0*sourceColor.z)/2000000.0;

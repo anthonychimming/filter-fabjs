@@ -4,6 +4,7 @@
  * Licensed GPL-2.0-or-later. See LICENSE and README.md.
  */
 import { FormulaError } from './formula-language.js';
+import { CONTROL_COUNT, CONTROL_PAIR_COUNT } from './controls.js';
 
 export const IR_VERSION=1;
 export const IRType=Object.freeze({SCALAR:'scalar',INTEGER:'integer',BOOLEAN:'boolean',MASK:'mask',CHANNEL:'channel',COLOR:'color',VECTOR2:'vector2',IMAGE:'image'});
@@ -58,10 +59,10 @@ function constantIntegerFromAst(node){
 export class TypedIRCompiler{
   constructor({legacyMath=false}={}){
     this.legacyMath=Boolean(legacyMath);
-    this.meta={nodeCount:0,controls:Array(8).fill(false),dynamicControls:false,functions:new Set(),variables:new Set(),usesSource:false,stateful:false,deterministic:true};
+    this.meta={nodeCount:0,controls:Array(CONTROL_COUNT).fill(false),dynamicControls:false,functions:new Set(),variables:new Set(),usesSource:false,stateful:false,deterministic:true};
   }
   markControl(index,count=1){
-    if(Number.isInteger(index)&&index>=0&&index+count<=8){for(let i=0;i<count;i++)this.meta.controls[index+i]=true}
+    if(Number.isInteger(index)&&index>=0&&index+count<=CONTROL_COUNT){for(let i=0;i<count;i++)this.meta.controls[index+i]=true}
     else{this.meta.dynamicControls=true;this.meta.controls.fill(true)}
   }
   trackCall(name,astArgs){
@@ -72,7 +73,7 @@ export class TypedIRCompiler{
     if(name==='ctl'||name==='val')this.markControl(constantIntegerFromAst(astArgs[0]));
     else if(name==='map'){
       const pair=constantIntegerFromAst(astArgs[0]);
-      if(Number.isInteger(pair)&&pair>=0&&pair<4)this.markControl(pair*2,2);else this.markControl(null);
+      if(Number.isInteger(pair)&&pair>=0&&pair<CONTROL_PAIR_COUNT)this.markControl(pair*2,2);else this.markControl(null);
     }
   }
   compile(node){
