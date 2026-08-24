@@ -6,6 +6,24 @@
 import { RendererBackend, RenderCancelledError } from './renderer-backend.js';
 import { programCacheKey } from '../core/ir.js';
 
+export const MAX_CPU_RENDER_WORK=3_000_000_000;
+const CPU_CALL_WEIGHTS=Object.freeze({src:2,src0:2,src1:2,srcWrap:2,srcMirror:2,srcLinear:5,rad:3,rad0:3,rad1:3,cnv:10,cnv0:10,cnv1:10,hash2:4,valueNoise:12,perlin:20,worleyF1:30,worleyF2:30,fbm:240,turbulence:240,ridged:240,periodicNoise:12,sierpinski:12});
+
+export class RenderBudgetError extends Error{constructor(message){super(message);this.name='RenderBudgetError'}}
+
+export function estimateCpuProgramCost(program){
+  if(!Array.isArray(program?.outputs)||program.outputs.length!==4)return Infinity;
+  let cost=0;const stack=program.outputs.map(output=>output?.expression);
+  while(stack.length){const node=stack.pop();if(!node||typeof node!=='object')return Infinity;cost+=node.op==='call'?(CPU_CALL_WEIGHTS[node.fn]||1):1;switch(node.op){case'const':case'var':break;case'unary':stack.push(node.input);break;case'binary':stack.push(node.left,node.right);break;case'select':stack.push(node.condition,node.whenTrue,node.whenFalse);break;case'call':if(!Array.isArray(node.args))return Infinity;stack.push(...node.args);break;default:return Infinity}}
+  return cost;
+}
+
+export function assertCpuRenderBudget(program,width,height){
+  const pixels=width*height,cost=estimateCpuProgramCost(program);
+  if(!Number.isSafeInteger(pixels)||pixels<1||!Number.isFinite(cost)||cost>MAX_CPU_RENDER_WORK/pixels)throw new RenderBudgetError(`CPU render cost exceeds the ${MAX_CPU_RENDER_WORK.toLocaleString('en-US')} work-unit limit`);
+  return cost*pixels;
+}
+
 export class CpuRenderer extends RendererBackend{
   constructor(programFactory){super('cpu','CPU Worker');this.programFactory=programFactory;this.worker=null;this.workerProgramKey=null;this.source=null;this.width=0;this.height=0;this.pending=new Map();this.readyPromise=Promise.resolve();this.resolveReady=null;this.rejectReady=null}
   spawnWorker(){
@@ -40,6 +58,7 @@ export class CpuRenderer extends RendererBackend{
   }
   async render({id,program,controls,legacyMath,onProgress}){
     if(!this.source||!this.width||!this.height)throw new Error('Renderer source is not initialized');
+    assertCpuRenderBudget(program,this.width,this.height);
     await this.ensureWorker();
     if(!this.worker)throw new Error(`${this.label} is unavailable`);
     return new Promise((resolve,reject)=>{

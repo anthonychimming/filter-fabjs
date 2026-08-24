@@ -3,7 +3,8 @@ import { Worker } from 'node:worker_threads';
 import { CHROMA_MODELS } from '../src/core/chroma.js';
 import { Parser, VARS } from '../src/core/formula-language.js';
 import { compileFilterProgram } from '../src/core/ir.js';
-import { CpuRenderer } from '../src/renderers/cpu-renderer.js';
+import { presets } from '../src/presets/builtins.js';
+import { assertCpuRenderBudget, CpuRenderer, estimateCpuProgramCost, MAX_CPU_RENDER_WORK } from '../src/renderers/cpu-renderer.js';
 import { workerProgram } from '../src/renderers/cpu-worker-source.js';
 
 const wrapper = `
@@ -62,6 +63,13 @@ assert.deepEqual([...legacyMap.slice(0,3)],[128,128,128],'legacy map() must use 
 const legacyMultiplyAndPow=await render(['1073741824*2<0?255:0','pow(2,-1)','pow(5,0)','a'],{legacyMath:true});
 assert.deepEqual([...legacyMultiplyAndPow.slice(0,4)],[255,1,1,255],'legacy multiplication must use signed 32-bit products and pow() must use legacy rounding');
 
+const nativeRandom=await render(Array(4).fill('rnd(0,255)'));
+assert.deepEqual([...nativeRandom.slice(0,4)],[29,21,234,135],'native float random generation must retain its existing sequence');
+const legacyRandom=await render(Array(4).fill('rnd(0,255)'),{legacyMath:true});
+assert.deepEqual([...legacyRandom],[10,35,106,115,158,111,120,91,134,88,37,145,64,117,125,164],'legacy rnd() must match Filter Factory’s subtractive generator sequence');
+const legacyReset=await render(Array(4).fill('rst(1),rnd(0,255)'),{legacyMath:true});
+assert.deepEqual([...legacyReset],Array(16).fill(148),'legacy rst() must rebuild the Filter Factory generator before the next rnd() call');
+
 const exactNoiseSeed=await render(Array(3).fill('hash2(x,y,16777217)*255').concat('a'));
 assert.equal(exactNoiseSeed[0],253,'CPU fallback must preserve exact integer noise seeds that f32 cannot represent');
 
@@ -81,6 +89,13 @@ const legacySpans=await render(['U','V','U','V'],{legacyMath:true});
 assert.deepEqual([...legacySpans.slice(0,4)],[legacyChroma.uSpan,legacyChroma.vSpan,legacyChroma.uSpan,legacyChroma.vSpan]);
 
 const cachedProgram=compileFilterProgram(['r','g','b','a'].map(formula=>new Parser(formula).parse()));
+assert.equal(estimateCpuProgramCost(cachedProgram),4,'CPU work estimation must aggregate all four output expressions');
+assert.equal(assertCpuRenderBudget(cachedProgram,1800,1800),12_960_000,'ordinary full-size renders must remain within the CPU work budget');
+const maximalFormula=Array(2048).fill('r').join('+'),maximalProgram=compileFilterProgram(Array(4).fill(maximalFormula).map(formula=>new Parser(formula).parse()));
+assert.ok(estimateCpuProgramCost(maximalProgram)>MAX_CPU_RENDER_WORK/(1800*1800));
+assert.throws(()=>assertCpuRenderBudget(maximalProgram,1800,1800),error=>error?.name==='RenderBudgetError','maximal imported programs must be rejected before full-size CPU dispatch');
+assert.doesNotThrow(()=>assertCpuRenderBudget(maximalProgram,64,64),'the CPU budget must remain image-scaled for small previews');
+for(const preset of presets){const program=compileFilterProgram(preset.f.map(formula=>new Parser(formula).parse()));assert.doesNotThrow(()=>assertCpuRenderBudget(program,1800,1800),`built-in ${preset.id} must remain CPU-renderable at the maximum image size`)}
 const firstCachedResult=await renderProgram(cachedProgram,'identity-program');
 const reusedCachedResult=await renderProgram(null,'identity-program',false);
 assert.deepEqual([...reusedCachedResult],[...firstCachedResult],'the worker must reuse a previously validated IR program when only its cache key is sent');

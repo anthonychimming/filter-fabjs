@@ -4,7 +4,7 @@ This document describes the implementation currently present in the public repos
 
 ## Release
 
-- Application version: **2.4.7**
+- Application version: **2.4.8**
 - Native filter format: **version 2**
 - Typed IR: **version 1**
 - Development layout: native ES modules
@@ -23,7 +23,7 @@ The **Auto** renderer selects WebGPU when the current program is compatible and 
 
 Formula text is validated after a short pause without starting a render. The preview changes only when the user selects **Render** or presses **Ctrl/⌘ + Enter**, so incomplete expressions never interrupt typing. After an intentional render, keyboard focus and the text selection are restored.
 
-Each formula is limited to 8,192 characters, 4,096 tokens, 4,096 syntax nodes, and 128 nesting levels so malformed input fails predictably before recursive parsing or compilation can exhaust resources.
+Each formula is limited to 8,192 characters, 4,096 tokens, 4,096 syntax nodes, and 128 nesting levels so malformed input fails predictably before recursive parsing or compilation can exhaust resources. WebGPU generation additionally caps aggregate four-channel IR size, while CPU dispatch rejects programs whose weighted execution cost multiplied by the image pixel count exceeds its work budget.
 
 The current formula engine includes:
 

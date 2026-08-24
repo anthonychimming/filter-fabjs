@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.4.8
+
+- Matched historic AFS/legacy `rnd()` and `rst()` behavior with Filter Factory's 56-entry subtractive random-number generator while preserving native random behavior.
+- Added image-scaled weighted CPU execution limits and an aggregate WebGPU IR complexity cap so valid but excessive imported formulas fail before consuming unbounded render or shader-generation work.
+
 ## 2.4.7
 
 - Restored Filter Factory-compatible signed 32-bit arithmetic, helper truncation, integer square-root behavior, and power rounding for historic AFS/legacy filters.

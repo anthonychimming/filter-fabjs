@@ -1,6 +1,6 @@
 # Filter FabJS Formula Reference
 
-**Applies to Filter FabJS v2.4.7 · native filter format v2 · typed IR v1**
+**Applies to Filter FabJS v2.4.8 · native filter format v2 · typed IR v1**
 
 This is the compact, implementation-oriented reference for writing Filter FabJS formulas. For worked explanations and tutorials, see the [Filter FabJS Programming Guide (PDF)](Filter_FabJS_Programming_Guide_v2.4.7.pdf). For analytic mask details, see [ANALYTIC_SHAPES.md](ANALYTIC_SHAPES.md).
 
@@ -30,7 +30,7 @@ Historic Filter Factory `.afs` imports use legacy integer compatibility mode and
 - Scientific notation is **not** supported: write `0.001`, not `1e-3`.
 - `//` line comments are supported.
 - Parentheses may be nested up to 128 levels.
-- Formula limits: 8,192 characters, 4,096 tokens, and 4,096 syntax nodes.
+- Formula limits: 8,192 characters, 4,096 tokens, and 4,096 syntax nodes. WebGPU generation is capped at 4,096 IR nodes per four-channel program; CPU dispatch also applies an image-scaled weighted work limit.
 
 Example:
 
@@ -287,7 +287,7 @@ multiply(c,128,ctl(0))
 | comma sequencing | Evaluate left expression, return right expression |
 | legacy integer math | Historic `.afs` compatibility mode |
 
-`get()`/`put()` cells are cleared at the start of every render and are stateful/order-dependent. `rnd()` is also sequential. These constructs intentionally force CPU rendering.
+`get()`/`put()` cells are cleared at the start of every render and are stateful/order-dependent. `rnd()` is also sequential. Native float filters retain Filter FabJS's existing generator, while historic AFS/legacy filters use Filter Factory's 56-entry subtractive generator and `rst()` reset behavior. These constructs intentionally force CPU rendering.
 
 ## 13. WebGPU compatibility rule
 
