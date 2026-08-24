@@ -1,6 +1,6 @@
 # Filter FabJS Formula Reference
 
-**Applies to Filter FabJS v2.5.4 · native filter format v2 · typed IR v1**
+**Applies to Filter FabJS v2.6.0 · native filter format v2 · typed IR v1**
 
 This is the compact, implementation-oriented reference for writing Filter FabJS formulas. For worked explanations and tutorials, see the [Filter FabJS Programming Guide (PDF)](Filter_FabJS_Programming_Guide_v2.4.7.pdf). For analytic mask details, see [ANALYTIC_SHAPES.md](ANALYTIC_SHAPES.md).
 
@@ -71,11 +71,15 @@ Division or modulo by zero evaluates to `0`.
 | `i` | Luminance: `(299*r + 587*g + 114*b) / 1000` |
 | `u v` | Signed chroma components |
 | `x y` | Current pixel coordinates |
+| `nx ny` | Normalized image coordinates spanning `0..1` across each dimension |
+| `cx cy` | Centered image coordinates spanning `-1..1` across each dimension |
 | `z` / `p` | Current output channel index: `0=R`, `1=G`, `2=B`, `3=A` |
 | `d` | Direction from image centre, using 1024 angle units per turn |
 | `m` | Distance from image centre in pixels |
 
 Native-float chroma bounds are `u=-55..55` and `v=-78..78`.
+
+For a one-pixel-wide or one-pixel-high dimension, its normalized coordinate is `0.5` and its centered coordinate is `0`. Existing uppercase `U` and `V` remain chroma-span constants for compatibility.
 
 ### Image and range constants
 
@@ -103,13 +107,13 @@ Native-float chroma bounds are `u=-55..55` and `v=-78..78`.
 
 ## 4. Controls
 
-Filter FabJS exposes eight controls indexed `0..7`. Raw control values are `0..255`.
+Filter FabJS exposes ten controls indexed `0..9`. Raw control values are `0..255`.
 
 | Function | Meaning |
 | --- | --- |
 | `ctl(i)` | Raw control value. Invalid index returns `0`. |
 | `val(i,a,b)` | Maps control `i` linearly from `0..255` to `a..b`. |
-| `map(i,v)` | Reversible remap of `v` through control pair `i*2` / `i*2+1`; `i` is `0..3`. |
+| `map(i,v)` | Reversible remap of `v` through control pair `i*2` / `i*2+1`; `i` is `0..4`. |
 
 Use `val()` when a control represents a semantic range:
 
@@ -168,6 +172,8 @@ cnv(1,1,1,1,1,1,1,1,1,9)
 | `gain(v,g)` | Gain curve; `v` is normalized `0..1` | Yes |
 | `wrap(v,size)` | Positive modulo coordinate | Yes |
 | `mirror(v,size)` | Ping-pong coordinate | Yes |
+| `repeat(v,size)` | Descriptive alias of `wrap(v,size)` | Yes |
+| `mirrorRepeat(v,size)` | Descriptive alias of `mirror(v,size)` | Yes |
 
 **Important:** Native float filters use `sqr(x)` for squaring and `sqrt(x)` for square root. Historic AFS/legacy programs retain Filter Factory's `sqr(x)` square-root semantics; `sqrt(x)` is its legacy alias.
 
@@ -189,6 +195,8 @@ Filter FabJS uses **1024 units per full turn**:
 | `r2y(angle,radius)` | Cartesian Y offset | Yes |
 | `c2d(x,y)` | Cartesian vector to Filter FabJS direction | Yes |
 | `c2m(x,y)` | Vector magnitude | Yes |
+| `angle(x,y)` | Descriptive alias of `c2d(x,y)` | Yes |
+| `radius(x,y)` | Descriptive alias of `c2m(x,y)` | Yes |
 
 For unit direction vectors, use radius `1`:
 
@@ -225,10 +233,20 @@ fbm(x,y,64,5,2,0.5,1234)*255
 | `linearGrad(x,y,x0,y0,x1,y1)` | Projection from start to end, clamped `0..1` | Yes |
 | `radialGrad(x,y,cx,cy,radius)` | `1` at centre to `0` at radius | Yes |
 | `angularGrad(x,y,cx,cy,offset)` | Wrapped angular ramp `0..1`; offset is turns when `abs(offset)<=1`, otherwise 1024-angle units | Yes |
+| `gradient3(t,a,b,c)` | Piecewise-linear scalar ramp through three equally spaced stops; `t` clamps to `0..1` | Yes |
+| `gradient4(t,a,b,c,d)` | Piecewise-linear scalar ramp through four equally spaced stops; `t` clamps to `0..1` | Yes |
 | `checker(x,y,cellWidth,cellHeight)` | Checker mask `0` or `1` | Yes |
 | `brick(x,y,width,height,mortar,offset)` | Brick mask: `1` brick, `0` mortar | Yes |
 
 For `brick()`, `offset` is a fraction of brick width when `abs(offset)<=1`, otherwise pixels. Odd rows are staggered.
+
+Palette ramps return a scalar, so use one ramp per output channel to define an explicit RGB palette:
+
+```text
+R: gradient4(nx,12,74,220,255)
+G: gradient4(nx,8,36,126,240)
+B: gradient4(nx,28,110,190,96)
+```
 
 ## 10. Analytic shape masks
 
@@ -296,9 +314,9 @@ A native float filter is WebGPU-compatible when every operation in all four chan
 WebGPU supports:
 
 - arithmetic, comparisons, logical operators, and ternary selection;
-- controls and mapping;
+- ten controls and five-pair mapping;
 - source sampling and 3×3 convolution;
-- numeric, polar, noise, gradient, pattern, shape-mask, and blend functions listed above.
+- normalized/centered coordinates and numeric, polar, repeat, palette-ramp, noise, gradient, pattern, shape-mask, and blend functions listed above.
 
 WebGPU rejects:
 
@@ -322,6 +340,8 @@ Keep these ranges explicit when composing formulas:
 | Blend channels | `0..255` |
 | Angles | `0..1024` per turn |
 | Coordinates / sizes | pixels |
+| Normalized coordinates (`nx ny`) | `0..1` |
+| Centered coordinates (`cx cy`) | `-1..1` |
 
 Common conversions:
 
@@ -334,7 +354,7 @@ val(0,minValue,maxValue)
 
 ## 15. Minimal native filter JSON
 
-Native v2 filters use four formulas and up to eight controls:
+Native v2 filters use four formulas and up to ten controls:
 
 ```json
 {
@@ -355,7 +375,7 @@ Native v2 filters use four formulas and up to eight controls:
 }
 ```
 
-Missing control entries are filled to eight controls with value `128`. Native filter files are limited to 256 KiB.
+Missing control entries are filled to ten controls with value `128`, so existing eight-control files remain valid without migration. Native filter files are limited to 256 KiB.
 
 ## 16. Common correctness traps
 

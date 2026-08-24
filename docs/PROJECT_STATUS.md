@@ -4,7 +4,7 @@ This document describes the implementation currently present in the public repos
 
 ## Release
 
-- Application version: **2.5.4**
+- Application version: **2.6.0**
 - Native filter format: **version 2**
 - Typed IR: **version 1**
 - Development layout: native ES modules
@@ -30,7 +30,9 @@ The current formula engine includes:
 - RGBA/source-channel variables and image coordinates.
 - Signed YUV chroma variables with coherent native-float bounds and spans; legacy imports retain the historic Filter Factory constant model.
 - Arithmetic, comparisons, logical operations, and ternary selection.
-- Controls and value mapping.
+- Ten data-driven controls, including five reversible `map()` pairs, with default expansion for older eight-control filters.
+- Normalized `nx`/`ny` and centered `cx`/`cy` image coordinates.
+- Radius, angle, repeat, mirror-repeat, and three-/four-stop scalar palette-ramp helpers.
 - Nearest, wrapped, mirrored, and bilinear image sampling.
 - Numeric shaping and coordinate helpers.
 - Procedural noise functions.
@@ -42,7 +44,7 @@ The current formula engine includes:
 
 ## WebGPU compatibility
 
-The WebGPU backend supports the deterministic stateless formula language, including hash, value, Perlin, Worley, FBM, turbulence, ridged and periodic noise; procedural patterns; analytic shape and Sierpiński masks; polar sampling; and fixed 3×3 convolution. All 28 native built-in filters are WebGPU-compatible.
+The WebGPU backend supports the deterministic stateless formula language, including ten controls; normalized and centered coordinates; radius, angle, repeat, mirror-repeat, and scalar palette-ramp helpers; hash, value, Perlin, Worley, FBM, turbulence, ridged and periodic noise; procedural patterns; analytic shape and Sierpiński masks; polar sampling; and fixed 3×3 convolution. All 28 native built-in filters are WebGPU-compatible.
 
 Sequential random-state functions (`rnd()` and `rst()`), shared cell operations (`get()` and `put()`), bitwise/shift/comma expressions, direct `pow()` formulas, and legacy integer compatibility remain CPU-only by design.
 
@@ -71,6 +73,7 @@ The repository includes smoke tests for:
 - Analytic shape-mask CPU semantics and optional CPU/WebGPU pixel parity.
 - An optional browser parity suite comparing CPU and WebGPU pixels on actual WebGPU hardware.
 - Native JSON and AFS format handling.
+- Ten-control normalization, indices 8/9, fifth-pair mapping, and aligned twelve-slot WebGPU parameter packing.
 - CPU Worker pixel rendering.
 - Formula-editor event wiring and focus-safe render behavior.
 - Brand-token contrast, neutral preview-canvas treatment, and the GitHub profile target.

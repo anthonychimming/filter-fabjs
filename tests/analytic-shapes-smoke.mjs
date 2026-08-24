@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { Worker } from 'node:worker_threads';
+import { defaultControlValues } from '../src/core/controls.js';
 import { Parser } from '../src/core/formula-language.js';
 import { compileFilterProgram } from '../src/core/ir.js';
 import { workerProgram } from '../src/renderers/cpu-worker-source.js';
@@ -37,7 +38,7 @@ worker.postMessage({
     'box(x,y,3,3,2,2,0,0)*255',
     'triangle(x,y,3,0,0,6,6,6,0)*255'
   ]),
-  controls: Array(8).fill(128),
+  controls: defaultControlValues(),
   legacyMath: false
 });
 const first = new Uint8ClampedArray((await waitFor(message => message.type === 'result' && message.id === 1)).buffer);
@@ -59,7 +60,7 @@ worker.postMessage({
     '0',
     '255'
   ]),
-  controls: Array(8).fill(128),
+  controls: defaultControlValues(),
   legacyMath: false
 });
 const second = new Uint8ClampedArray((await waitFor(message => message.type === 'result' && message.id === 2)).buffer);
@@ -77,7 +78,7 @@ worker.postMessage({
     '0',
     '255'
   ]),
-  controls: Array(8).fill(128),
+  controls: defaultControlValues(),
   legacyMath: false
 });
 const third = new Uint8ClampedArray((await waitFor(message => message.type === 'result' && message.id === 3)).buffer);
@@ -96,7 +97,7 @@ worker.postMessage({
     'sierpinski(x,y,50,50,90,0,0)*255',
     'sierpinski(x,y,50,50,90,1,2)*255'
   ]),
-  controls: Array(8).fill(128),
+  controls: defaultControlValues(),
   legacyMath: false
 });
 const fourth = new Uint8ClampedArray((await waitFor(message => message.type === 'result' && message.id === 4)).buffer);

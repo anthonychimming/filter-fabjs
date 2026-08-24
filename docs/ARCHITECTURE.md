@@ -1,6 +1,6 @@
 # Architecture
 
-Filter FabJS v2.5.4 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
+Filter FabJS v2.6.0 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
 
 ```text
 Formula text
@@ -19,9 +19,11 @@ RGBA pixel output
 ## Module contracts
 
 - `src/core/formula-language.js` — tokenization, parsing, formula validation, and syntax trees.
+- `src/core/controls.js` — shared definitions for the ten public controls, their defaults, and the five control pairs.
 - `src/core/chroma.js` — math-mode-specific chroma bounds shared by CPU and WebGPU code generation.
 - `src/core/ir.js` — conversion from syntax trees to renderer-neutral typed IR, semantic metadata, and memoized canonical program keys.
 - `src/gpu/wgsl-compiler.js` — WebGPU compatibility analysis and typed-IR-to-WGSL compilation.
+- `src/gpu/params-layout.js` — aligned WebGPU parameter-buffer sizing with twelve reserved control slots for the ten public controls.
 - `src/renderers/renderer-backend.js` — shared renderer contract.
 - `src/renderers/cpu-renderer.js` — CPU Worker lifecycle, shared retained source, keyed IR reuse, rendering, progress, lazy restart, and cancellation.
 - `src/renderers/webgpu-renderer.js` — recoverable GPU buffers, shared retained source, entry/byte-bounded WGSL-plan/pipeline reuse, direct RGBA upload/readback, full-frame dispatch, source release, and queued/active cancellation.
@@ -44,6 +46,6 @@ RGBA pixel output
 
 ## Current WebGPU boundary
 
-The Phase 3.5 WebGPU subset covers supported deterministic stateless operations: arithmetic, conditions, controls, image and polar sampling, coordinate shaping, gradients, procedural patterns, analytic shape masks, deterministic noise, blend operations, and fixed 3×3 convolution. Operations outside that subset are identified by compatibility analysis and use the CPU Worker fallback. `pow()` remains CPU-only because WGSL does not define JavaScript-compatible results for negative bases.
+The Phase 3.5 WebGPU subset covers supported deterministic stateless operations: arithmetic, conditions, ten controls, image and polar sampling, normalized and centered coordinates, coordinate shaping and repetition, scalar palette ramps, gradients, procedural patterns, analytic shape masks, deterministic noise, blend operations, and fixed 3×3 convolution. Operations outside that subset are identified by compatibility analysis and use the CPU Worker fallback. `pow()` remains CPU-only because WGSL does not define JavaScript-compatible results for negative bases.
 
 The CPU renderer remains the compatibility backend for legacy integer-mode AFS filters, bitwise/shift/comma expressions, and operations with sequential or shared mutable state (`rnd()`, `rst()`, `get()`, and `put()`).

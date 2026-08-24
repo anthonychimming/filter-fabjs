@@ -56,6 +56,7 @@ assert.match(app, /el\.split\.oninput=\(\)=>\{state\.split=Number\(el\.split\.va
 assert.match(controls, /range\.oninput=\(\)=>update\(range\.value\)/, 'range input must update its displayed value continuously');
 assert.match(controls, /range\.onchange=\(\)=>scheduleRender\(\)/, 'range control must render only after the edit is committed');
 assert.match(controls, /slider-label" type="text" maxlength="80"/, 'control labels must stay within the serialized metadata limit');
+assert.match(controls, /for\(const definition of CONTROL_DEFINITIONS\)/, 'the control panel must be generated from the shared control definitions');
 assert.match(html, /id="filterName"[^>]+maxlength="120"/, 'filter names must be bounded in the editor');
 assert.match(html, /id="filterAuthor"[^>]+maxlength="120"/, 'filter authors must be bounded in the editor');
 

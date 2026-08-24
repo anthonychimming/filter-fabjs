@@ -6,11 +6,13 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const order = [
   'src/core/utils.js',
+  'src/core/controls.js',
   'src/core/formula-language.js',
   'src/core/chroma.js',
   'src/core/ir.js',
   'src/presets/builtins.js',
   'src/renderers/cpu-worker-source.js',
+  'src/gpu/params-layout.js',
   'src/gpu/wgsl-compiler.js',
   'src/renderers/renderer-backend.js',
   'src/renderers/cpu-renderer.js',

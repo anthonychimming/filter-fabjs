@@ -1,4 +1,5 @@
 import { Parser } from '../src/core/formula-language.js';
+import { CONTROL_DEFINITIONS } from '../src/core/controls.js';
 import { compileFilterProgram } from '../src/core/ir.js';
 import { CpuRenderer } from '../src/renderers/cpu-renderer.js';
 import { workerProgram } from '../src/renderers/cpu-worker-source.js';
@@ -8,7 +9,7 @@ const summary = document.querySelector('#summary');
 const results = document.querySelector('#results');
 const width = 31;
 const height = 23;
-const controls = [43, 87, 129, 171, 213, 65, 107, 149];
+const controls = CONTROL_DEFINITIONS.map((_,index)=>[43,87,129,171,213,65,107,149,191,233][index]);
 const source = new Uint8ClampedArray(width * height * 4);
 for (let y = 0; y < height; y += 1) {
   for (let x = 0; x < width; x += 1) {
@@ -31,6 +32,14 @@ const fixtures = [
   ['Turbulence', 'turbulence(x,y,14,5,711)*255'],
   ['Ridged noise', 'ridged(x,y,14,5,711)*255'],
   ['Periodic noise', 'periodicNoise(x,y,19,13,711)*255'],
+  ['Control 8', 'ctl(8)'],
+  ['Control 9', 'val(9,0,255)'],
+  ['Control pair 4', 'map(4,c)'],
+  ['Normalized coordinates', 'gradient4(nx,0,64,192,255)'],
+  ['Centered radius', 'clamp(radius(cx,cy),0,1)*255'],
+  ['Centered angle', 'repeat(angle(cx,cy),1024)/4'],
+  ['Mirror repeat', 'mirrorRepeat(x,7)*32'],
+  ['Three-stop ramp', 'gradient3(ny,0,128,255)'],
   ['Polar sample', 'rad(128,3,z)'],
   ['Mirror boundary', 'srcMirror(X,y,z)'],
   ['3×3 convolution', 'clamp(cnv(0,-1,0,-1,5,-1,0,-1,0,1),0,255)'],

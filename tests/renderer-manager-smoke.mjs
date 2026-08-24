@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { defaultControlValues } from '../src/core/controls.js';
 import { Parser } from '../src/core/formula-language.js';
 import { compileFilterProgram } from '../src/core/ir.js';
 import { RenderCancelledError } from '../src/renderers/renderer-backend.js';
@@ -100,18 +101,18 @@ try{
   const gpu=new FakeRenderer('webgpu',{render:async()=>{throw validationError}}),cpu=new FakeRenderer('cpu'),fallbackManager=new RendererManager({webgpu:()=>gpu,cpu:()=>cpu});
   await fallbackManager.setSource(new Uint8ClampedArray([9,8,7,255]),1,1);
   const selections=[];
-  const first=await fallbackManager.renderWithFallback({id:1,program,controls:Array(8).fill(128),legacyMath:false,isCurrent:()=>true,onSelection:(selection,context)=>selections.push([selection.renderer.id,context.runtimeFallback])});
+  const first=await fallbackManager.renderWithFallback({id:1,program,controls:defaultControlValues(),legacyMath:false,isCurrent:()=>true,onSelection:(selection,context)=>selections.push([selection.renderer.id,context.runtimeFallback])});
   assert.equal(first.result.backend,'cpu','runtime WebGPU failure must be recovered by manager-owned CPU fallback');
   assert.deepEqual(selections,[['webgpu',false],['cpu',true]],'the manager must report initial selection and runtime fallback');
   assert.match(first.fallbackReason,/pipeline validation failed/);
   assert.equal(gpu.lastArgs.webgpuAnalysis?.compatible,true,'the manager must pass its cached compatibility analysis into WGSL planning');
 
-  const second=await fallbackManager.renderWithFallback({id:2,program,controls:Array(8).fill(128),legacyMath:false,isCurrent:()=>true});
+  const second=await fallbackManager.renderWithFallback({id:2,program,controls:defaultControlValues(),legacyMath:false,isCurrent:()=>true});
   assert.equal(second.result.backend,'cpu');
   assert.equal(gpu.renderCalls,1,'persistent validation failures must be quarantined for later control renders');
 
   gpu.device=null;
-  await fallbackManager.renderWithFallback({id:3,program,controls:Array(8).fill(128),legacyMath:false,isCurrent:()=>true});
+  await fallbackManager.renderWithFallback({id:3,program,controls:defaultControlValues(),legacyMath:false,isCurrent:()=>true});
   assert.equal(gpu.renderCalls,2,'device loss must clear the failed device/program quarantine');
   fallbackManager.dispose();
 
@@ -120,7 +121,7 @@ try{
   deferredCpu.setSource=()=>{cpuSourceStarted=true;return new Promise(resolve=>{resolveCpuSource=resolve})};
   const cancellationManager=new RendererManager({webgpu:()=>transientGpu,cpu:()=>deferredCpu});
   await cancellationManager.setSource(new Uint8ClampedArray([1,1,1,255]),1,1);
-  const pending=cancellationManager.renderWithFallback({id:4,program,controls:Array(8).fill(128),legacyMath:false,isCurrent:()=>current});
+  const pending=cancellationManager.renderWithFallback({id:4,program,controls:defaultControlValues(),legacyMath:false,isCurrent:()=>current});
   for(let attempt=0;attempt<100&&!cpuSourceStarted;attempt++)await Promise.resolve();
   assert.equal(cpuSourceStarted,true,'CPU source synchronization must begin after runtime GPU failure');
   current=false;resolveCpuSource();
@@ -130,7 +131,7 @@ try{
 
   const cancelled=new RenderCancelledError('cancelled in fallback'),cancellingGpu=new FakeRenderer('webgpu',{render:async()=>{throw new Error('GPU failed')}}),cancellingCpu=new FakeRenderer('cpu',{render:async()=>{throw cancelled}}),propagationManager=new RendererManager({webgpu:()=>cancellingGpu,cpu:()=>cancellingCpu});
   await propagationManager.setSource(new Uint8ClampedArray([1,1,1,255]),1,1);
-  await assert.rejects(propagationManager.renderWithFallback({id:5,program,controls:Array(8).fill(128),legacyMath:false,isCurrent:()=>true}),error=>error===cancelled,'CPU fallback cancellation must be preserved');
+  await assert.rejects(propagationManager.renderWithFallback({id:5,program,controls:defaultControlValues(),legacyMath:false,isCurrent:()=>true}),error=>error===cancelled,'CPU fallback cancellation must be preserved');
   propagationManager.dispose();
 }finally{
   console.error=originalConsoleError;

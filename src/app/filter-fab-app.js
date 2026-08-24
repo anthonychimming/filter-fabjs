@@ -4,6 +4,7 @@
  * Licensed GPL-2.0-or-later. See LICENSE and README.md.
  */
 import { $, $$, clamp, debounce, storageGet, storageSet, escapeHtml, slug } from '../core/utils.js';
+import { CONTROL_COUNT, CONTROL_DEFINITIONS, defaultControlLabels, defaultControlValues } from '../core/controls.js';
 import { Parser } from '../core/formula-language.js';
 import { IR_VERSION, compileFilterProgram } from '../core/ir.js';
 import { workerProgram } from '../renderers/cpu-worker-source.js';
@@ -63,7 +64,7 @@ export function upsertCustomPreset(list,filter,name,idFactory=createCustomPreset
 
 export function initFilterFabApp(){
   const {el,ctx}=getDom();
-  const state={source:null,filtered:null,width:0,height:0,view:'filtered',split:50,zoom:'fit',zoomLevel:1,controls:Array(8).fill(128),labels:Array.from({length:8},(_,i)=>`Control ${i+1}`),renderId:0,imageLoadId:0,filterLoadId:0,rendererManager:null,rendererPreference:storageGet('ffw-renderer','auto'),lastProgram:null,lastProgramKey:null,lastWGSL:null,lastGpuAnalysis:null,isRendering:false,usedControls:Array(8).fill(false),legacyMath:false,hasPendingFormulaChanges:false,focusSnapshot:null};
+  const state={source:null,filtered:null,width:0,height:0,view:'filtered',split:50,zoom:'fit',zoomLevel:1,controls:defaultControlValues(),labels:defaultControlLabels(),renderId:0,imageLoadId:0,filterLoadId:0,rendererManager:null,rendererPreference:storageGet('ffw-renderer','auto'),lastProgram:null,lastProgramKey:null,lastWGSL:null,lastGpuAnalysis:null,isRendering:false,usedControls:Array(CONTROL_COUNT).fill(false),legacyMath:false,hasPendingFormulaChanges:false,focusSnapshot:null};
   const canvasView=createCanvasView({state,el,ctx});
   let controlsController;
 
@@ -106,15 +107,15 @@ export function initFilterFabApp(){
     const normalizedFormulas=formulas.map(formula=>formula.trim()),astList=inputAsts||getValidatedFormulaAsts(definition)||normalizedFormulas.map(formula=>new Parser(formula).parse()),program=compileFilterProgram(astList,{legacyMath});
     let rawValues,rawLabels;
     if(definition.controls!==undefined){
-      if(!Array.isArray(definition.controls)||definition.controls.length>8)throw new Error('Filter definition may contain at most eight controls');
+      if(!Array.isArray(definition.controls)||definition.controls.length>CONTROL_COUNT)throw new Error(`Filter definition may contain at most ${CONTROL_COUNT} controls`);
       rawValues=definition.controls.map((control,index)=>{if(typeof control==='number')return control;if(!control||typeof control!=='object'||Array.isArray(control))throw new Error(`Control ${index+1} is malformed`);return control.value});
       rawLabels=definition.controls.map((control,index)=>typeof control==='number'?`Control ${index+1}`:control.label);
     }else{
       rawValues=definition.values??[];rawLabels=definition.labels??[];
-      if(!Array.isArray(rawValues)||!Array.isArray(rawLabels)||rawValues.length>8||rawLabels.length>8)throw new Error('Filter definition may contain at most eight controls');
+      if(!Array.isArray(rawValues)||!Array.isArray(rawLabels)||rawValues.length>CONTROL_COUNT||rawLabels.length>CONTROL_COUNT)throw new Error(`Filter definition may contain at most ${CONTROL_COUNT} controls`);
     }
-    const controls=Array.from({length:8},(_,index)=>{const value=rawValues[index]??128;if(typeof value!=='number'||!Number.isFinite(value))throw new Error(`Control ${index+1} must be a finite number`);return clamp(value,0,255)});
-    const labels=Array.from({length:8},(_,index)=>{const value=rawLabels[index]??`Control ${index+1}`;if(typeof value!=='string')throw new Error(`Control ${index+1} label must be a string`);const label=value.trim();if(label.length>80)throw new Error(`Control ${index+1} label exceeds 80 characters`);return label||`Control ${index+1}`});
+    const controls=CONTROL_DEFINITIONS.map((definition,index)=>{const value=rawValues[index]??definition.defaultValue;if(typeof value!=='number'||!Number.isFinite(value))throw new Error(`Control ${index+1} must be a finite number`);return clamp(value,0,255)});
+    const labels=CONTROL_DEFINITIONS.map((definition,index)=>{const value=rawLabels[index]??definition.defaultLabel;if(typeof value!=='string')throw new Error(`Control ${index+1} label must be a string`);const label=value.trim();if(label.length>80)throw new Error(`Control ${index+1} label exceeds 80 characters`);return label||definition.defaultLabel});
     if(definition.name!==undefined&&typeof definition.name!=='string')throw new Error('Filter name must be a string');if(definition.author!==undefined&&typeof definition.author!=='string')throw new Error('Filter author must be a string');
     const name=String(definition.name??'').trim()||'Untitled Filter',author=String(definition.author??'').trim();if(name.length>120||author.length>120)throw new Error('Filter name and author are limited to 120 characters');
     return{legacyMath,formulas:normalizedFormulas,controls,labels,name,author,program};
@@ -231,7 +232,7 @@ export function initFilterFabApp(){
     window.addEventListener('beforeunload',()=>state.rendererManager?.dispose());
   }
 
-  window.FilterFabJS=Object.freeze({version:'2.5.4',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererPreference:()=>state.rendererPreference});
+  window.FilterFabJS=Object.freeze({version:'2.6.0',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererPreference:()=>state.rendererPreference});
   controlsController.buildSliders();populatePresets();wire();const demo=demoImage();initImage(demo.data,demo.width,demo.height);applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');
   return{state,render,applyFilter,loadImageFile};
 }
