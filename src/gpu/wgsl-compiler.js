@@ -5,11 +5,12 @@
  */
 import { CHROMA_MODELS } from '../core/chroma.js';
 import { CONTROL_COUNT, CONTROL_PAIR_COUNT } from '../core/controls.js';
+import { MAX_FRACTAL_ITERATIONS } from '../core/formula-language.js';
 import { IR_VERSION, IRType, programCacheKey } from '../core/ir.js';
 import { WEBGPU_CONTROL_SLOT_COUNT } from './params-layout.js';
 
 export class WGSLCompileError extends Error{constructor(message,blockers=[]){super(message);this.name='WGSLCompileError';this.blockers=blockers}}
-const WEBGPU_FUNCTIONS=new Set('src src0 src1 srcWrap srcMirror srcLinear rad rad0 rad1 cnv cnv0 cnv1 ctl val map min max abs add sub dif mix scl sqr sqrt sin cos tan r2x r2y c2d c2m radius angle clamp lerp step smoothstep floor ceil round fract sign bias gain hash2 valueNoise perlin worleyF1 worleyF2 fbm turbulence ridged periodicNoise wrap mirror repeat mirrorRepeat gradient3 gradient4 linearGrad radialGrad angularGrad checker brick line circle ring box triangle grid sierpinski multiply screen overlay softLight difference'.split(' '));
+const WEBGPU_FUNCTIONS=new Set('src src0 src1 srcWrap srcMirror srcLinear rad rad0 rad1 cnv cnv0 cnv1 ctl val map min max abs add sub dif mix scl sqr sqrt sin cos tan r2x r2y c2d c2m radius angle clamp lerp step smoothstep floor ceil round fract sign bias gain hash2 valueNoise perlin worleyF1 worleyF2 fbm turbulence ridged periodicNoise mandelbrot julia wrap mirror repeat mirrorRepeat gradient3 gradient4 linearGrad radialGrad angularGrad checker brick line circle ring box triangle grid sierpinski multiply screen overlay softLight difference'.split(' '));
 const WEBGPU_UNARY=new Set(['+','-','!']);
 const WEBGPU_BINARY=new Set(['+','-','*','/','%','<','<=','>','>=','==','!=','&&','||']);
 const WEBGPU_BOOLEAN_BINARY=new Set(['<','<=','>','>=','==','!=','&&','||']);
@@ -124,6 +125,8 @@ export class WGSLCompiler{
       case'turbulence':return`ff_turbulence(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
       case'ridged':return`ff_ridged(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
       case'periodicNoise':return`ff_periodic_noise(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
+      case'mandelbrot':return`ff_mandelbrot(${A(0)}, ${A(1)}, ${A(2)})`;
+      case'julia':return`ff_julia(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
       case'wrap':case'repeat':return`ff_wrap(${A(0)}, ${A(1)})`;case'mirror':case'mirrorRepeat':return`ff_mirror(${A(0)}, ${A(1)})`;
       case'gradient3':return`ff_gradient3(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)})`;case'gradient4':return`ff_gradient4(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
       case'linearGrad':return`ff_linear_grad(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)}, ${A(5)})`;
@@ -145,6 +148,7 @@ export class WGSLCompiler{
   shader(expr){return String.raw`
 const FF_TAU : f32 = 6.283185307179586;
 const FF_PI : f32 = 3.141592653589793;
+const FF_MAX_FRACTAL_ITERATIONS : i32 = ${MAX_FRACTAL_ITERATIONS};
 struct Params { width:u32, height:u32, startRow:u32, rowCount:u32, controls:array<f32,${WEBGPU_CONTROL_SLOT_COUNT}>, };
 @group(0) @binding(0) var<storage,read> srcPixels:array<u32>;
 @group(0) @binding(1) var<storage,read_write> outPixels:array<u32>;
@@ -194,6 +198,9 @@ fn ff_fbm(x:f32,y:f32,scale0:f32,octaves0:f32,lacunarity0:f32,gain0:f32,seed:f32
 fn ff_turbulence(x:f32,y:f32,scale0:f32,octaves0:f32,seed:f32)->f32{let octaves=clamp(i32(trunc(octaves0)),1,12);var amplitude=1.0;var sum=0.0;var norm=0.0;var scale=scale0;for(var octave:i32=0;octave<octaves;octave=octave+1){sum=sum+abs(ff_perlin(x,y,scale,seed+f32(octave)*131.0)*2.0-1.0)*amplitude;norm=norm+amplitude;amplitude=amplitude*0.5;scale=scale/2.0;}return select(0.0,sum/norm,norm!=0.0);}
 fn ff_ridged(x:f32,y:f32,scale0:f32,octaves0:f32,seed:f32)->f32{let octaves=clamp(i32(trunc(octaves0)),1,12);var amplitude=1.0;var sum=0.0;var norm=0.0;var scale=scale0;for(var octave:i32=0;octave<octaves;octave=octave+1){let ridge=1.0-abs(ff_perlin(x,y,scale,seed+f32(octave)*151.0)*2.0-1.0);sum=sum+ridge*ridge*amplitude;norm=norm+amplitude;amplitude=amplitude*0.5;scale=scale/2.0;}return select(0.0,sum/norm,norm!=0.0);}
 fn ff_periodic_noise(x:f32,y:f32,periodX0:f32,periodY0:f32,seed:f32)->f32{let periodX=max(1.0,abs(periodX0));let periodY=max(1.0,abs(periodY0));let gx=ff_wrap(x,periodX)/periodX*8.0;let gy=ff_wrap(y,periodY)/periodY*8.0;let ix=floor(gx);let iy=floor(gy);let tx=ff_fade(gx-ix);let ty=ff_fade(gy-iy);let a=ff_hash01(ff_wrap(ix,8.0),ff_wrap(iy,8.0),seed);let b=ff_hash01(ff_wrap(ix+1.0,8.0),ff_wrap(iy,8.0),seed);let c=ff_hash01(ff_wrap(ix,8.0),ff_wrap(iy+1.0,8.0),seed);let d=ff_hash01(ff_wrap(ix+1.0,8.0),ff_wrap(iy+1.0,8.0),seed);return mix(a,b,tx)*(1.0-ty)+mix(c,d,tx)*ty;}
+fn ff_fractal_escape(zx0:f32,zy0:f32,cx:f32,cy:f32,iterations0:f32)->f32{let limit=clamp(i32(trunc(iterations0)),1,FF_MAX_FRACTAL_ITERATIONS);var zx=zx0;var zy=zy0;for(var iteration:i32=0;iteration<FF_MAX_FRACTAL_ITERATIONS;iteration=iteration+1){if(iteration>=limit){break;}let nextY=2.0*zx*zy+cy;let nextX=zx*zx-zy*zy+cx;zx=nextX;zy=nextY;if(zx*zx+zy*zy>4.0){return f32(iteration)/f32(limit);}}return 1.0;}
+fn ff_mandelbrot(cx:f32,cy:f32,iterations:f32)->f32{return ff_fractal_escape(0.0,0.0,cx,cy,iterations);}
+fn ff_julia(x:f32,y:f32,cx:f32,cy:f32,iterations:f32)->f32{return ff_fractal_escape(x,y,cx,cy,iterations);}
 fn ff_linear_grad(x:f32,y:f32,x0:f32,y0:f32,x1:f32,y1:f32)->f32{let dx=x1-x0;let dy=y1-y0;let den=dx*dx+dy*dy;if(den==0.0){return 0.0;}return clamp(((x-x0)*dx+(y-y0)*dy)/den,0.0,1.0);}
 fn ff_radial_grad(x:f32,y:f32,cx:f32,cy:f32,r:f32)->f32{return clamp(1.0-length(vec2<f32>(x-cx,y-cy))/max(0.000001,abs(r)),0.0,1.0);}
 fn ff_angular_grad(x:f32,y:f32,cx:f32,cy:f32,offset0:f32)->f32{let offset=select(offset0/1024.0,offset0,abs(offset0)<=1.0);return ff_wrap(ff_atan2(y-cy,x-cx)/FF_TAU+offset,1.0);}

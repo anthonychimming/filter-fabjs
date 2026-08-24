@@ -4,10 +4,11 @@
  * Licensed GPL-2.0-or-later. See LICENSE and README.md.
  */
 import { RendererBackend, RenderCancelledError } from './renderer-backend.js';
+import { MAX_FRACTAL_ITERATIONS } from '../core/formula-language.js';
 import { programCacheKey } from '../core/ir.js';
 
 export const MAX_CPU_RENDER_WORK=3_000_000_000;
-const CPU_CALL_WEIGHTS=Object.freeze({src:2,src0:2,src1:2,srcWrap:2,srcMirror:2,srcLinear:5,rad:3,rad0:3,rad1:3,cnv:10,cnv0:10,cnv1:10,hash2:4,valueNoise:12,perlin:20,worleyF1:30,worleyF2:30,fbm:240,turbulence:240,ridged:240,periodicNoise:12,sierpinski:12});
+const CPU_CALL_WEIGHTS=Object.freeze({src:2,src0:2,src1:2,srcWrap:2,srcMirror:2,srcLinear:5,rad:3,rad0:3,rad1:3,cnv:10,cnv0:10,cnv1:10,hash2:4,valueNoise:12,perlin:20,worleyF1:30,worleyF2:30,fbm:240,turbulence:240,ridged:240,periodicNoise:12,mandelbrot:MAX_FRACTAL_ITERATIONS,julia:MAX_FRACTAL_ITERATIONS,sierpinski:12});
 
 export class RenderBudgetError extends Error{constructor(message){super(message);this.name='RenderBudgetError'}}
 

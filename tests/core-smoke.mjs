@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { CONTROL_COUNT } from '../src/core/controls.js';
-import { FORMULA_LIMITS, Parser } from '../src/core/formula-language.js';
-import { compileFilterProgram } from '../src/core/ir.js';
+import { FORMULA_LIMITS, MAX_FRACTAL_ITERATIONS, Parser } from '../src/core/formula-language.js';
+import { compileFilterProgram, IRType } from '../src/core/ir.js';
 import { presets } from '../src/presets/builtins.js';
 import { WGSLCompiler } from '../src/gpu/wgsl-compiler.js';
 import { detectFilterFormat, FILTER_TEXT_MAX_LENGTH, getValidatedFormulaAsts, parseAFS, validateNativeFilter } from '../src/io/filter-format.js';
@@ -18,10 +18,15 @@ for (const preset of presets) {
   else cpuFallback += 1;
 }
 
-assert.equal(presets.length, 28);
+assert.equal(presets.length, 29);
 assert.equal(gpuCompatible, presets.length, 'every native built-in must compile for WebGPU after Phase 3.5');
 assert.equal(cpuFallback, 0, 'native built-ins must not require CPU fallback');
 assert.equal(gpuCompatible + cpuFallback, presets.length);
+const mandelbrotPreset=presets.find(preset=>preset.id==='mandelbrotatlas');
+assert.equal(mandelbrotPreset?.name,'Mandelbrot Atlas','Phase 3.5B must include the native Mandelbrot reference preset');
+const mandelbrotPresetProgram=compileFilterProgram(mandelbrotPreset.f.map(formula=>new Parser(formula).parse()));
+assert.ok(mandelbrotPresetProgram.metadata.functions.includes('mandelbrot'),'the Mandelbrot reference preset must use the public intrinsic');
+assert.equal(WGSLCompiler.analyze(mandelbrotPresetProgram).compatible,true,'the Mandelbrot reference preset must remain GPU-compatible');
 const native=detectFilterFormat(JSON.stringify({ format: 'filter-fab-js', version: 2, formulas: ['r','g','b','a'] }), 'test.json');
 assert.equal(native.kind, 'native');
 assert.equal(native.data.mathMode, 'float', 'version 2 files without mathMode must normalize to float mode');
@@ -44,6 +49,16 @@ assert.deepEqual(phase35aProgram.metadata.controlMask.slice(8),[true,true],'cont
 for(const variable of ['nx','ny','cx','cy'])assert.ok(phase35aProgram.metadata.variables.includes(variable),`Phase 3.5A program must track ${variable}`);
 for(const name of ['angle','gradient4','mirrorRepeat','radius','repeat'])assert.ok(phase35aProgram.metadata.functions.includes(name),`Phase 3.5A program must track ${name}()`);
 assert.doesNotThrow(()=>WGSLCompiler.compile(phase35aProgram),'Phase 3.5A vocabulary must compile for WebGPU');
+const phase35bProgram=compileFilterProgram(['mandelbrot(cx,cy,256)','julia(cx,cy,-0.8,0.156,val(0,1,256))','fbm(x,y,16,12,2,0.5,7)','a'].map(formula=>new Parser(formula).parse()));
+assert.equal(MAX_FRACTAL_ITERATIONS,256,'Phase 3.5B fractal iteration work must have a stable hard ceiling');
+assert.equal(phase35bProgram.outputs[0].expression.type,IRType.MASK,'mandelbrot() must produce a normalized mask field');
+assert.equal(phase35bProgram.outputs[1].expression.type,IRType.MASK,'julia() must produce a normalized mask field');
+for(const name of ['fbm','julia','mandelbrot'])assert.ok(phase35bProgram.metadata.functions.includes(name),`Phase 3.5B program must track ${name}()`);
+assert.equal(phase35bProgram.metadata.stateful,false,'bounded fractal intrinsics must remain stateless');
+assert.equal(phase35bProgram.metadata.deterministic,true,'bounded fractal intrinsics must remain deterministic');
+assert.doesNotThrow(()=>WGSLCompiler.compile(phase35bProgram),'Phase 3.5B vocabulary must compile for WebGPU');
+assert.throws(()=>new Parser('mandelbrot(0,0)').parse(),/expects 3 arguments/,'mandelbrot() arity must be validated before compilation');
+assert.throws(()=>new Parser('julia(0,0,0,0)').parse(),/expects 5 arguments/,'julia() arity must be validated before compilation');
 const afsHeader='%RGB-1.0\n128\n128\n128\n128\n128\n128\n128\n128\n';
 const afsWithFirstControl=value=>`%RGB-1.0\n${value}\n128\n128\n128\n128\n128\n128\n128\nr\ng\nb\na\n`;
 const fourGroupAfs=parseAFS(`${afsHeader}r\n\ng\n\nb\n\na\n`,'test.afs');

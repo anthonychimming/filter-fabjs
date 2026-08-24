@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { Worker } from 'node:worker_threads';
 import { CHROMA_MODELS } from '../src/core/chroma.js';
 import { CONTROL_COUNT, defaultControlValues } from '../src/core/controls.js';
-import { Parser, VARS } from '../src/core/formula-language.js';
+import { MAX_FRACTAL_ITERATIONS, Parser, VARS } from '../src/core/formula-language.js';
 import { compileFilterProgram } from '../src/core/ir.js';
 import { presets } from '../src/presets/builtins.js';
 import { assertCpuRenderBudget, CpuRenderer, estimateCpuProgramCost, MAX_CPU_RENDER_WORK } from '../src/renderers/cpu-renderer.js';
@@ -62,6 +62,11 @@ const coordinateHelpers=await render(['radius(3,4)*20','angle(0,1)/4','repeat(-1
 assert.deepEqual([...coordinateHelpers.slice(0,4)],[100,64,150,150],'coordinate helper aliases must retain positive-repeat and 1024-angle semantics');
 const paletteRamps=await render(['gradient3(0.25,0,100,200)','gradient4(0.5,0,60,180,240)','gradient3(-1,0,100,200)','gradient4(2,0,60,180,240)']);
 assert.deepEqual([...paletteRamps.slice(0,4)],[50,120,0,240],'three- and four-stop palette ramps must clamp and interpolate normalized positions');
+const fractalFields=await render(['mandelbrot(0,0,0)*255','mandelbrot(2,0,4)*255','mandelbrot(3,0,9999)*255','julia(0,0,0,0,9999)*255']);
+assert.deepEqual([...fractalFields.slice(0,4)],[255,64,0,255],'bounded fractal intrinsics must normalize escape time and clamp requested iterations');
+const juliaEscape=await render(['julia(3,0,0,0,8)*255','julia(0,0,-0.8,0.156,64)*255','mandelbrot(-0.75,0.1,256)*255','mandelbrot(-0.75,0.1,9999)*255']);
+assert.equal(juliaEscape[0],0,'Julia points escaping on the first iteration must return zero');
+assert.equal(juliaEscape[2],juliaEscape[3],'Mandelbrot work above the shared iteration ceiling must clamp deterministically');
 
 const nativeSquare=await render(['sqr(4)','sqr(4)','sqr(4)','a']);
 assert.deepEqual([...nativeSquare.slice(0,4)],[16,16,16,255],'native float sqr() must retain its documented square operation');
@@ -102,6 +107,8 @@ assert.deepEqual([...legacySpans.slice(0,4)],[legacyChroma.uSpan,legacyChroma.vS
 const cachedProgram=compileFilterProgram(['r','g','b','a'].map(formula=>new Parser(formula).parse()));
 assert.equal(estimateCpuProgramCost(cachedProgram),4,'CPU work estimation must aggregate all four output expressions');
 assert.equal(assertCpuRenderBudget(cachedProgram,1800,1800),12_960_000,'ordinary full-size renders must remain within the CPU work budget');
+const fractalProgram=compileFilterProgram(['mandelbrot(0,0,256)','julia(0,0,0,0,256)','r','a'].map(formula=>new Parser(formula).parse()));
+assert.equal(estimateCpuProgramCost(fractalProgram),MAX_FRACTAL_ITERATIONS*2+10,'CPU work estimation must account for both bounded fractal loops and their arguments');
 const maximalFormula=Array(2048).fill('r').join('+'),maximalProgram=compileFilterProgram(Array(4).fill(maximalFormula).map(formula=>new Parser(formula).parse()));
 assert.ok(estimateCpuProgramCost(maximalProgram)>MAX_CPU_RENDER_WORK/(1800*1800));
 assert.throws(()=>assertCpuRenderBudget(maximalProgram,1800,1800),error=>error?.name==='RenderBudgetError','maximal imported programs must be rejected before full-size CPU dispatch');
@@ -117,6 +124,7 @@ assert.match(sourceText, /function vars\(n,e\)\{const p=e\.p,z=e\.z;switch\(n\)/
 assert.match(sourceText,/legacyMath=program\.mathMode==='legacy'/,'CPU arithmetic and chroma bounds must use the IR program math mode as their shared authority');
 assert.doesNotMatch(sourceText,/n\.args\.map/,'CPU call evaluation must not allocate an argument array per call and pixel');
 assert.match(sourceText,/const pixel=\[0,0,0,0\],environment=\{x:0,y:0,z:0,p:pixel\}/,'CPU rendering must reuse its pixel and environment records');
+assert.match(sourceText,new RegExp(`limit=clamp\\(int\\(f32\\(iterations\\)\\),1,${MAX_FRACTAL_ITERATIONS}\\)`),'CPU fractal execution must use the shared hard iteration ceiling');
 const variableBody = sourceText.match(/function vars\(n,e\)\{([\s\S]*?)\n\}return 0\}/)?.[1] || '';
 const handledVariables = new Set([...variableBody.matchAll(/case'([^']+)'/g)].map(match => match[1]));
 for (const name of VARS) assert.ok(handledVariables.has(name), `lazy CPU lookup must preserve variable ${name}`);

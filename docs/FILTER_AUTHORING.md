@@ -1,6 +1,6 @@
 # Filter FabJS Filter Authoring Guide
 
-**Applies to Filter FabJS v2.6.0**
+**Applies to Filter FabJS v2.6.1**
 
 This guide is for designing new Filter FabJS filters efficiently and with predictable CPU/WebGPU behavior. It assumes the formula syntax in [FORMULA_REFERENCE.md](FORMULA_REFERENCE.md).
 
@@ -281,6 +281,21 @@ Use `ridged()` for vein-like or mountainous structures and `turbulence()` for fo
 ### Periodic noise
 
 Use `periodicNoise()` when the generated texture must tile without a seam.
+
+### Bounded escape-time fractals
+
+Use `mandelbrot(x,y,iterations)` for the Mandelbrot set and `julia(x,y,cx,cy,iterations)` for Julia sets. Both return normalized `0..1` fields and clamp the requested iteration count to `1..256`, so imported formulas cannot create unbounded CPU or shader loops.
+
+Keep coordinates aspect-correct, then color the scalar field explicitly:
+
+```text
+gradient4(
+  sqrt(mandelbrot(cx*X/min(X,Y)*1.5-0.5,cy*Y/min(X,Y)*1.5,128)),
+  4,48,230,8
+)
+```
+
+Higher iteration counts reveal more boundary detail but cost more per pixel. Expose a bounded iteration control only when the added detail is visible at the intended scale.
 
 ## 10. Distortion pattern
 

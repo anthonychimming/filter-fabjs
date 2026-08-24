@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.6.1
+
+- Added deterministic, stateless `mandelbrot(x,y,iterations)` and `julia(x,y,cx,cy,iterations)` intrinsics that return normalized escape-time fields and clamp requested work to 1–256 iterations.
+- Implemented the fractal intrinsics with f32-aligned CPU arithmetic, statically bounded WGSL loops, CPU render-budget accounting, typed-IR/WGSL/CPU tests, and optional hardware parity fixtures.
+- Added the GPU-compatible **Mandelbrot Atlas** built-in preset, bringing the native preset collection to 29.
+
 ## 2.6.0
 
 - Expanded native formula controls from eight to ten through shared control definitions, preserving eight-control filters and historic AFS imports while adding a fifth `map()` pair.
