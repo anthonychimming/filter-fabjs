@@ -8,6 +8,7 @@ import { FORMULA_LIMITS, Parser } from '../core/formula-language.js';
 
 export const FILTER_FILE_MAX_BYTES=256*1024;
 export const FILTER_TEXT_MAX_LENGTH=256*1024;
+const validatedFormulaAsts=new WeakMap();
 
 export function normalizeFilterText(text){return String(text??'').replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n')}
 function assertFilterTextSize(text){if(String(text??'').length>FILTER_TEXT_MAX_LENGTH)throw new Error(`Filter file exceeds the ${FILTER_FILE_MAX_BYTES/1024} KiB limit`)}
@@ -18,13 +19,16 @@ function boundedString(value,name,maxLength,fallback=''){
 }
 function validatedFormulas(formulas,label='Native filter'){
   if(!Array.isArray(formulas)||formulas.length!==4)throw new Error(`${label} must contain exactly four channel formulas`);
-  return formulas.map((formula,index)=>{
+  const asts=[];
+  const normalized=formulas.map((formula,index)=>{
     if(typeof formula!=='string'||!formula.trim())throw new Error(`${label} channel ${index+1} must be a non-empty formula string`);
     const normalized=formula.trim();if(normalized.length>FORMULA_LIMITS.maxLength)throw new Error(`${label} channel ${index+1} exceeds the ${FORMULA_LIMITS.maxLength}-character formula limit`);
-    try{new Parser(normalized).parse()}catch(error){throw new Error(`${label} channel ${index+1}: ${error.message}`)}
+    try{asts.push(new Parser(normalized).parse())}catch(error){throw new Error(`${label} channel ${index+1}: ${error.message}`)}
     return normalized;
   });
+  return{normalized,asts};
 }
+export function getValidatedFormulaAsts(filter){return validatedFormulaAsts.get(filter)||null}
 function controlValue(value,index){if(typeof value!=='number'||!Number.isFinite(value)||value<0||value>255)throw new Error(`Native filter control ${index+1} must be a finite number from 0 to 255`);return value}
 function controlLabel(value,index){if(value===undefined||value===null||value==='')return`Control ${index+1}`;if(typeof value!=='string')throw new Error(`Native filter control ${index+1} label must be a string`);const label=value.trim();if(label.length>80)throw new Error(`Native filter control ${index+1} label exceeds 80 characters`);return label||`Control ${index+1}`}
 function normalizeNativeControls(data){
@@ -49,30 +53,31 @@ export function validateNativeFilter(data){
   if(!Number.isInteger(data.version)||![1,2].includes(data.version))throw new Error('Native filter version must be 1 or 2');
   if(data.mathMode!==undefined&&!['float','legacy'].includes(data.mathMode))throw new Error('Native filter mathMode must be “float” or “legacy”');
   const formulas=validatedFormulas(Array.isArray(data.formulas)?data.formulas:data.f);
-  return{format:'filter-fab-js',version:data.version,mathMode:data.mathMode??(data.version===1?'legacy':'float'),name:boundedString(data.name,'name',120,'Untitled Filter'),author:boundedString(data.author,'author',120),formulas,controls:normalizeNativeControls(data)};
+  const result={format:'filter-fab-js',version:data.version,mathMode:data.mathMode??(data.version===1?'legacy':'float'),name:boundedString(data.name,'name',120,'Untitled Filter'),author:boundedString(data.author,'author',120),formulas:formulas.normalized,controls:normalizeNativeControls(data)};
+  validatedFormulaAsts.set(result,formulas.asts);return result;
 }
 export function cleanAFSFormula(group){
-  return group
-    .replace(/\\(?:r|n)/gi,'')
-    .split('\n')
-    .map(line=>line.trim())
-    .filter(Boolean)
-    .join(' ')
-    .trim();
+  let formula='',continued=false;
+  for(const rawLine of group.split('\n')){
+    const lineContinues=/\\(?:r|n)/i.test(rawLine),line=rawLine.replace(/\\(?:r|n)/gi,'').trim();
+    if(!line)continue;
+    formula+=(formula?(continued?' ':'\n'):'')+line;continued=lineContinues;
+  }
+  return formula.trim();
 }
 export function splitAFSFormulaGroups(body){
   const separated=body.split(/\n[ \t]*\n+/).map(cleanAFSFormula).filter(Boolean);
-  if(separated.length>=4)return separated.slice(0,4);
-  const formulas=[];let current='',depth=0;
+  if(separated.length>=4)return separated;
+  const formulas=[];let current='',depth=0,continued=false;
   for(const rawLine of body.split('\n')){
-    const line=rawLine.replace(/\\(?:r|n)/gi,'').trim();
-    if(!line){if(current.trim()&&depth===0){formulas.push(current.trim());current=''}continue}
-    current+=(current?' ':'')+line;
-    for(const ch of line){if(ch==='(')depth++;else if(ch===')')depth=Math.max(0,depth-1)}
-    if(depth===0){formulas.push(current.trim());current=''}
+    const lineContinues=/\\(?:r|n)/i.test(rawLine),line=rawLine.replace(/\\(?:r|n)/gi,'').trim();
+    if(!line){if(current.trim()&&depth===0){formulas.push(current.trim());current='';continued=false}continue}
+    current+=(current?(continued?' ':'\n'):'')+line;continued=lineContinues;
+    for(const ch of line.replace(/\/\/.*$/,'')){if(ch==='(')depth++;else if(ch===')')depth=Math.max(0,depth-1)}
+    if(depth===0&&!continued){formulas.push(current.trim());current=''}
   }
   if(current.trim())formulas.push(current.trim());
-  return formulas.slice(0,4);
+  return formulas;
 }
 export function parseAFS(text,fileName=''){
   assertFilterTextSize(text);
@@ -80,15 +85,18 @@ export function parseAFS(text,fileName=''){
   if(!/^%RGB(?:-[0-9]+(?:\.[0-9]+)*)?$/i.test(header))throw new Error('Not a supported RGB AFS file');
   if(lines.length<8)throw new Error('AFS file is missing its eight control values');
   const values=lines.splice(0,8).map((raw,index)=>{
-    const value=Number.parseInt(raw.trim(),10);
-    if(!Number.isFinite(value))throw new Error(`AFS control ${index+1} is not a valid integer`);
+    const token=raw.trim();
+    if(!/^[+-]?\d+$/.test(token))throw new Error(`AFS control ${index+1} is not a valid integer`);
+    const value=Number(token);
+    if(!Number.isSafeInteger(value))throw new Error(`AFS control ${index+1} is not a valid integer`);
     return clamp(value,0,255);
   });
   const f=splitAFSFormulaGroups(lines.join('\n'));
   if(f.length!==4)throw new Error(`AFS file contains ${f.length} channel formula${f.length===1?'':'s'}; expected 4`);
   const formulas=validatedFormulas(f,'AFS filter');
   const base=String(fileName||'').replace(/\.[^.]+$/,'').trim();
-  return{format:'filter-factory-afs',version:header.replace(/^%RGB-?/i,'')||'1.0',name:base||'Imported AFS Filter',author:'',mathMode:'legacy',values,labels:Array.from({length:8},(_,i)=>`Control ${i+1}`),f:formulas};
+  const result={format:'filter-factory-afs',version:header.replace(/^%RGB-?/i,'')||'1.0',name:base||'Imported AFS Filter',author:'',mathMode:'legacy',values,labels:Array.from({length:8},(_,i)=>`Control ${i+1}`),f:formulas.normalized};
+  validatedFormulaAsts.set(result,formulas.asts);return result;
 }
 export function detectFilterFormat(text,fileName=''){
   assertFilterTextSize(text);

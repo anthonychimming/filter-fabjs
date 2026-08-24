@@ -4,7 +4,7 @@ This document describes the implementation currently present in the public repos
 
 ## Release
 
-- Application version: **2.4.8**
+- Application version: **2.5.0**
 - Native filter format: **version 2**
 - Typed IR: **version 1**
 - Development layout: native ES modules
@@ -53,7 +53,7 @@ Compatibility is analyzed from typed IR before a render is dispatched.
 Current workflows include:
 
 - Strictly validated and normalized Filter FabJS native JSON v1/v2 import plus version 2 export.
-- Historic `.afs` import with legacy integer math and the same formula budgets.
+- Historic `.afs` import with legacy integer math, eight whole-token integer controls with legacy 0–255 clamping, exactly four formula groups, preserved physical line-comment boundaries, and the same formula budgets.
 - Image loading and drag-and-drop.
 - Clipboard image paste.
 - RGBA PNG copy where browser clipboard support permits it.
