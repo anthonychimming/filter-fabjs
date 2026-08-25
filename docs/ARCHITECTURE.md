@@ -1,6 +1,6 @@
 # Architecture
 
-Filter FabJS v2.6.3 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
+Filter FabJS v2.6.4 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
 
 ```text
 Formula text
@@ -27,7 +27,7 @@ RGBA pixel output
 - `src/renderers/renderer-backend.js` — shared renderer contract.
 - `src/renderers/cpu-renderer.js` — CPU Worker lifecycle, shared retained source, keyed IR reuse, rendering, progress, lazy restart, and cancellation.
 - `src/renderers/webgpu-renderer.js` — recoverable GPU buffers, shared retained source, entry/byte-bounded WGSL-plan/pipeline reuse, direct RGBA upload/readback, full-frame dispatch, source release, and queued/active cancellation.
-- `src/renderers/renderer-manager.js` — renderer selection, immutable source coordination, entry/byte-bounded compatibility analysis, lazy source synchronization, inactive-backend release, cancellation-aware runtime CPU fallback, and bounded repeated program-failure quarantine.
+- `src/renderers/renderer-manager.js` — renderer selection, immutable source coordination, entry/byte-bounded compatibility analysis and diagnostic snapshots, lazy source synchronization, inactive-backend release, cancellation-aware runtime CPU fallback, and bounded repeated program-failure quarantine.
 - `src/presets/builtins.js` — built-in filter definitions.
 - `src/io/filter-format.js` — size-bounded native JSON and historic AFS validation, normalization, parsing, and validated-AST handoff to application preparation.
 - `src/io/image-io.js` — image and clipboard encoding helpers.
@@ -46,6 +46,6 @@ RGBA pixel output
 
 ## Current WebGPU boundary
 
-The Phase 3.5 WebGPU subset covers supported deterministic stateless operations: arithmetic, conditions, ten controls, image and polar sampling, normalized and centered coordinates, coordinate shaping and repetition, scalar palette ramps, gradients, procedural patterns, analytic shape masks, signed-distance primitives and composition, deterministic noise, bounded Mandelbrot and Julia fields, blend operations, and fixed 3×3 convolution. Signed-distance fields remain ordinary scalar expressions inside the current one-pass program and become masks only through explicit fill/outline helpers; domain warping is coordinate composition rather than a second execution model. Fractal iteration is encapsulated inside compiler intrinsics with a shared 256-step ceiling; the formula language does not expose general-purpose loops. Operations outside the subset are identified by compatibility analysis and use the CPU Worker fallback. `pow()` remains CPU-only because WGSL does not define JavaScript-compatible results for negative bases.
+The Phase 3.5 WebGPU subset covers supported deterministic stateless operations: arithmetic, conditions, ten controls, image and polar sampling, normalized and centered coordinates, coordinate shaping and repetition, scalar palette ramps, gradients, procedural patterns, analytic shape masks, signed-distance primitives and composition, deterministic noise, bounded Mandelbrot and Julia fields, blend operations, and fixed 3×3 convolution. Signed-distance fields remain ordinary scalar expressions inside the current one-pass program and become masks only through explicit fill/outline helpers; domain warping is coordinate composition rather than a second execution model. Fractal iteration is encapsulated inside compiler intrinsics with a shared 256-step ceiling; the formula language does not expose general-purpose loops. Operations outside the subset are identified by compatibility analysis and use the CPU Worker fallback. Phase 3.5D exposes the manager's authoritative analysis as a read-only diagnostic snapshot containing formula compatibility, current GPU eligibility, selected backend, fallback reason, operation count, and the current one-pass count. `pow()` remains CPU-only because WGSL does not define JavaScript-compatible results for negative bases.
 
 The CPU renderer remains the compatibility backend for legacy integer-mode AFS filters, bitwise/shift/comma expressions, and operations with sequential or shared mutable state (`rnd()`, `rst()`, `get()`, and `put()`).

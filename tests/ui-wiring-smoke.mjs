@@ -7,6 +7,7 @@ const html = fs.readFileSync('index.html', 'utf8');
 
 assert.match(html, /id="renderBtn"/, 'formula editor must expose an explicit Render action');
 assert.match(html, /id="formulaEditStatus"/, 'formula editor must expose preview state');
+assert.match(html, /id="rendererDiagnostics"[^>]+aria-live="polite"/, 'the renderer toolbar must expose live GPU eligibility and fallback diagnostics');
 
 const formulaInputHandler = app.match(/field\.oninput=\(\)=>\{([\s\S]*?)\n\s*\};\n\s*field\.onblur/)?.[1] || '';
 assert.ok(formulaInputHandler, 'formula input handler must be present');
@@ -33,6 +34,7 @@ assert.match(app, /async function exportPNG\(\)/, 'PNG export must use the async
 assert.match(app, /blob=await canvasBlob\(canvas,'image\/png'\)/, 'PNG export must download an encoded Blob');
 assert.doesNotMatch(app, /toDataURL\(/, 'PNG export must not block on a base64 data URL');
 assert.match(app, /rendererManager\.renderWithFallback\(/, 'the renderer manager must own runtime CPU fallback');
+assert.match(app, /rendererManager\.diagnose\(program,state\.rendererPreference\)/, 'the UI inspector must consume manager-owned renderer diagnostics');
 assert.doesNotMatch(app, /rendererManager\.get\('cpu'\)|rendererManager\.active\s*=/, 'the app must not bypass manager-owned fallback state');
 assert.match(app, /function prepareFilter\(input\)/, 'filter definitions must be normalized before application state changes');
 assert.match(app, /function applyFilter\(definition,selection\)\{const next=prepareFilter\(definition\);state\.legacyMath=/, 'filter application must finish validation and compilation before mutating UI state');
@@ -49,9 +51,11 @@ assert.match(app, /astList=inputAsts\|\|getValidatedFormulaAsts\(definition\)\|\
 assert.match(app, /state\.lastProgram=next\.program;state\.lastProgramKey=currentProgramKey\(\)/, 'applying a prepared filter must seed the exact-key render cache');
 assert.match(app, /FILTER_FILE_MAX_BYTES/, 'filter imports must reject oversized files before reading them');
 assert.match(app, /lastProgramKey/, 'the app must retain a stable key for parsed-program reuse');
-assert.match(app, /state\.lastProgramKey===key\)\{controlsController\.updateControlUsage\(state\.lastProgram\);return state\.lastProgram\}/, 'control-only renders must reuse the last parsed IR program');
+assert.match(app, /state\.lastProgramKey===key\)\{controlsController\.updateControlUsage\(state\.lastProgram\);updateRendererDiagnostics\(state\.lastProgram\);return state\.lastProgram\}/, 'control-only renders must reuse the last parsed IR program and cached compatibility analysis');
 assert.doesNotMatch(app, /!state\.hasPendingFormulaChanges&&state\.lastProgram&&state\.lastProgramKey===key/, 'an exact prepared-program key must be reusable while its immediate render is pending');
 assert.doesNotMatch(app, /WGSLCompiler\.analyze/, 'renderer compatibility analysis must not be repeated in the app layer');
+assert.match(app, /getRendererDiagnostics:\(\)=>state\.lastRendererDiagnostics/, 'the diagnostic snapshot must be available through the read-only browser API');
+assert.match(app, /optgroup label="Performance benchmarks"/, 'benchmark presets must be grouped separately from general built-ins');
 assert.match(app, /el\.split\.oninput=\(\)=>\{state\.split=Number\(el\.split\.value\);canvasView\.requestDraw\(\);\}/, 'split-preview input must coalesce redraws through animation frames');
 assert.match(controls, /range\.oninput=\(\)=>update\(range\.value\)/, 'range input must update its displayed value continuously');
 assert.match(controls, /range\.onchange=\(\)=>scheduleRender\(\)/, 'range control must render only after the edit is committed');

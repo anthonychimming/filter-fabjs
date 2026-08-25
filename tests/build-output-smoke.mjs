@@ -22,6 +22,7 @@ assert.match(deployedCss, /--panel2:#180e23/, 'deployed CSS must contain the v2.
 assert.match(deployedJavaScript, /background\.addColorStop\(0,'#08050d'\)/, 'deployed JavaScript must contain the v2.1.2 demo artwork');
 const escapedVersion = packageMetadata.version.replaceAll('.', '\\.');
 assert.match(deployedJavaScript, new RegExp(`version:'${escapedVersion}'`), 'deployed JavaScript API must report the package version');
+assert.match(deployedJavaScript, /getRendererDiagnostics/, 'deployed JavaScript must expose the Phase 3.5D renderer diagnostic snapshot');
 
 assert.match(standaloneHtml, new RegExp(`<title>Filter FabJS v${packageMetadata.version.replaceAll('.', '\\.')}<\\/title>`), 'standalone title must match package version');
 assert.doesNotMatch(standaloneHtml, /<link[^>]+href=|<script[^>]+src=|type="module"/, 'standalone build must not depend on external CSS or JavaScript');

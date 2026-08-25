@@ -29,6 +29,10 @@ export class RendererManager{
   async get(id){let renderer=this.instances.get(id);if(!renderer){const factory=this.factories[id];if(!factory)throw new Error(`Unknown renderer backend “${id}”`);renderer=factory();this.instances.set(id,renderer)}while(this.source&&this.instanceVersions.get(id)!==this.sourceVersion){let sync=this.syncPromises.get(id);if(!sync){sync={version:this.sourceVersion,promise:this.syncSource(id,renderer)};this.syncPromises.set(id,sync)}try{await sync.promise}catch(error){if(sync.version===this.sourceVersion)throw error}finally{if(this.syncPromises.get(id)===sync)this.syncPromises.delete(id)}}return renderer}
   programKey(program){return WGSLCompiler.key(program)}
   analyze(program){const key=this.programKey(program),cached=this.analysisCache.get(key);if(cached){this.analysisCache.delete(key);this.analysisCache.set(key,cached);return cached}const analysis=WGSLCompiler.analyze(program),bytes=analysisEntryBytes(key,analysis);if(bytes<=MAX_ANALYSIS_CACHE_BYTES){this.analysisCache.set(key,analysis);this.analysisCacheBytes+=bytes;while(this.analysisCache.size>MAX_ANALYSES||this.analysisCacheBytes>MAX_ANALYSIS_CACHE_BYTES){const oldestKey=this.analysisCache.keys().next().value,oldest=this.analysisCache.get(oldestKey);this.analysisCache.delete(oldestKey);this.analysisCacheBytes-=analysisEntryBytes(oldestKey,oldest)}}return analysis}
+  diagnose(program,preference='auto'){
+    const analysis=this.analyze(program),gpuReason=!analysis.compatible?`GPU subset: ${analysis.blockers.slice(0,3).join(', ')}`:WebGpuRenderer.unavailableReason()||this.gpuFailure(program),gpuEligible=!gpuReason,forcedCpu=preference==='cpu';
+    return{analysis,preference,rendererId:forcedCpu||!gpuEligible?'cpu':'webgpu',mode:forcedCpu?'cpu-selected':gpuEligible?'gpu-eligible':'cpu-fallback',gpuCompatible:analysis.compatible,gpuEligible,gpuReason,operationCount:Number(program?.metadata?.nodeCount)||0,passes:1};
+  }
   gpuFailure(program){
     const key=this.programKey(program),failure=this.gpuFailures.get(key),renderer=this.instances.get('webgpu');
     if(!failure)return'';
@@ -45,9 +49,9 @@ export class RendererManager{
   throwIfCancelled(error,isCurrent){if(error?.name==='RenderCancelledError')throw error;this.assertCurrent(isCurrent)}
   progressHandler(onProgress,isCurrent){return message=>{if(typeof isCurrent==='function'&&!isCurrent())return;onProgress?.(message)}}
   async select(program,preference='auto',isCurrent){
-    const analysis=this.analyze(program);
+    const diagnostic=this.diagnose(program,preference),analysis=diagnostic.analysis;
     if(preference==='cpu'){const renderer=await this.get('cpu');this.assertCurrent(isCurrent);this.active=renderer;return{renderer,analysis,fallbackReason:''}}
-    let reason='';if(!analysis.compatible)reason=`GPU subset: ${analysis.blockers.slice(0,3).join(', ')}`;else reason=WebGpuRenderer.unavailableReason()||this.gpuFailure(program);
+    let reason=diagnostic.gpuReason;
     if(!reason){try{const renderer=await this.get('webgpu');this.assertCurrent(isCurrent);this.active=renderer;return{renderer,analysis,fallbackReason:''}}catch(error){this.throwIfCancelled(error,isCurrent);console.warn('WebGPU initialization failed; using CPU',error);reason=error.message||'WebGPU initialization failed'}}
     const renderer=await this.get('cpu');this.assertCurrent(isCurrent);this.active=renderer;return{renderer,analysis,fallbackReason:reason};
   }

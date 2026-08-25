@@ -72,6 +72,13 @@ const warpedSdfFormulas=[
   `lerp(b,clamp(22+${warpedSdfFill}*(230-${warpedSdfHue}*80),0,255),ctl(9))`,
   'a'
 ];
+const benchmarkNoiseScale='val(0,10,96)',benchmarkNoiseOctaves='val(1,2,8)',benchmarkNoiseSeed='val(2,1,9999)',benchmarkNoiseContrast='val(3,0.65,1.65)';
+const benchmarkNoiseFormulas=[
+  `lerp(r,clamp(fbm(x,y,${benchmarkNoiseScale},${benchmarkNoiseOctaves},2,0.5,${benchmarkNoiseSeed})*255*${benchmarkNoiseContrast},0,255),ctl(9))`,
+  `lerp(g,clamp(turbulence(x+37,y+71,${benchmarkNoiseScale},${benchmarkNoiseOctaves},${benchmarkNoiseSeed})*255*${benchmarkNoiseContrast},0,255),ctl(9))`,
+  `lerp(b,clamp(ridged(x-53,y+29,${benchmarkNoiseScale},${benchmarkNoiseOctaves},${benchmarkNoiseSeed})*255*${benchmarkNoiseContrast},0,255),ctl(9))`,
+  'a'
+];
 
 export const presets=[
 {id:'pass',name:'Pass Through',values:[128,128,128,128,128,128,128,128],labels:Array.from({length:8},(_,i)=>`Control ${i+1}`),f:['r','g','b','a']},
@@ -89,7 +96,8 @@ export const presets=[
 {id:'fractalclouds',name:'Fractal Clouds',values:[58,135,190,128,128,128,128,128],labels:['Scale','Seed','Blend','Control 4','Control 5','Control 6','Control 7','Control 8'],f:Array(3).fill('lerp(c,fbm(x,y,val(0,12,180),5,2,0.5,val(1,1,9999))*255,ctl(2))').concat('a')},
 {id:'sierpinskifractal',name:'Sierpiński Fractal',values:[174,208,32,238,232,214,8,255],labels:['Recursion Depth','Fractal Scale','Edge Softness','Foreground R','Foreground G','Foreground B','Background','Effect Mix'],f:sierpinskiFormulas},
 {id:'halftone',name:'Halftone Dots',values:[72,150,34,128,128,128,128,128],labels:['Cell Size','Dot Size','Softness','Control 4','Control 5','Control 6','Control 7','Control 8'],f:Array(3).fill('(1-smoothstep((255-i)/255*val(1,1,14),(255-i)/255*val(1,1,14)+val(2,0,4),c2m(wrap(x,val(0,4,32))-val(0,4,32)/2,wrap(y,val(0,4,32))-val(0,4,32)/2)))*255').concat('a')},
-{id:'mandelbrotatlas',name:'Mandelbrot Atlas',values:[128,96,128,128,190,220,8,255],labels:['Scale','Center X','Center Y','Iterations','Red Accent','Blue Accent','Interior','Effect Mix'],f:mandelbrotFormulas},
+{id:'mandelbrotatlas',name:'Mandelbrot Atlas',benchmark:true,values:[128,96,128,128,190,220,8,255],labels:['Scale','Center X','Center Y','Iterations','Red Accent','Blue Accent','Interior','Effect Mix'],f:mandelbrotFormulas},
+{id:'layerednoisebenchmark',name:'Layered Noise Benchmark',benchmark:true,values:[92,192,73,150,128,128,128,128,128,255],labels:['Noise Scale','Octaves','Seed','Contrast','Control 5','Control 6','Control 7','Control 8','Control 9','Effect Mix'],f:benchmarkNoiseFormulas},
 {id:'mirrorx',name:'Mirror Horizontal',values:Array(8).fill(128),labels:Array.from({length:8},(_,i)=>`Control ${i+1}`),f:['src(X-1-x,y,0)','src(X-1-x,y,1)','src(X-1-x,y,2)','src(X-1-x,y,3)']},
 {id:'midnighttartan',name:'Midnight Tartan',values:[150,130,100,75,215,128,124,255],labels:['Sett Scale','Broad Stripe','Fine Thread','Weave Spacing','Pattern Strength','Weave Angle','Blue Tone','Effect Mix'],f:tartanFormulas},
 {id:'mosaic',name:'Mosaic',values:[35,35,128,128,128,128,128,128],labels:['Block Width','Block Height','Control 3','Control 4','Control 5','Control 6','Control 7','Control 8'],f:Array(4).fill('srcLinear(floor(x/val(0,2,64))*val(0,2,64)+val(0,2,64)/2,floor(y/val(1,2,64))*val(1,2,64)+val(1,2,64)/2,z)')},
@@ -102,6 +110,6 @@ export const presets=[
 {id:'swirl',name:'Swirl',values:[165,128,128,128,128,128,128,128],labels:['Twist','Control 2','Control 3','Control 4','Control 5','Control 6','Control 7','Control 8'],f:['rad(d+((M-m)*val(0,-260,260))/max(1,M),m,0)','rad(d+((M-m)*val(0,-260,260))/max(1,M),m,1)','rad(d+((M-m)*val(0,-260,260))/max(1,M),m,2)','a']},
 {id:'thresholddither',name:'Threshold Dither',values:[128,60,80,128,128,128,128,128],labels:['Threshold','Pattern Size','Dither Amount','Control 4','Control 5','Control 6','Control 7','Control 8'],f:Array(3).fill('i+(checker(x,y,val(1,2,16),val(1,2,16))*2-1)*val(2,0,64)>=ctl(0)?255:0').concat('a')},
 {id:'vignettepro',name:'Vignette Pro',values:[160,105,128,128,128,128,128,128],labels:['Strength','Radius','Control 3','Control 4','Control 5','Control 6','Control 7','Control 8'],f:Array(3).fill('clamp(c*(1-smoothstep(val(1,0,M),M,m)*val(0,0,100)/100),0,255)').concat('a')},
-{id:'warpedsdfbloom',name:'Warped SDF Bloom',values:[80,100,73,150,100,75,80,48,115,255],labels:['Warp Amount','Warp Scale','Seed','Shape Size','Smooth Union','Cutout Size','Outline Width','Edge Softness','Colour Shift','Effect Mix'],f:warpedSdfFormulas},
+{id:'warpedsdfbloom',name:'Warped SDF Bloom',benchmark:true,values:[80,100,73,150,100,75,80,48,115,255],labels:['Warp Amount','Warp Scale','Seed','Shape Size','Smooth Union','Cutout Size','Outline Width','Edge Softness','Colour Shift','Effect Mix'],f:warpedSdfFormulas},
 {id:'warmcool',name:'Warm–Cool Gradient',values:[120,120,128,128,128,128,128,128],labels:['Warm Strength','Cool Strength','Control 3','Control 4','Control 5','Control 6','Control 7','Control 8'],f:['clamp(r+linearGrad(x,y,0,0,X,Y)*val(0,0,70)-val(1,0,30),0,255)','g','clamp(b+(1-linearGrad(x,y,0,0,X,Y))*val(1,0,70)-val(0,0,30),0,255)','a']}
 ];

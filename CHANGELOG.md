@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.6.4
+
+- Added a live renderer diagnostic beside the backend selector that distinguishes GPU eligibility, explicit CPU selection, and CPU fallback while reporting the authoritative fallback reason, IR operation count, and current one-pass count.
+- Exposed the same manager-owned diagnostic snapshot through `window.FilterFabJS.getRendererDiagnostics()` without duplicating WebGPU compatibility analysis in the application layer.
+- Added a dedicated performance-benchmark preset group for fractal iteration, layered FBM/turbulence/ridged noise, and domain-warped SDF composition, with manager, UI, built-in, build-output, and optional full-preset hardware-parity coverage.
+
 ## 2.6.3
 
 - Added WebGPU-compatible signed-distance primitives for circles, stroked line segments, and rotated boxes plus union, intersection, subtraction, and polynomial smooth-union composition.

@@ -4,7 +4,7 @@ This document describes the implementation currently present in the public repos
 
 ## Release
 
-- Application version: **2.6.3**
+- Application version: **2.6.4**
 - Native filter format: **version 2**
 - Typed IR: **version 1**
 - Development layout: native ES modules
@@ -17,7 +17,7 @@ Filter FabJS provides two rendering backends:
 - **WebGPU** — compiles supported typed IR into WGSL and renders with a full-frame compute/readback submission using direct RGBA byte views. If the device is lost or destroyed to abort active work, the retained source is uploaded to the replacement device on the next GPU render. Generated plans and pipelines use an entry- and payload-bounded LRU cache.
 - **CPU Worker** — compatibility renderer for unsupported WebGPU operations and legacy integer-mode filters. It reuses hot-loop evaluation storage and keeps the current validated IR so control-only renders send only a compact key.
 
-The **Auto** renderer selects WebGPU when the current program is compatible and WebGPU is available; otherwise it reports a fallback reason and uses the CPU Worker. Runtime GPU failures also fall back through the renderer manager, preserving cancellation and suppressing repeated validation attempts for the same device/program pair. WebGPU render and source-upload generations are captured when work is queued, so cancellation prevents stale queued work from starting; cancelling submitted work destroys the device to interrupt pending readback. `WGSLCompiler.analyze()` is the sole WebGPU-capability authority; renderer-neutral IR metadata records semantic facts without predicting backend support. Compatibility analysis reuses compact memoized program keys in an entry- and payload-bounded LRU cache, and unchanged parsed IR is reused for control-only renders. The app, renderer manager, and main-thread renderer state share one immutable source pixel array; the CPU Worker receives its own transferable copy. When a new image is loaded, both backends release the previous source and only the selected backend receives the replacement lazily. A cancelled CPU Worker remains stopped until the next render request.
+The **Auto** renderer selects WebGPU when the current program is compatible and WebGPU is available; otherwise it reports a fallback reason and uses the CPU Worker. A live diagnostic beside the renderer selector distinguishes GPU eligibility, explicit CPU selection, and CPU fallback while showing the typed-IR operation count and current one-pass count; its read-only snapshot is also available through `window.FilterFabJS.getRendererDiagnostics()`. Runtime GPU failures also fall back through the renderer manager, preserving cancellation and suppressing repeated validation attempts for the same device/program pair. WebGPU render and source-upload generations are captured when work is queued, so cancellation prevents stale queued work from starting; cancelling submitted work destroys the device to interrupt pending readback. `WGSLCompiler.analyze()` is the sole WebGPU-capability authority; renderer-neutral IR metadata records semantic facts without predicting backend support. Compatibility analysis reuses compact memoized program keys in an entry- and payload-bounded LRU cache, and unchanged parsed IR is reused for control-only renders. The app, renderer manager, and main-thread renderer state share one immutable source pixel array; the CPU Worker receives its own transferable copy. When a new image is loaded, both backends release the previous source and only the selected backend receives the replacement lazily. A cancelled CPU Worker remains stopped until the next render request.
 
 ## Formula engine
 
@@ -46,7 +46,7 @@ The current formula engine includes:
 
 ## WebGPU compatibility
 
-The WebGPU backend supports the deterministic stateless formula language, including ten controls; normalized and centered coordinates; radius, angle, repeat, mirror-repeat, and scalar palette-ramp helpers; hash, value, Perlin, Worley, FBM, turbulence, ridged and periodic noise; bounded Mandelbrot and Julia fields; procedural patterns; analytic shape, signed-distance composition, and Sierpiński masks; polar sampling; and fixed 3×3 convolution. All 30 native built-in filters are WebGPU-compatible.
+The WebGPU backend supports the deterministic stateless formula language, including ten controls; normalized and centered coordinates; radius, angle, repeat, mirror-repeat, and scalar palette-ramp helpers; hash, value, Perlin, Worley, FBM, turbulence, ridged and periodic noise; bounded Mandelbrot and Julia fields; procedural patterns; analytic shape, signed-distance composition, and Sierpiński masks; polar sampling; and fixed 3×3 convolution. All 31 native built-in filters are WebGPU-compatible. Mandelbrot Atlas, Layered Noise Benchmark, and Warped SDF Bloom are grouped as deterministic performance workloads for manual like-for-like CPU/WebGPU timing comparisons.
 
 Sequential random-state functions (`rnd()` and `rst()`), shared cell operations (`get()` and `put()`), bitwise/shift/comma expressions, direct `pow()` formulas, and legacy integer compatibility remain CPU-only by design.
 
@@ -78,6 +78,7 @@ The repository includes smoke tests for:
 - Ten-control normalization, indices 8/9, fifth-pair mapping, and aligned twelve-slot WebGPU parameter packing.
 - Bounded Mandelbrot/Julia parser, typed-IR, CPU, WGSL, render-budget, built-in, and optional hardware-parity coverage.
 - Signed-distance parser/arity, typed-IR type and metadata, CPU semantics, WGSL generation, domain-warp preset, render-budget, and optional hardware-parity coverage.
+- Manager-owned renderer diagnostics, UI states, browser API exposure, benchmark classification, and optional full-preset CPU/WebGPU pixel parity.
 - CPU Worker pixel rendering.
 - Formula-editor event wiring and focus-safe render behavior.
 - Brand-token contrast, neutral preview-canvas treatment, and the GitHub profile target.

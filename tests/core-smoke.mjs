@@ -18,7 +18,7 @@ for (const preset of presets) {
   else cpuFallback += 1;
 }
 
-assert.equal(presets.length, 30);
+assert.equal(presets.length, 31);
 assert.equal(gpuCompatible, presets.length, 'every native built-in must compile for WebGPU after Phase 3.5');
 assert.equal(cpuFallback, 0, 'native built-ins must not require CPU fallback');
 assert.equal(gpuCompatible + cpuFallback, presets.length);
@@ -32,6 +32,11 @@ assert.equal(warpedSdfPreset?.name,'Warped SDF Bloom','Phase 3.5C must include t
 const warpedSdfPresetProgram=compileFilterProgram(warpedSdfPreset.f.map(formula=>new Parser(formula).parse()));
 for(const name of ['sdfCircle','sdfBox','sdfSmoothUnion','sdfSubtract','sdfFill','sdfOutline','valueNoise'])assert.ok(warpedSdfPresetProgram.metadata.functions.includes(name),`the Phase 3.5C reference preset must use ${name}()`);
 assert.equal(WGSLCompiler.analyze(warpedSdfPresetProgram).compatible,true,'the domain-warped SDF reference preset must remain GPU-compatible');
+const benchmarkPresets=presets.filter(preset=>preset.benchmark);
+assert.deepEqual(benchmarkPresets.map(preset=>preset.id),['mandelbrotatlas','layerednoisebenchmark','warpedsdfbloom'],'Phase 3.5D must expose fractal, layered-noise, and warped-SDF benchmark workloads');
+for(const preset of benchmarkPresets){const program=compileFilterProgram(preset.f.map(formula=>new Parser(formula).parse()));assert.equal(program.metadata.deterministic,true,`${preset.name} benchmark must be deterministic`);assert.equal(program.metadata.stateful,false,`${preset.name} benchmark must remain stateless`);assert.equal(WGSLCompiler.analyze(program).compatible,true,`${preset.name} benchmark must remain GPU-compatible`);}
+const layeredNoiseProgram=compileFilterProgram(benchmarkPresets.find(preset=>preset.id==='layerednoisebenchmark').f.map(formula=>new Parser(formula).parse()));
+for(const name of ['fbm','turbulence','ridged'])assert.ok(layeredNoiseProgram.metadata.functions.includes(name),`the layered-noise benchmark must exercise ${name}()`);
 const native=detectFilterFormat(JSON.stringify({ format: 'filter-fab-js', version: 2, formulas: ['r','g','b','a'] }), 'test.json');
 assert.equal(native.kind, 'native');
 assert.equal(native.data.mathMode, 'float', 'version 2 files without mathMode must normalize to float mode');

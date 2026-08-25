@@ -89,6 +89,17 @@ Object.defineProperty(globalThis,'navigator',{configurable:true,value:{gpu:{}}})
 console.error=()=>{};
 try{
   const program=compileFilterProgram(['r','g','b','a'].map(formula=>new Parser(formula).parse()));
+  const diagnosticManager=new RendererManager({}),eligibleDiagnostic=diagnosticManager.diagnose(program,'auto'),cpuDiagnostic=diagnosticManager.diagnose(program,'cpu'),incompatibleDiagnostic=diagnosticManager.diagnose(legacyProgram,'auto');
+  assert.equal(eligibleDiagnostic.mode,'gpu-eligible','compatible programs with an available WebGPU API must report GPU eligibility');
+  assert.equal(eligibleDiagnostic.rendererId,'webgpu');
+  assert.equal(eligibleDiagnostic.operationCount,program.metadata.nodeCount);
+  assert.equal(eligibleDiagnostic.passes,1,'current typed-IR programs must report one render pass');
+  assert.equal(cpuDiagnostic.mode,'cpu-selected','an explicit CPU preference must remain distinct from fallback');
+  assert.equal(cpuDiagnostic.gpuEligible,true,'CPU selection must still expose independent GPU eligibility');
+  assert.equal(incompatibleDiagnostic.mode,'cpu-fallback');
+  assert.equal(incompatibleDiagnostic.gpuCompatible,false);
+  assert.match(incompatibleDiagnostic.gpuReason,/legacy integer compatibility mode/,'fallback diagnostics must preserve the analyzer blocker');
+  diagnosticManager.dispose();
   class FakeRenderer {
     constructor(id,{render}={}){this.id=id;this.label=id==='webgpu'?'WebGPU':'CPU Worker';this.renderImpl=render;this.renderCalls=0;this.device=id==='webgpu'?{}:null;this.deviceGeneration=id==='webgpu'?1:0}
     async setSource(pixels,width,height){this.source=new Uint8ClampedArray(pixels);this.width=width;this.height=height}

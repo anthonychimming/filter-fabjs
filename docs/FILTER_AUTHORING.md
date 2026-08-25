@@ -1,6 +1,6 @@
 # Filter FabJS Filter Authoring Guide
 
-**Applies to Filter FabJS v2.6.3**
+**Applies to Filter FabJS v2.6.4**
 
 This guide is for designing new Filter FabJS filters efficiently and with predictable CPU/WebGPU behavior. It assumes the formula syntax in [FORMULA_REFERENCE.md](FORMULA_REFERENCE.md).
 
@@ -538,6 +538,8 @@ Relative cost tends to increase roughly as follows:
 7. combinations of repeated high-cost operations.
 
 This is qualitative guidance, not a guaranteed benchmark ordering.
+
+The **Performance benchmarks** preset group provides deterministic fractal-iteration, layered-noise, and warped-SDF workloads. To compare backends, keep the image, preset, and controls unchanged, render once with **CPU** and once with **GPU**, and compare the elapsed times in the status bar. The renderer diagnostic beside the selector confirms whether the program is GPU-eligible or explains why CPU fallback was selected. Browser, GPU, image dimensions, and warm-up state still affect the timings, so treat them as local observations rather than portable scores.
 
 ## 19. Prefer reusable channel formulas
 

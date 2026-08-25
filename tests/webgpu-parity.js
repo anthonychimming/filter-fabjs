@@ -1,6 +1,7 @@
 import { Parser } from '../src/core/formula-language.js';
 import { CONTROL_DEFINITIONS } from '../src/core/controls.js';
 import { compileFilterProgram } from '../src/core/ir.js';
+import { presets } from '../src/presets/builtins.js';
 import { CpuRenderer } from '../src/renderers/cpu-renderer.js';
 import { workerProgram } from '../src/renderers/cpu-worker-source.js';
 import { WebGpuRenderer } from '../src/renderers/webgpu-renderer.js';
@@ -69,6 +70,7 @@ const fixtures = [
 const programFor = formula => compileFilterProgram(
   [formula, formula, formula, formula].map(sourceText => new Parser(sourceText).parse())
 );
+const benchmarkFixtures=presets.filter(preset=>preset.benchmark).map(preset=>({name:`Benchmark preset · ${preset.name}`,program:compileFilterProgram(preset.f.map(formula=>new Parser(formula).parse())),controls:CONTROL_DEFINITIONS.map((definition,index)=>preset.values[index]??definition.defaultValue)}));
 
 function compare(cpuPixels, gpuPixels) {
   let max = 0;
@@ -91,12 +93,12 @@ async function run() {
       cpu.setSource(source, width, height),
       gpu.setSource(source, width, height)
     ]);
-    for (let index = 0; index < fixtures.length; index += 1) {
-      const [name, formula] = fixtures[index];
-      const program = programFor(formula);
+    const parityFixtures=fixtures.map(([name,formula])=>({name,program:programFor(formula),controls})).concat(benchmarkFixtures);
+    for (let index = 0; index < parityFixtures.length; index += 1) {
+      const {name,program,controls:fixtureControls} = parityFixtures[index];
       const [cpuResult, gpuResult] = await Promise.all([
-        cpu.render({ id: index + 1, program, controls, legacyMath: false }),
-        gpu.render({ program, controls })
+        cpu.render({ id: index + 1, program, controls:fixtureControls, legacyMath: false }),
+        gpu.render({ program, controls:fixtureControls })
       ]);
       const delta = compare(cpuResult.pixels, gpuResult.pixels);
       const ok = delta.max <= 3 && delta.mean <= 0.35;
@@ -109,9 +111,9 @@ async function run() {
     cpu.dispose();
     gpu.dispose();
   }
-  const ok = passed === fixtures.length;
+  const fixtureCount=fixtures.length+benchmarkFixtures.length,ok = passed === fixtureCount;
   summary.className = ok ? 'pass' : 'fail';
-  summary.textContent = `${passed}/${fixtures.length} fixtures passed on actual WebGPU hardware.`;
+  summary.textContent = `${passed}/${fixtureCount} fixtures passed on actual WebGPU hardware.`;
 }
 
 run().catch(error => {
