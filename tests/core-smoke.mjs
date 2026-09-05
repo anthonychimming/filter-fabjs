@@ -4,12 +4,15 @@ import { FORMULA_LIMITS, MAX_FRACTAL_ITERATIONS, Parser } from '../src/core/form
 import { compileFilterProgram, IRType } from '../src/core/ir.js';
 import { presets } from '../src/presets/builtins.js';
 import { WGSLCompiler } from '../src/gpu/wgsl-compiler.js';
-import { detectFilterFormat, FILTER_TEXT_MAX_LENGTH, getValidatedFormulaAsts, parseAFS, validateNativeFilter } from '../src/io/filter-format.js';
+import { detectFilterFormat, FILTER_DESCRIPTION_MAX_LENGTH, FILTER_TEXT_MAX_LENGTH, getValidatedFormulaAsts, parseAFS, validateNativeFilter } from '../src/io/filter-format.js';
 
 let gpuCompatible = 0;
 let cpuFallback = 0;
 for (const preset of presets) {
   const formulas = preset.formulas || preset.f;
+  assert.equal(typeof preset.description,'string',`${preset.name} must include filter-level description metadata`);
+  assert.ok(preset.description.trim(),`${preset.name} must include a useful description`);
+  assert.ok(preset.description.length<=FILTER_DESCRIPTION_MAX_LENGTH,`${preset.name} description must stay within the native metadata limit`);
   assert.equal(formulas.length, 4, `${preset.name} must have four formulas`);
   const program = compileFilterProgram(formulas.map(formula => new Parser(formula).parse()));
   assert.equal(program.outputs.length, 4);
@@ -40,6 +43,9 @@ for(const name of ['fbm','turbulence','ridged'])assert.ok(layeredNoiseProgram.me
 const native=detectFilterFormat(JSON.stringify({ format: 'filter-fab-js', version: 2, formulas: ['r','g','b','a'] }), 'test.json');
 assert.equal(native.kind, 'native');
 assert.equal(native.data.mathMode, 'float', 'version 2 files without mathMode must normalize to float mode');
+assert.equal(native.data.description,'','legacy native files without description metadata must normalize to an empty string');
+const describedNative=validateNativeFilter({format:'filter-fab-js',version:2,name:'Described',description:'  First line.\nSecond line.  ',formulas:['r','g','b','a']});
+assert.equal(describedNative.description,'First line.\nSecond line.','native descriptions must preserve internal line breaks while trimming their outer whitespace');
 assert.equal(CONTROL_COUNT,10,'Phase 3.5A must expose ten data-driven formula controls');
 assert.equal(native.data.controls.length, CONTROL_COUNT, 'native controls must normalize completely before UI mutation');
 assert.deepEqual(native.data.controls[0],{label:'Control 1',value:128});
@@ -87,6 +93,7 @@ const afsHeader='%RGB-1.0\n128\n128\n128\n128\n128\n128\n128\n128\n';
 const afsWithFirstControl=value=>`%RGB-1.0\n${value}\n128\n128\n128\n128\n128\n128\n128\nr\ng\nb\na\n`;
 const fourGroupAfs=parseAFS(`${afsHeader}r\n\ng\n\nb\n\na\n`,'test.afs');
 assert.deepEqual(fourGroupAfs.f,['r','g','b','a'],'AFS import must accept exactly four separated formula groups');
+assert.equal(fourGroupAfs.description,'','historic AFS imports must normalize missing description metadata to an empty string');
 assert.equal(getValidatedFormulaAsts(fourGroupAfs)?.length,4,'AFS validation must carry its parsed channel ASTs into application preparation');
 assert.equal(parseAFS(afsWithFirstControl('  +128  '),'spaced-control.afs').values[0],128,'AFS controls may retain surrounding whitespace and an integer sign');
 assert.equal(parseAFS(afsWithFirstControl('-1'),'low-control.afs').values[0],0,'valid AFS integers below the control range must retain legacy clamping');
@@ -112,6 +119,8 @@ assert.throws(()=>validateNativeFilter({format:'filter-fab-js',version:2,formula
 assert.throws(()=>validateNativeFilter({format:'filter-fab-js',version:2,formulas:['r','g','b','a'],controls:[{label:'Bad',value:Number.NaN}]}),/finite number/);
 assert.throws(()=>validateNativeFilter({format:'filter-fab-js',version:2,formulas:['r','g','b','a'],controls:[{label:{},value:128}]}),/label must be a string/);
 assert.throws(()=>validateNativeFilter({format:'filter-fab-js',version:2,name:{},formulas:['r','g','b','a']}),/name must be a string/);
+assert.throws(()=>validateNativeFilter({format:'filter-fab-js',version:2,description:{},formulas:['r','g','b','a']}),/description must be a string/);
+assert.throws(()=>validateNativeFilter({format:'filter-fab-js',version:2,description:'x'.repeat(FILTER_DESCRIPTION_MAX_LENGTH+1),formulas:['r','g','b','a']}),new RegExp(`description exceeds ${FILTER_DESCRIPTION_MAX_LENGTH} characters`));
 assert.throws(()=>validateNativeFilter({format:'filter-fab-js',version:2,formulas:['r','g','unknown','a']}),/channel 3: Unknown variable/);
 assert.throws(()=>detectFilterFormat(' '.repeat(FILTER_TEXT_MAX_LENGTH+1),'large.json'),/KiB limit/);
 assert.throws(()=>new Parser('-'.repeat(FORMULA_LIMITS.maxDepth+1)+'1').parse(),/nesting limit/,'deep formulas must fail predictably instead of overflowing the stack');

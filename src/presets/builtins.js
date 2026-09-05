@@ -79,8 +79,41 @@ const benchmarkNoiseFormulas=[
   `lerp(b,clamp(ridged(x-53,y+29,${benchmarkNoiseScale},${benchmarkNoiseOctaves},${benchmarkNoiseSeed})*255*${benchmarkNoiseContrast},0,255),ctl(9))`,
   'a'
 ];
+const presetDescriptions={
+  pass:'Returns the source image unchanged. Use it as a neutral starting point for a new filter.',
+  invert:'Inverts the red, green, and blue channels while preserving the source alpha channel.',
+  amberfilm:'Applies a warm amber film grade with adjustable strength and warmth. It works especially well on portraits and high-contrast scenes.',
+  analyticshapesampler:'Demonstrates the analytic line, circle, ring, rotated-box, triangle, and grid masks with adjustable geometry, colour, and source mixing.',
+  analoggrain:'Adds deterministic monochrome grain to simulate a lightly textured analog image. Adjust Amount for intensity and Seed for a different grain pattern.',
+  brightcontrast:'Adjusts image brightness and contrast while preserving colour relationships and alpha.',
+  cellular:'Blends the source with deterministic Worley-cell edges. Smaller cells create finer structures; Seed changes the cellular layout.',
+  channelglitch:'Offsets RGB channels by deterministic horizontal bands to create a colour-split glitch. Adjust band height, displacement, seed, and source mix.',
+  chromasolar:'Solarizes each colour channel around a shared threshold with adjustable channel separation.',
+  digitalglitch:'Displaces RGB channels in deterministic rectangular blocks. Block dimensions, displacement, and seed control the glitch structure.',
+  directionalecho:'Blends two directional source samples with the original image to create a repeated motion echo.',
+  duotone:'Maps source luminance between editable shadow and highlight colours for a two-colour treatment.',
+  fractalclouds:'Blends the image with deterministic multi-octave fractal noise. Adjust scale, seed, and mix to create cloud-like texture.',
+  sierpinskifractal:'Generates a recursive triangular Sierpiński mask with adjustable depth, scale, edge softness, colours, and source mix.',
+  halftone:'Converts luminance into a repeating field of soft halftone dots with adjustable cell size, dot size, and softness.',
+  mandelbrotatlas:'Renders a bounded Mandelbrot escape-time field with adjustable framing, iterations, palette accents, and source mix. It also serves as the fractal compute benchmark.',
+  layerednoisebenchmark:'Exercises bounded FBM, turbulence, and ridged noise in separate colour channels for repeatable CPU/WebGPU performance and parity comparisons.',
+  mirrorx:'Mirrors the source image horizontally while preserving all four channels.',
+  midnighttartan:'Builds a dark tartan textile from layered grid masks, pinstripes, rotated thread hatching, and adjustable source mixing.',
+  mosaic:'Samples the centre of repeating rectangular blocks to produce a pixelated mosaic.',
+  noisedisplace:'Displaces source-image coordinates with two deterministic value-noise fields. Adjust scale, strength, and seed to vary the distortion.',
+  poster:'Reduces each RGB channel to a controlled number of tonal levels while preserving alpha.',
+  rgbshift:'Offsets the red, green, and blue channels independently in two dimensions for chromatic misregistration effects.',
+  saturation:'Adjusts colour saturation around perceptual luminance, from grayscale through exaggerated colour.',
+  sharpen:'Blends a fixed 3×3 sharpening convolution with the source image.',
+  softfocus:'Blends four diagonal bilinear samples with the original image to produce an adjustable soft-focus glow.',
+  swirl:'Rotates source sampling progressively around the image centre to create a radial swirl.',
+  thresholddither:'Applies a checker-pattern offset before luminance thresholding to create a two-tone ordered dither.',
+  vignettepro:'Darkens the image progressively toward the edges with adjustable strength and radius.',
+  warpedsdfbloom:'Combines, subtracts, outlines, and noise-warps signed-distance shapes. It also serves as the SDF composition benchmark.',
+  warmcool:'Applies opposing warm and cool colour shifts along a diagonal image gradient.'
+};
 
-export const presets=[
+const presetDefinitions=[
 {id:'pass',name:'Pass Through',values:[128,128,128,128,128,128,128,128],labels:Array.from({length:8},(_,i)=>`Control ${i+1}`),f:['r','g','b','a']},
 {id:'invert',name:'Invert',values:Array(8).fill(128),labels:Array.from({length:8},(_,i)=>`Control ${i+1}`),f:['255-r','255-g','255-b','a']},
 {id:'amberfilm',name:'Amber Film',values:[115,140,128,128,128,128,128,128],labels:['Strength','Warmth','Control 3','Control 4','Control 5','Control 6','Control 7','Control 8'],f:['lerp(r,clamp(i+val(1,10,65),0,255),ctl(0))','lerp(g,clamp(i+val(1,-10,20),0,255),ctl(0))','lerp(b,clamp(i-val(1,15,80),0,255),ctl(0))','a']},
@@ -113,3 +146,5 @@ export const presets=[
 {id:'warpedsdfbloom',name:'Warped SDF Bloom',benchmark:true,values:[80,100,73,150,100,75,80,48,115,255],labels:['Warp Amount','Warp Scale','Seed','Shape Size','Smooth Union','Cutout Size','Outline Width','Edge Softness','Colour Shift','Effect Mix'],f:warpedSdfFormulas},
 {id:'warmcool',name:'Warm–Cool Gradient',values:[120,120,128,128,128,128,128,128],labels:['Warm Strength','Cool Strength','Control 3','Control 4','Control 5','Control 6','Control 7','Control 8'],f:['clamp(r+linearGrad(x,y,0,0,X,Y)*val(0,0,70)-val(1,0,30),0,255)','g','clamp(b+(1-linearGrad(x,y,0,0,X,Y))*val(1,0,70)-val(0,0,30),0,255)','a']}
 ];
+
+export const presets=presetDefinitions.map(preset=>({...preset,description:presetDescriptions[preset.id]}));

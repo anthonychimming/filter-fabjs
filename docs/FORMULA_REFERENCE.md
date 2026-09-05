@@ -1,6 +1,6 @@
 # Filter FabJS Formula Reference
 
-**Applies to Filter FabJS v2.6.4 · native filter format v2 · typed IR v1**
+**Applies to Filter FabJS v2.6.5 · native filter format v2 · typed IR v1**
 
 This is the compact, implementation-oriented reference for writing Filter FabJS formulas. For worked explanations and tutorials, see the [Filter FabJS Programming Guide (PDF)](Filter_FabJS_Programming_Guide_v2.4.7.pdf). For analytic mask details, see [ANALYTIC_SHAPES.md](ANALYTIC_SHAPES.md).
 
@@ -407,6 +407,7 @@ Native v2 filters use four formulas and up to ten controls:
   "version": 2,
   "mathMode": "float",
   "name": "Example",
+  "description": "Inverts the source RGB channels with an adjustable mix.",
   "author": "",
   "formulas": [
     "lerp(r,255-r,ctl(0))",
@@ -420,7 +421,7 @@ Native v2 filters use four formulas and up to ten controls:
 }
 ```
 
-Missing control entries are filled to ten controls with value `128`, so existing eight-control files remain valid without migration. Native filter files are limited to 256 KiB.
+Missing control entries are filled to ten controls with value `128`, so existing eight-control files remain valid without migration. The optional top-level `description` is limited to 2,000 characters and defaults to an empty string when absent. Native filter files are limited to 256 KiB.
 
 ## 16. Common correctness traps
 

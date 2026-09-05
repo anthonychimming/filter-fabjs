@@ -2,19 +2,21 @@ import assert from 'node:assert/strict';
 import { applyPresetSafely, findCustomPresetById, importLatestFilterFile, initializeImagePreview, normalizeCustomPresetList, upsertCustomPreset, validateFilterForPersistence } from '../src/app/filter-fab-app.js';
 
 function deferred(){let resolve,reject;const promise=new Promise((nextResolve,nextReject)=>{resolve=nextResolve;reject=nextReject;});return{promise,resolve,reject};}
-function filterText(name){return JSON.stringify({format:'filter-fab-js',version:2,name,formulas:['r','g','b','a']});}
+function filterText(name,description=''){return JSON.stringify({format:'filter-fab-js',version:2,name,description,formulas:['r','g','b','a']});}
 function filterFile(name,textPromise){return{name:`${name}.json`,size:128,text:()=>textPromise};}
 
 {
   const state={filterLoadId:0,isRendering:false},firstText=deferred(),secondText=deferred(),applied=[];
-  const dependencies={state,cancelRender:async()=>assert.fail('stale imports must not cancel rendering'),applyFilter:filter=>applied.push(filter.name)};
+  const dependencies={state,cancelRender:async()=>assert.fail('stale imports must not cancel rendering'),applyFilter:filter=>applied.push({name:filter.name,description:filter.description})};
   const first=importLatestFilterFile(filterFile('first',firstText.promise),dependencies);
   const second=importLatestFilterFile(filterFile('second',secondText.promise),dependencies);
-  secondText.resolve(filterText('Second'));
-  assert.equal((await second).data.name,'Second','the newest completed import must be applied');
+  secondText.resolve(filterText('Second','Newest description'));
+  const secondResult=await second;
+  assert.equal(secondResult.data.name,'Second','the newest completed import must be applied');
+  assert.equal(secondResult.data.description,'Newest description','native import must preserve description metadata');
   firstText.resolve(filterText('First'));
   assert.equal(await first,null,'an older import that completes last must be ignored');
-  assert.deepEqual(applied,['Second'],'a stale import must not overwrite the newer filter');
+  assert.deepEqual(applied,[{name:'Second',description:'Newest description'}],'a stale import must not overwrite the newer described filter');
 }
 
 {
@@ -78,11 +80,11 @@ function filterFile(name,textPromise){return{name:`${name}.json`,size:128,text:(
 }
 
 {
-  const existing={format:'filter-fab-js',version:2,name:'Existing',id:'preset-existing',formulas:['r','g','b','a']},replacement={format:'filter-fab-js',version:2,formulas:['255-r','g','b','a']};
+  const existing={format:'filter-fab-js',version:2,name:'Existing',description:'Old description',id:'preset-existing',formulas:['r','g','b','a']},replacement={format:'filter-fab-js',version:2,description:'Replacement description',formulas:['255-r','g','b','a']};
   const updated=upsertCustomPreset([existing],replacement,'Existing',()=>assert.fail('overwriting a preset must preserve its stable ID'));
-  assert.equal(updated.preset.id,'preset-existing');assert.equal(updated.list[0],updated.preset);
+  assert.equal(updated.preset.id,'preset-existing');assert.equal(updated.preset.description,'Replacement description','overwriting a local preset must preserve edited description metadata');assert.equal(updated.list[0],updated.preset);
   const added=upsertCustomPreset(updated.list,replacement,'Added',()=> 'preset-added');
-  assert.equal(added.preset.id,'preset-added');assert.equal(findCustomPresetById(added.list,'preset-existing').name,'Existing');assert.equal(findCustomPresetById(added.list,'preset-added').name,'Added');
+  assert.equal(added.preset.id,'preset-added');assert.equal(added.preset.description,'Replacement description','new local presets must carry description metadata');assert.equal(findCustomPresetById(added.list,'preset-existing').name,'Existing');assert.equal(findCustomPresetById(added.list,'preset-added').name,'Added');
 }
 
 console.log('App workflow smoke checks passed.');

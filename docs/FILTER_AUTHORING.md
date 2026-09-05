@@ -1,6 +1,6 @@
 # Filter FabJS Filter Authoring Guide
 
-**Applies to Filter FabJS v2.6.4**
+**Applies to Filter FabJS v2.6.5**
 
 This guide is for designing new Filter FabJS filters efficiently and with predictable CPU/WebGPU behavior. It assumes the formula syntax in [FORMULA_REFERENCE.md](FORMULA_REFERENCE.md).
 
@@ -650,6 +650,7 @@ A: a
   "version": 2,
   "mathMode": "float",
   "name": "New Filter",
+  "description": "Explains what the filter does, which images suit it, and how its main controls affect the result.",
   "author": "",
   "formulas": [
     "lerp(r,255-r,ctl(7))",
@@ -670,7 +671,7 @@ A: a
 }
 ```
 
-Native v2 filters should normally use `"mathMode": "float"`.
+Native v2 filters should normally use `"mathMode": "float"`. `description` is optional top-level metadata, supports internal line breaks, and is limited to 2,000 characters. Give built-ins and shareable presets a concise explanation of the effect, suitable source images, and the most important controls; older filters without a description remain valid.
 
 ## 24. Preflight checklist
 

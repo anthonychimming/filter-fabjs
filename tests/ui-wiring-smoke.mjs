@@ -4,6 +4,7 @@ import fs from 'node:fs';
 const app = fs.readFileSync('src/app/filter-fab-app.js', 'utf8');
 const controls = fs.readFileSync('src/ui/controls.js', 'utf8');
 const html = fs.readFileSync('index.html', 'utf8');
+const css = fs.readFileSync('styles/app.css', 'utf8');
 
 assert.match(html, /id="renderBtn"/, 'formula editor must expose an explicit Render action');
 assert.match(html, /id="formulaEditStatus"/, 'formula editor must expose preview state');
@@ -63,5 +64,10 @@ assert.match(controls, /slider-label" type="text" maxlength="80"/, 'control labe
 assert.match(controls, /for\(const definition of CONTROL_DEFINITIONS\)/, 'the control panel must be generated from the shared control definitions');
 assert.match(html, /id="filterName"[^>]+maxlength="120"/, 'filter names must be bounded in the editor');
 assert.match(html, /id="filterAuthor"[^>]+maxlength="120"/, 'filter authors must be bounded in the editor');
+assert.match(html, /id="filterDescription"[^>]+rows="4"[^>]+maxlength="2000"/, 'filter descriptions must use a bounded four-line textarea');
+assert.match(css, /\.filter-description textarea\{height:82px;max-height:82px;resize:none;overflow-y:auto;/, 'the description editor must stay visually capped and scroll internally');
+assert.match(app, /description:el\.description\.value\.trim\(\)\.slice\(0,FILTER_DESCRIPTION_MAX_LENGTH\)/, 'native exports and local presets must read bounded filter-level description metadata');
+assert.match(app, /el\.description\.value=next\.description/, 'applying imported and built-in filters must restore description metadata into the editor');
+assert.match(app, /description=String\(definition\.description\?\?''\)\.trim\(\)/, 'older filters must normalize a missing description to an empty string');
 
 console.log('UI wiring smoke checks passed.');

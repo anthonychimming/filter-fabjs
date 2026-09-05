@@ -4,7 +4,7 @@ This document describes the implementation currently present in the public repos
 
 ## Release
 
-- Application version: **2.6.4**
+- Application version: **2.6.5**
 - Native filter format: **version 2**
 - Typed IR: **version 1**
 - Development layout: native ES modules
@@ -57,6 +57,7 @@ Compatibility is analyzed from typed IR before a render is dispatched.
 Current workflows include:
 
 - Strictly validated and normalized Filter FabJS native JSON v1/v2 import plus version 2 export.
+- Optional multiline filter descriptions, bounded to 2,000 characters and preserved through all 31 built-ins, native import/export, and browser-local presets; missing descriptions normalize to an empty string.
 - Historic `.afs` import with legacy integer math, eight whole-token integer controls with legacy 0–255 clamping, exactly four formula groups, preserved physical line-comment boundaries, and the same formula budgets.
 - Image loading and drag-and-drop.
 - Clipboard image paste.
@@ -75,6 +76,7 @@ The repository includes smoke tests for:
 - Analytic shape-mask CPU semantics and optional CPU/WebGPU pixel parity.
 - An optional browser parity suite comparing CPU and WebGPU pixels on actual WebGPU hardware.
 - Native JSON and AFS format handling.
+- Description metadata bounds, backward-compatible defaults, built-in coverage, local-preset persistence, and four-line editor wiring.
 - Ten-control normalization, indices 8/9, fifth-pair mapping, and aligned twelve-slot WebGPU parameter packing.
 - Bounded Mandelbrot/Julia parser, typed-IR, CPU, WGSL, render-budget, built-in, and optional hardware-parity coverage.
 - Signed-distance parser/arity, typed-IR type and metadata, CPU semantics, WGSL generation, domain-warp preset, render-budget, and optional hardware-parity coverage.

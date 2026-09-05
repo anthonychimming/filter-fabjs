@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.6.5
+
+- Added an editable four-line Description field beneath Controls and preserved its multiline value as top-level filter metadata through built-ins, native JSON import/export, and browser-local preset creation or replacement.
+- Bounded descriptions to 2,000 characters during UI entry and untrusted native-filter validation, while native v1/v2 files, historic AFS imports, and older local presets without the field continue to load with an empty description.
+- Added concise descriptions to all 31 built-ins plus focused format, persistence, preset, and UI regression coverage without changing native filter format v2, typed IR v1, or either renderer.
+
 ## 2.6.4
 
 - Added a live renderer diagnostic beside the backend selector that distinguishes GPU eligibility, explicit CPU selection, and CPU fallback while reporting the authoritative fallback reason, IR operation count, and current one-pass count.

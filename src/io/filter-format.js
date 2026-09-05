@@ -9,6 +9,7 @@ import { FORMULA_LIMITS, Parser } from '../core/formula-language.js';
 
 export const FILTER_FILE_MAX_BYTES=256*1024;
 export const FILTER_TEXT_MAX_LENGTH=256*1024;
+export const FILTER_DESCRIPTION_MAX_LENGTH=2000;
 const validatedFormulaAsts=new WeakMap();
 
 export function normalizeFilterText(text){return String(text??'').replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n')}
@@ -54,7 +55,7 @@ export function validateNativeFilter(data){
   if(!Number.isInteger(data.version)||![1,2].includes(data.version))throw new Error('Native filter version must be 1 or 2');
   if(data.mathMode!==undefined&&!['float','legacy'].includes(data.mathMode))throw new Error('Native filter mathMode must be “float” or “legacy”');
   const formulas=validatedFormulas(Array.isArray(data.formulas)?data.formulas:data.f);
-  const result={format:'filter-fab-js',version:data.version,mathMode:data.mathMode??(data.version===1?'legacy':'float'),name:boundedString(data.name,'name',120,'Untitled Filter'),author:boundedString(data.author,'author',120),formulas:formulas.normalized,controls:normalizeNativeControls(data)};
+  const result={format:'filter-fab-js',version:data.version,mathMode:data.mathMode??(data.version===1?'legacy':'float'),name:boundedString(data.name,'name',120,'Untitled Filter'),description:boundedString(data.description,'description',FILTER_DESCRIPTION_MAX_LENGTH),author:boundedString(data.author,'author',120),formulas:formulas.normalized,controls:normalizeNativeControls(data)};
   validatedFormulaAsts.set(result,formulas.asts);return result;
 }
 export function cleanAFSFormula(group){
@@ -96,7 +97,7 @@ export function parseAFS(text,fileName=''){
   if(f.length!==4)throw new Error(`AFS file contains ${f.length} channel formula${f.length===1?'':'s'}; expected 4`);
   const formulas=validatedFormulas(f,'AFS filter');
   const base=String(fileName||'').replace(/\.[^.]+$/,'').trim();
-  const result={format:'filter-factory-afs',version:header.replace(/^%RGB-?/i,'')||'1.0',name:base||'Imported AFS Filter',author:'',mathMode:'legacy',values,labels:Array.from({length:8},(_,i)=>`Control ${i+1}`),f:formulas.normalized};
+  const result={format:'filter-factory-afs',version:header.replace(/^%RGB-?/i,'')||'1.0',name:base||'Imported AFS Filter',description:'',author:'',mathMode:'legacy',values,labels:Array.from({length:8},(_,i)=>`Control ${i+1}`),f:formulas.normalized};
   validatedFormulaAsts.set(result,formulas.asts);return result;
 }
 export function detectFilterFormat(text,fileName=''){

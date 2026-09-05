@@ -1,6 +1,6 @@
 # Architecture
 
-Filter FabJS v2.6.4 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
+Filter FabJS v2.6.5 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
 
 ```text
 Formula text
@@ -28,8 +28,8 @@ RGBA pixel output
 - `src/renderers/cpu-renderer.js` — CPU Worker lifecycle, shared retained source, keyed IR reuse, rendering, progress, lazy restart, and cancellation.
 - `src/renderers/webgpu-renderer.js` — recoverable GPU buffers, shared retained source, entry/byte-bounded WGSL-plan/pipeline reuse, direct RGBA upload/readback, full-frame dispatch, source release, and queued/active cancellation.
 - `src/renderers/renderer-manager.js` — renderer selection, immutable source coordination, entry/byte-bounded compatibility analysis and diagnostic snapshots, lazy source synchronization, inactive-backend release, cancellation-aware runtime CPU fallback, and bounded repeated program-failure quarantine.
-- `src/presets/builtins.js` — built-in filter definitions.
-- `src/io/filter-format.js` — size-bounded native JSON and historic AFS validation, normalization, parsing, and validated-AST handoff to application preparation.
+- `src/presets/builtins.js` — built-in filter definitions and their human-readable descriptions.
+- `src/io/filter-format.js` — size-bounded native JSON and historic AFS validation, normalized filter-level metadata, parsing, and validated-AST handoff to application preparation.
 - `src/io/image-io.js` — image and clipboard encoding helpers.
 - `src/ui/*` — DOM, controls, and canvas presentation.
 - `src/app/filter-fab-app.js` — application state and browser UI orchestration.
@@ -43,6 +43,8 @@ RGBA pixel output
 5. CPU fallback must remain explicit and report why GPU execution was unavailable or incompatible.
 6. File-format parsing belongs in `io/`; rendering code should not know how a filter was loaded.
 7. Shared application state should be coordinated by the app layer rather than mutated from renderer/compiler internals.
+
+Filter descriptions are optional top-level metadata beside `name` and `author`. They are normalized before UI mutation and persistence, remain outside control state and typed IR, and do not affect renderer selection or program cache keys.
 
 ## Current WebGPU boundary
 
