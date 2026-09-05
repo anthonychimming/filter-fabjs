@@ -80,11 +80,11 @@ function filterFile(name,textPromise){return{name:`${name}.json`,size:128,text:(
 }
 
 {
-  const existing={format:'filter-fab-js',version:2,name:'Existing',description:'Old description',id:'preset-existing',formulas:['r','g','b','a']},replacement={format:'filter-fab-js',version:2,description:'Replacement description',formulas:['255-r','g','b','a']};
+  const controlUI={widget:'slider',displayMin:0,displayMax:100,step:1,format:'number',unit:'%'},existing={format:'filter-fab-js',version:2,name:'Existing',description:'Old description',id:'preset-existing',formulas:['r','g','b','a']},replacement={format:'filter-fab-js',version:2,description:'Replacement description',formulas:['255-r','g','b','a'],controls:[{label:'Mix',value:192,ui:controlUI}]};
   const updated=upsertCustomPreset([existing],replacement,'Existing',()=>assert.fail('overwriting a preset must preserve its stable ID'));
-  assert.equal(updated.preset.id,'preset-existing');assert.equal(updated.preset.description,'Replacement description','overwriting a local preset must preserve edited description metadata');assert.equal(updated.list[0],updated.preset);
+  assert.equal(updated.preset.id,'preset-existing');assert.equal(updated.preset.description,'Replacement description','overwriting a local preset must preserve edited description metadata');assert.deepEqual(updated.preset.controls[0].ui,controlUI,'overwriting a local preset must preserve rich control metadata');assert.equal(updated.list[0],updated.preset);
   const added=upsertCustomPreset(updated.list,replacement,'Added',()=> 'preset-added');
-  assert.equal(added.preset.id,'preset-added');assert.equal(added.preset.description,'Replacement description','new local presets must carry description metadata');assert.equal(findCustomPresetById(added.list,'preset-existing').name,'Existing');assert.equal(findCustomPresetById(added.list,'preset-added').name,'Added');
+  assert.equal(added.preset.id,'preset-added');assert.equal(added.preset.description,'Replacement description','new local presets must carry description metadata');assert.deepEqual(added.preset.controls[0].ui,controlUI,'new local presets must carry rich control metadata');assert.equal(findCustomPresetById(added.list,'preset-existing').name,'Existing');assert.equal(findCustomPresetById(added.list,'preset-added').name,'Added');
 }
 
 console.log('App workflow smoke checks passed.');

@@ -50,6 +50,10 @@ const renderProgram = async (program,programKey,includeProgram=true) => {
 const result = await render(['255-r','255-g','255-b','a']);
 assert.deepEqual([...new Uint8ClampedArray(result.buffer)], [245,235,225,255, 155,145,135,128, 255,255,0,255, 0,255,255,255]);
 
+const posterPreset=presets.find(preset=>preset.id==='poster'),posterControls=defaultControlValues();posterControls[0]=0;
+const twoLevelPoster=await render(posterPreset.f,{controls:posterControls});
+assert.deepEqual([...twoLevelPoster],[0,0,0,255,0,0,0,128,0,0,255,255,255,0,0,255],'two-level Posterize must quantize to the full 0–255 endpoint range');
+
 const numericEdges = await render(['round(0.5)*255','pow(-2,2)','c2d(0,0)','a']);
 assert.deepEqual([...numericEdges], [255,4,0,255, 255,4,0,128, 255,4,0,255, 255,4,0,255], 'CPU fallback semantics must remain defined at GPU edge cases');
 
@@ -113,7 +117,11 @@ const maximalFormula=Array(2048).fill('r').join('+'),maximalProgram=compileFilte
 assert.ok(estimateCpuProgramCost(maximalProgram)>MAX_CPU_RENDER_WORK/(1800*1800));
 assert.throws(()=>assertCpuRenderBudget(maximalProgram,1800,1800),error=>error?.name==='RenderBudgetError','maximal imported programs must be rejected before full-size CPU dispatch');
 assert.doesNotThrow(()=>assertCpuRenderBudget(maximalProgram,64,64),'the CPU budget must remain image-scaled for small previews');
-for(const preset of presets){const program=compileFilterProgram(preset.f.map(formula=>new Parser(formula).parse()));assert.doesNotThrow(()=>assertCpuRenderBudget(program,1800,1800),`built-in ${preset.id} must remain CPU-renderable at the maximum image size`)}
+for(const preset of presets){
+  const program=compileFilterProgram(preset.f.map(formula=>new Parser(formula).parse()));assert.doesNotThrow(()=>assertCpuRenderBudget(program,1800,1800),`built-in ${preset.id} must remain CPU-renderable at the maximum image size`);
+  const defaults=defaultControlValues();preset.controls.forEach((control,index)=>defaults[index]=control.value);
+  for(const controls of [defaults,defaults.map(()=>0),defaults.map(()=>255)])assert.equal((await render(preset.f,{controls})).length,16,`built-in ${preset.id} must render at default and control extremes`);
+}
 const firstCachedResult=await renderProgram(cachedProgram,'identity-program');
 const reusedCachedResult=await renderProgram(null,'identity-program',false);
 assert.deepEqual([...reusedCachedResult],[...firstCachedResult],'the worker must reuse a previously validated IR program when only its cache key is sent');

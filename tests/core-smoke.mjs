@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { CONTROL_COUNT } from '../src/core/controls.js';
+import { CONTROL_COUNT, DEFAULT_CONTROL_UI } from '../src/core/controls.js';
 import { FORMULA_LIMITS, MAX_FRACTAL_ITERATIONS, Parser } from '../src/core/formula-language.js';
 import { compileFilterProgram, IRType } from '../src/core/ir.js';
 import { presets } from '../src/presets/builtins.js';
@@ -8,6 +8,7 @@ import { detectFilterFormat, FILTER_DESCRIPTION_MAX_LENGTH, FILTER_TEXT_MAX_LENG
 
 let gpuCompatible = 0;
 let cpuFallback = 0;
+const genericControlUI={...DEFAULT_CONTROL_UI};
 for (const preset of presets) {
   const formulas = preset.formulas || preset.f;
   assert.equal(typeof preset.description,'string',`${preset.name} must include filter-level description metadata`);
@@ -48,12 +49,12 @@ const describedNative=validateNativeFilter({format:'filter-fab-js',version:2,nam
 assert.equal(describedNative.description,'First line.\nSecond line.','native descriptions must preserve internal line breaks while trimming their outer whitespace');
 assert.equal(CONTROL_COUNT,10,'Phase 3.5A must expose ten data-driven formula controls');
 assert.equal(native.data.controls.length, CONTROL_COUNT, 'native controls must normalize completely before UI mutation');
-assert.deepEqual(native.data.controls[0],{label:'Control 1',value:128});
-assert.deepEqual(native.data.controls[9],{label:'Control 10',value:128},'older native filters must gain default controls 8 and 9 without migration');
+assert.deepEqual(native.data.controls[0],{label:'Control 1',value:128,ui:genericControlUI});
+assert.deepEqual(native.data.controls[9],{label:'Control 10',value:128,ui:genericControlUI},'older native filters must gain default controls 8 and 9 without migration');
 assert.equal(getValidatedFormulaAsts(native.data)?.length,4,'native validation must carry its parsed channel ASTs into application preparation');
 const legacyNative=validateNativeFilter({format:'filter-fab-js',version:1,f:['r','g','b','a'],values:[0,255],labels:['Low','High']});
 assert.equal(legacyNative.mathMode,'legacy','version 1 files without mathMode must retain legacy arithmetic');
-assert.deepEqual(legacyNative.controls.slice(0,2),[{label:'Low',value:0},{label:'High',value:255}]);
+assert.deepEqual(legacyNative.controls.slice(0,2),[{label:'Low',value:0,ui:genericControlUI},{label:'High',value:255,ui:genericControlUI}]);
 const tenControlNative=validateNativeFilter({format:'filter-fab-js',version:2,formulas:['ctl(8)','ctl(9)','map(4,c)','a'],controls:Array.from({length:CONTROL_COUNT},(_,index)=>({label:`Input ${index}`,value:index}))});
 assert.equal(tenControlNative.controls.length,CONTROL_COUNT,'native v2 filters must accept all ten controls');
 assert.equal(tenControlNative.controls[9].value,9);

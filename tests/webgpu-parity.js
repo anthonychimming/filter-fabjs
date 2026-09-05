@@ -70,7 +70,7 @@ const fixtures = [
 const programFor = formula => compileFilterProgram(
   [formula, formula, formula, formula].map(sourceText => new Parser(sourceText).parse())
 );
-const benchmarkFixtures=presets.filter(preset=>preset.benchmark).map(preset=>({name:`Benchmark preset · ${preset.name}`,program:compileFilterProgram(preset.f.map(formula=>new Parser(formula).parse())),controls:CONTROL_DEFINITIONS.map((definition,index)=>preset.values[index]??definition.defaultValue)}));
+const benchmarkFixtures=presets.filter(preset=>preset.benchmark).map(preset=>{const values=preset.controls?.map(control=>typeof control==='number'?control:control.value)??preset.values??[];return{name:`Benchmark preset · ${preset.name}`,program:compileFilterProgram(preset.f.map(formula=>new Parser(formula).parse())),controls:CONTROL_DEFINITIONS.map((definition,index)=>values[index]??definition.defaultValue)}});
 
 function compare(cpuPixels, gpuPixels) {
   let max = 0;

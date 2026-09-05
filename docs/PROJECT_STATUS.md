@@ -4,7 +4,7 @@ This document describes the implementation currently present in the public repos
 
 ## Release
 
-- Application version: **2.6.5**
+- Application version: **2.6.7**
 - Native filter format: **version 2**
 - Typed IR: **version 1**
 - Development layout: native ES modules
@@ -31,6 +31,7 @@ The current formula engine includes:
 - Signed YUV chroma variables with coherent native-float bounds and spans; legacy imports retain the historic Filter Factory constant model.
 - Arithmetic, comparisons, logical operations, and ternary selection.
 - Ten data-driven controls, including five reversible `map()` pairs, with default expansion for older eight-control filters.
+- Optional per-control slider, number, toggle, and seed presentation metadata with display-space ranges, steps, integer/number formatting, and short units; canonical renderer inputs remain floating-point values from 0–255.
 - Normalized `nx`/`ny` and centered `cx`/`cy` image coordinates.
 - Radius, angle, repeat, mirror-repeat, and three-/four-stop scalar palette-ramp helpers.
 - Nearest, wrapped, mirrored, and bilinear image sampling.
@@ -57,6 +58,7 @@ Compatibility is analyzed from typed IR before a render is dispatched.
 Current workflows include:
 
 - Strictly validated and normalized Filter FabJS native JSON v1/v2 import plus version 2 export.
+- Additive rich-control `ui` metadata preserved through native import/export, browser-local presets, switching, save, and reset. All 31 built-ins provide semantic display ranges and widgets for their active controls; missing metadata and historic AFS controls receive the generic 0–255 slider presentation.
 - Optional multiline filter descriptions, bounded to 2,000 characters and preserved through all 31 built-ins, native import/export, and browser-local presets; missing descriptions normalize to an empty string.
 - Historic `.afs` import with legacy integer math, eight whole-token integer controls with legacy 0–255 clamping, exactly four formula groups, preserved physical line-comment boundaries, and the same formula budgets.
 - Image loading and drag-and-drop.
@@ -77,6 +79,7 @@ The repository includes smoke tests for:
 - An optional browser parity suite comparing CPU and WebGPU pixels on actual WebGPU hardware.
 - Native JSON and AFS format handling.
 - Description metadata bounds, backward-compatible defaults, built-in coverage, local-preset persistence, and four-line editor wiring.
+- Rich-control normalization, raw/display round trips, decimal/integer formatting, toggle and seed bounds, native/local persistence, simple/conflicting/dynamic `val()` mapping analysis, complete built-in coverage, and accessible responsive editor wiring.
 - Ten-control normalization, indices 8/9, fifth-pair mapping, and aligned twelve-slot WebGPU parameter packing.
 - Bounded Mandelbrot/Julia parser, typed-IR, CPU, WGSL, render-budget, built-in, and optional hardware-parity coverage.
 - Signed-distance parser/arity, typed-IR type and metadata, CPU semantics, WGSL generation, domain-warp preset, render-budget, and optional hardware-parity coverage.
@@ -108,3 +111,4 @@ For hardware parity, run `npm run dev` and open `http://localhost:8080/tests/web
 - CPU and GPU floating-point implementations may have small numerical differences.
 - Historic Filter Factory behavior is not guaranteed to be bit-exact for every edge case.
 - Clipboard interoperability depends on the browser and receiving application.
+- Display ranges are linear; logarithmic curves, enums, colour controls, grouping, conditional visibility, and control reordering are not part of v2.6.7.

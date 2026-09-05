@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.6.7
+
+- Audited all 31 built-in filters and migrated every active control to semantic rich-control metadata, including percentage, degree, pixel, channel-level, multiplier, integer, and deterministic seed presentations while preserving control indices and canonical raw defaults.
+- Corrected Posterize quantization so every level count spans the full 0–255 output range; two-level posterization now produces true black and white instead of topping out at 128.
+- Added focused regression coverage for complete built-in control metadata, valid presentation schemas, seed and angle widgets, and Posterize endpoints while preserving WebGPU compatibility for the full built-in collection.
+
+## 2.6.6
+
+- Added Richer Control Definitions with slider, number, toggle, and seed widgets; author-defined display ranges, steps, number formatting, and short units map back to the existing floating-point canonical 0–255 control values without renderer changes.
+- Added a responsive, draft-based **Edit controls** dialog with all ten indexed slots, Used/Unused status, accessible runtime controls, authoring shortcuts, previews, validation, toggle normalization, seed randomization, and non-binding constant-`val()` mapping guidance.
+- Preserved additive `ui` metadata through native JSON v1/v2 normalization and v2 export, browser-local presets, preset switching, reset, and AFS defaults; migrated Mandelbrot Atlas, Warped SDF Bloom, and Sierpiński Fractal as showcase presets while leaving native format v2, typed IR v1, formula semantics, and both renderers unchanged.
+- Added focused normalization, mapping, formatting, persistence, mapping-analysis, built-in, accessibility-wiring, and renderer-regression coverage.
+
 ## 2.6.5
 
 - Added an editable four-line Description field beneath Controls and preserved its multiline value as top-level filter metadata through built-ins, native JSON import/export, and browser-local preset creation or replacement.

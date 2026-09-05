@@ -39,6 +39,20 @@ function variableIRType(name){if(INTEGER_VARS.has(name))return IRType.INTEGER;if
 function mergeIRTypes(a,b){if(a===b)return a;if(a===IRType.BOOLEAN&&b===IRType.BOOLEAN)return IRType.BOOLEAN;if(a===IRType.INTEGER&&b===IRType.INTEGER)return IRType.INTEGER;if(a===IRType.CHANNEL&&b===IRType.CHANNEL)return IRType.CHANNEL;if(a===IRType.MASK&&b===IRType.MASK)return IRType.MASK;return IRType.SCALAR}
 function arithmeticIRType(operator,a,b){if(operator==='/' )return IRType.SCALAR;if(operator==='%'&&a===IRType.INTEGER&&b===IRType.INTEGER)return IRType.INTEGER;if(['+','-','*'].includes(operator)&&a===IRType.INTEGER&&b===IRType.INTEGER)return IRType.INTEGER;return IRType.SCALAR}
 function callIRType(name,args){if(CHANNEL_FUNCTIONS.has(name))return IRType.CHANNEL;if(MASK_FUNCTIONS.has(name))return IRType.MASK;if(INTEGER_FUNCTIONS.has(name))return IRType.INTEGER;if(['clamp','abs','sign'].includes(name))return args[0]?.type||IRType.SCALAR;if(['min','max','lerp'].includes(name))return mergeIRTypes(args[0]?.type,args[1]?.type);if(['multiply','screen','overlay','softLight','difference'].includes(name))return args[0]?.type===IRType.CHANNEL||args[1]?.type===IRType.CHANNEL?IRType.CHANNEL:IRType.SCALAR;return IRType.SCALAR}
+function constantNumberFromAst(node){
+  if(!node)return null;
+  if(node.k==='n'){const value=Number(node.v);return Number.isFinite(value)?value:null}
+  if(node.k==='u'){
+    const value=constantNumberFromAst(node.e);if(value===null)return null;
+    if(node.o==='+')return value;if(node.o==='-')return-value;
+  }
+  if(node.k==='b'){
+    const left=constantNumberFromAst(node.l),right=constantNumberFromAst(node.r);if(left===null||right===null)return null;
+    let value=null;switch(node.o){case'+':value=left+right;break;case'-':value=left-right;break;case'*':value=left*right;break;case'/':value=right===0?0:left/right;break;case'%':value=right===0?0:left%right;break;}
+    return Number.isFinite(value)?value:null;
+  }
+  return null;
+}
 function constantIntegerFromAst(node){
   if(!node)return null;
   if(node.k==='n'&&Number.isFinite(Number(node.v)))return Math.trunc(Number(node.v));
@@ -59,18 +73,25 @@ function constantIntegerFromAst(node){
 export class TypedIRCompiler{
   constructor({legacyMath=false}={}){
     this.legacyMath=Boolean(legacyMath);
-    this.meta={nodeCount:0,controls:Array(CONTROL_COUNT).fill(false),dynamicControls:false,functions:new Set(),variables:new Set(),usesSource:false,stateful:false,deterministic:true};
+    this.meta={nodeCount:0,controls:Array(CONTROL_COUNT).fill(false),controlMappings:Array(CONTROL_COUNT).fill(null),blockedControlMappings:Array(CONTROL_COUNT).fill(false),dynamicControls:false,functions:new Set(),variables:new Set(),usesSource:false,stateful:false,deterministic:true};
   }
   markControl(index,count=1){
     if(Number.isInteger(index)&&index>=0&&index+count<=CONTROL_COUNT){for(let i=0;i<count;i++)this.meta.controls[index+i]=true}
     else{this.meta.dynamicControls=true;this.meta.controls.fill(true)}
+  }
+  trackValMapping(astArgs){
+    const index=constantNumberFromAst(astArgs[0]);if(!Number.isInteger(index)||index<0||index>=CONTROL_COUNT)return;
+    const minimum=constantNumberFromAst(astArgs[1]),maximum=constantNumberFromAst(astArgs[2]),current=this.meta.controlMappings[index];
+    if(minimum===null||maximum===null){this.meta.blockedControlMappings[index]=true;return}
+    if(!current){this.meta.controlMappings[index]={type:'val',min:minimum,max:maximum};return}
+    if(current.type==='conflict'||current.min!==minimum||current.max!==maximum)this.meta.controlMappings[index]={type:'conflict'};
   }
   trackCall(name,astArgs){
     this.meta.functions.add(name);
     if(SOURCE_FUNCTIONS.has(name))this.meta.usesSource=true;
     if(STATEFUL_FUNCTIONS.has(name))this.meta.stateful=true;
     if(NONDETERMINISTIC_FUNCTIONS.has(name))this.meta.deterministic=false;
-    if(name==='ctl'||name==='val')this.markControl(constantIntegerFromAst(astArgs[0]));
+    if(name==='ctl'||name==='val'){this.markControl(constantIntegerFromAst(astArgs[0]));if(name==='val')this.trackValMapping(astArgs)}
     else if(name==='map'){
       const pair=constantIntegerFromAst(astArgs[0]);
       if(Number.isInteger(pair)&&pair>=0&&pair<CONTROL_PAIR_COUNT)this.markControl(pair*2,2);else this.markControl(null);
@@ -106,7 +127,8 @@ export class TypedIRCompiler{
     throw new FormulaError(`Unknown syntax node “${node.k}”`);
   }
   finish(){
-    return{nodeCount:this.meta.nodeCount,controlMask:[...this.meta.controls],dynamicControls:this.meta.dynamicControls,functions:[...this.meta.functions].sort(),variables:[...this.meta.variables].sort(),usesSource:this.meta.usesSource,stateful:this.meta.stateful,deterministic:this.meta.deterministic};
+    const controlMappings=this.meta.controlMappings.map((mapping,index)=>mapping&&this.meta.blockedControlMappings[index]?{type:'conflict'}:mapping?{...mapping}:null);
+    return{nodeCount:this.meta.nodeCount,controlMask:[...this.meta.controls],controlMappings,dynamicControls:this.meta.dynamicControls,functions:[...this.meta.functions].sort(),variables:[...this.meta.variables].sort(),usesSource:this.meta.usesSource,stateful:this.meta.stateful,deterministic:this.meta.deterministic};
   }
 }
 export function compileFilterProgram(astList,{legacyMath=false}={}){

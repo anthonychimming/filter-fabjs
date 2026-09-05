@@ -1,6 +1,6 @@
 # Filter FabJS Formula Reference
 
-**Applies to Filter FabJS v2.6.5 · native filter format v2 · typed IR v1**
+**Applies to Filter FabJS v2.6.7 · native filter format v2 · typed IR v1**
 
 This is the compact, implementation-oriented reference for writing Filter FabJS formulas. For worked explanations and tutorials, see the [Filter FabJS Programming Guide (PDF)](Filter_FabJS_Programming_Guide_v2.4.7.pdf). For analytic mask details, see [ANALYTIC_SHAPES.md](ANALYTIC_SHAPES.md).
 
@@ -109,6 +109,8 @@ For a one-pixel-wide or one-pixel-high dimension, its normalized coordinate is `
 
 Filter FabJS exposes ten controls indexed `0..9`. Raw control values are `0..255`.
 
+Each control may also carry presentation metadata for a `slider`, `number`, `toggle`, or `seed` widget. Display minimum/maximum, step, `number`/`integer` formatting, and a short unit are authoring/UI metadata only. The stored canonical value remains a floating-point number from `0..255`; display values are linearly derived from it and edits map back into that canonical domain. The **Edit controls** dialog configures these fields without changing formula or renderer semantics.
+
 | Function | Meaning |
 | --- | --- |
 | `ctl(i)` | Raw control value. Invalid index returns `0`. |
@@ -124,6 +126,8 @@ val(2,0.5,2.5)     // scale
 ```
 
 Use `ctl()` directly for opacity/mix controls because blend helpers and `lerp()` accept `0..255` control values.
+
+When the display range matches a simple constant `val(i,a,b)` call, the authoring dialog reports the mapping and can copy its bounds into the presentation. Multiple different mappings or dynamic bounds do not produce an automatic suggestion. This inspection is metadata only.
 
 ## 5. Sampling and convolution
 
@@ -416,12 +420,23 @@ Native v2 filters use four formulas and up to ten controls:
     "a"
   ],
   "controls": [
-    { "label": "Effect Mix", "value": 255 }
+    {
+      "label": "Effect Mix",
+      "value": 255,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 100,
+        "step": 1,
+        "format": "number",
+        "unit": "%"
+      }
+    }
   ]
 }
 ```
 
-Missing control entries are filled to ten controls with value `128`, so existing eight-control files remain valid without migration. The optional top-level `description` is limited to 2,000 characters and defaults to an empty string when absent. Native filter files are limited to 256 KiB.
+Missing control entries are filled to ten controls with value `128`, so existing eight-control files remain valid without migration. Missing `ui` objects receive the generic 0–255 slider presentation. The additive property remains in native format v2; older compatible readers ignore it. The optional top-level `description` is limited to 2,000 characters and defaults to an empty string when absent. Native filter files are limited to 256 KiB.
 
 ## 16. Common correctness traps
 

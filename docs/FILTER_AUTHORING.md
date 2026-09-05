@@ -1,6 +1,6 @@
 # Filter FabJS Filter Authoring Guide
 
-**Applies to Filter FabJS v2.6.5**
+**Applies to Filter FabJS v2.6.7**
 
 This guide is for designing new Filter FabJS filters efficiently and with predictable CPU/WebGPU behavior. It assumes the formula syntax in [FORMULA_REFERENCE.md](FORMULA_REFERENCE.md).
 
@@ -110,6 +110,19 @@ A practical pattern is:
 - control 9: global effect mix.
 
 This is a convention, not an engine requirement.
+
+### Define a clear runtime presentation
+
+Use **Edit controls** to choose how each indexed slot appears without changing its formula meaning:
+
+- `slider` for continuous or stepped adjustment;
+- `number` for direct numeric entry;
+- `toggle` for binary values (`0` off, `255` on);
+- `seed` for an integer field with an explicit randomize action.
+
+Display minimum, maximum, step, `number`/`integer` formatting, and a unit of up to 12 characters are presentation metadata. Filter FabJS always stores and renders the canonical floating-point `0..255` value. For a display range of `24..192`, selecting `96` stores approximately `109.285714`; `val(index,24,192)` reconstructs `96`. Step snapping occurs before the display value maps back to canonical space, so do not round that stored value to an integer.
+
+The editor recognizes straightforward constant mappings such as `val(0,24,192)` and can suggest the same display range. A warning is informational: an author may intentionally choose other presentation bounds. Conflicting mappings and dynamic bounds are not inferred.
 
 ## 5. Prefer resolution-independent formulas
 
@@ -666,12 +679,23 @@ A: a
     { "label": "Control 5", "value": 128 },
     { "label": "Control 6", "value": 128 },
     { "label": "Control 7", "value": 128 },
-    { "label": "Effect Mix", "value": 255 }
+    {
+      "label": "Effect Mix",
+      "value": 255,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 100,
+        "step": 1,
+        "format": "number",
+        "unit": "%"
+      }
+    }
   ]
 }
 ```
 
-Native v2 filters should normally use `"mathMode": "float"`. `description` is optional top-level metadata, supports internal line breaks, and is limited to 2,000 characters. Give built-ins and shareable presets a concise explanation of the effect, suitable source images, and the most important controls; older filters without a description remain valid.
+Native v2 filters should normally use `"mathMode": "float"`. Each control's optional `ui` object is additive metadata; missing definitions normalize to the generic 0–255 slider, so older filters remain valid. `description` is optional top-level metadata, supports internal line breaks, and is limited to 2,000 characters. Give built-ins and shareable presets a concise explanation of the effect, suitable source images, and the most important controls; older filters without a description remain valid.
 
 ## 24. Preflight checklist
 

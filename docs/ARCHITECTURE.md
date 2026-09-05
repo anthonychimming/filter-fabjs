@@ -1,6 +1,6 @@
 # Architecture
 
-Filter FabJS v2.6.5 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
+Filter FabJS v2.6.7 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
 
 ```text
 Formula text
@@ -19,17 +19,17 @@ RGBA pixel output
 ## Module contracts
 
 - `src/core/formula-language.js` — tokenization, parsing, formula validation, and syntax trees.
-- `src/core/controls.js` — shared definitions for the ten public controls, their defaults, and the five control pairs.
+- `src/core/controls.js` — shared definitions for the ten public controls, rich-presentation validation, raw/display mapping, formatting, and the five control pairs.
 - `src/core/chroma.js` — math-mode-specific chroma bounds shared by CPU and WebGPU code generation.
-- `src/core/ir.js` — conversion from syntax trees to renderer-neutral typed IR, semantic metadata, and memoized canonical program keys.
+- `src/core/ir.js` — conversion from syntax trees to renderer-neutral typed IR, semantic metadata including simple constant-`val()` mapping inspection, and memoized canonical program keys.
 - `src/gpu/wgsl-compiler.js` — WebGPU compatibility analysis and typed-IR-to-WGSL compilation.
 - `src/gpu/params-layout.js` — aligned WebGPU parameter-buffer sizing with twelve reserved control slots for the ten public controls.
 - `src/renderers/renderer-backend.js` — shared renderer contract.
 - `src/renderers/cpu-renderer.js` — CPU Worker lifecycle, shared retained source, keyed IR reuse, rendering, progress, lazy restart, and cancellation.
 - `src/renderers/webgpu-renderer.js` — recoverable GPU buffers, shared retained source, entry/byte-bounded WGSL-plan/pipeline reuse, direct RGBA upload/readback, full-frame dispatch, source release, and queued/active cancellation.
 - `src/renderers/renderer-manager.js` — renderer selection, immutable source coordination, entry/byte-bounded compatibility analysis and diagnostic snapshots, lazy source synchronization, inactive-backend release, cancellation-aware runtime CPU fallback, and bounded repeated program-failure quarantine.
-- `src/presets/builtins.js` — built-in filter definitions and their human-readable descriptions.
-- `src/io/filter-format.js` — size-bounded native JSON and historic AFS validation, normalized filter-level metadata, parsing, and validated-AST handoff to application preparation.
+- `src/presets/builtins.js` — built-in filter definitions, human-readable descriptions, and selected rich-control showcases.
+- `src/io/filter-format.js` — size-bounded native JSON and historic AFS validation, normalized filter/control metadata, parsing, and validated-AST handoff to application preparation.
 - `src/io/image-io.js` — image and clipboard encoding helpers.
 - `src/ui/*` — DOM, controls, and canvas presentation.
 - `src/app/filter-fab-app.js` — application state and browser UI orchestration.
@@ -44,7 +44,7 @@ RGBA pixel output
 6. File-format parsing belongs in `io/`; rendering code should not know how a filter was loaded.
 7. Shared application state should be coordinated by the app layer rather than mutated from renderer/compiler internals.
 
-Filter descriptions are optional top-level metadata beside `name` and `author`. They are normalized before UI mutation and persistence, remain outside control state and typed IR, and do not affect renderer selection or program cache keys.
+Filter descriptions are optional top-level metadata beside `name` and `author`. Rich control presentations are optional `ui` metadata beside each control's canonical `label` and `value`. Both are normalized before UI mutation and persistence. Display values are derived from canonical 0–255 values, and presentation metadata remains outside typed-IR execution, renderer selection, GPU parameter layout, CPU Worker evaluation, and program cache keys. IR `controlMappings` metadata inspects only straightforward constant `val(index,min,max)` calls for authoring feedback; it never changes execution.
 
 ## Current WebGPU boundary
 
