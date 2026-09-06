@@ -1,27 +1,38 @@
-# Filter FabJS v2.6.7
+# Filter FabJS
 
-Filter FabJS is an open-source, browser-native procedural RGBA image-filter editor. It combines a compact expression language with WebGPU rendering and a CPU Worker fallback.
+**A browser-based procedural image filter editor with WebGPU acceleration.**
 
-The project is under active development.
+**[▶ Launch Filter FabJS](https://anthonychimming.github.io/filter-fabjs/)**
 
-**[▶ Try Filter FabJS Live](https://anthonychimming.github.io/filter-fabjs/)**
+Filter FabJS is an open-source, browser-native procedural RGBA image-processing environment inspired by Adobe Filter Factory and the open-source Filter Foundry project. It lets users build and edit custom image filters from mathematical expressions directly in the browser.
 
-## Current capabilities
+The engine combines four-channel RGBA formula authoring with WebGPU rendering and automatic CPU Worker fallback. Its procedural vocabulary includes image sampling, coordinate transforms, gradients, palette ramps, deterministic noise, fractals, analytic masks, signed-distance fields, convolution, and blend operations. Historic Filter Factory `.afs` filters remain supported through the legacy compatibility path. fileciteturn7file1L1-L1
 
-- Four-channel RGBA formula editing with live validation and preview rendering.
-- Ten data-driven formula controls with author-defined slider, number, toggle, and seed presentations, plus normalized/centered coordinates, coordinate repetition, polar helpers, and palette ramps.
-- WebGPU acceleration with automatic CPU fallback for unsupported or legacy formulas.
-- Built-in image-processing and procedural filters, including analytic shapes, signed-distance composition, patterns, gradients, noise, convolution, bounded Mandelbrot/Julia fields, and fractal masks.
-- Auto / GPU / CPU renderer selection with live eligibility/fallback diagnostics, render progress, and cancellation.
-- Deterministic fractal, layered-noise, and warped-SDF performance benchmark presets for like-for-like CPU/WebGPU timing comparisons.
+**Current stable release: v2.6.7**
+
+## Features
+
+- Custom R, G, B, and Alpha formulas with live validation and preview rendering.
+- WebGPU / WGSL acceleration with automatic CPU fallback for unsupported or legacy formulas.
+- Ten data-driven controls with author-defined slider, number, toggle, and seed presentations.
+- Normalized, centered, polar, repeated, and mirrored coordinate systems.
+- Image sampling, transforms, blend modes, gradients, and scalar palette ramps.
+- Deterministic procedural noise including value noise, Perlin, Worley, FBM, turbulence, ridged, and periodic fields.
+- Mandelbrot, Julia, and finite-depth Sierpiński fractal functions.
+- Analytic shape masks and signed-distance-field composition.
+- Fixed 3×3 convolution.
+- Auto / GPU / CPU renderer selection with live eligibility and fallback diagnostics.
+- Deterministic benchmark presets for CPU/WebGPU performance comparisons.
 - Native Filter FabJS JSON import/export plus historic Filter Factory `.afs` import.
-- Editable filter descriptions preserved through built-ins, native JSON import/export, and custom local presets.
-- PNG image loading, export, clipboard copy/paste, and alpha-aware preview.
+- Editable filter descriptions and persistent custom local presets.
+- PNG loading/export, clipboard copy/paste, and alpha-aware preview.
 - Modular development source plus a standalone single-file release build.
+
+Filter FabJS v2.6.7 uses a typed, renderer-neutral intermediate representation, with the CPU and WebGPU renderers consuming the same semantic formula program. The current engine remains a single-pass formula renderer; multi-pass graph processing is planned for the Phase 4 development line rather than the stable v2.x branch. fileciteturn7file0L31-L44 fileciteturn7file0L47-L71
 
 See [Project Status](docs/PROJECT_STATUS.md) for implementation details, compatibility notes, and current boundaries.
 
-For the formula language, function reference, renderer compatibility notes, and worked filter examples, see the **[Filter FabJS Programming Guide (PDF)](docs/Filter_FabJS_Programming_Guide_v2.4.7.pdf)**.
+For the formula language, function reference, renderer compatibility notes, and worked filter examples, see the **[Filter FabJS Programming Guide (PDF)](docs/Filter_FabJS_Programming_Guide_v2.4.7.pdf)** and **[Formula Reference](docs/FORMULA_REFERENCE.md)**. Native filters use four channel expressions, floating-point math, and explicit CPU fallback for legacy/stateful constructs. fileciteturn7file2L9-L20 fileciteturn7file2L358-L377
 
 ## Run locally
 
