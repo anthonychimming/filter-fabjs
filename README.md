@@ -28,7 +28,7 @@ The engine combines four-channel RGBA formula authoring with WebGPU rendering an
 - PNG loading/export, clipboard copy/paste, and alpha-aware preview.
 - Modular development source plus a standalone single-file release build.
 
-Filter FabJS v2.6.7 uses a typed, renderer-neutral intermediate representation, with the CPU and WebGPU renderers consuming the same semantic formula program. The current engine remains a single-pass formula renderer; multi-pass graph processing is planned for the Phase 4 development line rather than the stable v2.x branch.
+Filter FabJS v2.6.7 uses a typed, renderer-neutral intermediate representation, with the CPU and WebGPU renderers consuming the same semantic formula program.
 
 See [Project Status](docs/PROJECT_STATUS.md) for implementation details, compatibility notes, and current boundaries.
 
