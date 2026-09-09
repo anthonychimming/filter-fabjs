@@ -3,6 +3,9 @@
  * Modular source extracted from v2.0.7; modular architecture v2.1.0.
  * Licensed GPL-2.0-or-later. See LICENSE and README.md.
  */
+import { normalizeTags, tagKey, portableContent, validatePortableId } from '../core/filter-metadata.js';
+import { PREFERENCE_PREFIX, readEntryPreference, writeEntryPreference, catalogEntry, readLibrary, writeLibraryRecord } from './filter-catalog.js';
+import { createFilterBrowser, chooseFilterAction } from '../ui/filter-browser.js';
 import { $, $$, clamp, debounce, storageGet, storageSet, escapeHtml, slug } from '../core/utils.js';
 import { CONTROL_COUNT, CONTROL_DEFINITIONS, cloneControlUI, defaultControlLabels, defaultControlUIs, defaultControlValues, normalizeControlUI, normalizeToggleRaw } from '../core/controls.js';
 import { Parser } from '../core/formula-language.js';
@@ -18,7 +21,7 @@ import { getDom } from '../ui/dom.js';
 import { createCanvasView } from '../ui/canvas-view.js';
 import { createControlsController } from '../ui/controls.js';
 
-export async function importLatestFilterFile(file,{state,cancelRender,applyFilter}){
+export async function importLatestFilterFile(file,{state,cancelRender,applyFilter,beforeApply=async()=>true}){
   if(!file)return null;
   const loadId=++state.filterLoadId;
   try{
@@ -27,6 +30,7 @@ export async function importLatestFilterFile(file,{state,cancelRender,applyFilte
     if(loadId!==state.filterLoadId)return null;
     const result=detectFilterFormat(text,file.name);
     if(state.isRendering){await cancelRender();if(loadId!==state.filterLoadId)return null;}
+    if(!await beforeApply(result.data)||loadId!==state.filterLoadId)return null;
     applyFilter(result.data);
     return result;
   }catch(error){if(loadId!==state.filterLoadId)return null;throw error;}
@@ -66,7 +70,8 @@ export function initFilterFabApp(){
   const {el,ctx}=getDom();
   const state={source:null,filtered:null,width:0,height:0,view:'filtered',split:50,zoom:'fit',zoomLevel:1,controls:defaultControlValues(),labels:defaultControlLabels(),controlUIs:defaultControlUIs(),renderId:0,imageLoadId:0,filterLoadId:0,rendererManager:null,rendererPreference:storageGet('ffw-renderer','auto'),lastProgram:null,lastProgramKey:null,lastWGSL:null,lastGpuAnalysis:null,lastRendererDiagnostics:null,isRendering:false,usedControls:Array(CONTROL_COUNT).fill(false),legacyMath:false,hasPendingFormulaChanges:false,focusSnapshot:null};
   const canvasView=createCanvasView({state,el,ctx});
-  let controlsController;
+  let controlsController,browser,catalogCache=null;
+  const activeDocument={key:null,id:undefined,tags:[],baseline:null,recordBaseline:null,imported:false};
 
   const rendererFactories={
     cpu:()=>new CpuRenderer(workerProgram),
@@ -77,7 +82,7 @@ export function initFilterFabApp(){
   function setStatus(text,kind='good'){el.statusText.textContent=text;el.statusDot.className='status-dot'+(kind==='busy'?' busy':kind==='pending'?' pending':kind==='error'?' error':'');}
   function toast(text){el.toast.textContent=text;el.toast.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.toast.classList.remove('show'),1800);}
   const interactiveNodes=()=>Array.from(document.querySelectorAll('button,input,select,textarea'));
-  function updatePresetDeleteState(){const custom=el.preset?.value.startsWith('custom:');if(!el.deletePreset)return;el.deletePreset.disabled=state.isRendering||!custom;el.deletePreset.title=custom?'Delete selected custom preset':'Select a custom preset to delete';}
+  function updatePresetDeleteState(){const custom=activeDocument.key?.startsWith('custom:');el.deletePreset.disabled=state.isRendering||!custom;el.deletePreset.title=custom?'Delete current saved filter':'Load a saved custom filter to delete';}
   function applyInteractionLocks(){interactiveNodes().forEach(node=>{node.disabled=state.isRendering;});$$('.slider-row',$('#sliderGrid')).forEach((row,index)=>{const unused=!state.usedControls[index];row.classList.toggle('control-unused',unused);row.setAttribute('aria-disabled',String(state.isRendering||unused));row.title=unused?'Unused — not referenced by any channel formula':'';$$('button,input,select',row).forEach(node=>{node.disabled=state.isRendering||unused;});});updatePresetDeleteState();}
   function captureFocus(){const node=document.activeElement;if(!(node instanceof Element)||node===document.body||!node.matches('button,input,select,textarea'))return null;const snapshot={node};if(typeof node.selectionStart==='number'){snapshot.start=node.selectionStart;snapshot.end=node.selectionEnd;snapshot.direction=node.selectionDirection;}return snapshot;}
   function restoreFocus(snapshot){if(!snapshot?.node?.isConnected||snapshot.node.disabled)return;requestAnimationFrame(()=>{if(!snapshot.node.isConnected||snapshot.node.disabled)return;snapshot.node.focus({preventScroll:true});if(typeof snapshot.start==='number'&&typeof snapshot.node.setSelectionRange==='function')snapshot.node.setSelectionRange(snapshot.start,snapshot.end,snapshot.direction||'none');});}
@@ -102,9 +107,55 @@ export function initFilterFabApp(){
   const scheduleFormulaValidation=debounce(validatePendingFormulas,220);
   controlsController=createControlsController({state,el,scheduleRender,applyInteractionLocks,compileCurrentProgram});
 
-  function customList(){try{const normalized=normalizeCustomPresetList(JSON.parse(storageGet('ffw-custom-presets','[]')));if(normalized.migrated)storageSet('ffw-custom-presets',JSON.stringify(normalized.storageList));return normalized.presets}catch{return[];}}
-  function populatePresets(){const selected=el.preset.value,custom=customList(),sorted=[...presets].sort((a,b)=>a.name.localeCompare(b.name)),builtIns=sorted.filter(preset=>!preset.benchmark),benchmarks=sorted.filter(preset=>preset.benchmark),options=list=>list.map(preset=>`<option value="builtin:${preset.id}">${preset.name}</option>`).join('');el.preset.innerHTML='<optgroup label="Built-in">'+options(builtIns)+'</optgroup>'+(benchmarks.length?'<optgroup label="Performance benchmarks">'+options(benchmarks)+'</optgroup>':'')+(custom.length?'<optgroup label="My presets">'+custom.map(preset=>`<option value="custom:${escapeHtml(preset.id)}">${escapeHtml(preset.name)}</option>`).join('')+'</optgroup>':'');if(selected&&Array.from(el.preset.options).some(option=>option.value===selected))el.preset.value=selected;updatePresetDeleteState();}
-  function currentFilter(){return{format:'filter-fab-js',version:2,mathMode:state.legacyMath?'legacy':'float',name:$('#filterName').value.trim().slice(0,120)||'Untitled Filter',description:el.description.value.trim().slice(0,FILTER_DESCRIPTION_MAX_LENGTH),author:$('#filterAuthor').value.trim().slice(0,120),formulas:el.formulas.map(field=>field.value.trim()),controls:state.controls.map((value,index)=>({label:String(state.labels[index]??'').slice(0,80)||`Control ${index+1}`,value,ui:cloneControlUI(state.controlUIs[index])}))};}
+  function library(){return readLibrary(localStorage,normalizeCustomPresetList);}
+  function organizationError(error){browser?.showError(error.message||'Browser storage is unavailable');setStatus(error.message||'Browser storage is unavailable','error');toast(error.message||'Browser storage is unavailable');}
+  function customList(){try{return library().presets;}catch(error){organizationError(error);return[];}}
+  function preference(key){try{return readEntryPreference(localStorage,key);}catch(error){organizationError(error);return{version:1,favorite:false,tags:[]};}}
+  function catalog(){if(catalogCache)return catalogCache;return catalogCache=[...presets.map(item=>catalogEntry(item,'builtin',preference(`builtin:${item.id}`))),...customList().map(item=>catalogEntry(item,'custom',preference(`custom:${item.id}`)))];}
+  function effectiveTags(){return activeDocument.key?.startsWith('builtin:')?[...new Map([...activeDocument.tags,...preference(activeDocument.key).tags].map(tag=>[tagKey(tag),tag])).values()]:activeDocument.tags;}
+  function documentSnapshot(){return portableContent({...currentFilter(),tags:activeDocument.tags});}
+  function isDirty(){return activeDocument.imported||!activeDocument.key||documentSnapshot()!==activeDocument.baseline;}
+  function updateDocumentHeader({forceSelection=false}={}){
+    const name=$('#filterName').value.trim()||'Untitled Filter';
+    const requestedSelection=el.preset.value;
+    let draft=el.preset.querySelector('[data-draft]');
+    if(!activeDocument.key){if(!draft){draft=document.createElement('option');draft.value='';draft.disabled=true;draft.dataset.draft='true';el.preset.prepend(draft);}draft.textContent=`${name} · ${activeDocument.imported?'Imported · not saved':'Not saved'}`;}else draft?.remove();
+    const requestedOption=requestedSelection&&Array.from(el.preset.options).some(option=>option.value===requestedSelection);
+    if(forceSelection||!requestedOption||requestedSelection===activeDocument.key)el.preset.value=activeDocument.key||'';
+    el.preset.title=name;
+    $('#savedDocumentStatus').textContent=activeDocument.imported?'Imported · not saved':!activeDocument.key?'Not saved':isDirty()?'Unsaved changes':'Saved';updatePresetDeleteState();
+  }
+  function populatePresets(){
+    catalogCache=null;el.preset.replaceChildren();
+    const entries=catalog();
+    for(const [label,accept] of [['Built-in',entry=>entry.source==='builtin'&&!entry.document.benchmark],['Performance benchmarks',entry=>entry.source==='builtin'&&entry.document.benchmark],['My Filters',entry=>entry.source==='custom']]){
+      const group=document.createElement('optgroup');group.label=label;
+      for(const entry of entries.filter(accept).sort((a,b)=>a.name.localeCompare(b.name)||a.key.localeCompare(b.key))){const option=document.createElement('option');option.value=entry.key;option.textContent=entry.name;group.append(option);}
+      if(group.children.length)el.preset.append(group);
+    }
+    browser?.refresh();updateDocumentHeader({forceSelection:true});
+  }
+  function refreshTags(){
+    const focusedTag=$('#tagChips').contains(document.activeElement)?document.activeElement.getAttribute('aria-label'):null;
+    const builtIn=activeDocument.key?.startsWith('builtin:'),tags=builtIn?preference(activeDocument.key).tags:activeDocument.tags;
+    $('#includedTags').textContent=builtIn?`Included tags: ${activeDocument.tags.join(', ')||'None'}`:'';$('#tagHelp').textContent=builtIn?'Saved in this browser. Included tags cannot be removed.':'Up to 20 tags, 32 characters each. Spaces and punctuation are allowed.';
+    const chips=$('#tagChips');chips.replaceChildren();for(const tag of tags){const button=document.createElement('button');button.textContent=`${tag} ×`;button.setAttribute('aria-label',`Remove tag ${tag}`);button.onclick=()=>{commitTags(tags.filter(item=>tagKey(item)!==tagKey(tag)));$('#newTag').focus();};chips.append(button);}
+    if(focusedTag)([...chips.children].find(node=>node.getAttribute('aria-label')===focusedTag)||$('#newTag')).focus();
+    const suggestions=$('#tagSuggestions');suggestions.replaceChildren();const all=[...new Set(catalog().flatMap(entry=>entry.tags))].filter(tag=>!tags.some(item=>tagKey(item)===tagKey(tag))).filter(tag=>tag.toLowerCase().includes($('#newTag').value.toLowerCase())).slice(0,50);for(const tag of all){const option=document.createElement('option');option.value=tag;suggestions.append(option);}
+  }
+  function commitTags(tags){try{const normalized=normalizeTags(tags);if(activeDocument.key?.startsWith('builtin:')){normalizeTags([...new Map([...activeDocument.tags,...normalized].map(tag=>[tagKey(tag),tag])).values()]);writeEntryPreference(localStorage,activeDocument.key,{tags:normalized});}else activeDocument.tags=normalized;$('#tagError').textContent='';catalogCache=null;refreshTags();populatePresets();return true;}catch(error){$('#tagError').textContent=error.message;return false;}}
+  async function guardReplacement(){
+    if(!isDirty())return true;
+    const {action}=await chooseFilterAction(`Save changes to ${$('#filterName').value||'Untitled Filter'}?`,[['save','Save and continue'],['discard','Discard changes'],['cancel','Cancel']]);
+    return action==='discard'||(action==='save'&&await savePreset());
+  }
+  async function loadCatalogEntry(entry,focusTarget=el.searchFilters){
+    const definition=entry.source==='builtin'?presets.find(item=>`builtin:${item.id}`===entry.key):findCustomPresetById(library().presets,entry.document.id);
+    if(!definition)throw new Error('This filter was deleted in another tab.');
+    prepareFilter(definition);if(!await guardReplacement())return false;
+    applyFilter(definition,entry.key);if(state.isRendering)state.focusSnapshot={node:focusTarget};return true;
+  }
+  function currentFilter(){return{format:'filter-fab-js',version:2,...(activeDocument.id?{id:activeDocument.id}:{}),tags:effectiveTags(),mathMode:state.legacyMath?'legacy':'float',name:$('#filterName').value.trim().slice(0,120)||'Untitled Filter',description:el.description.value.trim().slice(0,FILTER_DESCRIPTION_MAX_LENGTH),author:$('#filterAuthor').value.trim().slice(0,120),formulas:el.formulas.map(field=>field.value.trim()),controls:state.controls.map((value,index)=>({label:String(state.labels[index]??'').slice(0,80)||`Control ${index+1}`,value,ui:cloneControlUI(state.controlUIs[index])}))};}
   function prepareFilter(input){
     if(!input||typeof input!=='object'||Array.isArray(input))throw new Error('Filter definition must be an object');
     const inputAsts=getValidatedFormulaAsts(input),definition=inputAsts?input:input.format==='filter-fab-js'?validateNativeFilter(input):input,mathMode=definition.mathMode??'float';
@@ -129,9 +180,10 @@ export function initFilterFabApp(){
     const labels=CONTROL_DEFINITIONS.map((definition,index)=>{const value=rawLabels[index]??definition.defaultLabel;if(typeof value!=='string')throw new Error(`Control ${index+1} label must be a string`);const label=value.trim();if(label.length>80)throw new Error(`Control ${index+1} label exceeds 80 characters`);return label||definition.defaultLabel});
     if(definition.name!==undefined&&typeof definition.name!=='string')throw new Error('Filter name must be a string');if(definition.description!==undefined&&typeof definition.description!=='string')throw new Error('Filter description must be a string');if(definition.author!==undefined&&typeof definition.author!=='string')throw new Error('Filter author must be a string');
     const name=String(definition.name??'').trim()||'Untitled Filter',description=String(definition.description??'').trim(),author=String(definition.author??'').trim();if(name.length>120||author.length>120)throw new Error('Filter name and author are limited to 120 characters');if(description.length>FILTER_DESCRIPTION_MAX_LENGTH)throw new Error(`Filter description exceeds ${FILTER_DESCRIPTION_MAX_LENGTH} characters`);
-    return{legacyMath,formulas:normalizedFormulas,controls,labels,controlUIs,name,description,author,program};
+    const tags=normalizeTags(definition.tags),id=definition.format==='filter-factory-afs'?undefined:validatePortableId(definition.id);
+    return{tags,id,legacyMath,formulas:normalizedFormulas,controls,labels,controlUIs,name,description,author,program};
   }
-  function applyFilter(definition,selection){const next=prepareFilter(definition);state.legacyMath=next.legacyMath;el.formulas.forEach((field,index)=>field.value=next.formulas[index]);state.controls=next.controls;state.labels=next.labels;state.controlUIs=next.controlUIs;state.lastProgram=next.program;state.lastProgramKey=currentProgramKey();$('#filterName').value=next.name;el.description.value=next.description;$('#filterAuthor').value=next.author;controlsController.syncSliders();controlsController.updateControlUsage(next.program);if(selection)el.preset.value=selection;updatePresetDeleteState();markFormulaPending();render();}
+  function applyFilter(definition,selection){const next=prepareFilter(definition);state.legacyMath=next.legacyMath;el.formulas.forEach((field,index)=>field.value=next.formulas[index]);state.controls=next.controls;state.labels=next.labels;state.controlUIs=next.controlUIs;state.lastProgram=next.program;state.lastProgramKey=currentProgramKey();$('#filterName').value=next.name;el.description.value=next.description;$('#filterAuthor').value=next.author;controlsController.syncSliders();controlsController.updateControlUsage(next.program);activeDocument.key=selection||null;activeDocument.id=selection?.startsWith('builtin:')?undefined:next.id;activeDocument.tags=next.tags;activeDocument.imported=!selection;activeDocument.recordBaseline=selection?.startsWith('custom:')?JSON.stringify(definition):null;activeDocument.baseline=documentSnapshot();refreshTags();updateDocumentHeader({forceSelection:true});markFormulaPending();render();}
 
   function compileAll({cache=true}={}){const key=currentProgramKey();if(cache&&state.lastProgram&&state.lastProgramKey===key){controlsController.updateControlUsage(state.lastProgram);updateRendererDiagnostics(state.lastProgram);return state.lastProgram}const astList=[];let ok=true;el.formulas.forEach(field=>{const box=field.closest('.formula'),icon=$('.formula-state',box),errorElement=$('.formula-error',box);try{astList.push(new Parser(field.value).parse());field.classList.remove('invalid');field.setAttribute('aria-invalid','false');icon.textContent='✓';icon.classList.remove('bad','pending');errorElement.textContent='';errorElement.classList.remove('show');}catch(error){ok=false;astList.push(null);field.classList.add('invalid');field.setAttribute('aria-invalid','true');icon.textContent='!';icon.classList.remove('pending');icon.classList.add('bad');errorElement.textContent=`${error.message} at character ${(error.pos??0)+1}`;errorElement.classList.add('show');}});if(!ok){controlsController.updateControlUsage(null);clearRendererDiagnostics('GPU diagnostics unavailable','Fix formula errors to inspect renderer eligibility.');return null;}try{const program=compileFilterProgram(astList,{legacyMath:state.legacyMath});if(cache){state.lastProgram=program;state.lastProgramKey=key}controlsController.updateControlUsage(program);updateRendererDiagnostics(program);return program;}catch(error){console.error('IR compilation failed',error);setStatus(`Compiler error: ${error.message}`,'error');controlsController.updateControlUsage(null);clearRendererDiagnostics('GPU diagnostics unavailable',error.message);return null;}}
   function showFormulaFailure(){const hasFieldError=el.formulas.some(field=>field.classList.contains('invalid'));setFormulaEditStatus('invalid',hasFieldError?'Fix formula errors':'Compiler error');clearRendererDiagnostics('GPU diagnostics unavailable',hasFieldError?'Fix formula errors to inspect renderer eligibility.':'The typed IR could not be compiled.');if(hasFieldError)setStatus('Fix formula errors before rendering','error');}
@@ -186,10 +238,45 @@ export function initFilterFabApp(){
   function triggerDownload(href,name,revoke=false){try{const anchor=document.createElement('a');anchor.href=href;anchor.download=name;anchor.rel='noopener';anchor.style.display='none';document.body.appendChild(anchor);anchor.click();setTimeout(()=>{anchor.remove();if(revoke)URL.revokeObjectURL(href);},10000);toast(`Download started: ${name}`);return true;}catch(error){console.error('Download failed',error);toast(`Download failed: ${error.message||'browser blocked the file'}`);return false;}}
   function downloadBlob(blob,name){if(!(blob instanceof Blob)||!blob.size){toast('Nothing was generated to download');return false;}return triggerDownload(URL.createObjectURL(blob),name,true);}
   async function exportPNG(){if(!state.filtered||!state.width||!state.height){toast('Load and render an image before exporting');return;}setStatus('Encoding PNG…','busy');try{const canvas=renderedImageCanvas(state.filtered,state.width,state.height),name=slug($('#filterName').value||'filtered-image')+'.png',blob=await canvasBlob(canvas,'image/png');if(downloadBlob(blob,name))setStatus('Ready');}catch(error){console.error('PNG export failed',error);setStatus('PNG export failed','error');toast(`PNG export failed: ${error.message}`);}}
-  function exportFilter(){const filter=validatedCurrentFilter();if(!filter)return;const base=slug(filter.name);try{downloadBlob(new Blob([JSON.stringify(filter,null,2)+'\n'],{type:'application/json;charset=utf-8'}),base+'.json');}catch(error){console.error('Filter export failed',error);toast(`Filter export failed: ${error.message}`);}}
-  function deletePreset(){const[type,id]=el.preset.value.split(':');if(type!=='custom')return;const list=customList(),index=list.findIndex(preset=>preset.id===id),preset=list[index];if(!preset){populatePresets();toast('Preset could not be found');return;}if(!confirm(`Delete “${preset.name}” from My presets?`))return;list.splice(index,1);if(!storageSet('ffw-custom-presets',JSON.stringify(list))){toast('Browser storage is unavailable');return;}populatePresets();applyFilter(presets.find(item=>item.id==='pass'),'builtin:pass');toast(`Deleted “${preset.name}”`);}
-  async function importFilterFile(file){if(!file)return;try{const result=await importLatestFilterFile(file,{state,cancelRender,applyFilter});if(!result)return;toast(result.kind==='afs'?'AFS filter imported · CPU legacy mode':'Filter FabJS project imported');}catch(error){console.error('Filter import failed',error);toast(`Import failed: ${error.message}`);}finally{el.filterInput.value='';}}
-  function savePreset(){const filter=validatedCurrentFilter();if(!filter)return;const name=prompt('Preset name',filter.name)?.trim();if(!name)return;if(name.length>120){toast('Preset names are limited to 120 characters');return;}const saved=upsertCustomPreset(customList(),filter,name);if(storageSet('ffw-custom-presets',JSON.stringify(saved.list))){populatePresets();el.preset.value=`custom:${saved.preset.id}`;updatePresetDeleteState();toast('Preset saved in this browser');}else toast('Browser storage is unavailable');}
+  function exportFilter(){const filter=validatedCurrentFilter();if(!filter)return;if(!activeDocument.id)activeDocument.id=createCustomPresetId();filter.id=activeDocument.id;const base=slug(filter.name);try{downloadBlob(new Blob([JSON.stringify(filter,null,2)+'\n'],{type:'application/json;charset=utf-8'}),base+'.json');}catch(error){console.error('Filter export failed',error);toast(`Filter export failed: ${error.message}`);}}
+  async function deletePreset(){
+    if(!activeDocument.key?.startsWith('custom:'))return;
+    try{
+      const id=activeDocument.id,dirty=isDirty(),{action}=await chooseFilterAction(`Delete “${$('#filterName').value}” from My Filters?`,dirty?[['keep','Delete and keep unsaved draft'],['cancel','Cancel']]:[['delete','Delete'],['cancel','Cancel']]);
+      if(!['keep','delete'].includes(action))return;
+      const {storageList}=library();localStorage.setItem('ffw-custom-presets',JSON.stringify(storageList.filter(item=>item?.id!==id)));
+      try{localStorage.removeItem(PREFERENCE_PREFIX+`custom:${id}`);}catch(error){organizationError(error);}
+      if(action==='keep'){activeDocument.key=null;activeDocument.id=undefined;activeDocument.imported=false;activeDocument.recordBaseline=null;refreshTags();populatePresets();}else applyFilter(presets.find(item=>item.id==='pass'),'builtin:pass');
+      browser?.refresh();
+    }catch(error){organizationError(error);}
+  }
+  async function importFilterFile(file){if(!file)return;try{const result=await importLatestFilterFile(file,{state,cancelRender,applyFilter,beforeApply:async definition=>{prepareFilter(definition);return guardReplacement();}});if(!result)return;toast(result.kind==='afs'?'AFS filter imported · CPU legacy mode':'Filter FabJS project imported');}catch(error){console.error('Filter import failed',error);toast(`Import failed: ${error.message}`);}finally{el.filterInput.value='';}}
+  async function savePreset(){
+    const filter=validatedCurrentFilter();if(!filter){await chooseFilterAction('Could not save filter',[['cancel','Keep editing']],{detail:el.statusText.textContent});return false;}
+    try{
+      let list=library().presets,targetId=activeDocument.key?.startsWith('custom:')?activeDocument.id:null,expected=activeDocument.recordBaseline;
+      const duplicateName=list.some(item=>item.name.toLowerCase()===filter.name.toLowerCase()&&item.id!==targetId&&item.id!==filter.id);
+      const choice=await chooseFilterAction('Save filter',targetId?[['update','Update this filter'],['copy','Save as new filter'],['cancel','Cancel']]:[['save','Save as new filter'],['cancel','Cancel']],{name:duplicateName?`${filter.name.slice(0,113)} (copy)`:filter.name,detail:duplicateName?'Another filter has this name. A distinct name is suggested; same-name copies are allowed.':'Saved in this browser. Export also keeps a portable copy.'});
+      if(choice.action==='cancel')return false;filter.name=choice.name;
+      if(choice.action==='copy'){targetId=null;filter.id=createCustomPresetId();}
+      else if(!targetId&&!filter.id)filter.id=createCustomPresetId();
+      list=library().presets;
+      const existing=findCustomPresetById(list,targetId||filter.id);
+      if(targetId&&(!existing||JSON.stringify(existing)!==expected)){
+        const conflict=await chooseFilterAction('This filter changed in another tab.',existing?[['update','Update existing with my draft'],['copy','Save as new filter'],['cancel','Cancel']]:[['copy','Save as new filter'],['cancel','Cancel']],{detail:existing?`Current saved filter: ${existing.name}. Updated: ${existing.updatedAt||'unknown'}. Updating replaces that saved content with your draft.`:'The saved record was deleted. Your draft is still here.'});
+        if(conflict.action==='cancel')return false;
+        if(conflict.action==='copy'){targetId=null;filter.id=createCustomPresetId();}else expected=JSON.stringify(existing);
+      }else if(!targetId&&existing){
+        let equal=false;try{equal=portableContent(validateNativeFilter(existing))===portableContent(filter);}catch{}
+        const conflict=await chooseFilterAction(equal?'Already saved':'An existing filter has this ID.',equal?[['use','Use saved record'],['copy','Save as new filter'],['cancel','Cancel']]:[['update','Update existing'],['copy','Save as new filter'],['cancel','Cancel']]);
+        if(conflict.action==='cancel')return false;
+        if(conflict.action==='use'){adoptSaved(existing);return true;}
+        if(conflict.action==='copy')filter.id=createCustomPresetId();else{targetId=existing.id;expected=JSON.stringify(existing);}
+      }
+      const record=writeLibraryRecord(localStorage,normalizeCustomPresetList,filter,{targetId,expected});adoptSaved(record);toast('Filter saved in this browser');return true;
+    }catch(error){organizationError(error);await chooseFilterAction('Could not save filter',[['cancel','Keep editing']],{detail:error.message});return false;}
+  }
+  function adoptSaved(record){activeDocument.key=`custom:${record.id}`;activeDocument.id=record.id;activeDocument.tags=normalizeTags(record.tags);activeDocument.imported=false;activeDocument.recordBaseline=JSON.stringify(record);$('#filterName').value=record.name;activeDocument.baseline=documentSnapshot();refreshTags();populatePresets();}
 
   function wire(){
     el.rendererSelect.value=['auto','webgpu','cpu'].includes(state.rendererPreference)?state.rendererPreference:'auto';
@@ -205,8 +292,22 @@ export function initFilterFabApp(){
     $('#savePresetBtn').onclick=savePreset;
     el.deletePreset.onclick=deletePreset;
     el.renderBtn.onclick=()=>render({focusInvalid:true});
-    $('#resetBtn').onclick=()=>applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');
-    el.preset.onchange=()=>{const selection=el.preset.value,[type,id]=selection.split(':'),definition=type==='builtin'?presets.find(preset=>preset.id===id):findCustomPresetById(customList(),id);if(!definition){updatePresetDeleteState();return;}applyPresetSafely(definition,selection,{applyFilter,updatePresetDeleteState,onError:error=>{console.error('Preset application failed',error);setStatus(`Preset error: ${error.message}`,'error');toast(`Preset could not be loaded: ${error.message}`);}});};
+    $('#resetBtn').onclick=async()=>{if(await guardReplacement())applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');};
+    browser=createFilterBrowser({launcher:el.searchFilters,getEntries:catalog,load:loadCatalogEntry,toggleFavorite:entry=>{writeEntryPreference(localStorage,entry.key,{favorite:!entry.favorite});catalogCache=null;},onError:organizationError});
+    populatePresets();
+    el.preset.onchange=async()=>{
+      const key=el.preset.value;
+      if(key===activeDocument.key)return;
+      const entry=catalog().find(item=>item.key===key);if(!entry)return;
+      try{await loadCatalogEntry(entry,el.preset);}catch(error){organizationError(error);}finally{updateDocumentHeader({forceSelection:true});}
+    };
+    const addTag=()=>{const tags=activeDocument.key?.startsWith('builtin:')?preference(activeDocument.key).tags:activeDocument.tags;if(commitTags([...tags,$('#newTag').value])){$('#newTag').value='';refreshTags();$('#newTag').focus();}};
+    $('#addTagBtn').onclick=addTag;$('#newTag').onkeydown=event=>{if(event.key==='Enter'&&!event.isComposing){event.preventDefault();addTag();}};$('#newTag').oninput=refreshTags;
+    // The preset's native input event precedes change. Only its own change handler
+    // may restore the selection, after capturing the requested ID.
+    document.addEventListener('input',event=>{if(event.target!==el.preset&&event.target.closest('.sidebar'))queueMicrotask(updateDocumentHeader);});
+    document.addEventListener('change',event=>{if(event.target!==el.preset&&event.target.closest('.sidebar'))queueMicrotask(updateDocumentHeader);});
+    $('#editControlsDialog').addEventListener('close',updateDocumentHeader);
     el.formulas.forEach(field=>{
       field.oninput=()=>{
         const box=field.closest('.formula'),icon=$('.formula-state',box),errorElement=$('.formula-error',box);
@@ -223,7 +324,7 @@ export function initFilterFabApp(){
       field.onblur=validatePendingFormulas;
       field.onkeydown=event=>{if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){event.preventDefault();render({focusInvalid:true});}};
     });
-    document.addEventListener('keydown',event=>{if(event.key==='Escape'&&state.isRendering){event.preventDefault();event.stopPropagation();cancelRender();return;}if((event.ctrlKey||event.metaKey)&&event.shiftKey&&event.key.toLowerCase()==='c'&&!state.isRendering&&!isEditableTarget(event.target)){event.preventDefault();copyImageToClipboard();}});
+    document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!document.querySelector('dialog[open]')&&state.isRendering){event.preventDefault();event.stopPropagation();cancelRender();return;}if((event.ctrlKey||event.metaKey)&&event.shiftKey&&event.key.toLowerCase()==='c'&&!state.isRendering&&!isEditableTarget(event.target)){event.preventDefault();copyImageToClipboard();}});
     document.addEventListener('paste',event=>{if(state.isRendering||isEditableTarget(event.target)||document.querySelector('dialog[open]'))return;const image=imageFromClipboardData(event.clipboardData);if(!image)return;event.preventDefault();loadImageFile(image,{successMessage:'Image pasted from clipboard'});});
     $$('#viewMode button').forEach(button=>button.onclick=()=>{$$('#viewMode button').forEach(item=>item.classList.remove('active'));button.classList.add('active');state.view=button.dataset.view;el.splitControl.classList.toggle('show',state.view==='split');canvasView.drawView();});
     el.split.oninput=()=>{state.split=Number(el.split.value);canvasView.requestDraw();};
@@ -241,11 +342,14 @@ export function initFilterFabApp(){
     window.addEventListener('blur',hideDrop);
     $('#helpBtn').onclick=()=>$('#helpDialog').showModal();
     $('#closeHelp').onclick=()=>$('#helpDialog').close();
-    window.addEventListener('storage',event=>{if(event.key===null||event.key==='ffw-custom-presets')populatePresets();});
+    window.addEventListener('storage',event=>{if(event.key===null||event.key==='ffw-custom-presets'||event.key.startsWith(PREFERENCE_PREFIX)){
+      if(activeDocument.key?.startsWith('custom:')){try{const record=findCustomPresetById(library().presets,activeDocument.id);if(!record){activeDocument.key=null;activeDocument.id=undefined;activeDocument.imported=false;toast('Saved filter deleted in another tab. Save as new to keep this draft.');}else if(JSON.stringify(record)!==activeDocument.recordBaseline)toast('Saved filter changed in another tab. Update will require review.');}catch(error){organizationError(error);}}
+      catalogCache=null;refreshTags();populatePresets();
+    }});
     window.addEventListener('beforeunload',()=>state.rendererManager?.dispose());
   }
 
-  window.FilterFabJS=Object.freeze({version:'2.6.7',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getRendererPreference:()=>state.rendererPreference});
-  controlsController.buildSliders();populatePresets();wire();const demo=demoImage();initImage(demo.data,demo.width,demo.height);applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');
+  window.FilterFabJS=Object.freeze({version:'2.7.0',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getRendererPreference:()=>state.rendererPreference});
+  controlsController.buildSliders();wire();const demo=demoImage();initImage(demo.data,demo.width,demo.height);applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');
   return{state,render,applyFilter,loadImageFile};
 }

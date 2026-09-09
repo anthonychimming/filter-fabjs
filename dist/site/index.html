@@ -42,7 +42,7 @@
   Licensed GPL-2.0-or-later. Original Filter Foundry project:
   https://github.com/danielmarschall/filter_foundry
 -->
-<link rel="stylesheet" href="./styles/app.css">
+<link rel="stylesheet" href="./assets/app.c4501dbbf470.css">
 </head>
 <body>
 <div class="app">
@@ -82,5 +82,5 @@
 <h3>Preview and transparency</h3><p>The image area uses a Photoshop-style light checkerboard so transparent pixels are clearly visible in Filtered, Original, and Split views. The surrounding stage keeps its darker checker pattern for contrast, making alpha previews easier to read before exporting, copying, or pasting the image.</p><h3>Built-ins and files</h3><p>The preset menu contains 31 WebGPU-compatible built-ins. Mandelbrot Atlas, Layered Noise Benchmark, and Warped SDF Bloom are grouped as deterministic performance benchmarks so the same image and controls can be timed with CPU and GPU selection. Import automatically detects Filter FabJS native JSON projects and historic <code>.afs</code> files. Multiline AFS formulas and legacy line-continuation markers are reconstructed before parsing. AFS files use legacy integer-style math and therefore render on the CPU. Filter FabJS exports only its native JSON project format.</p>
 <h3>Development architecture</h3><p>Filter FabJS v2.1 uses native ES modules during development. Parser, typed IR, GPU compiler, renderers, presets, file I/O, and UI controllers are separated to keep the codebase maintainable and renderer boundaries explicit. The build scripts can still produce a standalone HTML release.</p><h3>Compatibility scope</h3><p>This browser app targets RGBA images and common Filter Factory expressions. It is not a Photoshop plug-in and is not bit-exact for every historic edge case.</p><p>Distributed under GPL-2.0-or-later. Inspired by the open-source Filter Foundry project.</p>
 </div></dialog>
-<script type="module" src="./src/main.js"></script>
+<script src="./assets/app.3fa34790d4b0.js" defer></script>
 </body></html>

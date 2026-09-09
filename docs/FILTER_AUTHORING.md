@@ -1,6 +1,6 @@
 # Filter FabJS Filter Authoring Guide
 
-**Applies to Filter FabJS v2.6.7**
+**Applies to Filter FabJS v2.7.0**
 
 This guide is for designing new Filter FabJS filters efficiently and with predictable CPU/WebGPU behavior. It assumes the formula syntax in [FORMULA_REFERENCE.md](FORMULA_REFERENCE.md).
 
@@ -800,3 +800,9 @@ A practical workflow for a new filter is:
 10. export the final native v2 JSON and keep the formula reference synchronized if new language features were introduced.
 
 The goal is not to maximize formula complexity. Prefer the smallest expression that produces the intended visual behavior predictably.
+
+## Filter library metadata (v2.7.0)
+
+Native JSON v2 accepts optional `id` (1–80 ASCII letters, digits, underscores or hyphens) and `tags` (at most 20 strings, each 1–32 Unicode code points). Tags normalize NFC, outer/repeated whitespace, and case-insensitive identity; punctuation and accents remain meaningful. Control/format characters are rejected. Missing tags normalize to an empty array. Invalid IDs/tags fail before editor mutation. Favorites are local preferences and never exported.
+
+IDs and tags round-trip in v2.7.0. Earlier v2.6.7 readers still accept the known rendering fields but discard these new fields on re-export. Built-in export allocates a portable custom ID and includes supplied plus personal tags; exporting does not save a library record. See [Filter library](FILTER_LIBRARY.md) for identity and storage behavior.

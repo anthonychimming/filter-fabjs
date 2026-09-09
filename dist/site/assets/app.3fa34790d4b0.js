@@ -1,0 +1,1961 @@
+(()=>{'use strict';
+
+/* src/core/utils.js */
+/**
+ * Filter FabJS
+ * Modular source extracted from v2.0.7; modular architecture v2.1.0.
+ * Licensed GPL-2.0-or-later. See LICENSE and README.md.
+ */
+
+const $ = (selector, root = document) => root.querySelector(selector);
+const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
+const debounce = (fn, milliseconds = 150) => {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), milliseconds);
+  };
+};
+const storageGet = (key, fallback = '') => {
+  try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; }
+};
+const storageSet = (key, value) => {
+  try { localStorage.setItem(key, value); return true; } catch { return false; }
+};
+const escapeHtml = value => String(value).replace(/[&<>"']/g, character => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+}[character]));
+const slug = value => String(value).toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'filter';
+
+
+/* src/core/controls.js */
+/**
+ * Filter FabJS
+ * Licensed GPL-2.0-or-later. See LICENSE and README.md.
+ */
+
+
+const DEFAULT_CONTROL_VALUE=128;
+const CONTROL_UI_WIDGETS=Object.freeze(['slider','number','toggle','seed']);
+const CONTROL_UI_FORMATS=Object.freeze(['number','integer']);
+const CONTROL_UNIT_MAX_LENGTH=12;
+const DEFAULT_CONTROL_UI=Object.freeze({widget:'slider',displayMin:0,displayMax:255,step:1,format:'number',unit:''});
+const CONTROL_DEFINITIONS=Object.freeze(Array.from({length:10},(_,index)=>Object.freeze({index,defaultValue:DEFAULT_CONTROL_VALUE,defaultLabel:`Control ${index+1}`})));
+const CONTROL_COUNT=CONTROL_DEFINITIONS.length;
+const CONTROL_PAIR_COUNT=Math.floor(CONTROL_COUNT/2);
+
+function cloneControlUI(ui=DEFAULT_CONTROL_UI){return{widget:ui.widget,displayMin:ui.displayMin,displayMax:ui.displayMax,step:ui.step,format:ui.format,unit:ui.unit}}
+function normalizeControlUI(value){
+  if(!value||typeof value!=='object'||Array.isArray(value))return cloneControlUI();
+  const widget=CONTROL_UI_WIDGETS.includes(value.widget)?value.widget:DEFAULT_CONTROL_UI.widget;
+  const format=widget==='seed'?'integer':CONTROL_UI_FORMATS.includes(value.format)?value.format:DEFAULT_CONTROL_UI.format;
+  let displayMin=Number.isFinite(value.displayMin)?value.displayMin:DEFAULT_CONTROL_UI.displayMin;
+  let displayMax=Number.isFinite(value.displayMax)?value.displayMax:DEFAULT_CONTROL_UI.displayMax;
+  if(displayMax<=displayMin){displayMin=DEFAULT_CONTROL_UI.displayMin;displayMax=DEFAULT_CONTROL_UI.displayMax;}
+  const range=displayMax-displayMin;
+  const step=Number.isFinite(value.step)&&value.step>0&&value.step<=range?value.step:Math.min(DEFAULT_CONTROL_UI.step,range);
+  const unit=typeof value.unit==='string'?value.unit.slice(0,CONTROL_UNIT_MAX_LENGTH):DEFAULT_CONTROL_UI.unit;
+  return{widget,displayMin,displayMax,step,format,unit};
+}
+function validateControlUI(value){
+  if(!value||typeof value!=='object'||Array.isArray(value))throw new Error('Control presentation must be an object');
+  if(!CONTROL_UI_WIDGETS.includes(value.widget))throw new Error(`Widget must be one of: ${CONTROL_UI_WIDGETS.join(', ')}`);
+  if(!Number.isFinite(value.displayMin))throw new Error('Display minimum must be a finite number');
+  if(!Number.isFinite(value.displayMax)||value.displayMax<=value.displayMin)throw new Error('Display maximum must be a finite number greater than the minimum');
+  const range=value.displayMax-value.displayMin;
+  if(!Number.isFinite(value.step)||value.step<=0||value.step>range)throw new Error('Step must be positive and no larger than the display range');
+  if(!CONTROL_UI_FORMATS.includes(value.format))throw new Error(`Format must be one of: ${CONTROL_UI_FORMATS.join(', ')}`);
+  if(typeof value.unit!=='string')throw new Error('Unit must be a string');
+  if(value.unit.length>CONTROL_UNIT_MAX_LENGTH)throw new Error(`Unit exceeds ${CONTROL_UNIT_MAX_LENGTH} characters`);
+  return{...cloneControlUI(value),format:value.widget==='seed'?'integer':value.format};
+}
+function rawToDisplay(raw,ui=DEFAULT_CONTROL_UI){const normalized=normalizeControlUI(ui);return normalized.displayMin+(clamp(Number(raw)||0,0,255)/255)*(normalized.displayMax-normalized.displayMin)}
+function snapDisplay(value,ui=DEFAULT_CONTROL_UI){const normalized=normalizeControlUI(ui),numeric=Number(value);if(!Number.isFinite(numeric))return normalized.displayMin;const steps=Math.round((numeric-normalized.displayMin)/normalized.step);return clamp(normalized.displayMin+steps*normalized.step,normalized.displayMin,normalized.displayMax)}
+function displayToRaw(value,ui=DEFAULT_CONTROL_UI){const normalized=normalizeControlUI(ui),display=snapDisplay(value,normalized),t=(display-normalized.displayMin)/(normalized.displayMax-normalized.displayMin);return clamp(t*255,0,255)}
+function decimalPlaces(step){
+  if(!Number.isFinite(step)||step<=0)return 0;
+  const text=step.toString().toLowerCase();
+  if(text.includes('e-'))return Math.min(12,Number(text.split('e-')[1])||0);
+  return Math.min(12,(text.split('.')[1]||'').length);
+}
+function formatControlValue(value,ui=DEFAULT_CONTROL_UI){
+  const normalized=normalizeControlUI(ui),numeric=Number(value);if(!Number.isFinite(numeric))return'';
+  if(normalized.format==='integer')return String(Math.round(numeric));
+  const precision=decimalPlaces(normalized.step),rounded=Number(numeric.toFixed(precision));return String(Object.is(rounded,-0)?0:rounded);
+}
+function normalizeToggleRaw(raw){return clamp(Number(raw)||0,0,255)<127.5?0:255}
+function randomSeedDisplay(ui=DEFAULT_CONTROL_UI,random=Math.random){
+  const normalized=normalizeControlUI(ui),minimum=Math.ceil(normalized.displayMin),maximum=Math.floor(normalized.displayMax);
+  if(maximum<minimum)return Math.round(snapDisplay(normalized.displayMin,normalized));
+  const value=minimum+Math.floor(clamp(Number(random())||0,0,0.9999999999999999)*(maximum-minimum+1));return Math.round(snapDisplay(value,normalized));
+}
+const defaultControlValues=()=>CONTROL_DEFINITIONS.map(definition=>definition.defaultValue);
+const defaultControlLabels=()=>CONTROL_DEFINITIONS.map(definition=>definition.defaultLabel);
+const defaultControlUIs=()=>CONTROL_DEFINITIONS.map(()=>cloneControlUI());
+
+
+/* src/core/filter-metadata.js */
+// Portable metadata only: no compiler or renderer dependencies.
+function validatePortableId(id){
+  if(id===undefined)return undefined;
+  if(typeof id!=='string'||!/^[A-Za-z0-9_-]{1,80}$/.test(id))throw new Error('Native filter id must contain 1–80 letters, digits, underscores or hyphens');
+  return id;
+}
+function tagKey(tag){return tag.normalize('NFC').toLowerCase();}
+function normalizeTags(tags=[]){
+  if(!Array.isArray(tags)||tags.length>20)throw new Error('Tags must be an array of at most 20 tags');
+  const result=[],seen=new Set();
+  for(const value of tags){
+    if(typeof value!=='string'||/[\p{Cc}\p{Cf}]/u.test(value))throw new Error('Tags must be text without control characters');
+    const label=value.normalize('NFC').trim().replace(/\s+/gu,' ');
+    if(!label||[...label].length>32)throw new Error('Each tag must contain 1–32 Unicode characters');
+    const key=tagKey(label);if(!seen.has(key)){seen.add(key);result.push(label);}
+  }
+  return result;
+}
+function searchText(value){return String(value??'').normalize('NFD').replace(/\p{M}/gu,'').toLowerCase().trim().replace(/\s+/gu,' ');}
+function portableContent(filter){
+  return JSON.stringify([filter.name,filter.author||'',filter.description||'',normalizeTags(filter.tags).map(tagKey).sort(),filter.mathMode,filter.formulas,filter.controls]);
+}
+
+
+/* src/core/formula-language.js */
+/**
+ * Filter FabJS
+ * Modular source extracted from v2.0.7; modular architecture v2.1.0.
+ * Licensed GPL-2.0-or-later. See LICENSE and README.md.
+ */
+const ARITY={src:3,rad:3,ctl:1,val:3,map:2,min:2,max:2,abs:1,add:3,sub:3,dif:2,rnd:2,mix:4,scl:5,sqr:1,sqrt:1,sin:1,cos:1,tan:1,r2x:2,r2y:2,c2d:2,c2m:2,radius:2,angle:2,get:1,put:2,cnv:10,rst:1,pow:2,src0:3,src1:3,rad0:3,rad1:3,cnv0:10,cnv1:10,clamp:3,lerp:3,step:2,smoothstep:3,floor:1,ceil:1,round:1,fract:1,sign:1,bias:2,gain:2,hash2:3,valueNoise:4,perlin:4,worleyF1:4,worleyF2:4,fbm:7,turbulence:5,ridged:5,periodicNoise:5,mandelbrot:3,julia:5,wrap:2,mirror:2,repeat:2,mirrorRepeat:2,gradient3:4,gradient4:5,srcWrap:3,srcMirror:3,srcLinear:3,linearGrad:6,radialGrad:5,angularGrad:5,checker:4,brick:6,line:8,circle:6,ring:7,box:8,triangle:9,grid:6,sierpinski:7,sdfLine:7,sdfCircle:5,sdfBox:7,sdfUnion:2,sdfIntersect:2,sdfSubtract:2,sdfSmoothUnion:3,sdfFill:[1,2],sdfOutline:[2,3],multiply:[2,3],screen:[2,3],overlay:[2,3],softLight:[2,3],difference:[2,3]};
+const VARS=new Set(('r g b a c i u v x y nx ny cx cy z p d m X Y Z P D M R G B A C I U V t rmax gmax bmax amax cmax imax umax vmax dmax mmax pmax xmax ymax zmax rmin gmin bmin amin cmin imin umin vmin dmin mmin pmin xmin ymin zmin r0 g0 b0 a0 c0 i0 u0 v0 d0 m0 r1 g1 b1 a1 c1 i1 u1 v1 d1 m1 tmin tmax total').split(' '));
+const FORMULA_LIMITS=Object.freeze({maxLength:8192,maxTokens:4096,maxNodes:4096,maxDepth:128});
+const MAX_FRACTAL_ITERATIONS=256;
+
+class FormulaError extends Error{constructor(message,pos=0){super(message);this.name='FormulaError';this.pos=pos}}
+
+class Tokenizer{
+  constructor(text){
+    this.text=String(text??'');this.pos=0;this.tokenCount=0;
+    if(this.text.length>FORMULA_LIMITS.maxLength)throw new FormulaError(`Formula exceeds the ${FORMULA_LIMITS.maxLength}-character limit`,FORMULA_LIMITS.maxLength);
+    this.next();
+  }
+  emit(type,value,pos){
+    if(type!=='eof'&&++this.tokenCount>FORMULA_LIMITS.maxTokens)throw new FormulaError(`Formula exceeds the ${FORMULA_LIMITS.maxTokens}-token limit`,pos);
+    return this.current={type,value,pos};
+  }
+  next(){
+    const source=this.text,length=source.length;
+    while(this.pos<length){
+      if(/\s/.test(source[this.pos])){this.pos++;continue}
+      if(source[this.pos]==='/'&&source[this.pos+1]==='/'){while(this.pos<length&&!/[\r\n]/.test(source[this.pos]))this.pos++;continue}
+      break;
+    }
+    if(this.pos>=length)return this.emit('eof','',this.pos);
+    const start=this.pos;
+    if(source[start]==='0'&&/[xX]/.test(source[start+1]||'')){
+      this.pos+=2;let hex='';while(this.pos<length&&/[0-9a-f]/i.test(source[this.pos]))hex+=source[this.pos++];
+      if(!hex)throw new FormulaError('Expected hexadecimal digits',start);
+      const value=Number.parseInt(hex,16);if(!Number.isFinite(value))throw new FormulaError('Numeric literal must be finite',start);
+      return this.emit('number',value,start);
+    }
+    if(/[0-9]/.test(source[start])){
+      let raw='';while(this.pos<length&&/[0-9.]/.test(source[this.pos]))raw+=source[this.pos++];
+      if((raw.match(/\./g)||[]).length>1)throw new FormulaError('Invalid number',start);
+      const value=Number(raw);if(!Number.isFinite(value))throw new FormulaError('Numeric literal must be finite',start);
+      return this.emit('number',value,start);
+    }
+    if(/[A-Za-z]/.test(source[start])){
+      let id='';while(this.pos<length&&/[A-Za-z0-9]/.test(source[this.pos]))id+=source[this.pos++];
+      return this.emit('id',id,start);
+    }
+    const two=source.slice(start,start+2);
+    if(['<<','>>','<=','>=','==','!=','&&','||'].includes(two)){this.pos+=2;return this.emit('op',two,start)}
+    const char=source[this.pos++];
+    if('+-*/%<>&^|!?~,:()'.includes(char))return this.emit(char==='('? 'lparen':char===')'?'rparen':char===','?'comma':char===':'?'colon':'op',char,start);
+    throw new FormulaError(`Disallowed character “${char}”`,start);
+  }
+}
+
+class Parser{
+  constructor(text){this.t=new Tokenizer(text);this.nodeCount=0}
+  node(value,pos){if(++this.nodeCount>FORMULA_LIMITS.maxNodes)throw new FormulaError(`Formula exceeds the ${FORMULA_LIMITS.maxNodes}-node limit`,pos);return value}
+  checkDepth(depth){if(depth>FORMULA_LIMITS.maxDepth)throw new FormulaError(`Formula exceeds the nesting limit of ${FORMULA_LIMITS.maxDepth}`,this.t.current.pos)}
+  parse(){const node=this.expr(0,0);if(this.t.current.type!=='eof')throw new FormulaError(`Unexpected “${this.t.current.value}”`,this.t.current.pos);return node}
+  expr(min,depth){
+    this.checkDepth(depth);let left=this.prefix(depth);
+    while(true){
+      const token=this.t.current;
+      if(token.type==='op'&&token.value==='?'&&2>=min){
+        this.t.next();const whenTrue=this.expr(0,depth+1);
+        if(this.t.current.type!=='colon')throw new FormulaError('Expected : in conditional',this.t.current.pos);
+        this.t.next();left=this.node({k:'t',c:left,y:whenTrue,n:this.expr(2,depth+1)},token.pos);continue;
+      }
+      const operator=token.type==='comma'?',':token.type==='op'?token.value:null,precedence=this.prec(operator);
+      if(!operator||precedence<min)break;
+      this.t.next();left=this.node({k:'b',o:operator,l:left,r:this.expr(precedence+1,depth+1)},token.pos);
+    }
+    return left;
+  }
+  prefix(depth){
+    this.checkDepth(depth);const token=this.t.current;
+    if(token.type==='number'){this.t.next();return this.node({k:'n',v:token.value},token.pos)}
+    if(token.type==='id'){
+      this.t.next();const name=token.value;
+      if(this.t.current.type==='lparen'){
+        if(!(name in ARITY))throw new FormulaError(`Unknown function “${name}”`,token.pos);
+        this.t.next();const args=[];
+        if(this.t.current.type!=='rparen')while(true){args.push(this.expr(2,depth+1));if(this.t.current.type==='comma'){this.t.next();continue}break}
+        if(this.t.current.type!=='rparen')throw new FormulaError('Expected )',this.t.current.pos);
+        this.t.next();const arity=ARITY[name],valid=Array.isArray(arity)?arity.includes(args.length):args.length===arity;
+        if(!valid){const expected=Array.isArray(arity)?arity.join(' or '):arity;throw new FormulaError(`${name}() expects ${expected} argument${Array.isArray(arity)||arity!==1?'s':''}`,token.pos)}
+        return this.node({k:'f',n:name,a:args},token.pos);
+      }
+      if(!VARS.has(name))throw new FormulaError(`Unknown variable “${name}”`,token.pos);
+      return this.node({k:'v',n:name},token.pos);
+    }
+    if(token.type==='lparen'){
+      this.t.next();const node=this.expr(0,depth+1);
+      if(this.t.current.type!=='rparen')throw new FormulaError('Expected )',this.t.current.pos);
+      this.t.next();return node;
+    }
+    if(token.type==='op'&&['+','-','!','~'].includes(token.value)){this.t.next();return this.node({k:'u',o:token.value,e:this.expr(10,depth+1)},token.pos)}
+    throw new FormulaError(token.type==='eof'?'Expression is empty':`Unexpected “${token.value}”`,token.pos);
+  }
+  prec(operator){if(operator===',')return 1;if(operator==='&&'||operator==='||')return 3;if(['&','^','|'].includes(operator))return 4;if(operator==='=='||operator==='!=')return 5;if(['<','<=','>','>='].includes(operator))return 6;if(operator==='<<'||operator==='>>')return 7;if(operator==='+'||operator==='-')return 8;if(['*','/','%'].includes(operator))return 9;return-1}
+}
+
+
+/* src/core/chroma.js */
+/**
+ * Filter FabJS
+ * Chroma-variable contracts shared by the CPU and WebGPU renderers.
+ * Licensed GPL-2.0-or-later. See LICENSE and README.md.
+ */
+
+const float=Object.freeze({uMin:-55,uMax:55,uSpan:110,vMin:-78,vMax:78,vSpan:156});
+const legacy=Object.freeze({uMin:0,uMax:255,uSpan:255,vMin:0,vMax:255,vSpan:255});
+
+const CHROMA_MODELS=Object.freeze({float,legacy});
+
+
+/* src/core/ir.js */
+/**
+ * Filter FabJS
+ * Modular source extracted from v2.0.7; modular architecture v2.1.0.
+ * Licensed GPL-2.0-or-later. See LICENSE and README.md.
+ */
+
+
+const IR_VERSION=1;
+const IRType=Object.freeze({SCALAR:'scalar',INTEGER:'integer',BOOLEAN:'boolean',MASK:'mask',CHANNEL:'channel',COLOR:'color',VECTOR2:'vector2',IMAGE:'image'});
+const INTEGER_VARS=new Set('x y z p X Y Z P xmax ymax zmax pmax xmin ymin zmin pmin total'.split(' '));
+const CHANNEL_VARS=new Set('r g b a c r0 g0 b0 a0 c0 r1 g1 b1 a1 c1'.split(' '));
+const MASK_FUNCTIONS=new Set('step smoothstep hash2 valueNoise perlin worleyF1 worleyF2 fbm turbulence ridged periodicNoise mandelbrot julia linearGrad radialGrad angularGrad checker brick line circle ring box triangle grid sierpinski sdfFill sdfOutline'.split(' '));
+const INTEGER_FUNCTIONS=new Set('rnd floor ceil round rst'.split(' '));
+const CHANNEL_FUNCTIONS=new Set('src src0 src1 srcWrap srcMirror srcLinear rad rad0 rad1 cnv cnv0 cnv1'.split(' '));
+const SOURCE_FUNCTIONS=new Set('src src0 src1 srcWrap srcMirror srcLinear rad rad0 rad1 cnv cnv0 cnv1'.split(' '));
+const STATEFUL_FUNCTIONS=new Set('rnd rst get put'.split(' '));
+const NONDETERMINISTIC_FUNCTIONS=new Set('rnd rst'.split(' '));
+const PROGRAM_CACHE_KEYS=new WeakMap();
+function appendKeyText(chunks,value){const text=String(value??'');chunks.push(String(text.length),':',text)}
+function appendExpressionKey(chunks,node){
+  if(!node||typeof node!=='object'){chunks.push('0');return}
+  switch(node.op){
+    case'const':chunks.push('N');appendKeyText(chunks,Object.is(node.value,-0)?'-0':node.value);return;
+    case'var':chunks.push('V');appendKeyText(chunks,node.name);return;
+    case'unary':chunks.push('U');appendKeyText(chunks,node.operator);appendExpressionKey(chunks,node.input);return;
+    case'binary':chunks.push('B');appendKeyText(chunks,node.operator);appendExpressionKey(chunks,node.left);appendExpressionKey(chunks,node.right);return;
+    case'select':chunks.push('S');appendExpressionKey(chunks,node.condition);appendExpressionKey(chunks,node.whenTrue);appendExpressionKey(chunks,node.whenFalse);return;
+    case'call':{const args=Array.isArray(node.args)?node.args:[];chunks.push('F');appendKeyText(chunks,node.fn);chunks.push(String(args.length),';');args.forEach(arg=>appendExpressionKey(chunks,arg));return}
+    default:chunks.push('X');appendKeyText(chunks,node.op);
+  }
+}
+function programCacheKey(program){
+  if(program&&typeof program==='object'){const cached=PROGRAM_CACHE_KEYS.get(program);if(cached)return cached}
+  const chunks=['P'];appendKeyText(chunks,program?.kind);appendKeyText(chunks,program?.irVersion);appendKeyText(chunks,program?.mathMode);const outputs=Array.isArray(program?.outputs)?program.outputs:[];chunks.push(String(outputs.length),';');outputs.forEach(output=>appendExpressionKey(chunks,output?.expression));const key=chunks.join('');
+  if(program&&typeof program==='object')PROGRAM_CACHE_KEYS.set(program,key);return key;
+}
+function variableIRType(name){if(INTEGER_VARS.has(name))return IRType.INTEGER;if(CHANNEL_VARS.has(name))return IRType.CHANNEL;return IRType.SCALAR}
+function mergeIRTypes(a,b){if(a===b)return a;if(a===IRType.BOOLEAN&&b===IRType.BOOLEAN)return IRType.BOOLEAN;if(a===IRType.INTEGER&&b===IRType.INTEGER)return IRType.INTEGER;if(a===IRType.CHANNEL&&b===IRType.CHANNEL)return IRType.CHANNEL;if(a===IRType.MASK&&b===IRType.MASK)return IRType.MASK;return IRType.SCALAR}
+function arithmeticIRType(operator,a,b){if(operator==='/' )return IRType.SCALAR;if(operator==='%'&&a===IRType.INTEGER&&b===IRType.INTEGER)return IRType.INTEGER;if(['+','-','*'].includes(operator)&&a===IRType.INTEGER&&b===IRType.INTEGER)return IRType.INTEGER;return IRType.SCALAR}
+function callIRType(name,args){if(CHANNEL_FUNCTIONS.has(name))return IRType.CHANNEL;if(MASK_FUNCTIONS.has(name))return IRType.MASK;if(INTEGER_FUNCTIONS.has(name))return IRType.INTEGER;if(['clamp','abs','sign'].includes(name))return args[0]?.type||IRType.SCALAR;if(['min','max','lerp'].includes(name))return mergeIRTypes(args[0]?.type,args[1]?.type);if(['multiply','screen','overlay','softLight','difference'].includes(name))return args[0]?.type===IRType.CHANNEL||args[1]?.type===IRType.CHANNEL?IRType.CHANNEL:IRType.SCALAR;return IRType.SCALAR}
+function constantNumberFromAst(node){
+  if(!node)return null;
+  if(node.k==='n'){const value=Number(node.v);return Number.isFinite(value)?value:null}
+  if(node.k==='u'){
+    const value=constantNumberFromAst(node.e);if(value===null)return null;
+    if(node.o==='+')return value;if(node.o==='-')return-value;
+  }
+  if(node.k==='b'){
+    const left=constantNumberFromAst(node.l),right=constantNumberFromAst(node.r);if(left===null||right===null)return null;
+    let value=null;switch(node.o){case'+':value=left+right;break;case'-':value=left-right;break;case'*':value=left*right;break;case'/':value=right===0?0:left/right;break;case'%':value=right===0?0:left%right;break;}
+    return Number.isFinite(value)?value:null;
+  }
+  return null;
+}
+function constantIntegerFromAst(node){
+  if(!node)return null;
+  if(node.k==='n'&&Number.isFinite(Number(node.v)))return Math.trunc(Number(node.v));
+  if(node.k==='u'){
+    const value=constantIntegerFromAst(node.e);if(value===null)return null;
+    if(node.o==='+')return value;if(node.o==='-')return -value;if(node.o==='~')return ~value;if(node.o==='!')return value?0:1;
+  }
+  if(node.k==='b'){
+    const a=constantIntegerFromAst(node.l),b=constantIntegerFromAst(node.r);if(a===null||b===null)return null;
+    switch(node.o){case'+':return a+b;case'-':return a-b;case'*':return a*b;case'/':return b===0?0:Math.trunc(a/b);case'%':return b===0?0:a%b;case'<<':return a<<b;case'>>':return a>>b;case'&':return a&b;case'^':return a^b;case'|':return a|b;case',':return b;}
+  }
+  if(node.k==='t'){
+    const condition=constantIntegerFromAst(node.c);if(condition===null)return null;
+    return constantIntegerFromAst(condition?node.y:node.n);
+  }
+  return null;
+}
+class TypedIRCompiler{
+  constructor({legacyMath=false}={}){
+    this.legacyMath=Boolean(legacyMath);
+    this.meta={nodeCount:0,controls:Array(CONTROL_COUNT).fill(false),controlMappings:Array(CONTROL_COUNT).fill(null),blockedControlMappings:Array(CONTROL_COUNT).fill(false),dynamicControls:false,functions:new Set(),variables:new Set(),usesSource:false,stateful:false,deterministic:true};
+  }
+  markControl(index,count=1){
+    if(Number.isInteger(index)&&index>=0&&index+count<=CONTROL_COUNT){for(let i=0;i<count;i++)this.meta.controls[index+i]=true}
+    else{this.meta.dynamicControls=true;this.meta.controls.fill(true)}
+  }
+  trackValMapping(astArgs){
+    const index=constantNumberFromAst(astArgs[0]);if(!Number.isInteger(index)||index<0||index>=CONTROL_COUNT)return;
+    const minimum=constantNumberFromAst(astArgs[1]),maximum=constantNumberFromAst(astArgs[2]),current=this.meta.controlMappings[index];
+    if(minimum===null||maximum===null){this.meta.blockedControlMappings[index]=true;return}
+    if(!current){this.meta.controlMappings[index]={type:'val',min:minimum,max:maximum};return}
+    if(current.type==='conflict'||current.min!==minimum||current.max!==maximum)this.meta.controlMappings[index]={type:'conflict'};
+  }
+  trackCall(name,astArgs){
+    this.meta.functions.add(name);
+    if(SOURCE_FUNCTIONS.has(name))this.meta.usesSource=true;
+    if(STATEFUL_FUNCTIONS.has(name))this.meta.stateful=true;
+    if(NONDETERMINISTIC_FUNCTIONS.has(name))this.meta.deterministic=false;
+    if(name==='ctl'||name==='val'){this.markControl(constantIntegerFromAst(astArgs[0]));if(name==='val')this.trackValMapping(astArgs)}
+    else if(name==='map'){
+      const pair=constantIntegerFromAst(astArgs[0]);
+      if(Number.isInteger(pair)&&pair>=0&&pair<CONTROL_PAIR_COUNT)this.markControl(pair*2,2);else this.markControl(null);
+    }
+  }
+  compile(node){
+    if(!node)throw new FormulaError('Cannot compile an empty expression');
+    this.meta.nodeCount++;
+    switch(node.k){
+      case'n':return{op:'const',type:Number.isInteger(Number(node.v))?IRType.INTEGER:IRType.SCALAR,value:Number(node.v)};
+      case'v':this.meta.variables.add(node.n);return{op:'var',type:variableIRType(node.n),name:node.n};
+      case'u':{
+        const input=this.compile(node.e),type=node.o==='!'?IRType.BOOLEAN:node.o==='~'?IRType.INTEGER:(input.type===IRType.INTEGER?IRType.INTEGER:IRType.SCALAR);
+        return{op:'unary',type,operator:node.o,input};
+      }
+      case'b':{
+        const left=this.compile(node.l),right=this.compile(node.r);let type;
+        if(node.o===',')type=right.type;
+        else if(['&&','||','==','!=','<','<=','>','>='].includes(node.o))type=IRType.BOOLEAN;
+        else if(['&','^','|','<<','>>'].includes(node.o))type=IRType.INTEGER;
+        else type=arithmeticIRType(node.o,left.type,right.type);
+        return{op:'binary',type,operator:node.o,left,right};
+      }
+      case't':{
+        const condition=this.compile(node.c),whenTrue=this.compile(node.y),whenFalse=this.compile(node.n);
+        return{op:'select',type:mergeIRTypes(whenTrue.type,whenFalse.type),condition,whenTrue,whenFalse};
+      }
+      case'f':{
+        this.trackCall(node.n,node.a);const args=node.a.map(arg=>this.compile(arg));
+        return{op:'call',type:callIRType(node.n,args),fn:node.n,args};
+      }
+    }
+    throw new FormulaError(`Unknown syntax node “${node.k}”`);
+  }
+  finish(){
+    const controlMappings=this.meta.controlMappings.map((mapping,index)=>mapping&&this.meta.blockedControlMappings[index]?{type:'conflict'}:mapping?{...mapping}:null);
+    return{nodeCount:this.meta.nodeCount,controlMask:[...this.meta.controls],controlMappings,dynamicControls:this.meta.dynamicControls,functions:[...this.meta.functions].sort(),variables:[...this.meta.variables].sort(),usesSource:this.meta.usesSource,stateful:this.meta.stateful,deterministic:this.meta.deterministic};
+  }
+}
+function compileFilterProgram(astList,{legacyMath=false}={}){
+  if(!Array.isArray(astList)||astList.length!==4)throw new FormulaError('A filter program requires four channel expressions');
+  const compiler=new TypedIRCompiler({legacyMath});
+  const outputs=astList.map((ast,channel)=>({channel,type:IRType.CHANNEL,expression:compiler.compile(ast)}));
+  return{kind:'filter-fab-program',irVersion:IR_VERSION,mathMode:legacyMath?'legacy':'float',outputs,metadata:compiler.finish()};
+}
+
+
+/* src/presets/builtins.js */
+/**
+ * Filter FabJS
+ * Modular source extracted from v2.0.7; modular architecture v2.1.0.
+ * Licensed GPL-2.0-or-later. See LICENSE and README.md.
+ */
+const unionMasks=terms=>terms.reduce((left,right)=>`max(${left},${right})`);
+const richControl=(label,value,widget,displayMin,displayMax,step=1,format='number',unit='')=>({label,value,ui:{widget,displayMin,displayMax,step,format,unit}});
+const unusedControl=index=>richControl(`Control ${index+1}`,128,'slider',0,255);
+const samplerSize='min(X,Y)',samplerStroke='val(1,1,9)',samplerFeather='val(2,0,4)';
+const samplerGrid=`grid(x,y,val(3,10,28),val(3,10,28),${samplerStroke}/3,${samplerFeather})*box(x,y,X*0.76,Y*0.68,${samplerSize}*0.18,${samplerSize}*0.16,0,${samplerFeather})`;
+const samplerRedMask=unionMasks([
+  `line(x,y,X*0.16,Y*0.42,X*0.34,Y*0.28,${samplerStroke},${samplerFeather})`,
+  `circle(x,y,X*0.5,Y*0.35,${samplerSize}*0.075,${samplerFeather})`
+]);
+const samplerGreenMask=unionMasks([
+  `ring(x,y,X*0.76,Y*0.35,${samplerSize}*0.075,${samplerStroke},${samplerFeather})`,
+  `box(x,y,X*0.24,Y*0.68,${samplerSize}*0.16,${samplerSize}*0.12,val(0,-128,128),${samplerFeather})`
+]);
+const samplerBlueMask=unionMasks([
+  `triangle(x,y,X*0.5,Y*0.57,X*0.41,Y*0.77,X*0.59,Y*0.77,${samplerFeather})`,
+  samplerGrid
+]);
+const analyticShapeFormulas=[
+  `lerp(r,8+(ctl(4)-8)*${samplerRedMask},ctl(7))`,
+  `lerp(g,8+(ctl(5)-8)*${samplerGreenMask},ctl(7))`,
+  `lerp(b,8+(ctl(6)-8)*${samplerBlueMask},ctl(7))`,
+  'a'
+];
+const sierpinskiMask=`sierpinski(x,y,X/2,Y/2,min(X,Y)*val(1,0.5,0.96),val(0,2,9),val(2,0,2.5))`;
+const sierpinskiShade=`(0.76+linearGrad(x,y,0,Y*0.15,0,Y*0.85)*0.24)`;
+const sierpinskiFormulas=[
+  `lerp(r,ctl(6)+(ctl(3)-ctl(6))*${sierpinskiMask}*${sierpinskiShade},ctl(7))`,
+  `lerp(g,ctl(6)+(ctl(4)-ctl(6))*${sierpinskiMask}*${sierpinskiShade},ctl(7))`,
+  `lerp(b,ctl(6)+(ctl(5)-ctl(6))*${sierpinskiMask}*${sierpinskiShade},ctl(7))`,
+  'a'
+];
+const tartanScale='val(0,54,132)',tartanBroad='val(1,8,34)',tartanThread='val(2,0.6,3.4)',tartanFeather='0.65';
+const tartanPrimary=`grid(x,y,${tartanScale},${tartanScale},${tartanBroad},${tartanFeather})`;
+const tartanSecondary=`grid(x+${tartanScale}*0.3,y+${tartanScale}*0.3,${tartanScale},${tartanScale},${tartanBroad}*0.42,${tartanFeather})`;
+const tartanBands=`clamp(${tartanPrimary}+${tartanSecondary}*0.72,0,1.45)`;
+const tartanPinstripes=unionMasks([
+  `grid(x+${tartanScale}*0.07,y+${tartanScale}*0.07,${tartanScale},${tartanScale},${tartanThread},${tartanFeather})`,
+  `grid(x-${tartanScale}*0.07,y-${tartanScale}*0.07,${tartanScale},${tartanScale},${tartanThread},${tartanFeather})`
+]);
+const tartanAngle='val(5,80,176)',tartanDiagonal=`x*r2x(${tartanAngle},1)+y*r2y(${tartanAngle},1)`;
+const tartanWeave='val(3,3,10)',tartanHatch=`grid(${tartanDiagonal},512,${tartanWeave},1024,${tartanThread}*0.42,0.35)*(0.72+checker(x,y,${tartanWeave},${tartanWeave})*0.28)`;
+const tartanStrength='ctl(4)/255',tartanTone='val(6,0.75,1.35)';
+const tartanTarget=(base,band,pin)=>`clamp((${base}+${tartanStrength}*(${band}*${tartanBands}*(0.42+0.58*${tartanHatch})+${pin}*${tartanPinstripes}))*${tartanTone},0,255)`;
+const tartanFormulas=[
+  `lerp(r,${tartanTarget(6,18,12)},ctl(7))`,
+  `lerp(g,${tartanTarget(18,43,26)},ctl(7))`,
+  `lerp(b,${tartanTarget(35,74,45)},ctl(7))`,
+  'a'
+];
+const mandelbrotX='cx*X/min(X,Y)*val(0,1,2)+val(1,-1.5,0.5)';
+const mandelbrotY='cy*Y/min(X,Y)*val(0,1,2)+val(2,-1,1)';
+const mandelbrotField=`sqrt(mandelbrot(${mandelbrotX},${mandelbrotY},val(3,24,192)))`;
+const mandelbrotFormulas=[
+  `lerp(r,gradient4(${mandelbrotField},4,ctl(4),242,ctl(6)),ctl(7))`,
+  `lerp(g,gradient4(${mandelbrotField},8,40,190,ctl(6)),ctl(7))`,
+  `lerp(b,gradient4(${mandelbrotField},32,ctl(5),110,ctl(6)),ctl(7))`,
+  'a'
+];
+const warpedSdfScale='val(1,20,110)',warpedSdfAmount='val(0,0,30)',warpedSdfSeed='val(2,1,9999)';
+const warpedSdfX=`x+(valueNoise(x,y,${warpedSdfScale},${warpedSdfSeed})-0.5)*${warpedSdfAmount}`;
+const warpedSdfY=`y+(valueNoise(x+431,y+719,${warpedSdfScale},${warpedSdfSeed})-0.5)*${warpedSdfAmount}`;
+const warpedSdfSize='min(X,Y)*val(3,0.12,0.32)',warpedSdfSmooth='val(4,0,28)',warpedSdfCutout='min(X,Y)*val(5,0.03,0.16)';
+const warpedSdfOuter=`sdfSmoothUnion(sdfCircle(${warpedSdfX},${warpedSdfY},X/2,Y/2,${warpedSdfSize}),sdfBox(${warpedSdfX},${warpedSdfY},X/2,Y/2,${warpedSdfSize}*1.55,${warpedSdfSize}*1.05,128),${warpedSdfSmooth})`;
+const warpedSdfField=`sdfSubtract(${warpedSdfOuter},sdfCircle(${warpedSdfX},${warpedSdfY},X/2,Y/2,${warpedSdfCutout}))`;
+const warpedSdfFill=`sdfFill(${warpedSdfField},val(7,0,3))`,warpedSdfOutline=`sdfOutline(${warpedSdfField},val(6,0.5,8),val(7,0,3))`,warpedSdfHue='val(8,0,1)';
+const warpedSdfFormulas=[
+  `lerp(r,clamp(10+${warpedSdfFill}*(80+${warpedSdfHue}*130),0,255),ctl(9))`,
+  `lerp(g,clamp(12+${warpedSdfOutline}*(70+${warpedSdfHue}*130),0,255),ctl(9))`,
+  `lerp(b,clamp(22+${warpedSdfFill}*(230-${warpedSdfHue}*80),0,255),ctl(9))`,
+  'a'
+];
+const benchmarkNoiseScale='val(0,10,96)',benchmarkNoiseOctaves='val(1,2,8)',benchmarkNoiseSeed='val(2,1,9999)',benchmarkNoiseContrast='val(3,0.65,1.65)';
+const benchmarkNoiseFormulas=[
+  `lerp(r,clamp(fbm(x,y,${benchmarkNoiseScale},${benchmarkNoiseOctaves},2,0.5,${benchmarkNoiseSeed})*255*${benchmarkNoiseContrast},0,255),ctl(9))`,
+  `lerp(g,clamp(turbulence(x+37,y+71,${benchmarkNoiseScale},${benchmarkNoiseOctaves},${benchmarkNoiseSeed})*255*${benchmarkNoiseContrast},0,255),ctl(9))`,
+  `lerp(b,clamp(ridged(x-53,y+29,${benchmarkNoiseScale},${benchmarkNoiseOctaves},${benchmarkNoiseSeed})*255*${benchmarkNoiseContrast},0,255),ctl(9))`,
+  'a'
+];
+const presetDescriptions={
+  pass:'Returns the source image unchanged. Use it as a neutral starting point for a new filter.',
+  invert:'Inverts the red, green, and blue channels while preserving the source alpha channel.',
+  amberfilm:'Applies a warm amber film grade with adjustable strength and warmth. It works especially well on portraits and high-contrast scenes.',
+  analyticshapesampler:'Demonstrates the analytic line, circle, ring, rotated-box, triangle, and grid masks with adjustable geometry, colour, and source mixing.',
+  analoggrain:'Adds deterministic monochrome grain to simulate a lightly textured analog image. Adjust Amount for intensity and Seed for a different grain pattern.',
+  brightcontrast:'Adjusts image brightness and contrast while preserving colour relationships and alpha.',
+  cellular:'Blends the source with deterministic Worley-cell edges. Smaller cells create finer structures; Seed changes the cellular layout.',
+  channelglitch:'Offsets RGB channels by deterministic horizontal bands to create a colour-split glitch. Adjust band height, displacement, seed, and source mix.',
+  chromasolar:'Solarizes each colour channel around a shared threshold with adjustable channel separation.',
+  digitalglitch:'Displaces RGB channels in deterministic rectangular blocks. Block dimensions, displacement, and seed control the glitch structure.',
+  directionalecho:'Blends two directional source samples with the original image to create a repeated motion echo.',
+  duotone:'Maps source luminance between editable shadow and highlight colours for a two-colour treatment.',
+  fractalclouds:'Blends the image with deterministic multi-octave fractal noise. Adjust scale, seed, and mix to create cloud-like texture.',
+  sierpinskifractal:'Generates a recursive triangular Sierpiński mask with adjustable depth, scale, edge softness, colours, and source mix.',
+  halftone:'Converts luminance into a repeating field of soft halftone dots with adjustable cell size, dot size, and softness.',
+  mandelbrotatlas:'Renders a bounded Mandelbrot escape-time field with adjustable framing, iterations, palette accents, and source mix. It also serves as the fractal compute benchmark.',
+  layerednoisebenchmark:'Exercises bounded FBM, turbulence, and ridged noise in separate colour channels for repeatable CPU/WebGPU performance and parity comparisons.',
+  mirrorx:'Mirrors the source image horizontally while preserving all four channels.',
+  midnighttartan:'Builds a dark tartan textile from layered grid masks, pinstripes, rotated thread hatching, and adjustable source mixing.',
+  mosaic:'Samples the centre of repeating rectangular blocks to produce a pixelated mosaic.',
+  noisedisplace:'Displaces source-image coordinates with two deterministic value-noise fields. Adjust scale, strength, and seed to vary the distortion.',
+  poster:'Reduces each RGB channel to a controlled number of tonal levels while preserving alpha.',
+  rgbshift:'Offsets the red, green, and blue channels independently in two dimensions for chromatic misregistration effects.',
+  saturation:'Adjusts colour saturation around perceptual luminance, from grayscale through exaggerated colour.',
+  sharpen:'Blends a fixed 3×3 sharpening convolution with the source image.',
+  softfocus:'Blends four diagonal bilinear samples with the original image to produce an adjustable soft-focus glow.',
+  swirl:'Rotates source sampling progressively around the image centre to create a radial swirl.',
+  thresholddither:'Applies a checker-pattern offset before luminance thresholding to create a two-tone ordered dither.',
+  vignettepro:'Darkens the image progressively toward the edges with adjustable strength and radius.',
+  warpedsdfbloom:'Combines, subtracts, outlines, and noise-warps signed-distance shapes. It also serves as the SDF composition benchmark.',
+  warmcool:'Applies opposing warm and cool colour shifts along a diagonal image gradient.'
+};
+
+const presetDefinitions=[
+{id:'pass',name:'Pass Through',controls:[],f:['r','g','b','a']},
+{id:'invert',name:'Invert',controls:[],f:['255-r','255-g','255-b','a']},
+{id:'amberfilm',name:'Amber Film',controls:[richControl('Strength',115,'slider',0,100,1,'number','%'),richControl('Warmth',140,'slider',0,100,1,'number','%')],f:['lerp(r,clamp(i+val(1,10,65),0,255),ctl(0))','lerp(g,clamp(i+val(1,-10,20),0,255),ctl(0))','lerp(b,clamp(i-val(1,15,80),0,255),ctl(0))','a']},
+{id:'analyticshapesampler',name:'Analytic Shape Sampler',controls:[richControl('Box Rotation',156,'slider',-45,45,1,'number','°'),richControl('Stroke Width',70,'slider',1,9,0.1,'number','px'),richControl('Edge Softness',48,'slider',0,4,0.1,'number','px'),richControl('Grid Size',18,'slider',10,28,1,'integer','px'),richControl('Foreground R',228,'number',0,255,1,'integer'),richControl('Foreground G',210,'number',0,255,1,'integer'),richControl('Foreground B',230,'number',0,255,1,'integer'),richControl('Effect Mix',255,'slider',0,100,1,'number','%')],f:analyticShapeFormulas},
+{id:'analoggrain',name:'Analog Grain',controls:[richControl('Amount',52,'slider',0,90,1,'number','levels'),richControl('Seed',91,'seed',1,9999,1,'integer')],f:Array(3).fill('clamp(c+(hash2(x,y,val(1,1,9999))-0.5)*val(0,0,90),0,255)').concat('a')},
+{id:'brightcontrast',name:'Brightness / Contrast',controls:[richControl('Brightness',128,'slider',-128,128,1,'number','levels'),richControl('Contrast',85,'slider',0,300,1,'number','%')],f:Array(3).fill('clamp(((c-128)*val(1,0,300))/100+128+val(0,-128,128),0,255)').concat('a')},
+{id:'cellular',name:'Cellular Edges',controls:[richControl('Cell Size',54,'slider',8,120,1,'integer','px'),richControl('Seed',91,'seed',1,9999,1,'integer'),richControl('Blend',190,'slider',0,100,1,'number','%')],f:Array(3).fill('lerp(c,clamp((worleyF2(x,y,val(0,8,120),val(1,1,9999))-worleyF1(x,y,val(0,8,120),val(1,1,9999)))*900,0,255),ctl(2))').concat('a')},
+{id:'channelglitch',name:'Channel Split Glitch',controls:[richControl('Shift',72,'slider',0,54,1,'number','px'),richControl('Band Height',72,'slider',4,48,1,'integer','px'),richControl('Mix',170,'slider',0,100,1,'number','%'),richControl('Seed',61,'seed',1,9999,1,'integer')],f:['lerp(r,srcWrap(x+(hash2(floor(y/val(1,4,48)),0,val(3,1,9999))-0.5)*val(0,0,54),y,0),ctl(2))','lerp(g,srcWrap(x+(hash2(floor(y/val(1,4,48)),1,val(3,1,9999))-0.5)*val(0,0,18),y,1),ctl(2))','lerp(b,srcWrap(x-(hash2(floor(y/val(1,4,48)),2,val(3,1,9999))-0.5)*val(0,0,54),y,2),ctl(2))','a']},
+{id:'chromasolar',name:'Chromatic Solarize',controls:[richControl('Threshold',128,'slider',0,255,1,'integer'),richControl('Channel Spread',64,'slider',-72,72,1,'number','levels')],f:['r>=clamp(ctl(0)+val(1,-72,72),0,255)?255-r:r','g>=ctl(0)?255-g:g','b>=clamp(ctl(0)-val(1,-72,72),0,255)?255-b:b','a']},
+{id:'digitalglitch',name:'Digital Block Glitch',controls:[richControl('Displacement',77,'slider',0,100,1,'number','px'),richControl('Block Width',64,'slider',8,96,1,'integer','px'),richControl('Block Height',45,'slider',4,48,1,'integer','px'),richControl('Seed',91,'seed',1,9999,1,'integer')],f:['srcWrap(x+(hash2(floor(x/val(1,8,96)),floor(y/val(2,4,48)),val(3,1,9999))-0.5)*val(0,0,100),y,0)','srcWrap(x+(hash2(floor(x/val(1,8,96))+11,floor(y/val(2,4,48)),val(3,1,9999))-0.5)*val(0,0,70),y,1)','srcWrap(x+(hash2(floor(x/val(1,8,96))+23,floor(y/val(2,4,48)),val(3,1,9999))-0.5)*val(0,0,100),y,2)','a']},
+{id:'directionalecho',name:'Directional Echo',controls:[richControl('Distance',88,'slider',0,52,1,'number','px'),richControl('Angle',32,'slider',0,360,1,'number','°'),richControl('Mix',150,'slider',0,100,1,'number','%')],f:Array(3).fill('lerp(c,(c+srcLinear(x-r2x(val(1,0,1024),val(0,0,26)),y-r2y(val(1,0,1024),val(0,0,26)),z)+srcLinear(x-r2x(val(1,0,1024),val(0,0,52)),y-r2y(val(1,0,1024),val(0,0,52)),z))/3,ctl(2))').concat('a')},
+{id:'duotone',name:'Duotone',controls:[richControl('Shadow R',25,'number',0,255,1,'integer'),richControl('Shadow G',35,'number',0,255,1,'integer'),richControl('Shadow B',75,'number',0,255,1,'integer'),richControl('Highlight R',235,'number',0,255,1,'integer'),richControl('Highlight G',205,'number',0,255,1,'integer'),richControl('Highlight B',150,'number',0,255,1,'integer')],f:['scl(i,0,255,ctl(0),ctl(3))','scl(i,0,255,ctl(1),ctl(4))','scl(i,0,255,ctl(2),ctl(5))','a']},
+{id:'fractalclouds',name:'Fractal Clouds',controls:[richControl('Scale',58,'slider',12,180,1,'integer','px'),richControl('Seed',135,'seed',1,9999,1,'integer'),richControl('Blend',190,'slider',0,100,1,'number','%')],f:Array(3).fill('lerp(c,fbm(x,y,val(0,12,180),5,2,0.5,val(1,1,9999))*255,ctl(2))').concat('a')},
+{id:'sierpinskifractal',name:'Sierpiński Fractal',controls:[richControl('Recursion Depth',174,'number',2,9,1,'integer'),richControl('Fractal Scale',208,'slider',0.5,0.96,0.01),richControl('Edge Softness',32,'slider',0,2.5,0.1,'number','px'),richControl('Foreground R',238,'number',0,255,1,'integer'),richControl('Foreground G',232,'number',0,255,1,'integer'),richControl('Foreground B',214,'number',0,255,1,'integer'),richControl('Background',8,'number',0,255,1,'integer'),richControl('Effect Mix',255,'slider',0,100,1,'number','%')],f:sierpinskiFormulas},
+{id:'halftone',name:'Halftone Dots',controls:[richControl('Cell Size',72,'slider',4,32,1,'integer','px'),richControl('Dot Size',150,'slider',1,14,0.5,'number','px'),richControl('Softness',34,'slider',0,4,0.1,'number','px')],f:Array(3).fill('(1-smoothstep((255-i)/255*val(1,1,14),(255-i)/255*val(1,1,14)+val(2,0,4),c2m(wrap(x,val(0,4,32))-val(0,4,32)/2,wrap(y,val(0,4,32))-val(0,4,32)/2)))*255').concat('a')},
+{id:'mandelbrotatlas',name:'Mandelbrot Atlas',benchmark:true,controls:[richControl('Scale',128,'slider',1,2,0.01),richControl('Center X',96,'number',-1.5,0.5,0.01),richControl('Center Y',128,'number',-1,1,0.01),richControl('Iterations',128,'slider',24,192,1,'integer'),richControl('Red Accent',190,'slider',0,255,1,'integer'),richControl('Blue Accent',220,'slider',0,255,1,'integer'),richControl('Interior',8,'number',0,255,1,'integer'),richControl('Effect Mix',255,'slider',0,100,1,'number','%')],f:mandelbrotFormulas},
+{id:'layerednoisebenchmark',name:'Layered Noise Benchmark',benchmark:true,controls:[richControl('Noise Scale',92,'slider',10,96,1,'integer','px'),richControl('Octaves',192,'slider',2,8,1,'integer'),richControl('Seed',73,'seed',1,9999,1,'integer'),richControl('Contrast',150,'slider',0.65,1.65,0.01,'number','×'),unusedControl(4),unusedControl(5),unusedControl(6),unusedControl(7),unusedControl(8),richControl('Effect Mix',255,'slider',0,100,1,'number','%')],f:benchmarkNoiseFormulas},
+{id:'mirrorx',name:'Mirror Horizontal',controls:[],f:['src(X-1-x,y,0)','src(X-1-x,y,1)','src(X-1-x,y,2)','src(X-1-x,y,3)']},
+{id:'midnighttartan',name:'Midnight Tartan',controls:[richControl('Sett Scale',150,'slider',54,132,1,'integer','px'),richControl('Broad Stripe',130,'slider',8,34,1,'integer','px'),richControl('Fine Thread',100,'slider',0.6,3.4,0.1,'number','px'),richControl('Weave Spacing',75,'slider',3,10,0.1,'number','px'),richControl('Pattern Strength',215,'slider',0,100,1,'number','%'),richControl('Weave Angle',128,'slider',28,62,1,'number','°'),richControl('Blue Tone',124,'slider',0.75,1.35,0.01,'number','×'),richControl('Effect Mix',255,'slider',0,100,1,'number','%')],f:tartanFormulas},
+{id:'mosaic',name:'Mosaic',controls:[richControl('Block Width',35,'slider',2,64,1,'integer','px'),richControl('Block Height',35,'slider',2,64,1,'integer','px')],f:Array(4).fill('srcLinear(floor(x/val(0,2,64))*val(0,2,64)+val(0,2,64)/2,floor(y/val(1,2,64))*val(1,2,64)+val(1,2,64)/2,z)')},
+{id:'noisedisplace',name:'Noise Displacement',controls:[richControl('Noise Scale',52,'slider',8,120,1,'integer','px'),richControl('Strength',90,'slider',0,52,1,'number','px'),richControl('Seed',91,'seed',1,9999,1,'integer')],f:Array(3).fill('srcLinear(x+(valueNoise(x,y,val(0,8,120),val(2,1,9999))-0.5)*val(1,0,52),y+(valueNoise(x+431,y+719,val(0,8,120),val(2,1,9999))-0.5)*val(1,0,52),z)').concat('a')},
+{id:'poster',name:'Posterize',controls:[richControl('Levels',72,'slider',2,16,1,'integer')],f:Array(3).fill('round(c*(val(0,2,16)-1)/255)*255/(val(0,2,16)-1)').concat('a')},
+{id:'rgbshift',name:'RGB Shift',controls:[richControl('Red X',136,'number',-128,127,1,'number','px'),richControl('Red Y',128,'number',-128,127,1,'number','px'),richControl('Green X',120,'number',-128,127,1,'number','px'),richControl('Green Y',128,'number',-128,127,1,'number','px'),richControl('Blue X',128,'number',-128,127,1,'number','px'),richControl('Blue Y',136,'number',-128,127,1,'number','px')],f:['srcLinear(x+ctl(0)-128,y+ctl(1)-128,0)','srcLinear(x+ctl(2)-128,y+ctl(3)-128,1)','srcLinear(x+ctl(4)-128,y+ctl(5)-128,2)','a']},
+{id:'saturation',name:'Saturation',controls:[richControl('Saturation',85,'slider',0,300,1,'number','%')],f:Array(3).fill('clamp(i+((c-i)*val(0,0,300))/100,0,255)').concat('a')},
+{id:'sharpen',name:'Sharpen',controls:[richControl('Amount',128,'slider',0,200,1,'number','%')],f:Array(3).fill('clamp(c+((cnv(0,-1,0,-1,5,-1,0,-1,0,1)-c)*val(0,0,200))/100,0,255)').concat('a')},
+{id:'softfocus',name:'Soft Focus',controls:[richControl('Radius',75,'slider',1,14,0.5,'number','px'),richControl('Blend',175,'slider',0,100,1,'number','%')],f:Array(3).fill('lerp(c,(c+srcLinear(x-val(0,1,14),y-val(0,1,14),z)+srcLinear(x+val(0,1,14),y-val(0,1,14),z)+srcLinear(x-val(0,1,14),y+val(0,1,14),z)+srcLinear(x+val(0,1,14),y+val(0,1,14),z))/5,ctl(1))').concat('a')},
+{id:'swirl',name:'Swirl',controls:[richControl('Twist',165,'slider',-91.4,91.4,0.1,'number','°')],f:['rad(d+((M-m)*val(0,-260,260))/max(1,M),m,0)','rad(d+((M-m)*val(0,-260,260))/max(1,M),m,1)','rad(d+((M-m)*val(0,-260,260))/max(1,M),m,2)','a']},
+{id:'thresholddither',name:'Threshold Dither',controls:[richControl('Threshold',128,'slider',0,255,1,'integer'),richControl('Pattern Size',60,'slider',2,16,1,'integer','px'),richControl('Dither Amount',80,'slider',0,64,1,'number','levels')],f:Array(3).fill('i+(checker(x,y,val(1,2,16),val(1,2,16))*2-1)*val(2,0,64)>=ctl(0)?255:0').concat('a')},
+{id:'vignettepro',name:'Vignette Pro',controls:[richControl('Strength',160,'slider',0,100,1,'number','%'),richControl('Radius',105,'slider',0,100,1,'number','%')],f:Array(3).fill('clamp(c*(1-smoothstep(val(1,0,M),M,m)*val(0,0,100)/100),0,255)').concat('a')},
+{id:'warpedsdfbloom',name:'Warped SDF Bloom',benchmark:true,controls:[richControl('Warp Amount',80,'slider',0,30,0.1,'number','px'),richControl('Warp Scale',100,'slider',20,110,1,'number','px'),richControl('Seed',73,'seed',1,9999,1,'integer'),richControl('Shape Size',150,'slider',0.12,0.32,0.01),richControl('Smooth Union',100,'slider',0,28,0.5,'number','px'),richControl('Cutout Size',75,'slider',0.03,0.16,0.01),richControl('Outline Width',80,'slider',0.5,8,0.1,'number','px'),richControl('Edge Softness',48,'slider',0,3,0.1,'number','px'),richControl('Colour Shift',115,'slider',0,1,0.01),richControl('Effect Mix',255,'slider',0,100,1,'number','%')],f:warpedSdfFormulas},
+{id:'warmcool',name:'Warm–Cool Gradient',controls:[richControl('Warm Strength',120,'slider',0,100,1,'number','%'),richControl('Cool Strength',120,'slider',0,100,1,'number','%')],f:['clamp(r+linearGrad(x,y,0,0,X,Y)*val(0,0,70)-val(1,0,30),0,255)','g','clamp(b+(1-linearGrad(x,y,0,0,X,Y))*val(1,0,70)-val(0,0,30),0,255)','a']}
+];
+
+const presetTags={"pass": ["Utility"], "invert": ["Color", "Negative"], "amberfilm": ["Retro", "Warm", "Portrait"], "analyticshapesampler": ["Shapes", "Procedural"], "analoggrain": ["Noise", "Retro"], "brightcontrast": ["Tone"], "cellular": ["Noise", "Texture"], "channelglitch": ["Glitch", "Color"], "chromasolar": ["Color", "Retro"], "digitalglitch": ["Glitch"], "directionalecho": ["Blur", "Distortion"], "duotone": ["Color", "Print"], "fractalclouds": ["Noise", "Procedural"], "sierpinskifractal": ["Fractal", "Shapes"], "halftone": ["Monochrome", "Print"], "mandelbrotatlas": ["Fractal", "Procedural"], "layerednoisebenchmark": ["Noise", "Procedural"], "mirrorx": ["Transform"], "midnighttartan": ["Pattern", "Textile"], "mosaic": ["Pixelate"], "noisedisplace": ["Noise", "Distortion"], "poster": ["Color", "Print"], "rgbshift": ["Color", "Distortion"], "saturation": ["Color"], "sharpen": ["Detail"], "softfocus": ["Blur", "Portrait"], "swirl": ["Distortion"], "thresholddither": ["Monochrome", "Print"], "vignettepro": ["Tone", "Portrait"], "warpedsdfbloom": ["Shapes", "Procedural"], "warmcool": ["Color", "Gradient"]};
+
+const presets=presetDefinitions.map(preset=>({...preset,tags:[...(presetTags[preset.id]||[]),...(preset.benchmark?['Benchmark']:[])],description:presetDescriptions[preset.id]}));
+
+
+/* src/renderers/cpu-worker-source.js */
+/**
+ * Filter FabJS
+ * Modular source extracted from v2.0.7; modular architecture v2.1.0.
+ * Licensed GPL-2.0-or-later. See LICENSE and README.md.
+ */
+
+
+
+function workerProgram(){const float=CHROMA_MODELS.float,legacy=CHROMA_MODELS.legacy;return String.raw`
+const FLOAT_CHROMA={uMin:${float.uMin},uMax:${float.uMax},uSpan:${float.uSpan},vMin:${float.vMin},vMax:${float.vMax},vSpan:${float.vSpan}},LEGACY_CHROMA={uMin:${legacy.uMin},uMax:${legacy.uMax},uSpan:${legacy.uSpan},vMin:${legacy.vMin},vMax:${legacy.vMax},vSpan:${legacy.vSpan}};
+let srcPixels=null,W=0,H=0,controls=Array(${CONTROL_COUNT}).fill(${DEFAULT_CONTROL_VALUE}),rngSeed=691204,cells=new Float64Array(256),legacyMath=false,chroma=FLOAT_CHROMA,currentProgram=null,currentProgramKey=null;
+const legacyRng={index1:0,index2:31,seedTable:new Uint32Array(56),seed:0,seedSave:1};
+const pixel=[0,0,0,0],environment={x:0,y:0,z:0,p:pixel};
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),int=v=>Number.isFinite(v)?Math.trunc(v):0,toI32=v=>Number.isFinite(v)?Math.trunc(v)|0:0,i32Div=(a,b)=>{a=toI32(a);b=toI32(b);return b===0?0:toI32(a/b)},i32Abs=v=>toI32(Math.abs(toI32(v))),div=(a,b)=>b===0?0:a/b,mod=(v,m)=>m===0?0:((v%m)+m)%m;
+function legacySqrt(v){let root=toI32(v);if(root>1){const input=root;root>>=1;let estimate=2;while(root>estimate){estimate=i32Div(input,root);root=toI32(root+estimate)>>1}}return root}
+function legacyPow(base,exponent){const value=Math.pow(toI32(base),toI32(exponent));if(!Number.isFinite(value))return 0;const floor=Math.floor(value);return toI32(floor+(value-floor>=0.5?1:0))}
+function coordWrap(v,size){size=Math.max(1,Math.abs(size));return mod(v,size)}
+function coordMirror(v,size){size=Math.max(1,Math.abs(size));const p=mod(v,size*2);return p<size?p:size*2-p-1e-9}
+function sampleMode(x,y,z,mode='clamp'){z=int(z);if(z<0||z>3)return 0;if(mode==='wrap'){x=coordWrap(x,W);y=coordWrap(y,H)}else if(mode==='mirror'){x=coordMirror(x,W);y=coordMirror(y,H)}else{x=clamp(x,0,W-1);y=clamp(y,0,H-1)}x=clamp(int(x),0,W-1);y=clamp(int(y),0,H-1);return srcPixels[(y*W+x)*4+z]}
+function sampleLinear(x,y,z,mode='clamp'){z=int(z);if(z<0||z>3)return 0;const x0=Math.floor(x),y0=Math.floor(y),tx=x-x0,ty=y-y0;const a=sampleMode(x0,y0,z,mode),b=sampleMode(x0+1,y0,z,mode),c=sampleMode(x0,y0+1,z,mode),d=sampleMode(x0+1,y0+1,z,mode);return (a+(b-a)*tx)*(1-ty)+(c+(d-c)*tx)*ty}
+function rand(){rngSeed=(Math.imul(rngSeed,1664525)+1013904223)>>>0;return rngSeed/4294967296}
+function fillLegacyRng(seed){let mj=(161803398-(seed&0x7fff))>>>0,mk=1,ii=0;legacyRng.seedTable[55]=mj;for(let i=1;i<=54;i++){if((ii+=21)>=55)ii-=55;legacyRng.seedTable[ii]=mk;mk=(mj-mk)>>>0;mj=legacyRng.seedTable[ii]}for(let k=1;k<=4;k++){ii=30;for(let i=1;i<=55;i++){if(++ii>=55)ii-=55;legacyRng.seedTable[i]=(legacyRng.seedTable[i]-legacyRng.seedTable[1+ii])>>>0}}legacyRng.seedSave=seed>>>0}
+function resetLegacyRng(seed=0){legacyRng.index1=0;legacyRng.index2=31;legacyRng.seed=seed>>>0;legacyRng.seedSave=(legacyRng.seed+1)>>>0}
+function legacyRst(seed){legacyRng.seed=seed>>>0;legacyRng.seedSave=(legacyRng.seed+1)>>>0}
+function legacyRnd(a,b){a=toI32(a);b=toI32(b);if(legacyRng.seed!==legacyRng.seedSave){fillLegacyRng(legacyRng.seed);legacyRng.index1=0;legacyRng.index2=31}if(++legacyRng.index1===56)legacyRng.index1=1;if(++legacyRng.index2===56)legacyRng.index2=1;const value=(legacyRng.seedTable[legacyRng.index1]-legacyRng.seedTable[legacyRng.index2])>>>0;legacyRng.seedTable[legacyRng.index1]=value;const range=toI32(b-a);if(range<0)return 0;switch(range){case 255:return toI32(a+(value&0xff));case 127:return toI32(a+(value&0x7f));case 63:return toI32(a+(value&0x3f));case 31:return toI32(a+(value&0x1f));case 15:return toI32(a+(value&0xf));case 7:return toI32(a+(value&7));case 3:return toI32(a+(value&3));case 1:return toI32(a+(value&1));case 0:return a;default:return toI32(a+(value%(range+1)))}}
+function hash01(x,y,seed){let h=Math.imul(int(x),374761393)^Math.imul(int(y),668265263)^Math.imul(int(seed),1442695041);h=(h^(h>>>13));h=Math.imul(h,1274126177);return ((h^(h>>>16))>>>0)/4294967295}
+const fade=t=>t*t*t*(t*(t*6-15)+10),smooth01=t=>t*t*(3-2*t);
+function valueNoise2(x,y,scale,seed){scale=Math.max(1e-6,Math.abs(scale));x/=scale;y/=scale;const x0=Math.floor(x),y0=Math.floor(y),tx=fade(x-x0),ty=fade(y-y0),a=hash01(x0,y0,seed),b=hash01(x0+1,y0,seed),c=hash01(x0,y0+1,seed),d=hash01(x0+1,y0+1,seed);return (a+(b-a)*tx)*(1-ty)+(c+(d-c)*tx)*ty}
+function gradDot(ix,iy,x,y,seed){const ang=hash01(ix,iy,seed)*Math.PI*2;return Math.cos(ang)*(x-ix)+Math.sin(ang)*(y-iy)}
+function perlin2(x,y,scale,seed){scale=Math.max(1e-6,Math.abs(scale));x/=scale;y/=scale;const x0=Math.floor(x),y0=Math.floor(y),tx=fade(x-x0),ty=fade(y-y0),n00=gradDot(x0,y0,x,y,seed),n10=gradDot(x0+1,y0,x,y,seed),n01=gradDot(x0,y0+1,x,y,seed),n11=gradDot(x0+1,y0+1,x,y,seed),nx0=n00+(n10-n00)*tx,nx1=n01+(n11-n01)*tx;return clamp(0.5+(nx0+(nx1-nx0)*ty)*0.7071,0,1)}
+function worleyPair(x,y,scale,seed){scale=Math.max(1e-6,Math.abs(scale));x/=scale;y/=scale;const ix=Math.floor(x),iy=Math.floor(y);let f1=1e9,f2=1e9;for(let yy=-1;yy<=1;yy++)for(let xx=-1;xx<=1;xx++){const cx=ix+xx+hash01(ix+xx,iy+yy,seed),cy=iy+yy+hash01(ix+xx,iy+yy,seed+1013),d=Math.hypot(x-cx,y-cy);if(d<f1){f2=f1;f1=d}else if(d<f2)f2=d}return[clamp(f1/1.41421356,0,1),clamp(f2/1.41421356,0,1)]}
+function fbm2(x,y,scale,octaves,lacunarity,gain,seed,mode='perlin'){octaves=clamp(int(octaves),1,12);lacunarity=Math.max(1.01,Math.abs(lacunarity));gain=clamp(gain,0.01,0.99);let amp=1,sum=0,norm=0,s=scale;for(let o=0;o<octaves;o++){const n=mode==='value'?valueNoise2(x,y,s,seed+o*101):perlin2(x,y,s,seed+o*101);sum+=n*amp;norm+=amp;amp*=gain;s/=lacunarity}return norm?sum/norm:0}
+function turbulence2(x,y,scale,octaves,seed){octaves=clamp(int(octaves),1,12);let amp=1,sum=0,norm=0,s=scale;for(let o=0;o<octaves;o++){sum+=Math.abs(perlin2(x,y,s,seed+o*131)*2-1)*amp;norm+=amp;amp*=0.5;s/=2}return norm?sum/norm:0}
+function ridged2(x,y,scale,octaves,seed){octaves=clamp(int(octaves),1,12);let amp=1,sum=0,norm=0,s=scale;for(let o=0;o<octaves;o++){const n=1-Math.abs(perlin2(x,y,s,seed+o*151)*2-1);sum+=n*n*amp;norm+=amp;amp*=0.5;s/=2}return norm?sum/norm:0}
+function periodic2(x,y,px,py,seed){px=Math.max(1,Math.abs(px));py=Math.max(1,Math.abs(py));const u=coordWrap(x,px)/px,v=coordWrap(y,py)/py,cellsX=8,cellsY=8,gx=u*cellsX,gy=v*cellsY,x0=Math.floor(gx),y0=Math.floor(gy),tx=fade(gx-x0),ty=fade(gy-y0),h=(ix,iy)=>hash01(mod(ix,cellsX),mod(iy,cellsY),seed),a=h(x0,y0),b=h(x0+1,y0),c=h(x0,y0+1),d=h(x0+1,y0+1);return (a+(b-a)*tx)*(1-ty)+(c+(d-c)*tx)*ty}
+function fractalEscape2(zx,zy,cx,cy,iterations){const f32=Math.fround,limit=clamp(int(f32(iterations)),1,${MAX_FRACTAL_ITERATIONS});zx=f32(zx);zy=f32(zy);cx=f32(cx);cy=f32(cy);for(let iteration=0;iteration<limit;iteration++){const zx2=f32(zx*zx),zy2=f32(zy*zy),nextY=f32(f32(f32(2*zx)*zy)+cy),nextX=f32(f32(zx2-zy2)+cx);zx=nextX;zy=nextY;if(f32(f32(zx*zx)+f32(zy*zy))>4)return f32(iteration/limit)}return 1}
+function shapeMask(distance,feather){feather=Math.max(0,Math.abs(feather));if(distance<=0)return 1;if(feather===0)return 0;const t=clamp(distance/feather,0,1);return 1-smooth01(t)}
+function segmentDistance(px,py,ax,ay,bx,by){const dx=bx-ax,dy=by-ay,den=dx*dx+dy*dy;if(den<=1e-12)return Math.hypot(px-ax,py-ay);const t=clamp(((px-ax)*dx+(py-ay)*dy)/den,0,1);return Math.hypot(px-(ax+dx*t),py-(ay+dy*t))}
+function lineDistance(px,py,ax,ay,bx,by,width){return segmentDistance(px,py,ax,ay,bx,by)-Math.abs(width)/2}
+function circleDistance(px,py,cx,cy,radius){return Math.hypot(px-cx,py-cy)-Math.abs(radius)}
+function boxDistance(px,py,cx,cy,width,height,rotation){const angle=rotation*Math.PI*2/1024,co=Math.cos(angle),si=Math.sin(angle),dx=px-cx,dy=py-cy,qx=Math.abs(co*dx+si*dy)-Math.abs(width)/2,qy=Math.abs(-si*dx+co*dy)-Math.abs(height)/2;return Math.hypot(Math.max(qx,0),Math.max(qy,0))+Math.min(Math.max(qx,qy),0)}
+function smoothUnionDistance(a,b,radius){const k=Math.abs(radius);if(k===0)return Math.min(a,b);const h=clamp(0.5+0.5*(b-a)/k,0,1);return b+(a-b)*h-k*h*(1-h)}
+function lineMask(px,py,ax,ay,bx,by,width,feather){return shapeMask(lineDistance(px,py,ax,ay,bx,by,width),feather)}
+function circleMask(px,py,cx,cy,radius,feather){return shapeMask(circleDistance(px,py,cx,cy,radius),feather)}
+function ringMask(px,py,cx,cy,radius,width,feather){return shapeMask(Math.abs(Math.hypot(px-cx,py-cy)-Math.abs(radius))-Math.abs(width)/2,feather)}
+function boxMask(px,py,cx,cy,width,height,rotation,feather){return shapeMask(boxDistance(px,py,cx,cy,width,height,rotation),feather)}
+function triangleMask(px,py,ax,ay,bx,by,cx,cy,feather){const area=(bx-ax)*(cy-ay)-(by-ay)*(cx-ax);if(Math.abs(area)<=1e-9)return 0;const e0=(px-ax)*(by-ay)-(py-ay)*(bx-ax),e1=(px-bx)*(cy-by)-(py-by)*(cx-bx),e2=(px-cx)*(ay-cy)-(py-cy)*(ax-cx),hasNeg=e0<0||e1<0||e2<0,hasPos=e0>0||e1>0||e2>0,inside=!(hasNeg&&hasPos),distance=Math.min(segmentDistance(px,py,ax,ay,bx,by),segmentDistance(px,py,bx,by,cx,cy),segmentDistance(px,py,cx,cy,ax,ay));return shapeMask(inside?-distance:distance,feather)}
+function gridMask(px,py,width,height,lineWidth,feather){width=Math.max(1,Math.abs(width));height=Math.max(1,Math.abs(height));const lx=coordWrap(px,width),ly=coordWrap(py,height),distance=Math.min(Math.min(lx,width-lx),Math.min(ly,height-ly))-Math.abs(lineWidth)/2;return shapeMask(distance,feather)}
+function sierpinskiMask(px,py,cx,cy,size,depth,feather){size=Math.max(1e-6,Math.abs(size));const height=size*0.8660254037844386,top=cy-height/2,bottom=cy+height/2,left=cx-size/2,right=cx+size/2,base=triangleMask(px,py,cx,top,left,bottom,right,bottom,feather);if(base<=0)return 0;const yy=(py-top)/height;let u=yy/2-(px-cx)/size,v=yy/2+(px-cx)/size;if(u<0||v<0||u+v>1)return base;depth=clamp(int(depth),0,10);let localHeight=height;for(let level=0;level<depth;level++){const w=1-u-v;if(u<0.5&&v<0.5&&w<0.5){const holeDistance=Math.min(0.5-u,0.5-v,0.5-w)*localHeight;return shapeMask(holeDistance,feather)}if(u>=0.5){u=u*2-1;v*=2}else if(v>=0.5){u*=2;v=v*2-1}else{u*=2;v*=2}localHeight*=0.5}return base}
+function opacityMix(base,blend,opacity){const t=clamp(opacity===undefined?1:(Math.abs(opacity)<=1?opacity:opacity/255),0,1);return base+(blend-base)*t}
+function blendMode(n,a,b){a=clamp(a,0,255);b=clamp(b,0,255);switch(n){case'multiply':return a*b/255;case'screen':return 255-(255-a)*(255-b)/255;case'overlay':return a<128?2*a*b/255:255-2*(255-a)*(255-b)/255;case'softLight':{const A=a/255,B=b/255,res=(1-2*B)*A*A+2*B*A;return clamp(res*255,0,255)}case'difference':return Math.abs(a-b)}return a}
+function vars(n,e){const p=e.p,z=e.z;switch(n){
+case'r':case'r0':case'r1':return p[0];case'g':case'g0':case'g1':return p[1];case'b':case'b0':case'b1':return p[2];case'a':case'a0':case'a1':return p[3];case'c':case'c0':case'c1':return p[z];
+case'i':case'i0':case'i1':return(299*p[0]+587*p[1]+114*p[2])/1000;case'u':case'u0':case'u1':return(-147407*p[0]-289391*p[1]+436798*p[2])/2000000;case'v':case'v0':case'v1':return(614777*p[0]-514799*p[1]-99978*p[2])/2000000;
+case'x':return e.x;case'y':return e.y;case'nx':return W>1?e.x/(W-1):0.5;case'ny':return H>1?e.y/(H-1):0.5;case'cx':return W>1?e.x*2/(W-1)-1:0;case'cy':return H>1?e.y*2/(H-1)-1:0;case'z':case'p':return z;case'd':case'd0':case'd1':{const dx=W/2-e.x,dy=H/2-e.y;return Math.atan2(-dy,-dx)*1024/(2*Math.PI)}case'm':case'm0':case'm1':return Math.hypot(W/2-e.x,H/2-e.y);
+case'X':case'xmax':return W;case'Y':case'ymax':return H;case'Z':case'P':case'pmax':case'zmax':return 4;case'D':return 1024;case'M':case'mmax':return Math.hypot(W,H)/2;
+case'R':case'G':case'B':case'A':case'C':case'I':case'rmax':case'gmax':case'bmax':case'amax':case'cmax':case'imax':return 255;case'U':return chroma.uSpan;case'V':return chroma.vSpan;case'umax':return chroma.uMax;case'vmax':return chroma.vMax;case'dmax':return 512;
+case'umin':return chroma.uMin;case'vmin':return chroma.vMin;case'dmin':return-512;case'tmax':case'total':return 1;
+case't':case'rmin':case'gmin':case'bmin':case'amin':case'cmin':case'imin':case'mmin':case'pmin':case'xmin':case'ymin':case'zmin':case'tmin':return 0;
+}return 0}
+function call(n,a,e){const A=i=>a[i];switch(n){
+case'src':case'src0':case'src1':return sampleMode(A(0),A(1),A(2));case'srcWrap':return sampleMode(A(0),A(1),A(2),'wrap');case'srcMirror':return sampleMode(A(0),A(1),A(2),'mirror');case'srcLinear':return sampleLinear(A(0),A(1),A(2));
+case'rad':case'rad0':case'rad1':{const ang=A(0)*2*Math.PI/1024;return sampleMode(W/2+Math.cos(ang)*A(1),H/2+Math.sin(ang)*A(1),A(2))}
+case'ctl':{const i=int(A(0));return i>=0&&i<${CONTROL_COUNT}?controls[i]:0}case'val':{const i=int(A(0)),c=i>=0&&i<${CONTROL_COUNT}?controls[i]:0;return c*(A(2)-A(1))/255+A(1)}
+case'map':{const i=int(A(0)),v=clamp(A(1),0,255);if(i<0||i>=${CONTROL_PAIR_COUNT})return 0;const hi=controls[i*2],lo=controls[i*2+1];if(hi===lo)return v<hi?0:255;if(lo>hi){if(v<=hi)return 255;if(v>=lo)return 0}else{if(v<=lo)return 0;if(v>=hi)return 255}return (v-lo)*255/(hi-lo)}
+case'min':return Math.min(A(0),A(1));case'max':return Math.max(A(0),A(1));case'abs':return Math.abs(A(0));case'add':return Math.min(A(0)+A(1),A(2));case'sub':return Math.max(Math.abs(A(0)-A(1)),A(2));case'dif':return Math.abs(A(0)-A(1));
+case'rnd':{const lo=Math.min(A(0),A(1)),hi=Math.max(A(0),A(1));return Math.floor(lo+rand()*(hi-lo+1))}case'rst':rngSeed=(int(A(0))>>>0)||1;return 0;
+case'mix':return A(3)===0?0:A(0)*A(2)/A(3)+A(1)*(A(3)-A(2))/A(3);case'scl':return A(2)===A(1)?0:A(3)+(A(4)-A(3))*(A(0)-A(1))/(A(2)-A(1));case'sqr':return A(0)*A(0);case'sqrt':return Math.sqrt(Math.max(0,A(0)));case'sin':return 512*Math.sin(A(0)*2*Math.PI/1024);case'cos':return 512*Math.cos(A(0)*2*Math.PI/1024);case'tan':return 1024*Math.tan(A(0)*2*Math.PI/1024);case'r2x':return Math.cos(A(0)*2*Math.PI/1024)*A(1);case'r2y':return Math.sin(A(0)*2*Math.PI/1024)*A(1);case'c2d':case'angle':return Math.atan2(A(1),A(0))*1024/(2*Math.PI);case'c2m':case'radius':return Math.hypot(A(0),A(1));
+case'get':{const i=int(A(0));return i>=0&&i<256?cells[i]:0}case'put':{const i=int(A(1));if(i>=0&&i<256)cells[i]=A(0);return A(0)}case'pow':return Math.pow(A(0),A(1));
+case'cnv':case'cnv0':case'cnv1':{const d=A(9);if(d===0)return 0;let t=0,k=0;for(let yy=-1;yy<=1;yy++)for(let xx=-1;xx<=1;xx++)t+=A(k++)*sampleMode(e.x+xx,e.y+yy,e.z);return t/d}
+case'clamp':return clamp(A(0),A(1),A(2));case'lerp':{const t=clamp(Math.abs(A(2))<=1?A(2):A(2)/255,0,1);return A(0)+(A(1)-A(0))*t}case'step':return A(1)<A(0)?0:1;case'smoothstep':{if(A(1)===A(0))return A(2)<A(0)?0:1;const t=clamp((A(2)-A(0))/(A(1)-A(0)),0,1);return smooth01(t)}case'floor':return Math.floor(A(0));case'ceil':return Math.ceil(A(0));case'round':return Math.round(A(0));case'fract':return A(0)-Math.floor(A(0));case'sign':return Math.sign(A(0));case'bias':{const v=clamp(A(0),0,1),b=clamp(Math.abs(A(1))<=1?A(1):A(1)/255,0.001,0.999);return Math.pow(v,Math.log(b)/Math.log(0.5))}case'gain':{const v=clamp(A(0),0,1),g=clamp(Math.abs(A(1))<=1?A(1):A(1)/255,0.001,0.999);return v<0.5?call('bias',[v*2,g],e)/2:1-call('bias',[(1-v)*2,g],e)/2}
+case'hash2':return hash01(A(0),A(1),A(2));case'valueNoise':return valueNoise2(A(0),A(1),A(2),A(3));case'perlin':return perlin2(A(0),A(1),A(2),A(3));case'worleyF1':return worleyPair(A(0),A(1),A(2),A(3))[0];case'worleyF2':return worleyPair(A(0),A(1),A(2),A(3))[1];case'fbm':return fbm2(A(0),A(1),A(2),A(3),A(4),A(5),A(6));case'turbulence':return turbulence2(A(0),A(1),A(2),A(3),A(4));case'ridged':return ridged2(A(0),A(1),A(2),A(3),A(4));case'periodicNoise':return periodic2(A(0),A(1),A(2),A(3),A(4));
+case'mandelbrot':return fractalEscape2(0,0,A(0),A(1),A(2));case'julia':return fractalEscape2(A(0),A(1),A(2),A(3),A(4));
+case'wrap':case'repeat':return coordWrap(A(0),A(1));case'mirror':case'mirrorRepeat':return coordMirror(A(0),A(1));case'gradient3':{const t=clamp(A(0),0,1);return t<=0.5?A(1)+(A(2)-A(1))*t*2:A(2)+(A(3)-A(2))*(t*2-1)}case'gradient4':{const t=clamp(A(0),0,1);if(t<=1/3)return A(1)+(A(2)-A(1))*t*3;if(t<=2/3)return A(2)+(A(3)-A(2))*(t*3-1);return A(3)+(A(4)-A(3))*(t*3-2)}
+case'linearGrad':{const dx=A(4)-A(2),dy=A(5)-A(3),den=dx*dx+dy*dy;return den?clamp(((A(0)-A(2))*dx+(A(1)-A(3))*dy)/den,0,1):0}case'radialGrad':return clamp(1-Math.hypot(A(0)-A(2),A(1)-A(3))/Math.max(1e-6,Math.abs(A(4))),0,1);case'angularGrad':return mod(Math.atan2(A(1)-A(3),A(0)-A(2))/(Math.PI*2)+(Math.abs(A(4))<=1?A(4):A(4)/1024),1);case'checker':return (Math.floor(A(0)/Math.max(1,Math.abs(A(2))))+Math.floor(A(1)/Math.max(1,Math.abs(A(3)))))&1?1:0;case'brick':{const w=Math.max(1,Math.abs(A(2))),h=Math.max(1,Math.abs(A(3))),m=clamp(Math.abs(A(4)),0,Math.min(w,h)/2),row=Math.floor(A(1)/h),off=(Math.abs(A(5))<=1?A(5)*w:A(5))*(row&1),lx=coordWrap(A(0)+off,w),ly=coordWrap(A(1),h);return lx>=m&&lx<=w-m&&ly>=m&&ly<=h-m?1:0}
+case'line':return lineMask(A(0),A(1),A(2),A(3),A(4),A(5),A(6),A(7));case'circle':return circleMask(A(0),A(1),A(2),A(3),A(4),A(5));case'ring':return ringMask(A(0),A(1),A(2),A(3),A(4),A(5),A(6));case'box':return boxMask(A(0),A(1),A(2),A(3),A(4),A(5),A(6),A(7));case'triangle':return triangleMask(A(0),A(1),A(2),A(3),A(4),A(5),A(6),A(7),A(8));case'grid':return gridMask(A(0),A(1),A(2),A(3),A(4),A(5));case'sierpinski':return sierpinskiMask(A(0),A(1),A(2),A(3),A(4),A(5),A(6));
+case'sdfLine':return lineDistance(A(0),A(1),A(2),A(3),A(4),A(5),A(6));case'sdfCircle':return circleDistance(A(0),A(1),A(2),A(3),A(4));case'sdfBox':return boxDistance(A(0),A(1),A(2),A(3),A(4),A(5),A(6));
+case'sdfUnion':return Math.min(A(0),A(1));case'sdfIntersect':return Math.max(A(0),A(1));case'sdfSubtract':return Math.max(A(0),-A(1));case'sdfSmoothUnion':return smoothUnionDistance(A(0),A(1),A(2));case'sdfFill':return shapeMask(A(0),a.length>1?A(1):0);case'sdfOutline':return shapeMask(Math.abs(A(0))-Math.abs(A(1))/2,a.length>2?A(2):0);
+case'multiply':case'screen':case'overlay':case'softLight':case'difference':return opacityMix(A(0),blendMode(n,A(0),A(1)),a.length>2?A(2):undefined)
+}return 0}
+function callLegacy(n,a,e){const A=i=>toI32(a[i]);switch(n){
+case'rnd':return legacyRnd(A(0),A(1));case'rst':legacyRst(A(0));return 0;
+case'val':{const i=A(0),c=i>=0&&i<${CONTROL_COUNT}?toI32(controls[i]):0;return toI32(i32Div(Math.imul(c,toI32(A(2)-A(1))),255)+A(1))}
+case'map':{const i=A(0),v=clamp(A(1),0,255);if(i<0||i>=${CONTROL_PAIR_COUNT})return 0;const hi=toI32(controls[i*2]),lo=toI32(controls[i*2+1]);if(hi===lo)return v<hi?0:255;if(lo>hi){if(v<=hi)return 255;if(v>=lo)return 0}else{if(v<=lo)return 0;if(v>=hi)return 255}return i32Div(Math.imul(toI32(v-lo),255),toI32(hi-lo))}
+case'add':return Math.min(toI32(A(0)+A(1)),A(2));case'sub':return Math.max(i32Abs(toI32(A(0)-A(1))),A(2));case'dif':return i32Abs(toI32(A(0)-A(1)));case'abs':return i32Abs(A(0));
+case'mix':return A(3)===0?0:toI32(i32Div(Math.imul(A(0),A(2)),A(3))+i32Div(Math.imul(A(1),toI32(A(3)-A(2))),A(3)));
+case'scl':return A(2)===A(1)?0:toI32(A(3)+i32Div(Math.imul(toI32(A(4)-A(3)),toI32(A(0)-A(1))),toI32(A(2)-A(1))));
+case'sqr':case'sqrt':return legacySqrt(A(0));case'pow':return legacyPow(A(0),A(1));
+case'cnv':case'cnv0':case'cnv1':{const d=A(9);if(d===0)return 0;let total=0,k=0;for(let yy=-1;yy<=1;yy++)for(let xx=-1;xx<=1;xx++)total=toI32(total+Math.imul(A(k++),sampleMode(e.x+xx,e.y+yy,e.z)));return i32Div(total,d)}
+}return toI32(call(n,a,e))}
+function evFloat(n,e){switch(n.op){
+case'const':return Number(n.value);
+case'var':return vars(n.name,e);
+case'unary':{const v=evFloat(n.input,e);return n.operator=='+'?v:n.operator=='-'?-v:n.operator=='!'?(v?0:1):~int(v)}
+case'select':return evFloat(n.condition,e)?evFloat(n.whenTrue,e):evFloat(n.whenFalse,e);
+case'binary':{
+  if(n.operator=='&&')return evFloat(n.left,e)?(evFloat(n.right,e)?1:0):0;
+  if(n.operator=='||')return evFloat(n.left,e)?1:(evFloat(n.right,e)?1:0);
+  if(n.operator==','){evFloat(n.left,e);return evFloat(n.right,e)}
+  const a=evFloat(n.left,e),b=evFloat(n.right,e);
+  switch(n.operator){case'+':return a+b;case'-':return a-b;case'*':return a*b;case'/':return b===0?0:a/b;case'%':return b===0?0:a%b;case'<':return a<b?1:0;case'<=':return a<=b?1:0;case'>':return a>b?1:0;case'>=':return a>=b?1:0;case'==':return a===b?1:0;case'!=':return a!==b?1:0;case'&':return int(a)&int(b);case'^':return int(a)^int(b);case'|':return int(a)|int(b);case'<<':return int(a)<<int(b);case'>>':return int(a)>>int(b)}return 0
+}
+case'call':{const a=n.argumentValues||(n.argumentValues=new Float64Array(n.args.length));for(let i=0;i<n.args.length;i++)a[i]=evFloat(n.args[i],e);return call(n.fn,a,e)}
+}return 0}
+function evLegacy(n,e){switch(n.op){
+case'const':return toI32(n.value);
+case'var':return toI32(vars(n.name,e));
+case'unary':{const v=evLegacy(n.input,e);return n.operator=='+'?v:n.operator=='-'?toI32(-v):n.operator=='!'?(v?0:1):~v}
+case'select':return evLegacy(n.condition,e)?evLegacy(n.whenTrue,e):evLegacy(n.whenFalse,e);
+case'binary':{
+  if(n.operator=='&&')return evLegacy(n.left,e)?(evLegacy(n.right,e)?1:0):0;
+  if(n.operator=='||')return evLegacy(n.left,e)?1:(evLegacy(n.right,e)?1:0);
+  if(n.operator==','){evLegacy(n.left,e);return evLegacy(n.right,e)}
+  const a=evLegacy(n.left,e),b=evLegacy(n.right,e);
+  switch(n.operator){case'+':return toI32(a+b);case'-':return toI32(a-b);case'*':return Math.imul(a,b);case'/':return i32Div(a,b);case'%':return b===0?0:toI32(a%b);case'<':return a<b?1:0;case'<=':return a<=b?1:0;case'>':return a>b?1:0;case'>=':return a>=b?1:0;case'==':return a===b?1:0;case'!=':return a!==b?1:0;case'&':return a&b;case'^':return a^b;case'|':return a|b;case'<<':return a<<b;case'>>':return a>>b}return 0
+}
+case'call':{const a=n.argumentValues||(n.argumentValues=new Float64Array(n.args.length));for(let i=0;i<n.args.length;i++)a[i]=evLegacy(n.args[i],e);return callLegacy(n.fn,a,e)}
+}return 0}
+function ev(n,e){return legacyMath?evLegacy(n,e):evFloat(n,e)}
+onmessage=e=>{const m=e.data;if(m.type=='init'){W=m.width;H=m.height;srcPixels=new Uint8ClampedArray(m.buffer);postMessage({type:'ready'});return}if(m.type=='render'){const program=m.program||(m.programKey===currentProgramKey?currentProgram:null),outputs=program?.outputs;if(!program||program.kind!=='filter-fab-program'||program.irVersion!==1||!Array.isArray(outputs)||outputs.length!==4)throw new Error('Invalid or unsupported Filter FabJS IR program');if(m.program){currentProgram=program;currentProgramKey=m.programKey}const start=performance.now();controls=Array.from({length:${CONTROL_COUNT}},(_,index)=>{const value=Number(m.controls?.[index]??${DEFAULT_CONTROL_VALUE});return Number.isFinite(value)?value:${DEFAULT_CONTROL_VALUE}});legacyMath=program.mathMode==='legacy';chroma=legacyMath?LEGACY_CHROMA:FLOAT_CHROMA;rngSeed=691204;resetLegacyRng();cells.fill(0);const out=new Uint8ClampedArray(W*H*4),step=Math.max(1,Math.floor(H/24));for(let y=0;y<H;y++){environment.y=y;for(let x=0;x<W;x++){const idx=(y*W+x)*4;environment.x=x;pixel[0]=srcPixels[idx];pixel[1]=srcPixels[idx+1];pixel[2]=srcPixels[idx+2];pixel[3]=srcPixels[idx+3];for(let z=0;z<4;z++){environment.z=z;out[idx+z]=clamp(ev(outputs[z].expression,environment),0,255)}}if(((y+1)%step===0)||y===H-1)postMessage({type:'progress',id:m.id,row:y+1,total:H,pct:((y+1)/H)*100})}postMessage({type:'result',id:m.id,buffer:out.buffer,ms:performance.now()-start},[out.buffer])}};`}
+
+
+/* src/gpu/params-layout.js */
+/**
+ * Filter FabJS
+ * Licensed GPL-2.0-or-later. See LICENSE and README.md.
+ */
+
+
+const WEBGPU_CONTROL_SLOT_COUNT=Math.ceil(CONTROL_COUNT/4)*4;
+const WEBGPU_PARAMS_HEADER_BYTES=16;
+const WEBGPU_PARAMS_BYTES=WEBGPU_PARAMS_HEADER_BYTES+WEBGPU_CONTROL_SLOT_COUNT*4;
+
+
+/* src/gpu/wgsl-compiler.js */
+/**
+ * Filter FabJS
+ * Modular source extracted from v2.0.7; modular architecture v2.1.0.
+ * Licensed GPL-2.0-or-later. See LICENSE and README.md.
+ */
+
+
+
+
+
+class WGSLCompileError extends Error{constructor(message,blockers=[]){super(message);this.name='WGSLCompileError';this.blockers=blockers}}
+const WEBGPU_FUNCTIONS=new Set('src src0 src1 srcWrap srcMirror srcLinear rad rad0 rad1 cnv cnv0 cnv1 ctl val map min max abs add sub dif mix scl sqr sqrt sin cos tan r2x r2y c2d c2m radius angle clamp lerp step smoothstep floor ceil round fract sign bias gain hash2 valueNoise perlin worleyF1 worleyF2 fbm turbulence ridged periodicNoise mandelbrot julia wrap mirror repeat mirrorRepeat gradient3 gradient4 linearGrad radialGrad angularGrad checker brick line circle ring box triangle grid sierpinski sdfLine sdfCircle sdfBox sdfUnion sdfIntersect sdfSubtract sdfSmoothUnion sdfFill sdfOutline multiply screen overlay softLight difference'.split(' '));
+const WEBGPU_UNARY=new Set(['+','-','!']);
+const WEBGPU_BINARY=new Set(['+','-','*','/','%','<','<=','>','>=','==','!=','&&','||']);
+const WEBGPU_BOOLEAN_BINARY=new Set(['<','<=','>','>=','==','!=','&&','||']);
+const EXACT_INTEGER_NOISE_FUNCTIONS=new Set(['hash2','valueNoise','perlin','worleyF1','worleyF2','fbm','turbulence','ridged','periodicNoise']);
+const MAX_WEBGPU_IR_NODES=4096;
+class WGSLCompiler{
+  static analyze(program){
+    const blockers=[];let nodeCount=0;
+    if(!program||program.kind!=='filter-fab-program'||program.irVersion!==IR_VERSION)blockers.push('unsupported IR program');
+    if(program?.mathMode!=='float')blockers.push('legacy integer compatibility mode');
+    const walk=(node,exactIntegerContext=false)=>{
+      if(!node)return;
+      nodeCount++;
+      switch(node.op){
+        case'const':{
+          const value=Number(node.value),rounded=Math.fround(value),label=String(node.value);
+          if(!Number.isFinite(value))blockers.push(`constant ${label} is not finite`);
+          else if(!Number.isFinite(rounded))blockers.push(`constant ${label} is outside f32 range`);
+          else if(value!==0&&rounded===0)blockers.push(`constant ${label} underflows f32`);
+          else if(exactIntegerContext&&node.type===IRType.INTEGER&&rounded!==value)blockers.push(`integer constant ${label} is not exactly representable as f32`);
+          return;
+        }
+        case'var':return;
+        case'unary':if(!WEBGPU_UNARY.has(node.operator))blockers.push(`operator ${node.operator}`);walk(node.input,exactIntegerContext);return;
+        case'binary':if(!WEBGPU_BINARY.has(node.operator))blockers.push(node.operator===','?'comma sequencing':`operator ${node.operator}`);walk(node.left,exactIntegerContext);walk(node.right,exactIntegerContext);return;
+        case'select':walk(node.condition);walk(node.whenTrue,exactIntegerContext);walk(node.whenFalse,exactIntegerContext);return;
+        case'call':{
+          if(!WEBGPU_FUNCTIONS.has(node.fn))blockers.push(`${node.fn}()`);
+          const exactNoiseIntegers=EXACT_INTEGER_NOISE_FUNCTIONS.has(node.fn);
+          node.args.forEach(arg=>walk(arg,exactIntegerContext||(exactNoiseIntegers&&arg.type===IRType.INTEGER)));
+          return;
+        }
+        default:blockers.push(`IR operation ${node.op}`);
+      }
+    };
+    program?.outputs?.forEach(output=>walk(output.expression));
+    if(nodeCount>MAX_WEBGPU_IR_NODES)blockers.push(`program complexity ${nodeCount} exceeds WebGPU limit ${MAX_WEBGPU_IR_NODES}`);
+    const unique=[...new Set(blockers)];
+    return{compatible:unique.length===0,blockers:unique,subset:'phase-3.5-stateless'};
+  }
+  static key(program){return programCacheKey(program)}
+  static compile(program,analysis=this.analyze(program)){
+    if(!analysis.compatible)throw new WGSLCompileError(`WebGPU subset does not support: ${analysis.blockers.join(', ')}`,analysis.blockers);
+    const compiler=new WGSLCompiler(program),expressions=program.outputs.map((output,channel)=>compiler.value(output.expression,channel));
+    const code=compiler.shader(expressions);this.validateGeneratedSource(code);return{key:this.key(program),code,analysis};
+  }
+  static validateGeneratedSource(code){
+    const malformed=code.match(/\breturn(?:\s+[^;\n{}]+)?}/g);
+    if(malformed?.length)throw new WGSLCompileError('Generated WGSL contains an unterminated return statement',[...new Set(malformed)]);
+  }
+  constructor(program){this.program=program}
+  number(value){value=Number(value);if(!Number.isFinite(value))throw new WGSLCompileError('WGSL constants must be finite');const rounded=Math.fround(value);if(!Number.isFinite(rounded))throw new WGSLCompileError(`WGSL constant ${value} is outside f32 range`);if(value!==0&&rounded===0)throw new WGSLCompileError(`WGSL constant ${value} underflows f32`);const raw=String(value);return/[.eE]/.test(raw)?raw:`${raw}.0`}
+  bool(node,channel){
+    if(node.op==='binary'&&['<','<=','>','>=','==','!='].includes(node.operator))return`(${this.value(node.left,channel)} ${node.operator} ${this.value(node.right,channel)})`;
+    if(node.op==='binary'&&node.operator==='&&')return`(ff_bool(${this.value(node.left,channel)}) && ff_bool(${this.value(node.right,channel)}))`;
+    if(node.op==='binary'&&node.operator==='||')return`(ff_bool(${this.value(node.left,channel)}) || ff_bool(${this.value(node.right,channel)}))`;
+    if(node.op==='unary'&&node.operator==='!')return`(!ff_bool(${this.value(node.input,channel)}))`;
+    return`ff_bool(${this.value(node,channel)})`;
+  }
+  variable(name,channel){
+    const chroma=CHROMA_MODELS.float,direct={r:'sourceColor.x',g:'sourceColor.y',b:'sourceColor.z',a:'sourceColor.w',c:`ff_channel(sourceColor, ${channel}.0)`,i:'luminance',u:'chromaU',v:'chromaV',x:'pixelX',y:'pixelY',nx:'normalizedX',ny:'normalizedY',cx:'centeredX',cy:'centeredY',z:`${channel}.0`,p:`${channel}.0`,d:'direction',m:'radius',X:'widthF',Y:'heightF',Z:'4.0',P:'4.0',D:'1024.0',M:'maxRadius',R:'255.0',G:'255.0',B:'255.0',A:'255.0',C:'255.0',I:'255.0',U:this.number(chroma.uSpan),V:this.number(chroma.vSpan),t:'0.0',rmax:'255.0',gmax:'255.0',bmax:'255.0',amax:'255.0',cmax:'255.0',imax:'255.0',umax:this.number(chroma.uMax),vmax:this.number(chroma.vMax),dmax:'512.0',mmax:'maxRadius',pmax:'4.0',xmax:'widthF',ymax:'heightF',zmax:'4.0',rmin:'0.0',gmin:'0.0',bmin:'0.0',amin:'0.0',cmin:'0.0',imin:'0.0',umin:this.number(chroma.uMin),vmin:this.number(chroma.vMin),dmin:'-512.0',mmin:'0.0',pmin:'0.0',xmin:'0.0',ymin:'0.0',zmin:'0.0',tmin:'0.0',tmax:'1.0',total:'1.0'};
+    if(name in direct)return direct[name];
+    const alias={r0:'r',g0:'g',b0:'b',a0:'a',c0:'c',i0:'i',u0:'u',v0:'v',d0:'d',m0:'m',r1:'r',g1:'g',b1:'b',a1:'a',c1:'c',i1:'i',u1:'u',v1:'v',d1:'d',m1:'m'}[name];
+    if(alias)return this.variable(alias,channel);
+    throw new WGSLCompileError(`Variable ${name} is not supported by the WebGPU subset`,[name]);
+  }
+  value(node,channel){
+    switch(node.op){
+      case'const':return this.number(node.value);
+      case'var':return this.variable(node.name,channel);
+      case'unary':if(node.operator==='+')return`(${this.value(node.input,channel)})`;if(node.operator==='-')return`(-${this.value(node.input,channel)})`;return`ff_num(${this.bool(node,channel)})`;
+      case'binary':{
+        if(WEBGPU_BOOLEAN_BINARY.has(node.operator))return`ff_num(${this.bool(node,channel)})`;
+        const a=this.value(node.left,channel),b=this.value(node.right,channel);
+        if(node.operator==='/')return`ff_div(${a}, ${b})`;
+        if(node.operator==='%')return`ff_rem(${a}, ${b})`;
+        return`(${a} ${node.operator} ${b})`;
+      }
+      case'select':return`select(${this.value(node.whenFalse,channel)}, ${this.value(node.whenTrue,channel)}, ${this.bool(node.condition,channel)})`;
+      case'call':return this.call(node.fn,node.args.map(arg=>this.value(arg,channel)),channel);
+    }
+    throw new WGSLCompileError(`Unsupported IR operation ${node.op}`,[node.op]);
+  }
+  call(name,a,channel){
+    const A=i=>a[i];
+    switch(name){
+      case'src':case'src0':case'src1':return`ff_sample_nearest(${A(0)}, ${A(1)}, ${A(2)})`;
+      case'srcWrap':return`ff_sample_wrap(${A(0)}, ${A(1)}, ${A(2)})`;
+      case'srcMirror':return`ff_sample_mirror(${A(0)}, ${A(1)}, ${A(2)})`;
+      case'srcLinear':return`ff_sample_linear(${A(0)}, ${A(1)}, ${A(2)})`;
+      case'rad':case'rad0':case'rad1':return`ff_sample_polar(${A(0)}, ${A(1)}, ${A(2)})`;
+      case'cnv':case'cnv0':case'cnv1':return`ff_convolve3x3(pixelX, pixelY, ${channel}.0, ${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)}, ${A(5)}, ${A(6)}, ${A(7)}, ${A(8)}, ${A(9)})`;
+      case'ctl':return`ff_ctl(${A(0)})`;case'val':return`ff_val(${A(0)}, ${A(1)}, ${A(2)})`;
+      case'map':return`ff_map(${A(0)}, ${A(1)})`;
+      case'min':return`min(${A(0)}, ${A(1)})`;case'max':return`max(${A(0)}, ${A(1)})`;case'abs':return`abs(${A(0)})`;
+      case'add':return`min(${A(0)} + ${A(1)}, ${A(2)})`;case'sub':return`max(abs(${A(0)} - ${A(1)}), ${A(2)})`;case'dif':return`abs(${A(0)} - ${A(1)})`;
+      case'mix':return`ff_mix4(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)})`;case'scl':return`ff_scl(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
+      case'sqr':return`(${A(0)} * ${A(0)})`;case'sqrt':return`sqrt(max(0.0, ${A(0)}))`;
+      case'sin':return`(512.0 * sin(${A(0)} * FF_TAU / 1024.0))`;case'cos':return`(512.0 * cos(${A(0)} * FF_TAU / 1024.0))`;case'tan':return`(1024.0 * tan(${A(0)} * FF_TAU / 1024.0))`;
+      case'r2x':return`(cos(${A(0)} * FF_TAU / 1024.0) * ${A(1)})`;case'r2y':return`(sin(${A(0)} * FF_TAU / 1024.0) * ${A(1)})`;
+      case'c2d':case'angle':return`(ff_atan2(${A(1)}, ${A(0)}) * 1024.0 / FF_TAU)`;case'c2m':case'radius':return`length(vec2<f32>(${A(0)}, ${A(1)}))`;
+      case'clamp':return`ff_clamp(${A(0)}, ${A(1)}, ${A(2)})`;case'lerp':return`ff_lerp(${A(0)}, ${A(1)}, ${A(2)})`;
+      case'step':return`ff_step(${A(0)}, ${A(1)})`;case'smoothstep':return`ff_smoothstep(${A(0)}, ${A(1)}, ${A(2)})`;
+      case'floor':return`floor(${A(0)})`;case'ceil':return`ceil(${A(0)})`;case'round':return`ff_round(${A(0)})`;case'fract':return`fract(${A(0)})`;case'sign':return`sign(${A(0)})`;
+      case'bias':return`ff_bias(${A(0)}, ${A(1)})`;case'gain':return`ff_gain(${A(0)}, ${A(1)})`;
+      case'hash2':return`ff_hash01(${A(0)}, ${A(1)}, ${A(2)})`;
+      case'valueNoise':return`ff_value_noise(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)})`;
+      case'perlin':return`ff_perlin(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)})`;
+      case'worleyF1':return`ff_worley(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}).x`;
+      case'worleyF2':return`ff_worley(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}).y`;
+      case'fbm':return`ff_fbm(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)}, ${A(5)}, ${A(6)})`;
+      case'turbulence':return`ff_turbulence(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
+      case'ridged':return`ff_ridged(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
+      case'periodicNoise':return`ff_periodic_noise(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
+      case'mandelbrot':return`ff_mandelbrot(${A(0)}, ${A(1)}, ${A(2)})`;
+      case'julia':return`ff_julia(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
+      case'wrap':case'repeat':return`ff_wrap(${A(0)}, ${A(1)})`;case'mirror':case'mirrorRepeat':return`ff_mirror(${A(0)}, ${A(1)})`;
+      case'gradient3':return`ff_gradient3(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)})`;case'gradient4':return`ff_gradient4(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
+      case'linearGrad':return`ff_linear_grad(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)}, ${A(5)})`;
+      case'radialGrad':return`ff_radial_grad(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
+      case'angularGrad':return`ff_angular_grad(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
+      case'checker':return`ff_checker(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)})`;
+      case'brick':return`ff_brick(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)}, ${A(5)})`;
+      case'line':return`ff_line(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)}, ${A(5)}, ${A(6)}, ${A(7)})`;
+      case'circle':return`ff_circle(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)}, ${A(5)})`;
+      case'ring':return`ff_ring(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)}, ${A(5)}, ${A(6)})`;
+      case'box':return`ff_box(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)}, ${A(5)}, ${A(6)}, ${A(7)})`;
+      case'triangle':return`ff_triangle(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)}, ${A(5)}, ${A(6)}, ${A(7)}, ${A(8)})`;
+      case'grid':return`ff_grid(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)}, ${A(5)})`;
+      case'sierpinski':return`ff_sierpinski(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)}, ${A(5)}, ${A(6)})`;
+      case'sdfLine':return`ff_line_distance(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)}, ${A(5)}, ${A(6)})`;
+      case'sdfCircle':return`ff_circle_distance(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
+      case'sdfBox':return`ff_box_distance(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)}, ${A(5)}, ${A(6)})`;
+      case'sdfUnion':return`min(${A(0)}, ${A(1)})`;case'sdfIntersect':return`max(${A(0)}, ${A(1)})`;case'sdfSubtract':return`max(${A(0)}, -(${A(1)}))`;
+      case'sdfSmoothUnion':return`ff_sdf_smooth_union(${A(0)}, ${A(1)}, ${A(2)})`;
+      case'sdfFill':return`ff_shape_mask(${A(0)}, ${a.length>1?A(1):'0.0'})`;
+      case'sdfOutline':return`ff_sdf_outline(${A(0)}, ${A(1)}, ${a.length>2?A(2):'0.0'})`;
+      case'multiply':case'screen':case'overlay':case'softLight':case'difference':return`ff_blend_${name}(${A(0)}, ${A(1)}, ${a.length>2?A(2):'255.0'})`;
+    }
+    throw new WGSLCompileError(`Function ${name}() is not implemented in WGSL`,[`${name}()`]);
+  }
+  shader(expr){return String.raw`
+const FF_TAU : f32 = 6.283185307179586;
+const FF_PI : f32 = 3.141592653589793;
+const FF_MAX_FRACTAL_ITERATIONS : i32 = ${MAX_FRACTAL_ITERATIONS};
+struct Params { width:u32, height:u32, startRow:u32, rowCount:u32, controls:array<f32,${WEBGPU_CONTROL_SLOT_COUNT}>, };
+@group(0) @binding(0) var<storage,read> srcPixels:array<u32>;
+@group(0) @binding(1) var<storage,read_write> outPixels:array<u32>;
+@group(0) @binding(2) var<storage,read> params:Params;
+fn ff_bool(v:f32)->bool{return v!=0.0;}
+fn ff_num(v:bool)->f32{return select(0.0,1.0,v);}
+fn ff_negative_zero()->f32{return bitcast<f32>(0x80000000u);}
+fn ff_round(v:f32)->f32{let rounded=floor(v+0.5);if(rounded==0.0&&(bitcast<u32>(v)&0x80000000u)!=0u){return ff_negative_zero();}return rounded;}
+fn ff_atan2(y:f32,x:f32)->f32{if(y==0.0&&x==0.0){let yNegative=(bitcast<u32>(y)&0x80000000u)!=0u;let xNegative=(bitcast<u32>(x)&0x80000000u)!=0u;if(xNegative){return select(FF_PI,-FF_PI,yNegative);}return select(0.0,ff_negative_zero(),yNegative);}return atan2(y,x);}
+fn ff_clamp(v:f32,lo:f32,hi:f32)->f32{return max(lo,min(hi,v));}
+fn ff_normalized_coordinate(v:f32,size:f32)->f32{if(size<=1.0){return 0.5;}return v/(size-1.0);}
+fn ff_div(a:f32,b:f32)->f32{if(b==0.0){return 0.0;}return a/b;}
+fn ff_rem(a:f32,b:f32)->f32{if(b==0.0){return 0.0;}return a-b*trunc(a/b);}
+fn ff_wrap(v:f32,size:f32)->f32{let s=max(1.0,abs(size));return ff_rem(ff_rem(v,s)+s,s);}
+fn ff_mirror(v:f32,size:f32)->f32{let s=max(1.0,abs(size));let p=ff_wrap(v,s*2.0);if(p<s){return p;}return s*2.0-p-0.000000001;}
+fn ff_gradient3(t0:f32,a:f32,b:f32,c:f32)->f32{let t=clamp(t0,0.0,1.0);if(t<=0.5){return mix(a,b,t*2.0);}return mix(b,c,t*2.0-1.0);}
+fn ff_gradient4(t0:f32,a:f32,b:f32,c:f32,d:f32)->f32{let t=clamp(t0,0.0,1.0);if(t<=0.3333333333333333){return mix(a,b,t*3.0);}if(t<=0.6666666666666666){return mix(b,c,t*3.0-1.0);}return mix(c,d,t*3.0-2.0);}
+fn ff_channel(p:vec4<f32>,z:f32)->f32{let i=i32(trunc(z));if(i==0){return p.x;}if(i==1){return p.y;}if(i==2){return p.z;}if(i==3){return p.w;}return 0.0;}
+fn ff_unpack(v:u32)->vec4<f32>{return vec4<f32>(f32(v&255u),f32((v>>8u)&255u),f32((v>>16u)&255u),f32((v>>24u)&255u));}
+fn ff_pack(v:vec4<f32>)->u32{let c=vec4<u32>(round(clamp(v,vec4<f32>(0.0),vec4<f32>(255.0))));return c.x|(c.y<<8u)|(c.z<<16u)|(c.w<<24u);}
+fn ff_pixel_clamped(x:f32,y:f32)->vec4<f32>{let maxX=max(0.0,f32(params.width)-1.0);let maxY=max(0.0,f32(params.height)-1.0);let ix=u32(trunc(clamp(x,0.0,maxX)));let iy=u32(trunc(clamp(y,0.0,maxY)));return ff_unpack(srcPixels[iy*params.width+ix]);}
+fn ff_pixel_wrap(x:f32,y:f32)->vec4<f32>{let ix=u32(trunc(ff_wrap(x,f32(params.width))));let iy=u32(trunc(ff_wrap(y,f32(params.height))));return ff_unpack(srcPixels[iy*params.width+ix]);}
+fn ff_pixel_mirror(x:f32,y:f32)->vec4<f32>{let ix=min(u32(trunc(ff_mirror(x,f32(params.width)))),params.width-1u);let iy=min(u32(trunc(ff_mirror(y,f32(params.height)))),params.height-1u);return ff_unpack(srcPixels[iy*params.width+ix]);}
+fn ff_sample_nearest(x:f32,y:f32,z:f32)->f32{return ff_channel(ff_pixel_clamped(x,y),z);}
+fn ff_sample_wrap(x:f32,y:f32,z:f32)->f32{return ff_channel(ff_pixel_wrap(x,y),z);}
+fn ff_sample_mirror(x:f32,y:f32,z:f32)->f32{return ff_channel(ff_pixel_mirror(x,y),z);}
+fn ff_sample_linear(x:f32,y:f32,z:f32)->f32{let x0=floor(x);let y0=floor(y);let tx=x-x0;let ty=y-y0;let a=ff_sample_nearest(x0,y0,z);let b=ff_sample_nearest(x0+1.0,y0,z);let c=ff_sample_nearest(x0,y0+1.0,z);let d=ff_sample_nearest(x0+1.0,y0+1.0,z);return mix(a,b,tx)*(1.0-ty)+mix(c,d,tx)*ty;}
+fn ff_sample_polar(angle:f32,distance:f32,z:f32)->f32{let radians=angle*FF_TAU/1024.0;return ff_sample_nearest(f32(params.width)*0.5+cos(radians)*distance,f32(params.height)*0.5+sin(radians)*distance,z);}
+fn ff_convolve3x3(x:f32,y:f32,z:f32,k00:f32,k01:f32,k02:f32,k10:f32,k11:f32,k12:f32,k20:f32,k21:f32,k22:f32,divisor:f32)->f32{if(divisor==0.0){return 0.0;}let total=k00*ff_sample_nearest(x-1.0,y-1.0,z)+k01*ff_sample_nearest(x,y-1.0,z)+k02*ff_sample_nearest(x+1.0,y-1.0,z)+k10*ff_sample_nearest(x-1.0,y,z)+k11*ff_sample_nearest(x,y,z)+k12*ff_sample_nearest(x+1.0,y,z)+k20*ff_sample_nearest(x-1.0,y+1.0,z)+k21*ff_sample_nearest(x,y+1.0,z)+k22*ff_sample_nearest(x+1.0,y+1.0,z);return total/divisor;}
+fn ff_ctl(index:f32)->f32{let i=i32(trunc(index));if(i<0||i>=${CONTROL_COUNT}){return 0.0;}return params.controls[u32(i)];}
+fn ff_val(index:f32,a:f32,b:f32)->f32{return ff_ctl(index)*(b-a)/255.0+a;}
+fn ff_map(index:f32,v0:f32)->f32{let i=i32(trunc(index));if(i<0||i>=${CONTROL_PAIR_COUNT}){return 0.0;}let v=clamp(v0,0.0,255.0);let hi=params.controls[u32(i*2)];let lo=params.controls[u32(i*2+1)];if(hi==lo){return select(255.0,0.0,v<hi);}if(lo>hi){if(v<=hi){return 255.0;}if(v>=lo){return 0.0;}}else{if(v<=lo){return 0.0;}if(v>=hi){return 255.0;}}return (v-lo)*255.0/(hi-lo);}
+fn ff_lerp(a:f32,b:f32,t0:f32)->f32{let t=clamp(select(t0,t0/255.0,abs(t0)>1.0),0.0,1.0);return mix(a,b,t);}
+fn ff_step(edge:f32,v:f32)->f32{return select(0.0,1.0,v>=edge);}
+fn ff_smoothstep(a:f32,b:f32,v:f32)->f32{if(a==b){return select(0.0,1.0,v>=a);}let t=clamp((v-a)/(b-a),0.0,1.0);return t*t*(3.0-2.0*t);}
+fn ff_mix4(a:f32,b:f32,c:f32,d:f32)->f32{if(d==0.0){return 0.0;}return a*c/d+b*(d-c)/d;}
+fn ff_scl(v:f32,a:f32,b:f32,c:f32,d:f32)->f32{if(b==a){return 0.0;}return c+(d-c)*(v-a)/(b-a);}
+fn ff_bias(v0:f32,b0:f32)->f32{let v=clamp(v0,0.0,1.0);let b=clamp(select(b0/255.0,b0,abs(b0)<=1.0),0.001,0.999);return pow(v,log(b)/log(0.5));}
+fn ff_gain(v0:f32,g0:f32)->f32{let v=clamp(v0,0.0,1.0);let g=clamp(select(g0/255.0,g0,abs(g0)<=1.0),0.001,0.999);if(v<0.5){return ff_bias(v*2.0,g)*0.5;}return 1.0-ff_bias((1.0-v)*2.0,g)*0.5;}
+fn ff_hash01(x:f32,y:f32,seed:f32)->f32{var h=(bitcast<u32>(i32(trunc(x)))*374761393u)^(bitcast<u32>(i32(trunc(y)))*668265263u)^(bitcast<u32>(i32(trunc(seed)))*1442695041u);h=h^(h>>13u);h=h*1274126177u;h=h^(h>>16u);return f32(h)/4294967295.0;}
+fn ff_fade(t:f32)->f32{return t*t*t*(t*(t*6.0-15.0)+10.0);}
+fn ff_value_noise(x0:f32,y0:f32,scale0:f32,seed:f32)->f32{let scale=max(0.000001,abs(scale0));let x=x0/scale;let y=y0/scale;let ix=floor(x);let iy=floor(y);let tx=ff_fade(x-ix);let ty=ff_fade(y-iy);let a=ff_hash01(ix,iy,seed);let b=ff_hash01(ix+1.0,iy,seed);let c=ff_hash01(ix,iy+1.0,seed);let d=ff_hash01(ix+1.0,iy+1.0,seed);return mix(a,b,tx)*(1.0-ty)+mix(c,d,tx)*ty;}
+fn ff_grad_dot(ix:f32,iy:f32,x:f32,y:f32,seed:f32)->f32{let angle=ff_hash01(ix,iy,seed)*FF_TAU;return cos(angle)*(x-ix)+sin(angle)*(y-iy);}
+fn ff_perlin(x0:f32,y0:f32,scale0:f32,seed:f32)->f32{let scale=max(0.000001,abs(scale0));let x=x0/scale;let y=y0/scale;let ix=floor(x);let iy=floor(y);let tx=ff_fade(x-ix);let ty=ff_fade(y-iy);let n00=ff_grad_dot(ix,iy,x,y,seed);let n10=ff_grad_dot(ix+1.0,iy,x,y,seed);let n01=ff_grad_dot(ix,iy+1.0,x,y,seed);let n11=ff_grad_dot(ix+1.0,iy+1.0,x,y,seed);let nx0=mix(n00,n10,tx);let nx1=mix(n01,n11,tx);return clamp(0.5+mix(nx0,nx1,ty)*0.7071,0.0,1.0);}
+fn ff_worley(x0:f32,y0:f32,scale0:f32,seed:f32)->vec2<f32>{let scale=max(0.000001,abs(scale0));let x=x0/scale;let y=y0/scale;let ix=floor(x);let iy=floor(y);var f1=1000000000.0;var f2=1000000000.0;for(var yy:i32=-1;yy<=1;yy=yy+1){for(var xx:i32=-1;xx<=1;xx=xx+1){let cellX=ix+f32(xx);let cellY=iy+f32(yy);let cx=cellX+ff_hash01(cellX,cellY,seed);let cy=cellY+ff_hash01(cellX,cellY,seed+1013.0);let distance=length(vec2<f32>(x-cx,y-cy));if(distance<f1){f2=f1;f1=distance;}else if(distance<f2){f2=distance;}}}return clamp(vec2<f32>(f1,f2)/1.41421356,vec2<f32>(0.0),vec2<f32>(1.0));}
+fn ff_fbm(x:f32,y:f32,scale0:f32,octaves0:f32,lacunarity0:f32,gain0:f32,seed:f32)->f32{let octaves=clamp(i32(trunc(octaves0)),1,12);let lacunarity=max(1.01,abs(lacunarity0));let gain=clamp(gain0,0.01,0.99);var amplitude=1.0;var sum=0.0;var norm=0.0;var scale=scale0;for(var octave:i32=0;octave<octaves;octave=octave+1){sum=sum+ff_perlin(x,y,scale,seed+f32(octave)*101.0)*amplitude;norm=norm+amplitude;amplitude=amplitude*gain;scale=scale/lacunarity;}return select(0.0,sum/norm,norm!=0.0);}
+fn ff_turbulence(x:f32,y:f32,scale0:f32,octaves0:f32,seed:f32)->f32{let octaves=clamp(i32(trunc(octaves0)),1,12);var amplitude=1.0;var sum=0.0;var norm=0.0;var scale=scale0;for(var octave:i32=0;octave<octaves;octave=octave+1){sum=sum+abs(ff_perlin(x,y,scale,seed+f32(octave)*131.0)*2.0-1.0)*amplitude;norm=norm+amplitude;amplitude=amplitude*0.5;scale=scale/2.0;}return select(0.0,sum/norm,norm!=0.0);}
+fn ff_ridged(x:f32,y:f32,scale0:f32,octaves0:f32,seed:f32)->f32{let octaves=clamp(i32(trunc(octaves0)),1,12);var amplitude=1.0;var sum=0.0;var norm=0.0;var scale=scale0;for(var octave:i32=0;octave<octaves;octave=octave+1){let ridge=1.0-abs(ff_perlin(x,y,scale,seed+f32(octave)*151.0)*2.0-1.0);sum=sum+ridge*ridge*amplitude;norm=norm+amplitude;amplitude=amplitude*0.5;scale=scale/2.0;}return select(0.0,sum/norm,norm!=0.0);}
+fn ff_periodic_noise(x:f32,y:f32,periodX0:f32,periodY0:f32,seed:f32)->f32{let periodX=max(1.0,abs(periodX0));let periodY=max(1.0,abs(periodY0));let gx=ff_wrap(x,periodX)/periodX*8.0;let gy=ff_wrap(y,periodY)/periodY*8.0;let ix=floor(gx);let iy=floor(gy);let tx=ff_fade(gx-ix);let ty=ff_fade(gy-iy);let a=ff_hash01(ff_wrap(ix,8.0),ff_wrap(iy,8.0),seed);let b=ff_hash01(ff_wrap(ix+1.0,8.0),ff_wrap(iy,8.0),seed);let c=ff_hash01(ff_wrap(ix,8.0),ff_wrap(iy+1.0,8.0),seed);let d=ff_hash01(ff_wrap(ix+1.0,8.0),ff_wrap(iy+1.0,8.0),seed);return mix(a,b,tx)*(1.0-ty)+mix(c,d,tx)*ty;}
+fn ff_fractal_escape(zx0:f32,zy0:f32,cx:f32,cy:f32,iterations0:f32)->f32{let limit=clamp(i32(trunc(iterations0)),1,FF_MAX_FRACTAL_ITERATIONS);var zx=zx0;var zy=zy0;for(var iteration:i32=0;iteration<FF_MAX_FRACTAL_ITERATIONS;iteration=iteration+1){if(iteration>=limit){break;}let nextY=2.0*zx*zy+cy;let nextX=zx*zx-zy*zy+cx;zx=nextX;zy=nextY;if(zx*zx+zy*zy>4.0){return f32(iteration)/f32(limit);}}return 1.0;}
+fn ff_mandelbrot(cx:f32,cy:f32,iterations:f32)->f32{return ff_fractal_escape(0.0,0.0,cx,cy,iterations);}
+fn ff_julia(x:f32,y:f32,cx:f32,cy:f32,iterations:f32)->f32{return ff_fractal_escape(x,y,cx,cy,iterations);}
+fn ff_linear_grad(x:f32,y:f32,x0:f32,y0:f32,x1:f32,y1:f32)->f32{let dx=x1-x0;let dy=y1-y0;let den=dx*dx+dy*dy;if(den==0.0){return 0.0;}return clamp(((x-x0)*dx+(y-y0)*dy)/den,0.0,1.0);}
+fn ff_radial_grad(x:f32,y:f32,cx:f32,cy:f32,r:f32)->f32{return clamp(1.0-length(vec2<f32>(x-cx,y-cy))/max(0.000001,abs(r)),0.0,1.0);}
+fn ff_angular_grad(x:f32,y:f32,cx:f32,cy:f32,offset0:f32)->f32{let offset=select(offset0/1024.0,offset0,abs(offset0)<=1.0);return ff_wrap(ff_atan2(y-cy,x-cx)/FF_TAU+offset,1.0);}
+fn ff_checker(x:f32,y:f32,width0:f32,height0:f32)->f32{let width=max(1.0,abs(width0));let height=max(1.0,abs(height0));let parity=(i32(floor(x/width))+i32(floor(y/height)))&1;return select(0.0,1.0,parity!=0);}
+fn ff_brick(x:f32,y:f32,width0:f32,height0:f32,mortar0:f32,offset0:f32)->f32{let width=max(1.0,abs(width0));let height=max(1.0,abs(height0));let mortar=clamp(abs(mortar0),0.0,min(width,height)*0.5);let row=i32(floor(y/height));let stagger=select(0.0,1.0,(row&1)!=0);let offset=select(offset0,offset0*width,abs(offset0)<=1.0);let localX=ff_wrap(x+offset*stagger,width);let localY=ff_wrap(y,height);return select(0.0,1.0,localX>=mortar&&localX<=width-mortar&&localY>=mortar&&localY<=height-mortar);}
+fn ff_shape_mask(distance:f32,feather0:f32)->f32{let feather=max(0.0,abs(feather0));if(distance<=0.0){return 1.0;}if(feather==0.0){return 0.0;}return 1.0-ff_smoothstep(0.0,feather,distance);}
+fn ff_segment_distance(p:vec2<f32>,a:vec2<f32>,b:vec2<f32>)->f32{let delta=b-a;let den=dot(delta,delta);if(den<=0.000000000001){return length(p-a);}let t=clamp(dot(p-a,delta)/den,0.0,1.0);return length(p-(a+delta*t));}
+fn ff_line_distance(x:f32,y:f32,ax:f32,ay:f32,bx:f32,by:f32,width:f32)->f32{return ff_segment_distance(vec2<f32>(x,y),vec2<f32>(ax,ay),vec2<f32>(bx,by))-abs(width)*0.5;}
+fn ff_circle_distance(x:f32,y:f32,cx:f32,cy:f32,radius:f32)->f32{return length(vec2<f32>(x-cx,y-cy))-abs(radius);}
+fn ff_box_distance(x:f32,y:f32,cx:f32,cy:f32,width:f32,height:f32,rotation:f32)->f32{let angle=rotation*FF_TAU/1024.0;let co=cos(angle);let si=sin(angle);let delta=vec2<f32>(x-cx,y-cy);let q=abs(vec2<f32>(co*delta.x+si*delta.y,-si*delta.x+co*delta.y))-vec2<f32>(abs(width),abs(height))*0.5;return length(max(q,vec2<f32>(0.0)))+min(max(q.x,q.y),0.0);}
+fn ff_sdf_smooth_union(a:f32,b:f32,radius0:f32)->f32{let radius=abs(radius0);if(radius==0.0){return min(a,b);}let h=clamp(0.5+0.5*(b-a)/radius,0.0,1.0);return mix(b,a,h)-radius*h*(1.0-h);}
+fn ff_sdf_outline(distance:f32,width:f32,feather:f32)->f32{return ff_shape_mask(abs(distance)-abs(width)*0.5,feather);}
+fn ff_line(x:f32,y:f32,ax:f32,ay:f32,bx:f32,by:f32,width:f32,feather:f32)->f32{return ff_shape_mask(ff_line_distance(x,y,ax,ay,bx,by,width),feather);}
+fn ff_circle(x:f32,y:f32,cx:f32,cy:f32,radius:f32,feather:f32)->f32{return ff_shape_mask(ff_circle_distance(x,y,cx,cy,radius),feather);}
+fn ff_ring(x:f32,y:f32,cx:f32,cy:f32,radius:f32,width:f32,feather:f32)->f32{return ff_shape_mask(abs(length(vec2<f32>(x-cx,y-cy))-abs(radius))-abs(width)*0.5,feather);}
+fn ff_box(x:f32,y:f32,cx:f32,cy:f32,width:f32,height:f32,rotation:f32,feather:f32)->f32{return ff_shape_mask(ff_box_distance(x,y,cx,cy,width,height,rotation),feather);}
+fn ff_triangle(x:f32,y:f32,ax:f32,ay:f32,bx:f32,by:f32,cx:f32,cy:f32,feather:f32)->f32{let p=vec2<f32>(x,y);let a=vec2<f32>(ax,ay);let b=vec2<f32>(bx,by);let c=vec2<f32>(cx,cy);let area=(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);if(abs(area)<=0.000000001){return 0.0;}let e0=(p.x-a.x)*(b.y-a.y)-(p.y-a.y)*(b.x-a.x);let e1=(p.x-b.x)*(c.y-b.y)-(p.y-b.y)*(c.x-b.x);let e2=(p.x-c.x)*(a.y-c.y)-(p.y-c.y)*(a.x-c.x);let hasNeg=e0<0.0||e1<0.0||e2<0.0;let hasPos=e0>0.0||e1>0.0||e2>0.0;let inside=!(hasNeg&&hasPos);let distance=min(ff_segment_distance(p,a,b),min(ff_segment_distance(p,b,c),ff_segment_distance(p,c,a)));return ff_shape_mask(select(distance,-distance,inside),feather);}
+fn ff_grid(x:f32,y:f32,width0:f32,height0:f32,lineWidth:f32,feather:f32)->f32{let width=max(1.0,abs(width0));let height=max(1.0,abs(height0));let lx=ff_wrap(x,width);let ly=ff_wrap(y,height);let distance=min(min(lx,width-lx),min(ly,height-ly))-abs(lineWidth)*0.5;return ff_shape_mask(distance,feather);}
+fn ff_sierpinski(x:f32,y:f32,cx:f32,cy:f32,size0:f32,depth0:f32,feather:f32)->f32{let size=max(0.000001,abs(size0));let height=size*0.8660254037844386;let top=cy-height*0.5;let bottom=cy+height*0.5;let base=ff_triangle(x,y,cx,top,cx-size*0.5,bottom,cx+size*0.5,bottom,feather);if(base<=0.0){return 0.0;}let yy=(y-top)/height;var u=yy*0.5-(x-cx)/size;var v=yy*0.5+(x-cx)/size;if(u<0.0||v<0.0||u+v>1.0){return base;}let depth=clamp(i32(trunc(depth0)),0,10);var localHeight=height;for(var level:i32=0;level<depth;level=level+1){let w=1.0-u-v;if(u<0.5&&v<0.5&&w<0.5){let holeDistance=min(0.5-u,min(0.5-v,0.5-w))*localHeight;return ff_shape_mask(holeDistance,feather);}if(u>=0.5){u=u*2.0-1.0;v=v*2.0;}else if(v>=0.5){u=u*2.0;v=v*2.0-1.0;}else{u=u*2.0;v=v*2.0;}localHeight=localHeight*0.5;}return base;}
+fn ff_opacity(base:f32,blend:f32,opacity:f32)->f32{let t=clamp(select(opacity,opacity/255.0,abs(opacity)>1.0),0.0,1.0);return mix(base,blend,t);}
+fn ff_blend_multiply(a0:f32,b0:f32,o:f32)->f32{let a=clamp(a0,0.0,255.0);let b=clamp(b0,0.0,255.0);return ff_opacity(a,a*b/255.0,o);}
+fn ff_blend_screen(a0:f32,b0:f32,o:f32)->f32{let a=clamp(a0,0.0,255.0);let b=clamp(b0,0.0,255.0);return ff_opacity(a,255.0-(255.0-a)*(255.0-b)/255.0,o);}
+fn ff_blend_overlay(a0:f32,b0:f32,o:f32)->f32{let a=clamp(a0,0.0,255.0);let b=clamp(b0,0.0,255.0);let v=select(2.0*a*b/255.0,255.0-2.0*(255.0-a)*(255.0-b)/255.0,a>=128.0);return ff_opacity(a,v,o);}
+fn ff_blend_softLight(a0:f32,b0:f32,o:f32)->f32{let a=clamp(a0,0.0,255.0);let b=clamp(b0,0.0,255.0);let A=a/255.0;let B=b/255.0;let v=clamp(((1.0-2.0*B)*A*A+2.0*B*A)*255.0,0.0,255.0);return ff_opacity(a,v,o);}
+fn ff_blend_difference(a0:f32,b0:f32,o:f32)->f32{let a=clamp(a0,0.0,255.0);let b=clamp(b0,0.0,255.0);return ff_opacity(a,abs(a-b),o);}
+@compute @workgroup_size(8,8)
+fn main(@builtin(global_invocation_id) gid:vec3<u32>){
+  if(gid.x>=params.width||gid.y>=params.rowCount){return;}
+  let px=gid.x;let py=params.startRow+gid.y;if(py>=params.height){return;}
+  let index=py*params.width+px;let sourceColor=ff_unpack(srcPixels[index]);
+  let pixelX=f32(px);let pixelY=f32(py);let widthF=f32(params.width);let heightF=f32(params.height);let normalizedX=ff_normalized_coordinate(pixelX,widthF);let normalizedY=ff_normalized_coordinate(pixelY,heightF);let centeredX=normalizedX*2.0-1.0;let centeredY=normalizedY*2.0-1.0;
+  let luminance=(299.0*sourceColor.x+587.0*sourceColor.y+114.0*sourceColor.z)/1000.0;
+  let chromaU=(-147407.0*sourceColor.x-289391.0*sourceColor.y+436798.0*sourceColor.z)/2000000.0;
+  let chromaV=(614777.0*sourceColor.x-514799.0*sourceColor.y-99978.0*sourceColor.z)/2000000.0;
+  let dx=widthF*0.5-pixelX;let dy=heightF*0.5-pixelY;let radius=length(vec2<f32>(dx,dy));let maxRadius=length(vec2<f32>(widthF,heightF))*0.5;let direction=ff_atan2(-dy,-dx)*1024.0/FF_TAU;
+  outPixels[index]=ff_pack(vec4<f32>(${expr[0]},${expr[1]},${expr[2]},${expr[3]}));
+}`}
+}
+
+
+/* src/renderers/renderer-backend.js */
+/**
+ * Filter FabJS
+ * Modular source extracted from v2.0.7; modular architecture v2.1.0.
+ * Licensed GPL-2.0-or-later. See LICENSE and README.md.
+ */
+class RenderCancelledError extends Error{constructor(message='Render cancelled'){super(message);this.name='RenderCancelledError'}}
+class RendererBackend{
+  constructor(id,label){this.id=id;this.label=label}
+  setSource(){throw new Error(`${this.label} does not implement setSource()`)}
+  render(){throw new Error(`${this.label} does not implement render()`)}
+  cancel(){return Promise.resolve(false)}
+  dispose(){}
+}
+
+
+/* src/renderers/cpu-renderer.js */
+/**
+ * Filter FabJS
+ * Modular source extracted from v2.0.7; modular architecture v2.1.0.
+ * Licensed GPL-2.0-or-later. See LICENSE and README.md.
+ */
+
+
+
+const MAX_CPU_RENDER_WORK=3_000_000_000;
+const CPU_CALL_WEIGHTS=Object.freeze({src:2,src0:2,src1:2,srcWrap:2,srcMirror:2,srcLinear:5,rad:3,rad0:3,rad1:3,cnv:10,cnv0:10,cnv1:10,hash2:4,valueNoise:12,perlin:20,worleyF1:30,worleyF2:30,fbm:240,turbulence:240,ridged:240,periodicNoise:12,mandelbrot:MAX_FRACTAL_ITERATIONS,julia:MAX_FRACTAL_ITERATIONS,sierpinski:12});
+
+class RenderBudgetError extends Error{constructor(message){super(message);this.name='RenderBudgetError'}}
+
+function estimateCpuProgramCost(program){
+  if(!Array.isArray(program?.outputs)||program.outputs.length!==4)return Infinity;
+  let cost=0;const stack=program.outputs.map(output=>output?.expression);
+  while(stack.length){const node=stack.pop();if(!node||typeof node!=='object')return Infinity;cost+=node.op==='call'?(CPU_CALL_WEIGHTS[node.fn]||1):1;switch(node.op){case'const':case'var':break;case'unary':stack.push(node.input);break;case'binary':stack.push(node.left,node.right);break;case'select':stack.push(node.condition,node.whenTrue,node.whenFalse);break;case'call':if(!Array.isArray(node.args))return Infinity;stack.push(...node.args);break;default:return Infinity}}
+  return cost;
+}
+
+function assertCpuRenderBudget(program,width,height){
+  const pixels=width*height,cost=estimateCpuProgramCost(program);
+  if(!Number.isSafeInteger(pixels)||pixels<1||!Number.isFinite(cost)||cost>MAX_CPU_RENDER_WORK/pixels)throw new RenderBudgetError(`CPU render cost exceeds the ${MAX_CPU_RENDER_WORK.toLocaleString('en-US')} work-unit limit`);
+  return cost*pixels;
+}
+
+class CpuRenderer extends RendererBackend{
+  constructor(programFactory){super('cpu','CPU Worker');this.programFactory=programFactory;this.worker=null;this.workerProgramKey=null;this.source=null;this.width=0;this.height=0;this.pending=new Map();this.readyPromise=Promise.resolve();this.resolveReady=null;this.rejectReady=null}
+  spawnWorker(){
+    this.worker?.terminate();
+    const workerUrl=URL.createObjectURL(new Blob([this.programFactory()],{type:'application/javascript'}));
+    const worker=new Worker(workerUrl);this.worker=worker;this.workerProgramKey=null;URL.revokeObjectURL(workerUrl);
+    this.readyPromise=new Promise((resolve,reject)=>{this.resolveReady=resolve;this.rejectReady=reject});
+    worker.onmessage=e=>{
+      if(this.worker!==worker)return;
+      const m=e.data;
+      if(m.type==='ready'){this.resolveReady?.();this.resolveReady=this.rejectReady=null;return}
+      const job=this.pending.get(m.id);if(!job)return;
+      if(m.type==='progress'){job.onProgress?.(m);return}
+      if(m.type==='result'){this.pending.delete(m.id);job.resolve({pixels:new Uint8ClampedArray(m.buffer),ms:m.ms,backend:this.id,label:this.label})}
+    };
+    worker.onerror=e=>this.failWorker(worker,new Error(e.message||`${this.label} failed`));
+    worker.onmessageerror=e=>this.failWorker(worker,new Error(e.message||`${this.label} message failed`));
+  }
+  failWorker(worker,error){if(this.worker!==worker)return;this.worker=null;this.workerProgramKey=null;this.rejectReady?.(error);this.resolveReady=this.rejectReady=null;this.rejectPending(error);worker.terminate();this.readyPromise=Promise.resolve()}
+  rejectPending(error){for(const job of this.pending.values())job.reject(error);this.pending.clear()}
+  postSource(){
+    if(!this.worker||!this.source||!this.width||!this.height)return;
+    const copy=this.source.slice();
+    this.worker.postMessage({type:'init',width:this.width,height:this.height,buffer:copy.buffer},[copy.buffer]);
+  }
+  ensureWorker(){if(!this.worker){this.spawnWorker();this.postSource()}return this.readyPromise}
+  setSource(pixels,width,height){
+    this.source=pixels instanceof Uint8ClampedArray?pixels:new Uint8ClampedArray(pixels);this.width=width;this.height=height;
+    this.rejectPending(new RenderCancelledError('Source replaced'));
+    this.spawnWorker();this.postSource();return this.readyPromise;
+  }
+  async render({id,program,controls,legacyMath,onProgress}){
+    if(!this.source||!this.width||!this.height)throw new Error('Renderer source is not initialized');
+    assertCpuRenderBudget(program,this.width,this.height);
+    await this.ensureWorker();
+    if(!this.worker)throw new Error(`${this.label} is unavailable`);
+    return new Promise((resolve,reject)=>{
+      this.pending.set(id,{resolve,reject,onProgress});
+      try{const key=programCacheKey(program),message={type:'render',id,programKey:key,controls,legacyMath};if(key!==this.workerProgramKey)message.program=program;this.worker.postMessage(message);this.workerProgramKey=key}
+      catch(error){this.pending.delete(id);reject(error)}
+    });
+  }
+  async cancel(){
+    const hadWork=this.pending.size>0;
+    const error=new RenderCancelledError();
+    this.rejectReady?.(error);this.resolveReady=this.rejectReady=null;
+    this.rejectPending(error);
+    this.worker?.terminate();this.worker=null;this.workerProgramKey=null;this.readyPromise=Promise.resolve();
+    return hadWork;
+  }
+  releaseSource(){
+    const error=new RenderCancelledError('Source released');
+    this.rejectReady?.(error);this.resolveReady=this.rejectReady=null;
+    this.rejectPending(error);this.worker?.terminate();this.worker=null;this.workerProgramKey=null;
+    this.source=null;this.width=this.height=0;this.readyPromise=Promise.resolve();
+  }
+  dispose(){
+    const error=new RenderCancelledError('Renderer disposed');
+    this.rejectReady?.(error);this.resolveReady=this.rejectReady=null;
+    this.rejectPending(error);this.worker?.terminate();this.worker=null;this.workerProgramKey=null;
+    this.source=null;this.width=this.height=0;
+  }
+}
+
+
+/* src/renderers/webgpu-renderer.js */
+/**
+ * Filter FabJS
+ * Modular source extracted from v2.0.7; modular architecture v2.1.0.
+ * Licensed GPL-2.0-or-later. See LICENSE and README.md.
+ */
+
+
+
+
+const MAX_PIPELINES=32,MAX_PIPELINE_CACHE_BYTES=8*1024*1024;
+const pipelineEntryBytes=plan=>(String(plan?.key??'').length+String(plan?.code??'').length)*2;
+class WebGPUValidationError extends Error{constructor(message){super(message);this.name='WebGPUValidationError'}}
+
+class WebGpuRenderer extends RendererBackend{
+  constructor({onCompile=null}={}){super('webgpu','WebGPU');this.onCompile=onCompile;this.adapter=null;this.device=null;this.deviceGeneration=0;this.initPromise=null;this.source=null;this.width=0;this.height=0;this.sourceBuffer=null;this.outputBuffer=null;this.readbackBuffer=null;this.paramsBuffer=null;this.bufferGeneration=0;this.pipelineCache=new Map();this.pipelineCacheBytes=0;this.cancelVersion=0;this.active=false;this.lastShader='';this.operationQueue=Promise.resolve();this.disposed=false}
+  static unavailableReason(){if(!globalThis.navigator?.gpu)return globalThis.isSecureContext===false?'WebGPU requires HTTPS or localhost':'WebGPU API unavailable';return''}
+  async ensureDevice(){
+    if(this.disposed)throw new Error('WebGPU renderer is disposed');
+    if(this.device)return this.device;if(this.initPromise)return this.initPromise;
+    const reason=WebGpuRenderer.unavailableReason();if(reason)throw new Error(reason);
+    const init=(async()=>{const adapter=await navigator.gpu.requestAdapter({powerPreference:'high-performance'});if(!adapter)throw new Error('No WebGPU adapter was returned');const device=await adapter.requestDevice();if(this.disposed){device.destroy?.();throw new Error('WebGPU renderer is disposed')}this.adapter=adapter;this.device=device;this.deviceGeneration++;device.lost.then(info=>{if(this.device!==device)return;console.warn('WebGPU device lost',info);this.cancelVersion++;this.active=false;this.device=null;this.adapter=null;this.clearPipelineCache();this.destroyBuffers()});device.addEventListener?.('uncapturederror',event=>console.error('WebGPU uncaptured error',event.error));return device})();
+    this.initPromise=init;try{return await init}finally{if(this.initPromise===init)this.initPromise=null}
+  }
+  destroyBuffers(){for(const key of ['sourceBuffer','outputBuffer','readbackBuffer','paramsBuffer']){try{if(key==='readbackBuffer'&&this[key]?.mapState==='mapped')this[key].unmap()}catch{}try{this[key]?.destroy()}catch{}this[key]=null}this.bufferGeneration=0}
+  setSource(pixels,width,height){if(!Number.isInteger(width)||!Number.isInteger(height)||width<1||height<1)throw new Error('WebGPU source dimensions must be positive integers');const count=width*height;if(!Number.isSafeInteger(count)||pixels?.length!==count*4)throw new Error('WebGPU source pixel length does not match its dimensions');const source=pixels instanceof Uint8ClampedArray?pixels:new Uint8ClampedArray(pixels),token=++this.cancelVersion;const job=this.operationQueue.then(()=>this.configureSource(source,width,height,token));this.operationQueue=job.catch(()=>{});return job}
+  assertGeneration(token,message='WebGPU operation was cancelled'){if(token!==this.cancelVersion)throw new RenderCancelledError(message)}
+  async configureSource(pixels,width,height,token){
+    this.assertGeneration(token,'Stale WebGPU source upload');this.active=false;this.source=pixels;this.width=width;this.height=height;await this.uploadSource(token);return true;
+  }
+  async uploadSource(token=this.cancelVersion){
+    this.assertGeneration(token,'Stale WebGPU source upload');if(!this.source||!this.width||!this.height)throw new Error('WebGPU source is not initialized');const device=await this.ensureDevice();this.assertGeneration(token,'Stale WebGPU source upload');if(device!==this.device)throw new RenderCancelledError('WebGPU device changed during source upload');this.destroyBuffers();
+    const size=Math.max(4,this.width*this.height*4);
+    try{this.sourceBuffer=device.createBuffer({label:'Filter FabJS source',size,usage:GPUBufferUsage.STORAGE|GPUBufferUsage.COPY_DST});this.outputBuffer=device.createBuffer({label:'Filter FabJS output',size,usage:GPUBufferUsage.STORAGE|GPUBufferUsage.COPY_SRC});this.readbackBuffer=device.createBuffer({label:'Filter FabJS readback',size,usage:GPUBufferUsage.COPY_DST|GPUBufferUsage.MAP_READ});this.paramsBuffer=device.createBuffer({label:'Filter FabJS params',size:WEBGPU_PARAMS_BYTES,usage:GPUBufferUsage.STORAGE|GPUBufferUsage.COPY_DST});device.queue.writeBuffer(this.sourceBuffer,0,this.source);this.bufferGeneration=this.deviceGeneration}catch(error){this.destroyBuffers();throw error}
+    return device;
+  }
+  async ensureSourceBuffers(token=this.cancelVersion){this.assertGeneration(token);if(!this.source||!this.width||!this.height)throw new Error('WebGPU source is not initialized');if(this.device&&this.bufferGeneration===this.deviceGeneration&&this.sourceBuffer&&this.outputBuffer&&this.readbackBuffer&&this.paramsBuffer)return this.device;return this.uploadSource(token)}
+  releaseSource(){this.cancelVersion++;const job=this.operationQueue.then(()=>{this.active=false;this.destroyBuffers();this.source=null;this.width=this.height=0});this.operationQueue=job.catch(()=>{});return job}
+  writeParams(device,paramsBuffer,startRow,rowCount,controls){const data=new ArrayBuffer(WEBGPU_PARAMS_BYTES),view=new DataView(data);view.setUint32(0,this.width,true);view.setUint32(4,this.height,true);view.setUint32(8,startRow,true);view.setUint32(12,rowCount,true);for(let i=0;i<WEBGPU_CONTROL_SLOT_COUNT;i++)view.setFloat32(16+i*4,Number(i<CONTROL_COUNT?controls?.[i]??DEFAULT_CONTROL_VALUE:DEFAULT_CONTROL_VALUE),true);device.queue.writeBuffer(paramsBuffer,0,data)}
+  clearPipelineCache(){this.pipelineCache.clear();this.pipelineCacheBytes=0}
+  cachedPipeline(key){const entry=this.pipelineCache.get(key);if(!entry)return null;this.pipelineCache.delete(key);this.pipelineCache.set(key,entry);return entry}
+  rememberPipeline(plan,pipeline,deviceGeneration=this.deviceGeneration){const prior=this.pipelineCache.get(plan.key);if(prior){this.pipelineCache.delete(plan.key);this.pipelineCacheBytes-=prior.cacheBytes}const cacheBytes=pipelineEntryBytes(plan);if(cacheBytes>MAX_PIPELINE_CACHE_BYTES)return;this.pipelineCache.set(plan.key,{plan,pipeline,deviceGeneration,cacheBytes});this.pipelineCacheBytes+=cacheBytes;while(this.pipelineCache.size>MAX_PIPELINES||this.pipelineCacheBytes>MAX_PIPELINE_CACHE_BYTES){const oldestKey=this.pipelineCache.keys().next().value,oldest=this.pipelineCache.get(oldestKey);this.pipelineCache.delete(oldestKey);this.pipelineCacheBytes-=oldest.cacheBytes}}
+  planFor(program,analysis){const key=WGSLCompiler.key(program),entry=this.cachedPipeline(key);return entry?.plan||WGSLCompiler.compile(program,analysis)}
+  async pipelineFor(plan){
+    const cached=this.cachedPipeline(plan.key);if(cached?.pipeline&&cached.deviceGeneration===this.deviceGeneration&&this.device)return cached.pipeline;const device=await this.ensureDevice(),generation=this.deviceGeneration;device.pushErrorScope('validation');let pipeline,pipelineError=null,validationError=null;
+    try{const module=device.createShaderModule({label:'Filter FabJS generated WGSL',code:plan.code});const info=await module.getCompilationInfo?.();const failures=info?.messages?.filter(message=>message.type==='error')||[];if(failures.length)throw new WGSLCompileError(failures.map(message=>`${message.lineNum}:${message.linePos} ${message.message}`).join('\n'));pipeline=device.createComputePipelineAsync?await device.createComputePipelineAsync({label:'Filter FabJS compute pipeline',layout:'auto',compute:{module,entryPoint:'main'}}):device.createComputePipeline({label:'Filter FabJS compute pipeline',layout:'auto',compute:{module,entryPoint:'main'}})}catch(error){pipelineError=error}
+    try{validationError=await device.popErrorScope()}catch(error){if(!pipelineError)pipelineError=error}
+    if(device!==this.device||generation!==this.deviceGeneration)throw new RenderCancelledError('WebGPU device changed during pipeline creation');if(pipelineError?.name==='WGSLCompileError')throw pipelineError;if(validationError)throw new WebGPUValidationError(validationError.message);if(pipelineError)throw pipelineError;this.rememberPipeline(plan,pipeline,generation);return pipeline;
+  }
+  render(args){const token=this.cancelVersion,job=this.operationQueue.then(()=>this.performRender(args,token));this.operationQueue=job.catch(()=>{});return job}
+  async performRender({program,controls,onProgress,webgpuAnalysis},token){
+    this.assertGeneration(token);if(!this.source||!this.width||!this.height)throw new Error('WebGPU source is not initialized');const start=performance.now();this.active=true;
+    try{
+      const plan=this.planFor(program,webgpuAnalysis);this.lastShader=plan.code;this.onCompile?.({wgsl:plan.code,analysis:plan.analysis});const device=await this.ensureSourceBuffers(token);if(token!==this.cancelVersion||device!==this.device)throw new RenderCancelledError();const pipeline=await this.pipelineFor(plan);if(token!==this.cancelVersion||device!==this.device)throw new RenderCancelledError();
+      const sourceBuffer=this.sourceBuffer,outputBuffer=this.outputBuffer,readbackBuffer=this.readbackBuffer,paramsBuffer=this.paramsBuffer;if(!sourceBuffer||!outputBuffer||!readbackBuffer||!paramsBuffer)throw new Error('WebGPU source buffers were lost before dispatch');if(readbackBuffer.mapState==='mapped')readbackBuffer.unmap();this.writeParams(device,paramsBuffer,0,this.height,controls);
+      const bindGroup=device.createBindGroup({layout:pipeline.getBindGroupLayout(0),entries:[{binding:0,resource:{buffer:sourceBuffer}},{binding:1,resource:{buffer:outputBuffer}},{binding:2,resource:{buffer:paramsBuffer}}]}),encoder=device.createCommandEncoder({label:'Filter FabJS GPU frame'}),pass=encoder.beginComputePass();pass.setPipeline(pipeline);pass.setBindGroup(0,bindGroup);pass.dispatchWorkgroups(Math.ceil(this.width/8),Math.ceil(this.height/8));pass.end();encoder.copyBufferToBuffer(outputBuffer,0,readbackBuffer,0,this.width*this.height*4);device.queue.submit([encoder.finish()]);
+      try{await readbackBuffer.mapAsync(GPUMapMode.READ,0,this.width*this.height*4)}catch(error){if(token!==this.cancelVersion||device!==this.device)throw new RenderCancelledError();throw error}if(token!==this.cancelVersion||device!==this.device){try{if(readbackBuffer.mapState==='mapped')readbackBuffer.unmap()}catch{}throw new RenderCancelledError()}let raw;try{raw=readbackBuffer.getMappedRange(0,this.width*this.height*4).slice(0)}finally{if(readbackBuffer.mapState==='mapped')readbackBuffer.unmap()}onProgress?.({row:this.height,total:this.height,pct:100});return{pixels:new Uint8ClampedArray(raw),ms:performance.now()-start,backend:this.id,label:this.label};
+    }finally{this.active=false}
+  }
+  async cancel(){const hadWork=this.active;this.cancelVersion++;if(hadWork){const device=this.device;this.device=null;this.adapter=null;this.clearPipelineCache();this.destroyBuffers();try{device?.destroy?.()}catch{}}return hadWork}
+  dispose(){this.disposed=true;this.cancelVersion++;this.active=false;this.destroyBuffers();this.clearPipelineCache();const device=this.device;this.device=null;this.adapter=null;this.source=null;this.width=this.height=0;try{device?.destroy?.()}catch{}}
+}
+
+
+/* src/renderers/renderer-manager.js */
+/**
+ * Filter FabJS
+ * Modular source extracted from v2.0.7; modular architecture v2.1.0.
+ * Licensed GPL-2.0-or-later. See LICENSE and README.md.
+ */
+
+
+
+const MAX_ANALYSES=64,MAX_GPU_FAILURES=64,MAX_ANALYSIS_CACHE_BYTES=2*1024*1024,MAX_GPU_FAILURE_CACHE_BYTES=2*1024*1024;
+const textBytes=value=>String(value??'').length*2;
+const analysisEntryBytes=(key,analysis)=>textBytes(key)+textBytes(analysis?.subset)+(analysis?.blockers||[]).reduce((total,blocker)=>total+textBytes(blocker),0);
+const gpuFailureEntryBytes=(key,failure)=>textBytes(key)+textBytes(failure?.reason);
+
+class RendererManager{
+  constructor(factories){this.factories=factories;this.instances=new Map();this.instanceVersions=new Map();this.syncPromises=new Map();this.source=null;this.width=0;this.height=0;this.sourceVersion=0;this.active=null;this.analysisCache=new Map();this.analysisCacheBytes=0;this.gpuFailures=new Map();this.gpuFailureCacheBytes=0}
+  setSource(pixels,width,height){
+    if(!Number.isInteger(width)||!Number.isInteger(height)||width<1||height<1)throw new Error('Renderer source dimensions must be positive integers');
+    const count=width*height;if(!Number.isSafeInteger(count)||pixels?.length!==count*4)throw new Error('Renderer source pixel length does not match its dimensions');
+    const releases=[];
+    for(const [id,renderer] of this.instances){
+      this.instanceVersions.delete(id);
+      try{const release=typeof renderer.releaseSource==='function'?renderer.releaseSource():renderer.cancel?.();if(release)releases.push(Promise.resolve(release).catch(error=>console.warn(`${renderer.label||id} source release failed`,error)))}catch(error){console.warn(`${renderer.label||id} source release failed`,error)}
+    }
+    this.active=null;this.source=pixels instanceof Uint8ClampedArray?pixels:new Uint8ClampedArray(pixels);this.width=width;this.height=height;this.sourceVersion++;
+    return Promise.all(releases).then(()=>undefined);
+  }
+  async syncSource(id,renderer){const source=this.source,width=this.width,height=this.height,version=this.sourceVersion;await renderer.setSource(source,width,height);if(version===this.sourceVersion)this.instanceVersions.set(id,version)}
+  async get(id){let renderer=this.instances.get(id);if(!renderer){const factory=this.factories[id];if(!factory)throw new Error(`Unknown renderer backend “${id}”`);renderer=factory();this.instances.set(id,renderer)}while(this.source&&this.instanceVersions.get(id)!==this.sourceVersion){let sync=this.syncPromises.get(id);if(!sync){sync={version:this.sourceVersion,promise:this.syncSource(id,renderer)};this.syncPromises.set(id,sync)}try{await sync.promise}catch(error){if(sync.version===this.sourceVersion)throw error}finally{if(this.syncPromises.get(id)===sync)this.syncPromises.delete(id)}}return renderer}
+  programKey(program){return WGSLCompiler.key(program)}
+  analyze(program){const key=this.programKey(program),cached=this.analysisCache.get(key);if(cached){this.analysisCache.delete(key);this.analysisCache.set(key,cached);return cached}const analysis=WGSLCompiler.analyze(program),bytes=analysisEntryBytes(key,analysis);if(bytes<=MAX_ANALYSIS_CACHE_BYTES){this.analysisCache.set(key,analysis);this.analysisCacheBytes+=bytes;while(this.analysisCache.size>MAX_ANALYSES||this.analysisCacheBytes>MAX_ANALYSIS_CACHE_BYTES){const oldestKey=this.analysisCache.keys().next().value,oldest=this.analysisCache.get(oldestKey);this.analysisCache.delete(oldestKey);this.analysisCacheBytes-=analysisEntryBytes(oldestKey,oldest)}}return analysis}
+  diagnose(program,preference='auto'){
+    const analysis=this.analyze(program),gpuReason=!analysis.compatible?`GPU subset: ${analysis.blockers.slice(0,3).join(', ')}`:WebGpuRenderer.unavailableReason()||this.gpuFailure(program),gpuEligible=!gpuReason,forcedCpu=preference==='cpu';
+    return{analysis,preference,rendererId:forcedCpu||!gpuEligible?'cpu':'webgpu',mode:forcedCpu?'cpu-selected':gpuEligible?'gpu-eligible':'cpu-fallback',gpuCompatible:analysis.compatible,gpuEligible,gpuReason,operationCount:Number(program?.metadata?.nodeCount)||0,passes:1};
+  }
+  gpuFailure(program){
+    const key=this.programKey(program),failure=this.gpuFailures.get(key),renderer=this.instances.get('webgpu');
+    if(!failure)return'';
+    if(!renderer?.device||renderer.deviceGeneration!==failure.deviceGeneration){this.gpuFailures.delete(key);this.gpuFailureCacheBytes-=gpuFailureEntryBytes(key,failure);return''}
+    return failure.reason;
+  }
+  rememberGpuFailure(program,renderer,error){
+    const message=error?.message||'WebGPU render failed',persistent=error?.name==='WGSLCompileError'||(error?.name==='WebGPUValidationError'&&!/(?:device\s+(?:is\s+)?lost|destroyed|out\s+of\s+memory|internal)/i.test(message));
+    if(!persistent)return;
+    const key=this.programKey(program),prior=this.gpuFailures.get(key);if(prior){this.gpuFailures.delete(key);this.gpuFailureCacheBytes-=gpuFailureEntryBytes(key,prior)}const failure={deviceGeneration:renderer?.deviceGeneration??0,reason:`GPU error: ${message}`},bytes=gpuFailureEntryBytes(key,failure);if(bytes>MAX_GPU_FAILURE_CACHE_BYTES)return;this.gpuFailures.set(key,failure);this.gpuFailureCacheBytes+=bytes;
+    while(this.gpuFailures.size>MAX_GPU_FAILURES||this.gpuFailureCacheBytes>MAX_GPU_FAILURE_CACHE_BYTES){const oldestKey=this.gpuFailures.keys().next().value,oldest=this.gpuFailures.get(oldestKey);this.gpuFailures.delete(oldestKey);this.gpuFailureCacheBytes-=gpuFailureEntryBytes(oldestKey,oldest)}
+  }
+  assertCurrent(isCurrent){if(typeof isCurrent==='function'&&!isCurrent())throw new RenderCancelledError()}
+  throwIfCancelled(error,isCurrent){if(error?.name==='RenderCancelledError')throw error;this.assertCurrent(isCurrent)}
+  progressHandler(onProgress,isCurrent){return message=>{if(typeof isCurrent==='function'&&!isCurrent())return;onProgress?.(message)}}
+  async select(program,preference='auto',isCurrent){
+    const diagnostic=this.diagnose(program,preference),analysis=diagnostic.analysis;
+    if(preference==='cpu'){const renderer=await this.get('cpu');this.assertCurrent(isCurrent);this.active=renderer;return{renderer,analysis,fallbackReason:''}}
+    let reason=diagnostic.gpuReason;
+    if(!reason){try{const renderer=await this.get('webgpu');this.assertCurrent(isCurrent);this.active=renderer;return{renderer,analysis,fallbackReason:''}}catch(error){this.throwIfCancelled(error,isCurrent);console.warn('WebGPU initialization failed; using CPU',error);reason=error.message||'WebGPU initialization failed'}}
+    const renderer=await this.get('cpu');this.assertCurrent(isCurrent);this.active=renderer;return{renderer,analysis,fallbackReason:reason};
+  }
+  async renderWithFallback({program,preference='auto',id,controls,legacyMath,onProgress,onSelection,isCurrent}){
+    let selection;
+    try{selection=await this.select(program,preference,isCurrent)}catch(error){this.throwIfCancelled(error,isCurrent);throw error}
+    this.assertCurrent(isCurrent);onSelection?.(selection,{runtimeFallback:false,gpuError:null});
+    const args={id,program,controls,legacyMath,webgpuAnalysis:selection.analysis,onProgress:this.progressHandler(onProgress,isCurrent)};
+    try{
+      const result=await selection.renderer.render(args);this.assertCurrent(isCurrent);return{...selection,result,gpuError:null,runtimeFallback:false};
+    }catch(gpuError){
+      this.throwIfCancelled(gpuError,isCurrent);
+      if(selection.renderer.id!=='webgpu')throw gpuError;
+      console.error('WebGPU render failed; retrying on CPU',gpuError);this.rememberGpuFailure(program,selection.renderer,gpuError);
+      let cpu;
+      try{cpu=await this.get('cpu');this.assertCurrent(isCurrent)}catch(cpuInitError){this.throwIfCancelled(cpuInitError,isCurrent);throw this.fallbackError(gpuError,cpuInitError)}
+      this.active=cpu;selection={renderer:cpu,analysis:selection.analysis,fallbackReason:`GPU error: ${gpuError.message||'WebGPU render failed'}`};onSelection?.(selection,{runtimeFallback:true,gpuError});
+      try{const result=await cpu.render({...args,onProgress:this.progressHandler(onProgress,isCurrent)});this.assertCurrent(isCurrent);return{...selection,result,gpuError,runtimeFallback:true}}
+      catch(cpuError){this.throwIfCancelled(cpuError,isCurrent);throw this.fallbackError(gpuError,cpuError)}
+    }
+  }
+  fallbackError(gpuError,cpuError){const error=new Error(`GPU: ${gpuError.message}; CPU: ${cpuError.message}`);error.name='RendererFallbackError';error.gpuError=gpuError;error.cpuError=cpuError;return error}
+  async cancelActive(){return this.active?.cancel?.()??false}
+  dispose(){for(const renderer of this.instances.values())renderer.dispose();this.instances.clear();this.instanceVersions.clear();this.syncPromises.clear();this.analysisCache.clear();this.analysisCacheBytes=0;this.gpuFailures.clear();this.gpuFailureCacheBytes=0;this.active=null;this.source=null;this.width=this.height=0}
+}
+
+
+/* src/io/filter-format.js */
+/**
+ * Filter FabJS
+ * Modular source extracted from v2.0.7; modular architecture v2.1.0.
+ * Licensed GPL-2.0-or-later. See LICENSE and README.md.
+ */
+
+
+
+
+const FILTER_FILE_MAX_BYTES=256*1024;
+const FILTER_TEXT_MAX_LENGTH=256*1024;
+const FILTER_DESCRIPTION_MAX_LENGTH=2000;
+const validatedFormulaAsts=new WeakMap();
+
+function normalizeFilterText(text){return String(text??'').replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n')}
+function assertFilterTextSize(text){if(String(text??'').length>FILTER_TEXT_MAX_LENGTH)throw new Error(`Filter file exceeds the ${FILTER_FILE_MAX_BYTES/1024} KiB limit`)}
+function boundedString(value,name,maxLength,fallback=''){
+  if(value===undefined||value===null)return fallback;
+  if(typeof value!=='string')throw new Error(`Native filter ${name} must be a string`);
+  const result=value.trim();if(result.length>maxLength)throw new Error(`Native filter ${name} exceeds ${maxLength} characters`);return result||fallback;
+}
+function validatedFormulas(formulas,label='Native filter'){
+  if(!Array.isArray(formulas)||formulas.length!==4)throw new Error(`${label} must contain exactly four channel formulas`);
+  const asts=[];
+  const normalized=formulas.map((formula,index)=>{
+    if(typeof formula!=='string'||!formula.trim())throw new Error(`${label} channel ${index+1} must be a non-empty formula string`);
+    const normalized=formula.trim();if(normalized.length>FORMULA_LIMITS.maxLength)throw new Error(`${label} channel ${index+1} exceeds the ${FORMULA_LIMITS.maxLength}-character formula limit`);
+    try{asts.push(new Parser(normalized).parse())}catch(error){throw new Error(`${label} channel ${index+1}: ${error.message}`)}
+    return normalized;
+  });
+  return{normalized,asts};
+}
+function getValidatedFormulaAsts(filter){return validatedFormulaAsts.get(filter)||null}
+function controlValue(value,index){if(typeof value!=='number'||!Number.isFinite(value))throw new Error(`Native filter control ${index+1} must be a finite number`);return clamp(value,0,255)}
+function controlLabel(value,index){if(value===undefined||value===null||value==='')return`Control ${index+1}`;if(typeof value!=='string')throw new Error(`Native filter control ${index+1} label must be a string`);const label=value.trim();if(label.length>80)throw new Error(`Native filter control ${index+1} label exceeds 80 characters`);return label||`Control ${index+1}`}
+function normalizeNativeControls(data){
+  if(data.controls!==undefined){
+    if(!Array.isArray(data.controls)||data.controls.length>CONTROL_COUNT)throw new Error(`Native filter controls must be an array of at most ${CONTROL_COUNT} entries`);
+    const controls=data.controls.map((control,index)=>{
+      if(typeof control==='number')return{label:`Control ${index+1}`,value:controlValue(control,index),ui:cloneControlUI()};
+      if(!control||typeof control!=='object'||Array.isArray(control))throw new Error(`Native filter control ${index+1} must be a number or object`);
+      const ui=normalizeControlUI(control.ui),value=ui.widget==='toggle'?(controlValue(control.value,index)<127.5?0:255):controlValue(control.value,index);
+      return{label:controlLabel(control.label,index),value,ui};
+    });
+    while(controls.length<CONTROL_COUNT){const definition=CONTROL_DEFINITIONS[controls.length];controls.push({label:definition.defaultLabel,value:definition.defaultValue,ui:cloneControlUI()});}
+    return controls;
+  }
+  const values=data.values===undefined?[]:data.values,labels=data.labels===undefined?[]:data.labels;
+  if(!Array.isArray(values)||values.length>CONTROL_COUNT)throw new Error(`Native filter values must be an array of at most ${CONTROL_COUNT} entries`);
+  if(!Array.isArray(labels)||labels.length>CONTROL_COUNT)throw new Error(`Native filter labels must be an array of at most ${CONTROL_COUNT} entries`);
+  return CONTROL_DEFINITIONS.map((definition,index)=>({label:controlLabel(labels[index],index),value:index<values.length?controlValue(values[index],index):definition.defaultValue,ui:cloneControlUI()}));
+}
+function validateNativeFilter(data){
+  if(!data||typeof data!=='object'||Array.isArray(data))throw new Error('Native filter JSON must contain an object');
+  if(data.format!=='filter-fab-js')throw new Error('Native filter format must be “filter-fab-js”');
+  if(!Number.isInteger(data.version)||![1,2].includes(data.version))throw new Error('Native filter version must be 1 or 2');
+  if(data.mathMode!==undefined&&!['float','legacy'].includes(data.mathMode))throw new Error('Native filter mathMode must be “float” or “legacy”');
+  const formulas=validatedFormulas(Array.isArray(data.formulas)?data.formulas:data.f);
+  const result={format:'filter-fab-js',version:data.version,...(data.id===undefined?{}:{id:validatePortableId(data.id)}),tags:normalizeTags(data.tags),mathMode:data.mathMode??(data.version===1?'legacy':'float'),name:boundedString(data.name,'name',120,'Untitled Filter'),description:boundedString(data.description,'description',FILTER_DESCRIPTION_MAX_LENGTH),author:boundedString(data.author,'author',120),formulas:formulas.normalized,controls:normalizeNativeControls(data)};
+  validatedFormulaAsts.set(result,formulas.asts);return result;
+}
+function cleanAFSFormula(group){
+  let formula='',continued=false;
+  for(const rawLine of group.split('\n')){
+    const lineContinues=/\\(?:r|n)/i.test(rawLine),line=rawLine.replace(/\\(?:r|n)/gi,'').trim();
+    if(!line)continue;
+    formula+=(formula?(continued?' ':'\n'):'')+line;continued=lineContinues;
+  }
+  return formula.trim();
+}
+function splitAFSFormulaGroups(body){
+  const separated=body.split(/\n[ \t]*\n+/).map(cleanAFSFormula).filter(Boolean);
+  if(separated.length>=4)return separated;
+  const formulas=[];let current='',depth=0,continued=false;
+  for(const rawLine of body.split('\n')){
+    const lineContinues=/\\(?:r|n)/i.test(rawLine),line=rawLine.replace(/\\(?:r|n)/gi,'').trim();
+    if(!line){if(current.trim()&&depth===0){formulas.push(current.trim());current='';continued=false}continue}
+    current+=(current?(continued?' ':'\n'):'')+line;continued=lineContinues;
+    for(const ch of line.replace(/\/\/.*$/,'')){if(ch==='(')depth++;else if(ch===')')depth=Math.max(0,depth-1)}
+    if(depth===0&&!continued){formulas.push(current.trim());current=''}
+  }
+  if(current.trim())formulas.push(current.trim());
+  return formulas;
+}
+function parseAFS(text,fileName=''){
+  assertFilterTextSize(text);
+  const normalized=normalizeFilterText(text),lines=normalized.split('\n'),header=(lines.shift()||'').trim();
+  if(!/^%RGB(?:-[0-9]+(?:\.[0-9]+)*)?$/i.test(header))throw new Error('Not a supported RGB AFS file');
+  if(lines.length<8)throw new Error('AFS file is missing its eight control values');
+  const values=lines.splice(0,8).map((raw,index)=>{
+    const token=raw.trim();
+    if(!/^[+-]?\d+$/.test(token))throw new Error(`AFS control ${index+1} is not a valid integer`);
+    const value=Number(token);
+    if(!Number.isSafeInteger(value))throw new Error(`AFS control ${index+1} is not a valid integer`);
+    return clamp(value,0,255);
+  });
+  const f=splitAFSFormulaGroups(lines.join('\n'));
+  if(f.length!==4)throw new Error(`AFS file contains ${f.length} channel formula${f.length===1?'':'s'}; expected 4`);
+  const formulas=validatedFormulas(f,'AFS filter');
+  const base=String(fileName||'').replace(/\.[^.]+$/,'').trim();
+  const labels=Array.from({length:8},(_,i)=>`Control ${i+1}`),controls=CONTROL_DEFINITIONS.map((definition,index)=>({label:labels[index]??definition.defaultLabel,value:values[index]??definition.defaultValue,ui:cloneControlUI()}));
+  const result={format:'filter-factory-afs',version:header.replace(/^%RGB-?/i,'')||'1.0',name:base||'Imported AFS Filter',description:'',author:'',mathMode:'legacy',values,labels,f:formulas.normalized,controls};
+  validatedFormulaAsts.set(result,formulas.asts);return result;
+}
+function detectFilterFormat(text,fileName=''){
+  assertFilterTextSize(text);
+  const normalized=normalizeFilterText(text),trimmed=normalized.trimStart(),extension=(fileName.match(/\.([^.]+)$/)?.[1]||'').toLowerCase();
+  if(trimmed.startsWith('{')||extension==='json')return{kind:'native',data:validateNativeFilter(JSON.parse(normalized))};
+  if(/^%RGB(?:-[0-9]+(?:\.[0-9]+)*)?/i.test(trimmed)||extension==='afs')return{kind:'afs',data:parseAFS(normalized,fileName)};
+  throw new Error('Unsupported filter format. Choose a Filter FabJS .json file or a historic .afs file');
+}
+
+
+/* src/io/image-io.js */
+/**
+ * Filter FabJS
+ * Modular source extracted from v2.0.7; modular architecture v2.1.0.
+ * Licensed GPL-2.0-or-later. See LICENSE and README.md.
+ */
+
+function imageFromClipboardData(data){
+  if(!data)return null;
+  for(const item of Array.from(data.items||[])){
+    if(item.kind==='file'&&String(item.type||'').startsWith('image/')){
+      const file=item.getAsFile();if(file)return file;
+    }
+  }
+  return Array.from(data.files||[]).find(file=>String(file.type||'').startsWith('image/'))||null;
+}
+function alphaStats(pixels){
+  let min=255,max=0,transparent=0,translucent=0,opaque=0;
+  for(let i=3;i<pixels.length;i+=4){const value=pixels[i];min=Math.min(min,value);max=Math.max(max,value);if(value===0)transparent++;else if(value===255)opaque++;else translucent++;}
+  return{min,max,transparent,translucent,opaque,hasAlpha:min<255,total:Math.floor(pixels.length/4)};
+}
+function imageDataFromPixels(pixels,width,height){return new ImageData(pixels instanceof Uint8ClampedArray?pixels:new Uint8ClampedArray(pixels),width,height);}
+function renderedImageCanvas(pixels,width,height){
+  if(!pixels||!width||!height)throw new Error('Load and render an image first');
+  const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
+  const context=canvas.getContext('2d',{alpha:true,willReadFrequently:true});if(!context)throw new Error('Canvas export is unavailable');
+  context.clearRect(0,0,width,height);context.putImageData(imageDataFromPixels(pixels,width,height),0,0);return canvas;
+}
+function canvasBlob(canvas,type='image/png'){return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('The browser could not encode the image')),type));}
+function blobDataURL(blob){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||''));reader.onerror=()=>reject(reader.error||new Error('The PNG data URL could not be created'));reader.readAsDataURL(blob);});}
+async function verifyPngAlpha(blob,expected){
+  if(!expected.hasAlpha)return expected;
+  const bitmap=await createImageBitmap(blob),canvas=document.createElement('canvas');canvas.width=bitmap.width;canvas.height=bitmap.height;
+  const context=canvas.getContext('2d',{alpha:true,willReadFrequently:true});if(!context){bitmap.close?.();throw new Error('PNG alpha verification is unavailable');}
+  context.clearRect(0,0,canvas.width,canvas.height);context.drawImage(bitmap,0,0);bitmap.close?.();
+  const actual=alphaStats(context.getImageData(0,0,canvas.width,canvas.height).data);if(!actual.hasAlpha)throw new Error('The browser encoded an opaque PNG even though the rendered image contains transparency');return actual;
+}
+function clipboardSupports(ClipboardItemCtor,type){if(typeof ClipboardItemCtor.supports!=='function')return type==='image/png'||type==='text/html';try{return ClipboardItemCtor.supports(type)}catch{return false}}
+async function writePngClipboard(blob){
+  const ClipboardItemCtor=globalThis.ClipboardItem,representations={'image/png':blob};
+  if(clipboardSupports(ClipboardItemCtor,'web image/png'))representations['web image/png']=blob;
+  if(blob.size<=16*1024*1024&&clipboardSupports(ClipboardItemCtor,'text/html')){const dataURL=await blobDataURL(blob);representations['text/html']=new Blob([`<img src="${dataURL}" alt="">`],{type:'text/html'});}
+  try{await navigator.clipboard.write([new ClipboardItemCtor(representations)]);return Object.keys(representations)}catch(error){if(Object.keys(representations).length===1)throw error;await navigator.clipboard.write([new ClipboardItemCtor({'image/png':blob})]);return['image/png'];}
+}
+
+
+/* src/app/filter-catalog.js */
+
+const PREFERENCE_PREFIX='ffw-entry-v1:';
+function readEntryPreference(storage,key){
+  const raw=storage.getItem(PREFERENCE_PREFIX+key);
+  if(raw===null)return{version:1,favorite:false,tags:[]};
+  const value=JSON.parse(raw);
+  if(!value||value.version!==1||typeof value.favorite!=='boolean')throw new Error('Organization preferences are corrupt; stored data was preserved');
+  return{...value,tags:normalizeTags(value.tags)};
+}
+function writeEntryPreference(storage,key,change){
+  const next={...readEntryPreference(storage,key),...change,version:1};next.tags=normalizeTags(next.tags);
+  storage.setItem(PREFERENCE_PREFIX+key,JSON.stringify(next));return next;
+}
+function catalogEntry(document,source,preference){
+  let tags=[],unavailable=false;
+  try{tags=normalizeTags(document.tags);}catch{unavailable=true;}
+  if(source==='builtin')tags=[...new Map([...tags,...preference.tags].map(tag=>[tagKey(tag),tag])).values()];
+  const name=String(document.name||'Unavailable filter'),description=String(document.description||''),author=String(document.author||'');
+  return{key:`${source}:${document.id}`,source,name,description,author,tags,favorite:preference.favorite,document,unavailable,index:[name,description,author,...tags].map(searchText)};
+}
+function searchCatalog(entries,{query='',source='all',favorites=false,tags=[],sort='az'}={}){
+  const text=searchText(query),terms=text.split(' ').filter(Boolean);
+  const scoped=entries.filter(entry=>(source==='all'||entry.source===source)&&(!favorites||entry.favorite));
+  const choices=new Map();for(const entry of scoped)for(const tag of entry.tags)if(!choices.has(tagKey(tag)))choices.set(tagKey(tag),tag);
+  const rank=entry=>entry.index[0]===text?0:entry.index[0].startsWith(text)?1:terms.every(term=>entry.index[0].includes(term))?2:3;
+  const results=scoped.filter(entry=>tags.every(tag=>entry.tags.some(label=>tagKey(label)===tag))&&terms.every(term=>entry.index.some(field=>field.includes(term))));
+  results.sort((a,b)=>(text&&sort==='relevance'?rank(a)-rank(b):0)||a.name.localeCompare(b.name)||a.source.localeCompare(b.source)||a.key.localeCompare(b.key));
+  return{results,choices:[...choices].sort((a,b)=>a[1].localeCompare(b[1]))};
+}
+function readLibrary(storage,normalize){
+  const raw=storage.getItem('ffw-custom-presets');
+  const parsed=raw===null?[]:JSON.parse(raw);
+  if(!Array.isArray(parsed))throw new Error('Saved filter storage is corrupt; Export your draft. Stored data was preserved.');
+  const result=normalize(parsed);
+  if(result.migrated)storage.setItem('ffw-custom-presets',JSON.stringify(result.storageList));
+  return result;
+}
+function writeLibraryRecord(storage,normalize,filter,{targetId=null,expected=null}={}){
+  const {storageList}=readLibrary(storage,normalize),index=storageList.findIndex(item=>item?.id===(targetId||filter.id));
+  if(targetId&&(index<0||JSON.stringify(storageList[index])!==expected))throw new Error('This filter changed in another tab. Review the current record before updating.');
+  if(!targetId&&index>=0)throw new Error('An existing filter has this ID.');
+  const now=new Date().toISOString(),record={...(targetId?storageList[index]:{}),...filter,createdAt:targetId?storageList[index].createdAt||now:now,updatedAt:now};
+  if(targetId)storageList[index]=record;else storageList.push(record);
+  storage.setItem('ffw-custom-presets',JSON.stringify(storageList));return record;
+}
+
+
+/* src/ui/filter-browser.js */
+
+
+function browserNode(tag,text,className){const node=document.createElement(tag);if(text)node.textContent=text;if(className)node.className=className;return node;}
+function browserButton(text,action){const button=browserNode('button',text);button.type='button';button.onclick=action;return button;}
+
+// Native modal dialogs provide focus containment and Escape handling.
+function chooseFilterAction(title,choices,{name,detail=''}={}){
+  return new Promise(resolve=>{
+    const previous=document.activeElement,dialog=browserNode('dialog',null,'filter-choice'),heading=browserNode('h2',title),body=browserNode('div',null,'modal-body');
+    heading.id='filterChoiceTitle';dialog.setAttribute('aria-labelledby',heading.id);body.append(heading,browserNode('p',detail));
+    let input;if(name!==undefined){const label=browserNode('label','Filter name');input=browserNode('input');input.type='text';input.maxLength=120;input.value=name;label.append(input);body.append(label);}
+    const actions=browserNode('div',null,'filter-actions');
+    for(const [value,label] of choices)actions.append(browserButton(label,()=>{if(input&&!input.value.trim()){input.focus();return;}dialog.close(value);}));
+    body.append(actions);dialog.append(body);document.body.append(dialog);
+    dialog.addEventListener('close',()=>{const result={action:dialog.returnValue||'cancel',name:input?.value.trim()};dialog.remove();if(previous?.isConnected&&!previous.disabled)previous.focus();resolve(result);},{once:true});dialog.showModal();
+  });
+}
+
+function createFilterBrowser({launcher,getEntries,load,toggleFavorite,onError}){
+  const dialog=browserNode('dialog',null,'filter-browser');dialog.setAttribute('aria-labelledby','filterBrowserTitle');
+  dialog.innerHTML='<div class="modal-head"><strong id="filterBrowserTitle">Filters</strong><button type="button" data-close>Close</button></div><div class="browser-tools"><label>Search filters<input type="search" placeholder="Name, description, author or tag" data-search></label><button data-clear hidden>Clear search</button><div class="filter-actions"><label>Source<select data-source><option value="all">All</option><option value="builtin">Built-in</option><option value="custom">My Filters</option></select></label><label><input type="checkbox" data-favorites> Favorites only</label><label>Sort<select data-sort><option value="az">A–Z</option><option value="relevance">Relevance</option></select></label></div><details><summary>Tags</summary><label>Find tags<input type="search" data-tag-search></label><div data-choices class="tag-choices"></div><small>Match all selected tags. Up to 50 suggestions; type to narrow.</small></details><div data-selected class="chips"></div><div class="filter-actions"><span data-count role="status" aria-live="polite"></span><button data-reset>Reset view</button></div><p data-error role="alert"></p></div><ul class="filter-results"></ul><div class="browser-pages"><button data-prev>Previous</button><span data-page></span><button data-next>Next</button></div>';
+  dialog.querySelector('#filterBrowserTitle').textContent='Filter search';
+  document.body.append(dialog);
+  const find=selector=>dialog.querySelector(selector),query=find('[data-search]'),source=find('[data-source]'),favorites=find('[data-favorites]'),sort=find('[data-sort]'),selected=new Set();let page=0,composing=false,countTimer;
+  const close=()=>dialog.close();find('[data-close]').onclick=close;dialog.addEventListener('close',()=>{if(!launcher.disabled)launcher.focus();});
+  function reset(){query.value='';source.value='all';favorites.checked=false;sort.value='az';selected.clear();find('[data-tag-search]').value='';page=0;refresh();}
+  function refresh(){
+    if(!dialog.open)return;
+    const active=document.activeElement,focusKey=active?.dataset?.entryKey,focusAction=active?.dataset?.entryAction,oldButtons=[...dialog.querySelectorAll('[data-entry-action="favorite"]')],oldIndex=oldButtons.indexOf(active);
+    let entries;try{entries=getEntries();}catch(error){find('[data-error]').textContent=error.message;entries=[];}
+    const {results,choices}=searchCatalog(entries,{query:query.value,source:source.value,favorites:favorites.checked,tags:[...selected],sort:sort.value});
+    sort.options[1].disabled=!query.value.trim();find('[data-clear]').hidden=!query.value;
+    page=Math.min(page,Math.max(0,Math.ceil(results.length/50)-1));
+    clearTimeout(countTimer);countTimer=setTimeout(()=>find('[data-count]').textContent=`${results.length} filters`,150);
+    const selectedBox=find('[data-selected]');selectedBox.replaceChildren();for(const key of selected)selectedBox.append(browserButton(`${choices.find(item=>item[0]===key)?.[1]||key} ×`,()=>{selected.delete(key);page=0;refresh();find('[data-reset]').focus();}));
+    const choiceBox=find('[data-choices]');choiceBox.replaceChildren();for(const [key,label] of choices.filter(item=>searchText(item[1]).includes(searchText(find('[data-tag-search]').value))).slice(0,50)){
+      const wrapper=browserNode('label'),check=browserNode('input');check.type='checkbox';check.checked=selected.has(key);check.onchange=()=>{if(check.checked)selected.add(key);else selected.delete(key);page=0;refresh();[...choiceBox.querySelectorAll('input')].find(node=>node.value===key)?.focus();};check.value=key;wrapper.append(check,document.createTextNode(label));choiceBox.append(wrapper);
+    }
+    const list=find('.filter-results');list.replaceChildren();
+    for(const entry of results.slice(page*50,page*50+50)){
+      const row=browserNode('li'),top=browserNode('div',null,'filter-result-head');
+      const loadButton=browserButton(entry.name,async()=>{try{find('[data-error]').textContent='';if(await load(entry))close();}catch(error){find('[data-error]').textContent=`Could not load: ${error.message}`;}});loadButton.setAttribute('aria-label',`Load ${entry.name}`);loadButton.dataset.entryKey=entry.key;loadButton.dataset.entryAction='load';
+      const star=browserButton(entry.favorite?'★':'☆',()=>{try{toggleFavorite(entry);find('[data-error]').textContent='';refresh();}catch(error){find('[data-error]').textContent=`Couldn’t save favorites in this browser. ${error.message}`;onError(error);}});star.setAttribute('aria-pressed',String(entry.favorite));star.setAttribute('aria-label',`${entry.favorite?'Remove':'Add'} ${entry.name} ${entry.favorite?'from':'to'} favorites`);star.dataset.entryKey=entry.key;star.dataset.entryAction='favorite';
+      top.append(loadButton,star);
+      const sourceLabel=entry.source==='builtin'?'Built-in':'My Filters';
+      const authorLabel=entry.author|| (entry.source==='builtin'?'Filter FabJS':'Author not specified');
+      row.append(top,browserNode('small',`${sourceLabel} · ${authorLabel}${entry.document.benchmark?' · Benchmark':''}${entry.unavailable?' · Unavailable':''}`,'result-meta'));
+      row.append(browserNode('p',entry.description,'filter-excerpt'));
+      const tags=browserNode('div',null,'result-tags');
+      for(const tag of entry.tags){
+        const button=browserButton(tag,()=>{
+          query.value='';source.value='all';favorites.checked=false;sort.value='az';selected.clear();selected.add(tagKey(tag));find('[data-tag-search]').value='';page=0;refresh();
+          find('[data-selected] button')?.focus();
+        });
+        button.setAttribute('aria-label',`Show all filters tagged ${tag}`);tags.append(button);
+      }
+      row.append(tags);list.append(row);
+    }
+    if(!results.length){const empty=browserNode('li');empty.append(browserNode('p',favorites.checked&&!entries.some(entry=>entry.favorite)?'No favorites yet. Star a filter to keep it here.':source.value==='custom'&&!entries.some(entry=>entry.source==='custom')?'Saved filters appear here. Import a filter, then save it to keep it.':'No filters match this search.'),browserButton('Show all filters',reset));list.append(empty);}
+    find('[data-page]').textContent=`Page ${page+1} of ${Math.max(1,Math.ceil(results.length/50))}`;find('[data-prev]').disabled=page===0;find('[data-next]').disabled=(page+1)*50>=results.length;
+    if(focusKey){const same=[...list.querySelectorAll('button')].find(node=>node.dataset.entryKey===focusKey&&node.dataset.entryAction===focusAction),neighbors=[...list.querySelectorAll('[data-entry-action="favorite"]')];(same||neighbors[Math.min(Math.max(0,oldIndex),neighbors.length-1)]||list.querySelector('button')||find('[data-reset]')).focus();}
+  }
+  query.oncompositionstart=()=>composing=true;query.oncompositionend=()=>{composing=false;page=0;refresh();};query.oninput=()=>{if(!composing){page=0;refresh();}};
+  for(const field of [source,favorites,sort])field.onchange=()=>{page=0;refresh();};
+  find('[data-tag-search]').oninput=refresh;find('[data-clear]').onclick=()=>{query.value='';page=0;refresh();query.focus();};find('[data-reset]').onclick=reset;
+  find('[data-prev]').onclick=()=>{page--;refresh();};find('[data-next]').onclick=()=>{page++;refresh();};
+  launcher.onclick=()=>{find('[data-error]').textContent='';dialog.showModal();refresh();query.focus();};
+  return{refresh,dialog,showError:message=>{find('[data-error]').textContent=message;}};
+}
+
+
+/* src/ui/dom.js */
+/**
+ * Filter FabJS
+ * Modular source extracted from v2.0.7; modular architecture v2.1.0.
+ * Licensed GPL-2.0-or-later. See LICENSE and README.md.
+ */
+
+
+function getDom(){
+  const el={canvas:$('#displayCanvas'),stage:$('#canvasStage'),wrap:$('#canvasWrap'),drop:$('#dropOverlay'),renderOverlay:$('#renderOverlay'),progressFill:$('#progressFill'),progressPercent:$('#progressPercent'),progressRows:$('#progressRows'),controlsUsage:$('#controlsUsage'),formulaEditStatus:$('#formulaEditStatus'),renderBtn:$('#renderBtn'),imageInput:$('#imageInput'),filterInput:$('#filterInput'),preset:$('#presetSelect'),searchFilters:$('#browseFiltersBtn'),deletePreset:$('#deletePresetBtn'),rendererSelect:$('#rendererSelect'),rendererDiagnostics:$('#rendererDiagnostics'),description:$('#filterDescription'),formulas:[$('#formulaR'),$('#formulaG'),$('#formulaB'),$('#formulaA')],statusDot:$('#statusDot'),statusText:$('#statusText'),imageInfo:$('#imageInfo'),renderInfo:$('#renderInfo'),split:$('#splitRange'),splitControl:$('#splitControl'),zoomLabel:$('#zoomLabel'),toast:$('#toast')};
+  const ctx=el.canvas.getContext('2d');
+  if(!ctx)throw new Error('Canvas 2D context is unavailable');
+  return{el,ctx};
+}
+
+
+/* src/ui/canvas-view.js */
+/**
+ * Filter FabJS
+ * Modular source extracted from v2.0.7; modular architecture v2.1.0.
+ * Licensed GPL-2.0-or-later. See LICENSE and README.md.
+ */
+
+
+
+function createCanvasView({state,el,ctx}){
+  let sourceCache=null,filteredCache=null,drawScheduled=false;
+  function cachedImageData(pixels,cache){if(!cache||cache.pixels!==pixels||cache.width!==state.width||cache.height!==state.height)cache={pixels,width:state.width,height:state.height,imageData:imageDataFromPixels(pixels,state.width,state.height)};return cache}
+  function invalidatePixels(){sourceCache=filteredCache=null}
+  function drawView(){if(!state.source)return;ctx.clearRect(0,0,state.width,state.height);if(state.view==='original'||!state.filtered){sourceCache=cachedImageData(state.source,sourceCache);ctx.putImageData(sourceCache.imageData,0,0)}else if(state.view==='filtered'){filteredCache=cachedImageData(state.filtered,filteredCache);ctx.putImageData(filteredCache.imageData,0,0)}else{const cut=Math.round(state.width*state.split/100);sourceCache=cachedImageData(state.source,sourceCache);filteredCache=cachedImageData(state.filtered,filteredCache);ctx.putImageData(sourceCache.imageData,0,0,0,0,cut,state.height);ctx.putImageData(filteredCache.imageData,0,0,cut,0,state.width-cut,state.height);ctx.save();ctx.strokeStyle='rgba(255,255,255,.92)';ctx.lineWidth=Math.max(1,state.width/700);ctx.beginPath();ctx.moveTo(cut,0);ctx.lineTo(cut,state.height);ctx.stroke();ctx.restore();}}
+  function requestDraw(){if(drawScheduled)return;drawScheduled=true;requestAnimationFrame(()=>{drawScheduled=false;drawView()})}
+  function fitCanvas(){if(!state.width)return;const rect=el.stage.getBoundingClientRect();state.zoomLevel=Math.min(Math.max(100,rect.width-48)/state.width,Math.max(100,rect.height-48)/state.height,1);state.zoom='fit';applyZoom();}
+  function applyZoom(){el.wrap.style.width=`${Math.round(state.width*state.zoomLevel)}px`;el.wrap.style.height=`${Math.round(state.height*state.zoomLevel)}px`;el.canvas.style.width=el.canvas.style.height='100%';el.zoomLabel.textContent=state.zoom==='fit'?'Fit':`${Math.round(state.zoomLevel*100)}%`;}
+  function zoom(factor){state.zoom='manual';state.zoomLevel=clamp(state.zoomLevel*factor,.1,4);applyZoom();}
+  return{drawView,requestDraw,invalidatePixels,fitCanvas,applyZoom,zoom};
+}
+
+
+/* src/ui/controls.js */
+/**
+ * Filter FabJS
+ * Modular source extracted from v2.0.7; modular architecture v2.1.0.
+ * Licensed GPL-2.0-or-later. See LICENSE and README.md.
+ */
+
+
+
+const AUTHORING_PRESETS=Object.freeze({
+  generic:{widget:'slider',displayMin:0,displayMax:255,step:1,format:'number',unit:''},
+  percentage:{widget:'slider',displayMin:0,displayMax:100,step:1,format:'number',unit:'%'},
+  angle:{widget:'slider',displayMin:0,displayMax:360,step:1,format:'number',unit:'°'},
+  seed:{widget:'seed',displayMin:1,displayMax:9999,step:1,format:'integer',unit:''}
+});
+
+function append(parent,tag,className='',text=''){const node=document.createElement(tag);if(className)node.className=className;if(text)node.textContent=text;parent.appendChild(node);return node}
+function numericEditorUI(entry){return{widget:entry.ui.widget,displayMin:Number(entry.ui.displayMin),displayMax:Number(entry.ui.displayMax),step:Number(entry.ui.step),format:entry.ui.format,unit:entry.ui.unit}}
+
+function createControlsController({state,el,scheduleRender,applyInteractionLocks,compileCurrentProgram}){
+  const grid=$('#sliderGrid'),dialog=$('#editControlsDialog'),editorList=$('#controlEditorList'),editorError=$('#controlEditorError'),mappingPanel=$('#controlMappingFeedback'),preview=$('#controlEditorPreview');
+  const fields={label:$('#controlEditorLabel'),widget:$('#controlEditorWidget'),displayMin:$('#controlEditorMin'),displayMax:$('#controlEditorMax'),step:$('#controlEditorStep'),format:$('#controlEditorFormat'),unit:$('#controlEditorUnit')};
+  let draft=null,selectedIndex=0;
+
+  function controlName(index){return String(state.labels[index]||`Control ${index+1}`)}
+  function accessibleName(index){return `${controlName(index)}, control ${index}`}
+  function displayValue(index){return rawToDisplay(state.controls[index],state.controlUIs[index])}
+  function updateCanonical(index,value){state.controls[index]=displayToRaw(value,state.controlUIs[index])}
+  function addReadout(row,index,ui,value){const readout=append(row,'output','control-readout');readout.textContent=formatControlValue(value,ui);if(ui.unit)append(readout,'span','control-unit',` ${ui.unit}`);readout.setAttribute('aria-label',`${accessibleName(index)} value`);return readout}
+  function buildRuntimeControl(definition){
+    const index=definition.index,ui=normalizeControlUI(state.controlUIs[index]),value=displayValue(index),row=append(grid,'div','slider-row');row.dataset.controlIndex=String(index);
+    append(row,'span','slider-index',String(index));
+    const label=append(row,'button','control-label-button',controlName(index));label.type='button';label.title=`Edit ${controlName(index)}`;label.setAttribute('aria-label',`Edit ${accessibleName(index)}`);label.onclick=()=>openEditor(index);
+    const widget=append(row,'div',`control-widget control-widget-${ui.widget}`),name=accessibleName(index);let readout;
+    if(ui.widget==='slider'){
+      const input=append(widget,'input','slider-range');input.type='range';input.min=String(ui.displayMin);input.max=String(ui.displayMax);input.step=String(ui.step);input.value=String(value);input.setAttribute('aria-label',name);readout=addReadout(row,index,ui,value);
+      input.oninput=()=>{updateCanonical(index,input.value);const shown=rawToDisplay(state.controls[index],ui);readout.firstChild.textContent=formatControlValue(shown,ui);};input.onchange=()=>scheduleRender();
+    }else if(ui.widget==='number'||ui.widget==='seed'){
+      const input=append(widget,'input','slider-value');input.type='number';input.min=String(ui.displayMin);input.max=String(ui.displayMax);input.step=String(ui.step);input.value=formatControlValue(value,ui);input.setAttribute('aria-label',name);readout=addReadout(row,index,ui,value);readout.classList.add('unit-only');readout.firstChild.textContent='';
+      const commit=()=>{if(input.value==='')return;updateCanonical(index,input.value);const shown=rawToDisplay(state.controls[index],ui);input.value=formatControlValue(shown,ui);readout.firstChild.textContent='';};input.oninput=()=>{if(input.value!=='')updateCanonical(index,input.value);};input.onchange=()=>{commit();scheduleRender();};
+      if(ui.widget==='seed'){
+        const randomize=append(widget,'button','seed-randomize','↻');randomize.type='button';randomize.setAttribute('aria-label',`Generate new ${controlName(index)} value`);randomize.onclick=()=>{const seed=randomSeedDisplay(ui);updateCanonical(index,seed);input.value=formatControlValue(seed,ui);scheduleRender();};
+      }
+    }else{
+      const input=append(widget,'input','toggle-input');input.type='checkbox';input.setAttribute('role','switch');input.checked=normalizeToggleRaw(state.controls[index])===255;input.setAttribute('aria-label',name);input.setAttribute('aria-checked',String(input.checked));readout=addReadout(row,index,ui,input.checked?1:0);readout.textContent=input.checked?'On':'Off';
+      input.onchange=()=>{state.controls[index]=input.checked?255:0;input.setAttribute('aria-checked',String(input.checked));readout.textContent=input.checked?'On':'Off';scheduleRender();};
+    }
+    const usage=append(row,'span','control-usage-status visually-hidden',state.usedControls[index]?'Used':'Unused');usage.setAttribute('aria-live','polite');
+  }
+  function buildSliders(){grid.replaceChildren();for(const definition of CONTROL_DEFINITIONS)buildRuntimeControl(definition);applyInteractionLocks();}
+  function syncSliders(){buildSliders()}
+  function updateControlUsage(program){state.usedControls=program?.metadata?.controlMask?[...program.metadata.controlMask]:Array(CONTROL_COUNT).fill(true);const count=state.usedControls.filter(Boolean).length;el.controlsUsage.textContent=count?`${count} active`:'No controls used';grid.querySelectorAll('.control-usage-status').forEach((status,index)=>status.textContent=state.usedControls[index]?'Used':'Unused');if(dialog.open)renderEditorList();applyInteractionLocks();}
+  function refreshControlUsage(){try{updateControlUsage(compileCurrentProgram())}catch{updateControlUsage(null)}}
+
+  function draftEntry(index){return draft[index]}
+  function captureEditorFields(){
+    if(!draft)return;const entry=draftEntry(selectedIndex);entry.label=fields.label.value;entry.ui={widget:fields.widget.value,displayMin:fields.displayMin.value,displayMax:fields.displayMax.value,step:fields.step.value,format:fields.format.value,unit:fields.unit.value};
+  }
+  function loadEditorFields(){
+    const entry=draftEntry(selectedIndex);fields.label.value=entry.label;fields.widget.value=entry.ui.widget;fields.displayMin.value=entry.ui.displayMin;fields.displayMax.value=entry.ui.displayMax;fields.step.value=entry.ui.step;fields.format.value=entry.ui.format;fields.unit.value=entry.ui.unit;updateEditorFieldState();renderMappingFeedback();renderPreview();
+  }
+  function updateEditorFieldState(){const toggle=fields.widget.value==='toggle',seed=fields.widget.value==='seed';if(seed)fields.format.value='integer';fields.displayMin.disabled=toggle;fields.displayMax.disabled=toggle;fields.step.disabled=toggle;fields.format.disabled=toggle||seed;fields.unit.disabled=false;}
+  function renderEditorList(){
+    if(!draft)return;editorList.replaceChildren();draft.forEach((entry,index)=>{const button=append(editorList,'button','control-editor-item');button.type='button';button.classList.toggle('active',index===selectedIndex);append(button,'span','control-editor-index',String(index));append(button,'span','control-editor-name',String(entry.label||`Control ${index+1}`));append(button,'span',state.usedControls[index]?'control-editor-used':'control-editor-unused',state.usedControls[index]?'Used':'Unused');button.setAttribute('aria-current',index===selectedIndex?'true':'false');button.onclick=()=>{captureEditorFields();selectedIndex=index;renderEditorList();loadEditorFields();};});
+  }
+  function currentMapping(){try{return compileCurrentProgram()?.metadata?.controlMappings?.[selectedIndex]??null}catch{return null}}
+  function renderMappingFeedback(){
+    mappingPanel.replaceChildren();append(mappingPanel,'strong','','Formula mapping');const mapping=currentMapping();
+    if(mapping?.type==='conflict'){append(mappingPanel,'p','mapping-warning','Multiple or dynamic formula mappings detected. Automatic display-range suggestion is unavailable.');return}
+    if(mapping?.type!=='val'){append(mappingPanel,'p','mapping-neutral','No simple val() mapping detected.');return}
+    append(mappingPanel,'code','',`val(${selectedIndex}, ${mapping.min}, ${mapping.max})`);append(mappingPanel,'p','mapping-suggestion',`Suggested display range: ${mapping.min} → ${mapping.max}`);
+    const ui=numericEditorUI(draftEntry(selectedIndex)),validSuggestion=mapping.max>mapping.min,matches=validSuggestion&&Number.isFinite(ui.displayMin)&&Number.isFinite(ui.displayMax)&&Math.abs(ui.displayMin-mapping.min)<1e-9&&Math.abs(ui.displayMax-mapping.max)<1e-9;
+    if(!validSuggestion){append(mappingPanel,'p','mapping-warning','This reversed or empty mapping cannot be used as an increasing UI display range.');return}
+    append(mappingPanel,'p',matches?'mapping-match':'mapping-warning',matches?'✓ Matches formula mapping':'⚠ Display range differs from formula mapping');
+    const use=append(mappingPanel,'button','use-mapping-button','Use suggested range');use.type='button';use.disabled=matches;use.onclick=()=>{fields.displayMin.value=String(mapping.min);fields.displayMax.value=String(mapping.max);const range=mapping.max-mapping.min;if(!(Number(fields.step.value)>0&&Number(fields.step.value)<=range))fields.step.value='1';captureEditorFields();renderMappingFeedback();renderPreview();};
+  }
+  function renderPreview(){
+    preview.replaceChildren();const entry=draftEntry(selectedIndex),ui=normalizeControlUI(numericEditorUI(entry)),value=rawToDisplay(state.controls[selectedIndex],ui);append(preview,'span','control-preview-label',String(entry.label||`Control ${selectedIndex+1}`));
+    if(ui.widget==='toggle'){const input=append(preview,'input');input.type='checkbox';input.setAttribute('role','switch');input.checked=normalizeToggleRaw(state.controls[selectedIndex])===255;input.disabled=true;append(preview,'span','control-preview-value',input.checked?'On':'Off');return}
+    const input=append(preview,'input');input.type=ui.widget==='slider'?'range':'number';input.min=String(ui.displayMin);input.max=String(ui.displayMax);input.step=String(ui.step);input.value=String(value);input.disabled=true;append(preview,'span','control-preview-value',`${formatControlValue(value,ui)}${ui.unit?` ${ui.unit}`:''}`);
+  }
+  function openEditor(index=0){
+    draft=CONTROL_DEFINITIONS.map((definition,controlIndex)=>({label:controlName(controlIndex),ui:cloneControlUI(state.controlUIs[controlIndex])}));selectedIndex=index;editorError.textContent='';$('#controlAuthoringPreset').value='';renderEditorList();loadEditorFields();dialog.showModal();fields.label.focus();
+  }
+  function closeEditor(){draft=null;dialog.close('cancel')}
+  function commitEditor(){
+    captureEditorFields();try{
+      const labels=[],uis=[];draft.forEach((entry,index)=>{const label=String(entry.label).trim();if(label.length>80)throw new Error(`Control ${index} label exceeds 80 characters`);labels.push(label||`Control ${index+1}`);uis.push(validateControlUI(numericEditorUI(entry)));});
+      let valuesChanged=false;const values=state.controls.map((raw,index)=>{if(uis[index].widget!=='toggle')return raw;const normalized=normalizeToggleRaw(raw);if(normalized!==raw)valuesChanged=true;return normalized;});
+      state.labels=labels;state.controlUIs=uis;state.controls=values;draft=null;dialog.close('done');syncSliders();if(valuesChanged)scheduleRender();
+    }catch(error){editorError.textContent=error.message;}
+  }
+  Object.values(fields).forEach(field=>field.addEventListener('input',()=>{captureEditorFields();editorError.textContent='';updateEditorFieldState();renderEditorList();renderMappingFeedback();renderPreview();}));
+  $('#controlAuthoringPreset').onchange=event=>{const preset=AUTHORING_PRESETS[event.target.value];if(!preset)return;draftEntry(selectedIndex).ui=cloneControlUI(preset);loadEditorFields();event.target.value='';};
+  $('#editControlsBtn').onclick=()=>openEditor(0);$('#closeControlEditor').onclick=closeEditor;$('#cancelControlEditor').onclick=closeEditor;$('#doneControlEditor').onclick=commitEditor;
+  dialog.addEventListener('cancel',event=>{event.preventDefault();closeEditor();});
+  return{buildSliders,syncSliders,updateControlUsage,refreshControlUsage,openEditor};
+}
+
+
+/* src/app/filter-fab-app.js */
+/**
+ * Filter FabJS
+ * Modular source extracted from v2.0.7; modular architecture v2.1.0.
+ * Licensed GPL-2.0-or-later. See LICENSE and README.md.
+ */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+async function importLatestFilterFile(file,{state,cancelRender,applyFilter,beforeApply=async()=>true}){
+  if(!file)return null;
+  const loadId=++state.filterLoadId;
+  try{
+    if(Number.isFinite(Number(file.size))&&Number(file.size)>FILTER_FILE_MAX_BYTES)throw new Error(`Filter file exceeds the ${FILTER_FILE_MAX_BYTES/1024} KiB limit`);
+    const text=await file.text();
+    if(loadId!==state.filterLoadId)return null;
+    const result=detectFilterFormat(text,file.name);
+    if(state.isRendering){await cancelRender();if(loadId!==state.filterLoadId)return null;}
+    if(!await beforeApply(result.data)||loadId!==state.filterLoadId)return null;
+    applyFilter(result.data);
+    return result;
+  }catch(error){if(loadId!==state.filterLoadId)return null;throw error;}
+}
+
+function validateFilterForPersistence(filter,onError=()=>{}){try{return validateNativeFilter(filter);}catch(error){onError(error);return null;}}
+
+function applyPresetSafely(definition,selection,{applyFilter,updatePresetDeleteState,onError}){
+  updatePresetDeleteState();
+  try{applyFilter(definition,selection);return true;}catch(error){updatePresetDeleteState();onError(error);return false;}
+}
+
+function initializeImagePreview(data,width,height,{state,canvasView,canvas}){
+  canvasView.invalidatePixels();state.width=width;state.height=height;state.source=data instanceof Uint8ClampedArray?data:new Uint8ClampedArray(data);state.filtered=state.source;canvas.width=width;canvas.height=height;canvasView.fitCanvas();canvasView.drawView();
+}
+
+const CUSTOM_PRESET_ID_PATTERN=/^[A-Za-z0-9_-]{1,80}$/;
+function createCustomPresetId(){try{const uuid=globalThis.crypto?.randomUUID?.();if(uuid)return`preset-${uuid}`}catch{}return`preset-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,12)||'0'}`}
+function isValidCustomPresetId(value){return typeof value==='string'&&CUSTOM_PRESET_ID_PATTERN.test(value)}
+function allocateCustomPresetId(used,idFactory){for(let attempt=0;attempt<100;attempt++){const id=idFactory();if(isValidCustomPresetId(id)&&!used.has(id))return id}throw new Error('Could not create a unique custom preset ID')}
+function normalizeCustomPresetList(value,idFactory=createCustomPresetId){
+  if(!Array.isArray(value))return{presets:[],storageList:[],migrated:false};
+  const presets=[],storageList=[],used=new Set();let migrated=false;
+  value.forEach(item=>{
+    if(!item||typeof item!=='object'||Array.isArray(item)||typeof item.name!=='string'){storageList.push(item);return}
+    let id=item.id;if(!isValidCustomPresetId(id)||used.has(id)){id=allocateCustomPresetId(used,idFactory);migrated=true}
+    const preset=id===item.id?item:{...item,id};used.add(id);presets.push(preset);storageList.push(preset);
+  });
+  return{presets,storageList,migrated};
+}
+function findCustomPresetById(list,id){return Array.isArray(list)?list.find(preset=>preset.id===id)||null:null}
+function upsertCustomPreset(list,filter,name,idFactory=createCustomPresetId){
+  const next=[...list],index=next.findIndex(item=>item.name.toLowerCase()===name.toLowerCase()),used=new Set(next.map(item=>item.id)),id=index>=0?next[index].id:allocateCustomPresetId(used,idFactory),preset={...filter,name,id};if(index>=0)next[index]=preset;else next.push(preset);return{list:next,preset};
+}
+
+function initFilterFabApp(){
+  const {el,ctx}=getDom();
+  const state={source:null,filtered:null,width:0,height:0,view:'filtered',split:50,zoom:'fit',zoomLevel:1,controls:defaultControlValues(),labels:defaultControlLabels(),controlUIs:defaultControlUIs(),renderId:0,imageLoadId:0,filterLoadId:0,rendererManager:null,rendererPreference:storageGet('ffw-renderer','auto'),lastProgram:null,lastProgramKey:null,lastWGSL:null,lastGpuAnalysis:null,lastRendererDiagnostics:null,isRendering:false,usedControls:Array(CONTROL_COUNT).fill(false),legacyMath:false,hasPendingFormulaChanges:false,focusSnapshot:null};
+  const canvasView=createCanvasView({state,el,ctx});
+  let controlsController,browser,catalogCache=null;
+  const activeDocument={key:null,id:undefined,tags:[],baseline:null,recordBaseline:null,imported:false};
+
+  const rendererFactories={
+    cpu:()=>new CpuRenderer(workerProgram),
+    webgpu:()=>new WebGpuRenderer({onCompile:({wgsl,analysis})=>{state.lastWGSL=wgsl;state.lastGpuAnalysis=analysis;}})
+  };
+  state.rendererManager=new RendererManager(rendererFactories);
+
+  function setStatus(text,kind='good'){el.statusText.textContent=text;el.statusDot.className='status-dot'+(kind==='busy'?' busy':kind==='pending'?' pending':kind==='error'?' error':'');}
+  function toast(text){el.toast.textContent=text;el.toast.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.toast.classList.remove('show'),1800);}
+  const interactiveNodes=()=>Array.from(document.querySelectorAll('button,input,select,textarea'));
+  function updatePresetDeleteState(){const custom=activeDocument.key?.startsWith('custom:');el.deletePreset.disabled=state.isRendering||!custom;el.deletePreset.title=custom?'Delete current saved filter':'Load a saved custom filter to delete';}
+  function applyInteractionLocks(){interactiveNodes().forEach(node=>{node.disabled=state.isRendering;});$$('.slider-row',$('#sliderGrid')).forEach((row,index)=>{const unused=!state.usedControls[index];row.classList.toggle('control-unused',unused);row.setAttribute('aria-disabled',String(state.isRendering||unused));row.title=unused?'Unused — not referenced by any channel formula':'';$$('button,input,select',row).forEach(node=>{node.disabled=state.isRendering||unused;});});updatePresetDeleteState();}
+  function captureFocus(){const node=document.activeElement;if(!(node instanceof Element)||node===document.body||!node.matches('button,input,select,textarea'))return null;const snapshot={node};if(typeof node.selectionStart==='number'){snapshot.start=node.selectionStart;snapshot.end=node.selectionEnd;snapshot.direction=node.selectionDirection;}return snapshot;}
+  function restoreFocus(snapshot){if(!snapshot?.node?.isConnected||snapshot.node.disabled)return;requestAnimationFrame(()=>{if(!snapshot.node.isConnected||snapshot.node.disabled)return;snapshot.node.focus({preventScroll:true});if(typeof snapshot.start==='number'&&typeof snapshot.node.setSelectionRange==='function')snapshot.node.setSelectionRange(snapshot.start,snapshot.end,snapshot.direction||'none');});}
+  function setFormulaEditStatus(kind,text){el.formulaEditStatus.dataset.state=kind;el.formulaEditStatus.textContent=text;}
+  function setRendererDiagnosticsState(kind,text,title=''){el.rendererDiagnostics.dataset.state=kind;el.rendererDiagnostics.textContent=text;el.rendererDiagnostics.title=title;}
+  function updateRendererDiagnostics(program,{rendererId=null,fallbackReason='',runtimeFallback=false}={}){
+    const base=state.rendererManager.diagnose(program,state.rendererPreference),actualRenderer=rendererId||base.rendererId,reason=fallbackReason||base.gpuReason,mode=actualRenderer==='cpu'&&state.rendererPreference!=='cpu'&&reason?'cpu-fallback':base.mode,diagnostic={...base,rendererId:actualRenderer,mode,gpuReason:reason,runtimeFallback:Boolean(runtimeFallback)};
+    const label=mode==='gpu-eligible'?'GPU eligible':mode==='cpu-fallback'?'CPU fallback':diagnostic.gpuEligible?'CPU selected · GPU eligible':diagnostic.gpuCompatible?'CPU selected · GPU unavailable':'CPU selected · GPU incompatible',passLabel=diagnostic.passes===1?'pass':'passes';
+    setRendererDiagnosticsState(mode,`${label} · IR v${program.irVersion} · ${diagnostic.operationCount} ops · ${diagnostic.passes} ${passLabel}`,reason||'Current formula is compatible with the single-pass WebGPU renderer.');state.lastGpuAnalysis=diagnostic.analysis;state.lastRendererDiagnostics=diagnostic;return diagnostic;
+  }
+  function clearRendererDiagnostics(text,title){state.lastRendererDiagnostics=null;setRendererDiagnosticsState('error',text,title);}
+  function markFormulaPending(field=null){state.hasPendingFormulaChanges=true;if(field)field.classList.add('edited');setFormulaEditStatus('pending','Changes not rendered');setStatus('Formula changes ready to render','pending');state.lastRendererDiagnostics=null;setRendererDiagnosticsState('pending','Rechecking GPU eligibility…','Formula changes have not been validated yet.');}
+  function markPreviewCurrent(){state.hasPendingFormulaChanges=false;el.formulas.forEach(field=>field.classList.remove('edited'));setFormulaEditStatus('current','Preview current');}
+  function setProgress(pct,row,total){const safePct=clamp(Number.isFinite(Number(pct))?Number(pct):0,0,100),safeTotal=Math.max(0,Math.trunc(Number(total)||0)),safeRow=clamp(Math.trunc(Number(row)||0),0,safeTotal||0);el.progressFill.style.width=`${safePct}%`;el.progressFill.parentElement?.setAttribute('aria-valuenow',String(Math.round(safePct)));el.progressPercent.textContent=`${Math.round(safePct)}%`;el.progressRows.textContent=safeTotal?`${safeRow} / ${safeTotal} rows`:'Preparing…';}
+  function setUILocked(locked,pct=0,row=0,total=0){const wasRendering=state.isRendering,nextRendering=Boolean(locked);if(nextRendering&&!wasRendering)state.focusSnapshot=captureFocus();state.isRendering=nextRendering;document.body.classList.toggle('ui-locked',state.isRendering);document.body.setAttribute('aria-busy',String(state.isRendering));applyInteractionLocks();el.renderOverlay.classList.toggle('show',state.isRendering);el.renderOverlay.setAttribute('aria-hidden',String(!state.isRendering));if(state.isRendering)setProgress(pct,row,total);else if(wasRendering){const snapshot=state.focusSnapshot;state.focusSnapshot=null;restoreFocus(snapshot);}}
+  function initializeRendererSource(){if(!state.source||!state.width||!state.height)return Promise.resolve();return state.rendererManager.setSource(state.source,state.width,state.height);}
+  async function cancelRender(){if(!state.isRendering)return false;state.renderId++;try{await state.rendererManager?.cancelActive();}catch(error){console.error('Renderer cancellation failed',error);}setUILocked(false);setProgress(0,0,state.height||0);setStatus('Render cancelled');el.renderInfo.textContent=`${state.rendererManager?.active?.label||'Renderer'} · cancelled`;toast('Rendering cancelled');return true;}
+
+  function currentProgramKey(){return JSON.stringify([state.legacyMath,...el.formulas.map(field=>field.value)])}
+  function compileCurrentProgram(){const key=currentProgramKey();if(state.lastProgram&&state.lastProgramKey===key)return state.lastProgram;const astList=el.formulas.map(field=>new Parser(field.value).parse());return compileFilterProgram(astList,{legacyMath:state.legacyMath});}
+  const scheduleRender=debounce(()=>{if(!state.hasPendingFormulaChanges)render();},110);
+  const scheduleFormulaValidation=debounce(validatePendingFormulas,220);
+  controlsController=createControlsController({state,el,scheduleRender,applyInteractionLocks,compileCurrentProgram});
+
+  function library(){return readLibrary(localStorage,normalizeCustomPresetList);}
+  function organizationError(error){browser?.showError(error.message||'Browser storage is unavailable');setStatus(error.message||'Browser storage is unavailable','error');toast(error.message||'Browser storage is unavailable');}
+  function customList(){try{return library().presets;}catch(error){organizationError(error);return[];}}
+  function preference(key){try{return readEntryPreference(localStorage,key);}catch(error){organizationError(error);return{version:1,favorite:false,tags:[]};}}
+  function catalog(){if(catalogCache)return catalogCache;return catalogCache=[...presets.map(item=>catalogEntry(item,'builtin',preference(`builtin:${item.id}`))),...customList().map(item=>catalogEntry(item,'custom',preference(`custom:${item.id}`)))];}
+  function effectiveTags(){return activeDocument.key?.startsWith('builtin:')?[...new Map([...activeDocument.tags,...preference(activeDocument.key).tags].map(tag=>[tagKey(tag),tag])).values()]:activeDocument.tags;}
+  function documentSnapshot(){return portableContent({...currentFilter(),tags:activeDocument.tags});}
+  function isDirty(){return activeDocument.imported||!activeDocument.key||documentSnapshot()!==activeDocument.baseline;}
+  function updateDocumentHeader({forceSelection=false}={}){
+    const name=$('#filterName').value.trim()||'Untitled Filter';
+    const requestedSelection=el.preset.value;
+    let draft=el.preset.querySelector('[data-draft]');
+    if(!activeDocument.key){if(!draft){draft=document.createElement('option');draft.value='';draft.disabled=true;draft.dataset.draft='true';el.preset.prepend(draft);}draft.textContent=`${name} · ${activeDocument.imported?'Imported · not saved':'Not saved'}`;}else draft?.remove();
+    const requestedOption=requestedSelection&&Array.from(el.preset.options).some(option=>option.value===requestedSelection);
+    if(forceSelection||!requestedOption||requestedSelection===activeDocument.key)el.preset.value=activeDocument.key||'';
+    el.preset.title=name;
+    $('#savedDocumentStatus').textContent=activeDocument.imported?'Imported · not saved':!activeDocument.key?'Not saved':isDirty()?'Unsaved changes':'Saved';updatePresetDeleteState();
+  }
+  function populatePresets(){
+    catalogCache=null;el.preset.replaceChildren();
+    const entries=catalog();
+    for(const [label,accept] of [['Built-in',entry=>entry.source==='builtin'&&!entry.document.benchmark],['Performance benchmarks',entry=>entry.source==='builtin'&&entry.document.benchmark],['My Filters',entry=>entry.source==='custom']]){
+      const group=document.createElement('optgroup');group.label=label;
+      for(const entry of entries.filter(accept).sort((a,b)=>a.name.localeCompare(b.name)||a.key.localeCompare(b.key))){const option=document.createElement('option');option.value=entry.key;option.textContent=entry.name;group.append(option);}
+      if(group.children.length)el.preset.append(group);
+    }
+    browser?.refresh();updateDocumentHeader({forceSelection:true});
+  }
+  function refreshTags(){
+    const focusedTag=$('#tagChips').contains(document.activeElement)?document.activeElement.getAttribute('aria-label'):null;
+    const builtIn=activeDocument.key?.startsWith('builtin:'),tags=builtIn?preference(activeDocument.key).tags:activeDocument.tags;
+    $('#includedTags').textContent=builtIn?`Included tags: ${activeDocument.tags.join(', ')||'None'}`:'';$('#tagHelp').textContent=builtIn?'Saved in this browser. Included tags cannot be removed.':'Up to 20 tags, 32 characters each. Spaces and punctuation are allowed.';
+    const chips=$('#tagChips');chips.replaceChildren();for(const tag of tags){const button=document.createElement('button');button.textContent=`${tag} ×`;button.setAttribute('aria-label',`Remove tag ${tag}`);button.onclick=()=>{commitTags(tags.filter(item=>tagKey(item)!==tagKey(tag)));$('#newTag').focus();};chips.append(button);}
+    if(focusedTag)([...chips.children].find(node=>node.getAttribute('aria-label')===focusedTag)||$('#newTag')).focus();
+    const suggestions=$('#tagSuggestions');suggestions.replaceChildren();const all=[...new Set(catalog().flatMap(entry=>entry.tags))].filter(tag=>!tags.some(item=>tagKey(item)===tagKey(tag))).filter(tag=>tag.toLowerCase().includes($('#newTag').value.toLowerCase())).slice(0,50);for(const tag of all){const option=document.createElement('option');option.value=tag;suggestions.append(option);}
+  }
+  function commitTags(tags){try{const normalized=normalizeTags(tags);if(activeDocument.key?.startsWith('builtin:')){normalizeTags([...new Map([...activeDocument.tags,...normalized].map(tag=>[tagKey(tag),tag])).values()]);writeEntryPreference(localStorage,activeDocument.key,{tags:normalized});}else activeDocument.tags=normalized;$('#tagError').textContent='';catalogCache=null;refreshTags();populatePresets();return true;}catch(error){$('#tagError').textContent=error.message;return false;}}
+  async function guardReplacement(){
+    if(!isDirty())return true;
+    const {action}=await chooseFilterAction(`Save changes to ${$('#filterName').value||'Untitled Filter'}?`,[['save','Save and continue'],['discard','Discard changes'],['cancel','Cancel']]);
+    return action==='discard'||(action==='save'&&await savePreset());
+  }
+  async function loadCatalogEntry(entry,focusTarget=el.searchFilters){
+    const definition=entry.source==='builtin'?presets.find(item=>`builtin:${item.id}`===entry.key):findCustomPresetById(library().presets,entry.document.id);
+    if(!definition)throw new Error('This filter was deleted in another tab.');
+    prepareFilter(definition);if(!await guardReplacement())return false;
+    applyFilter(definition,entry.key);if(state.isRendering)state.focusSnapshot={node:focusTarget};return true;
+  }
+  function currentFilter(){return{format:'filter-fab-js',version:2,...(activeDocument.id?{id:activeDocument.id}:{}),tags:effectiveTags(),mathMode:state.legacyMath?'legacy':'float',name:$('#filterName').value.trim().slice(0,120)||'Untitled Filter',description:el.description.value.trim().slice(0,FILTER_DESCRIPTION_MAX_LENGTH),author:$('#filterAuthor').value.trim().slice(0,120),formulas:el.formulas.map(field=>field.value.trim()),controls:state.controls.map((value,index)=>({label:String(state.labels[index]??'').slice(0,80)||`Control ${index+1}`,value,ui:cloneControlUI(state.controlUIs[index])}))};}
+  function prepareFilter(input){
+    if(!input||typeof input!=='object'||Array.isArray(input))throw new Error('Filter definition must be an object');
+    const inputAsts=getValidatedFormulaAsts(input),definition=inputAsts?input:input.format==='filter-fab-js'?validateNativeFilter(input):input,mathMode=definition.mathMode??'float';
+    if(!['float','legacy'].includes(mathMode))throw new Error('Filter mathMode must be “float” or “legacy”');
+    const legacyMath=mathMode==='legacy',formulas=definition.formulas||definition.f;
+    if(!Array.isArray(formulas)||formulas.length!==4||formulas.some(formula=>typeof formula!=='string'||!formula.trim()))throw new Error('Filter definition must contain exactly four formulas');
+    const normalizedFormulas=formulas.map(formula=>formula.trim()),astList=inputAsts||getValidatedFormulaAsts(definition)||normalizedFormulas.map(formula=>new Parser(formula).parse()),program=compileFilterProgram(astList,{legacyMath});
+    let rawValues,rawLabels,rawUIs;
+    if(definition.controls!==undefined){
+      if(!Array.isArray(definition.controls)||definition.controls.length>CONTROL_COUNT)throw new Error(`Filter definition may contain at most ${CONTROL_COUNT} controls`);
+      rawValues=definition.controls.map((control,index)=>{if(typeof control==='number')return control;if(!control||typeof control!=='object'||Array.isArray(control))throw new Error(`Control ${index+1} is malformed`);return control.value});
+      rawLabels=definition.controls.map((control,index)=>typeof control==='number'?`Control ${index+1}`:control.label);
+      rawUIs=definition.controls.map(control=>typeof control==='number'?undefined:control.ui);
+    }else{
+      rawValues=definition.values??[];rawLabels=definition.labels??[];
+      rawUIs=definition.controlUIs??definition.uis??[];
+      if(!Array.isArray(rawValues)||!Array.isArray(rawLabels)||rawValues.length>CONTROL_COUNT||rawLabels.length>CONTROL_COUNT)throw new Error(`Filter definition may contain at most ${CONTROL_COUNT} controls`);
+      if(!Array.isArray(rawUIs)||rawUIs.length>CONTROL_COUNT)throw new Error(`Filter definition may contain at most ${CONTROL_COUNT} control presentations`);
+    }
+    const controlUIs=CONTROL_DEFINITIONS.map((definition,index)=>normalizeControlUI(rawUIs[index]));
+    const controls=CONTROL_DEFINITIONS.map((definition,index)=>{const value=rawValues[index]??definition.defaultValue;if(typeof value!=='number'||!Number.isFinite(value))throw new Error(`Control ${index+1} must be a finite number`);const canonical=clamp(value,0,255);return controlUIs[index].widget==='toggle'?normalizeToggleRaw(canonical):canonical});
+    const labels=CONTROL_DEFINITIONS.map((definition,index)=>{const value=rawLabels[index]??definition.defaultLabel;if(typeof value!=='string')throw new Error(`Control ${index+1} label must be a string`);const label=value.trim();if(label.length>80)throw new Error(`Control ${index+1} label exceeds 80 characters`);return label||definition.defaultLabel});
+    if(definition.name!==undefined&&typeof definition.name!=='string')throw new Error('Filter name must be a string');if(definition.description!==undefined&&typeof definition.description!=='string')throw new Error('Filter description must be a string');if(definition.author!==undefined&&typeof definition.author!=='string')throw new Error('Filter author must be a string');
+    const name=String(definition.name??'').trim()||'Untitled Filter',description=String(definition.description??'').trim(),author=String(definition.author??'').trim();if(name.length>120||author.length>120)throw new Error('Filter name and author are limited to 120 characters');if(description.length>FILTER_DESCRIPTION_MAX_LENGTH)throw new Error(`Filter description exceeds ${FILTER_DESCRIPTION_MAX_LENGTH} characters`);
+    const tags=normalizeTags(definition.tags),id=definition.format==='filter-factory-afs'?undefined:validatePortableId(definition.id);
+    return{tags,id,legacyMath,formulas:normalizedFormulas,controls,labels,controlUIs,name,description,author,program};
+  }
+  function applyFilter(definition,selection){const next=prepareFilter(definition);state.legacyMath=next.legacyMath;el.formulas.forEach((field,index)=>field.value=next.formulas[index]);state.controls=next.controls;state.labels=next.labels;state.controlUIs=next.controlUIs;state.lastProgram=next.program;state.lastProgramKey=currentProgramKey();$('#filterName').value=next.name;el.description.value=next.description;$('#filterAuthor').value=next.author;controlsController.syncSliders();controlsController.updateControlUsage(next.program);activeDocument.key=selection||null;activeDocument.id=selection?.startsWith('builtin:')?undefined:next.id;activeDocument.tags=next.tags;activeDocument.imported=!selection;activeDocument.recordBaseline=selection?.startsWith('custom:')?JSON.stringify(definition):null;activeDocument.baseline=documentSnapshot();refreshTags();updateDocumentHeader({forceSelection:true});markFormulaPending();render();}
+
+  function compileAll({cache=true}={}){const key=currentProgramKey();if(cache&&state.lastProgram&&state.lastProgramKey===key){controlsController.updateControlUsage(state.lastProgram);updateRendererDiagnostics(state.lastProgram);return state.lastProgram}const astList=[];let ok=true;el.formulas.forEach(field=>{const box=field.closest('.formula'),icon=$('.formula-state',box),errorElement=$('.formula-error',box);try{astList.push(new Parser(field.value).parse());field.classList.remove('invalid');field.setAttribute('aria-invalid','false');icon.textContent='✓';icon.classList.remove('bad','pending');errorElement.textContent='';errorElement.classList.remove('show');}catch(error){ok=false;astList.push(null);field.classList.add('invalid');field.setAttribute('aria-invalid','true');icon.textContent='!';icon.classList.remove('pending');icon.classList.add('bad');errorElement.textContent=`${error.message} at character ${(error.pos??0)+1}`;errorElement.classList.add('show');}});if(!ok){controlsController.updateControlUsage(null);clearRendererDiagnostics('GPU diagnostics unavailable','Fix formula errors to inspect renderer eligibility.');return null;}try{const program=compileFilterProgram(astList,{legacyMath:state.legacyMath});if(cache){state.lastProgram=program;state.lastProgramKey=key}controlsController.updateControlUsage(program);updateRendererDiagnostics(program);return program;}catch(error){console.error('IR compilation failed',error);setStatus(`Compiler error: ${error.message}`,'error');controlsController.updateControlUsage(null);clearRendererDiagnostics('GPU diagnostics unavailable',error.message);return null;}}
+  function showFormulaFailure(){const hasFieldError=el.formulas.some(field=>field.classList.contains('invalid'));setFormulaEditStatus('invalid',hasFieldError?'Fix formula errors':'Compiler error');clearRendererDiagnostics('GPU diagnostics unavailable',hasFieldError?'Fix formula errors to inspect renderer eligibility.':'The typed IR could not be compiled.');if(hasFieldError)setStatus('Fix formula errors before rendering','error');}
+  function validatedCurrentFilter(){return validateFilterForPersistence(currentFilter(),error=>{console.error('Filter validation failed',error);compileAll();showFormulaFailure();setStatus(`Filter validation error: ${error.message}`,'error');toast(`Filter validation failed: ${error.message}`);});}
+  function validatePendingFormulas(){if(!state.hasPendingFormulaChanges||state.isRendering)return;const program=compileAll({cache:false});if(program){setFormulaEditStatus('pending','Ready to render');setStatus('Formula valid · render to update preview','pending');}else showFormulaFailure();}
+  async function render({focusInvalid=false}={}){
+    if(!state.source||state.isRendering)return;
+    const program=compileAll();
+    if(!program){
+      showFormulaFailure();
+      if(focusInvalid)el.formulas.find(field=>field.classList.contains('invalid'))?.focus();
+      return;
+    }
+    const id=++state.renderId,irLabel=`IR v${program.irVersion} · ${program.metadata.nodeCount} ops`;
+    setUILocked(true,0,0,state.height||0);
+    setStatus('Selecting renderer…','busy');
+    el.renderInfo.textContent=`${irLabel} · selecting renderer…`;
+    let selection=null,runtimeFallback=false;
+    try{
+      const outcome=await state.rendererManager.renderWithFallback({id,program,preference:state.rendererPreference,controls:[...state.controls],legacyMath:state.legacyMath,isCurrent:()=>id===state.renderId,onSelection:(next,context)=>{
+        if(id!==state.renderId)return;selection=next;runtimeFallback=context.runtimeFallback;updateRendererDiagnostics(program,{rendererId:next.renderer.id,fallbackReason:next.fallbackReason,runtimeFallback});const fallback=next.fallbackReason?' · CPU fallback':'';setStatus(runtimeFallback?'GPU failed; rendering on CPU… 0%':`Rendering with ${next.renderer.label}… 0%`,'busy');el.renderInfo.textContent=`${next.renderer.label}${fallback} · ${irLabel} · preparing…`;
+      },onProgress:message=>{
+        if(id!==state.renderId||!selection)return;const fallback=selection.fallbackReason?' · CPU fallback':'';setProgress(message.pct,message.row,message.total);setStatus(runtimeFallback?`GPU failed; CPU fallback… ${Math.round(message.pct)}%`:`Rendering with ${selection.renderer.label}… ${Math.round(message.pct)}%`,'busy');el.renderInfo.textContent=`${selection.renderer.label}${fallback} · ${irLabel} · ${message.row} / ${message.total} rows`;
+      }}),result=outcome.result;
+      if(id!==state.renderId)return;
+      state.filtered=result.pixels;
+      canvasView.drawView();
+      markPreviewCurrent();
+      setStatus(outcome.fallbackReason?'Ready · CPU fallback':'Ready');
+      const reason=outcome.fallbackReason?` · ${outcome.fallbackReason}`:'';
+      el.renderInfo.textContent=`${result.label} · ${irLabel} · ${result.ms.toFixed(0)} ms${reason}`;
+      updateRendererDiagnostics(program,{rendererId:result.backend,fallbackReason:outcome.fallbackReason,runtimeFallback:outcome.runtimeFallback});
+    }catch(error){
+      if(id!==state.renderId||error?.name==='RenderCancelledError')return;
+      console.error('Render failed',error);
+      setStatus(`Renderer error: ${error.message}`,'error');
+      el.renderInfo.textContent=`${selection?.renderer?.label||'Renderer'} · ${irLabel} · error`;
+      setRendererDiagnosticsState('error',`Renderer error · ${irLabel}`,error.message);
+    }finally{
+      if(id===state.renderId)setUILocked(false);
+    }
+  }
+
+  function initImage(data,width,height){state.renderId++;if(state.isRendering)setUILocked(false);initializeImagePreview(data,width,height,{state,canvasView,canvas:el.canvas});el.imageInfo.textContent=`${width} × ${height} px`;initializeRendererSource().catch(error=>{console.error('Renderer initialization failed',error);setStatus(`Renderer error: ${error.message}`,'error');});render();}
+  function demoImage(){const width=960,height=640,canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const context=canvas.getContext('2d'),background=context.createLinearGradient(0,0,width,height);background.addColorStop(0,'#08050d');background.addColorStop(.48,'#6c47b1');background.addColorStop(1,'#c429a3');context.fillStyle=background;context.fillRect(0,0,width,height);for(let i=0;i<18;i++){context.globalAlpha=.09;context.fillStyle=i%2?'#fff':'#07111f';context.beginPath();context.arc(90+i*58,90+(i%4)*130,60+(i%3)*35,0,Math.PI*2);context.fill();}context.globalAlpha=1;context.fillStyle='rgba(6,16,5,.82)';context.roundRect(84,94,792,452,36);context.fill();context.fillStyle='#f6efc4';context.font='700 62px system-ui';context.fillText('FILTER',132,245);context.fillStyle='#e1ec1a';context.fillText('FABJS',132,316);context.font='24px system-ui';context.fillStyle='#cdddb7';context.fillText('Open an image or experiment with this demo.',136,370);const gradient=context.createLinearGradient(136,0,790,0);gradient.addColorStop(0,'#e45a87');gradient.addColorStop(.5,'#9fd36a');gradient.addColorStop(1,'#38a9d4');context.fillStyle=gradient;context.fillRect(136,412,654,18);return context.getImageData(0,0,width,height);}
+  async function loadImageFile(file,{successMessage='Image loaded'}={}){if(!file||!String(file.type||'').startsWith('image/')){toast('Choose a valid image file');return false;}const loadId=++state.imageLoadId;let bitmap=null;setStatus('Loading image…','busy');try{bitmap=await createImageBitmap(file);if(loadId!==state.imageLoadId)return false;const maximum=1800,scale=Math.min(1,maximum/Math.max(bitmap.width,bitmap.height)),width=Math.max(1,Math.round(bitmap.width*scale)),height=Math.max(1,Math.round(bitmap.height*scale)),canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const context=canvas.getContext('2d',{willReadFrequently:true});if(!context)throw new Error('Canvas image loading is unavailable');context.drawImage(bitmap,0,0,width,height);const pixels=context.getImageData(0,0,width,height).data;if(loadId!==state.imageLoadId)return false;initImage(pixels,width,height);toast(scale<1?`${successMessage} · resized to 1800 px`:successMessage);return true;}catch(error){if(loadId!==state.imageLoadId)return false;setStatus('Could not load image','error');toast(error.message||'Could not load image');return false;}finally{bitmap?.close?.();}}
+
+  function isEditableTarget(target){return target instanceof Element&&(target.matches('input,textarea,select,[contenteditable="true"]')||Boolean(target.closest('[contenteditable="true"]')));}
+  async function copyImageToClipboard(){if(state.isRendering)return;const ClipboardItemCtor=globalThis.ClipboardItem;if(!navigator.clipboard?.write||!ClipboardItemCtor){toast('Image copy is unavailable in this browser');return;}setStatus('Encoding RGBA PNG…','busy');try{const expected=alphaStats(state.filtered),blob=await canvasBlob(renderedImageCanvas(state.filtered,state.width,state.height),'image/png');await verifyPngAlpha(blob,expected);setStatus('Writing image to clipboard…','busy');await writePngClipboard(blob);if(expected.hasAlpha){setStatus(`Ready · PNG alpha ${expected.min}–${expected.max}`);toast('RGBA PNG copied · alpha preserved');}else{setStatus('Ready · copied image is opaque');toast('PNG copied · output has no transparent pixels');}}catch(error){console.error('Clipboard copy failed',error);setStatus('Clipboard copy unavailable','error');toast(error?.name==='NotAllowedError'?'Clipboard permission was blocked by the browser':`Copy failed: ${error.message||'clipboard unavailable'}`);}}
+  async function pasteImageFromClipboard(){if(state.isRendering)return;if(!navigator.clipboard?.read){toast('Clipboard reading is unavailable. Press Ctrl/⌘+V instead.');return;}setStatus('Reading clipboard…','busy');try{const items=await navigator.clipboard.read();for(const item of items){const types=Array.from(item.types||[]),type=['web image/png','image/png',...types.filter(value=>String(value).startsWith('image/'))].find(value=>types.includes(value));if(!type)continue;const raw=await item.getType(type),mime=String(type).replace(/^web\s+/,'');const blob=String(raw.type||'').startsWith('image/')?raw:new Blob([raw],{type:mime});await loadImageFile(blob,{successMessage:'Image pasted from clipboard'});return;}setStatus('Ready');toast('Clipboard does not contain an image');}catch(error){console.error('Clipboard paste failed',error);setStatus('Clipboard paste unavailable','error');toast(error?.name==='NotAllowedError'?'Clipboard permission was blocked. Press Ctrl/⌘+V instead.':`Paste failed: ${error.message||'clipboard unavailable'}`);}}
+
+  function triggerDownload(href,name,revoke=false){try{const anchor=document.createElement('a');anchor.href=href;anchor.download=name;anchor.rel='noopener';anchor.style.display='none';document.body.appendChild(anchor);anchor.click();setTimeout(()=>{anchor.remove();if(revoke)URL.revokeObjectURL(href);},10000);toast(`Download started: ${name}`);return true;}catch(error){console.error('Download failed',error);toast(`Download failed: ${error.message||'browser blocked the file'}`);return false;}}
+  function downloadBlob(blob,name){if(!(blob instanceof Blob)||!blob.size){toast('Nothing was generated to download');return false;}return triggerDownload(URL.createObjectURL(blob),name,true);}
+  async function exportPNG(){if(!state.filtered||!state.width||!state.height){toast('Load and render an image before exporting');return;}setStatus('Encoding PNG…','busy');try{const canvas=renderedImageCanvas(state.filtered,state.width,state.height),name=slug($('#filterName').value||'filtered-image')+'.png',blob=await canvasBlob(canvas,'image/png');if(downloadBlob(blob,name))setStatus('Ready');}catch(error){console.error('PNG export failed',error);setStatus('PNG export failed','error');toast(`PNG export failed: ${error.message}`);}}
+  function exportFilter(){const filter=validatedCurrentFilter();if(!filter)return;if(!activeDocument.id)activeDocument.id=createCustomPresetId();filter.id=activeDocument.id;const base=slug(filter.name);try{downloadBlob(new Blob([JSON.stringify(filter,null,2)+'\n'],{type:'application/json;charset=utf-8'}),base+'.json');}catch(error){console.error('Filter export failed',error);toast(`Filter export failed: ${error.message}`);}}
+  async function deletePreset(){
+    if(!activeDocument.key?.startsWith('custom:'))return;
+    try{
+      const id=activeDocument.id,dirty=isDirty(),{action}=await chooseFilterAction(`Delete “${$('#filterName').value}” from My Filters?`,dirty?[['keep','Delete and keep unsaved draft'],['cancel','Cancel']]:[['delete','Delete'],['cancel','Cancel']]);
+      if(!['keep','delete'].includes(action))return;
+      const {storageList}=library();localStorage.setItem('ffw-custom-presets',JSON.stringify(storageList.filter(item=>item?.id!==id)));
+      try{localStorage.removeItem(PREFERENCE_PREFIX+`custom:${id}`);}catch(error){organizationError(error);}
+      if(action==='keep'){activeDocument.key=null;activeDocument.id=undefined;activeDocument.imported=false;activeDocument.recordBaseline=null;refreshTags();populatePresets();}else applyFilter(presets.find(item=>item.id==='pass'),'builtin:pass');
+      browser?.refresh();
+    }catch(error){organizationError(error);}
+  }
+  async function importFilterFile(file){if(!file)return;try{const result=await importLatestFilterFile(file,{state,cancelRender,applyFilter,beforeApply:async definition=>{prepareFilter(definition);return guardReplacement();}});if(!result)return;toast(result.kind==='afs'?'AFS filter imported · CPU legacy mode':'Filter FabJS project imported');}catch(error){console.error('Filter import failed',error);toast(`Import failed: ${error.message}`);}finally{el.filterInput.value='';}}
+  async function savePreset(){
+    const filter=validatedCurrentFilter();if(!filter){await chooseFilterAction('Could not save filter',[['cancel','Keep editing']],{detail:el.statusText.textContent});return false;}
+    try{
+      let list=library().presets,targetId=activeDocument.key?.startsWith('custom:')?activeDocument.id:null,expected=activeDocument.recordBaseline;
+      const duplicateName=list.some(item=>item.name.toLowerCase()===filter.name.toLowerCase()&&item.id!==targetId&&item.id!==filter.id);
+      const choice=await chooseFilterAction('Save filter',targetId?[['update','Update this filter'],['copy','Save as new filter'],['cancel','Cancel']]:[['save','Save as new filter'],['cancel','Cancel']],{name:duplicateName?`${filter.name.slice(0,113)} (copy)`:filter.name,detail:duplicateName?'Another filter has this name. A distinct name is suggested; same-name copies are allowed.':'Saved in this browser. Export also keeps a portable copy.'});
+      if(choice.action==='cancel')return false;filter.name=choice.name;
+      if(choice.action==='copy'){targetId=null;filter.id=createCustomPresetId();}
+      else if(!targetId&&!filter.id)filter.id=createCustomPresetId();
+      list=library().presets;
+      const existing=findCustomPresetById(list,targetId||filter.id);
+      if(targetId&&(!existing||JSON.stringify(existing)!==expected)){
+        const conflict=await chooseFilterAction('This filter changed in another tab.',existing?[['update','Update existing with my draft'],['copy','Save as new filter'],['cancel','Cancel']]:[['copy','Save as new filter'],['cancel','Cancel']],{detail:existing?`Current saved filter: ${existing.name}. Updated: ${existing.updatedAt||'unknown'}. Updating replaces that saved content with your draft.`:'The saved record was deleted. Your draft is still here.'});
+        if(conflict.action==='cancel')return false;
+        if(conflict.action==='copy'){targetId=null;filter.id=createCustomPresetId();}else expected=JSON.stringify(existing);
+      }else if(!targetId&&existing){
+        let equal=false;try{equal=portableContent(validateNativeFilter(existing))===portableContent(filter);}catch{}
+        const conflict=await chooseFilterAction(equal?'Already saved':'An existing filter has this ID.',equal?[['use','Use saved record'],['copy','Save as new filter'],['cancel','Cancel']]:[['update','Update existing'],['copy','Save as new filter'],['cancel','Cancel']]);
+        if(conflict.action==='cancel')return false;
+        if(conflict.action==='use'){adoptSaved(existing);return true;}
+        if(conflict.action==='copy')filter.id=createCustomPresetId();else{targetId=existing.id;expected=JSON.stringify(existing);}
+      }
+      const record=writeLibraryRecord(localStorage,normalizeCustomPresetList,filter,{targetId,expected});adoptSaved(record);toast('Filter saved in this browser');return true;
+    }catch(error){organizationError(error);await chooseFilterAction('Could not save filter',[['cancel','Keep editing']],{detail:error.message});return false;}
+  }
+  function adoptSaved(record){activeDocument.key=`custom:${record.id}`;activeDocument.id=record.id;activeDocument.tags=normalizeTags(record.tags);activeDocument.imported=false;activeDocument.recordBaseline=JSON.stringify(record);$('#filterName').value=record.name;activeDocument.baseline=documentSnapshot();refreshTags();populatePresets();}
+
+  function wire(){
+    el.rendererSelect.value=['auto','webgpu','cpu'].includes(state.rendererPreference)?state.rendererPreference:'auto';
+    el.rendererSelect.onchange=()=>{state.rendererPreference=el.rendererSelect.value;storageSet('ffw-renderer',state.rendererPreference);if(!state.hasPendingFormulaChanges)render();else validatePendingFormulas();};
+    $('#openImageBtn').onclick=()=>el.imageInput.click();
+    el.imageInput.onchange=async()=>{await loadImageFile(el.imageInput.files[0]);el.imageInput.value='';};
+    $('#pasteImageBtn').onclick=pasteImageFromClipboard;
+    $('#copyImageBtn').onclick=copyImageToClipboard;
+    $('#importBtn').onclick=()=>el.filterInput.click();
+    el.filterInput.onchange=()=>importFilterFile(el.filterInput.files[0]);
+    $('#exportFilterBtn').onclick=exportFilter;
+    $('#exportImageBtn').onclick=exportPNG;
+    $('#savePresetBtn').onclick=savePreset;
+    el.deletePreset.onclick=deletePreset;
+    el.renderBtn.onclick=()=>render({focusInvalid:true});
+    $('#resetBtn').onclick=async()=>{if(await guardReplacement())applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');};
+    browser=createFilterBrowser({launcher:el.searchFilters,getEntries:catalog,load:loadCatalogEntry,toggleFavorite:entry=>{writeEntryPreference(localStorage,entry.key,{favorite:!entry.favorite});catalogCache=null;},onError:organizationError});
+    populatePresets();
+    el.preset.onchange=async()=>{
+      const key=el.preset.value;
+      if(key===activeDocument.key)return;
+      const entry=catalog().find(item=>item.key===key);if(!entry)return;
+      try{await loadCatalogEntry(entry,el.preset);}catch(error){organizationError(error);}finally{updateDocumentHeader({forceSelection:true});}
+    };
+    const addTag=()=>{const tags=activeDocument.key?.startsWith('builtin:')?preference(activeDocument.key).tags:activeDocument.tags;if(commitTags([...tags,$('#newTag').value])){$('#newTag').value='';refreshTags();$('#newTag').focus();}};
+    $('#addTagBtn').onclick=addTag;$('#newTag').onkeydown=event=>{if(event.key==='Enter'&&!event.isComposing){event.preventDefault();addTag();}};$('#newTag').oninput=refreshTags;
+    // The preset's native input event precedes change. Only its own change handler
+    // may restore the selection, after capturing the requested ID.
+    document.addEventListener('input',event=>{if(event.target!==el.preset&&event.target.closest('.sidebar'))queueMicrotask(updateDocumentHeader);});
+    document.addEventListener('change',event=>{if(event.target!==el.preset&&event.target.closest('.sidebar'))queueMicrotask(updateDocumentHeader);});
+    $('#editControlsDialog').addEventListener('close',updateDocumentHeader);
+    el.formulas.forEach(field=>{
+      field.oninput=()=>{
+        const box=field.closest('.formula'),icon=$('.formula-state',box),errorElement=$('.formula-error',box);
+        field.classList.remove('invalid');
+        field.setAttribute('aria-invalid','false');
+        icon.textContent='…';
+        icon.classList.remove('bad');
+        icon.classList.add('pending');
+        errorElement.textContent='';
+        errorElement.classList.remove('show');
+        markFormulaPending(field);
+        scheduleFormulaValidation();
+      };
+      field.onblur=validatePendingFormulas;
+      field.onkeydown=event=>{if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){event.preventDefault();render({focusInvalid:true});}};
+    });
+    document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!document.querySelector('dialog[open]')&&state.isRendering){event.preventDefault();event.stopPropagation();cancelRender();return;}if((event.ctrlKey||event.metaKey)&&event.shiftKey&&event.key.toLowerCase()==='c'&&!state.isRendering&&!isEditableTarget(event.target)){event.preventDefault();copyImageToClipboard();}});
+    document.addEventListener('paste',event=>{if(state.isRendering||isEditableTarget(event.target)||document.querySelector('dialog[open]'))return;const image=imageFromClipboardData(event.clipboardData);if(!image)return;event.preventDefault();loadImageFile(image,{successMessage:'Image pasted from clipboard'});});
+    $$('#viewMode button').forEach(button=>button.onclick=()=>{$$('#viewMode button').forEach(item=>item.classList.remove('active'));button.classList.add('active');state.view=button.dataset.view;el.splitControl.classList.toggle('show',state.view==='split');canvasView.drawView();});
+    el.split.oninput=()=>{state.split=Number(el.split.value);canvasView.requestDraw();};
+    $('#zoomFit').onclick=canvasView.fitCanvas;
+    $('#zoomIn').onclick=()=>canvasView.zoom(1.2);
+    $('#zoomOut').onclick=()=>canvasView.zoom(1/1.2);
+    window.onresize=debounce(()=>{if(state.zoom==='fit')canvasView.fitCanvas();},100);
+    let dragDepth=0;
+    const hasFiles=event=>Array.from(event.dataTransfer?.types||[]).includes('Files'),hideDrop=()=>{dragDepth=0;el.drop.classList.remove('show');};
+    el.stage.addEventListener('dragenter',event=>{event.preventDefault();if(state.isRendering||!hasFiles(event))return;dragDepth++;el.drop.classList.add('show');});
+    el.stage.addEventListener('dragover',event=>{event.preventDefault();if(state.isRendering||!hasFiles(event))return;if(event.dataTransfer)event.dataTransfer.dropEffect='copy';el.drop.classList.add('show');});
+    el.stage.addEventListener('dragleave',event=>{event.preventDefault();if(state.isRendering)return;dragDepth=Math.max(0,dragDepth-1);if(dragDepth===0)el.drop.classList.remove('show');});
+    el.stage.addEventListener('drop',event=>{event.preventDefault();hideDrop();if(state.isRendering)return;loadImageFile(event.dataTransfer?.files?.[0]);});
+    document.addEventListener('dragend',hideDrop);
+    window.addEventListener('blur',hideDrop);
+    $('#helpBtn').onclick=()=>$('#helpDialog').showModal();
+    $('#closeHelp').onclick=()=>$('#helpDialog').close();
+    window.addEventListener('storage',event=>{if(event.key===null||event.key==='ffw-custom-presets'||event.key.startsWith(PREFERENCE_PREFIX)){
+      if(activeDocument.key?.startsWith('custom:')){try{const record=findCustomPresetById(library().presets,activeDocument.id);if(!record){activeDocument.key=null;activeDocument.id=undefined;activeDocument.imported=false;toast('Saved filter deleted in another tab. Save as new to keep this draft.');}else if(JSON.stringify(record)!==activeDocument.recordBaseline)toast('Saved filter changed in another tab. Update will require review.');}catch(error){organizationError(error);}}
+      catalogCache=null;refreshTags();populatePresets();
+    }});
+    window.addEventListener('beforeunload',()=>state.rendererManager?.dispose());
+  }
+
+  window.FilterFabJS=Object.freeze({version:'2.7.0',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getRendererPreference:()=>state.rendererPreference});
+  controlsController.buildSliders();wire();const demo=demoImage();initImage(demo.data,demo.width,demo.height);applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');
+  return{state,render,applyFilter,loadImageFile};
+}
+
+
+/* src/main.js */
+/**
+ * Filter FabJS
+ * Modular source extracted from v2.0.7; modular architecture v2.1.0.
+ * Licensed GPL-2.0-or-later. See LICENSE and README.md.
+ */
+
+initFilterFabApp();
+
+})();

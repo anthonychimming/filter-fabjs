@@ -1,4 +1,4 @@
-# Filter FabJS
+# Filter FabJS v2.7.0
 
 **A browser-based procedural image filter editor with WebGPU acceleration.**
 
@@ -8,7 +8,7 @@ Filter FabJS is an open-source, browser-native procedural RGBA image-processing 
 
 The engine combines four-channel RGBA formula authoring with WebGPU rendering and automatic CPU Worker fallback. Its procedural vocabulary includes image sampling, coordinate transforms, gradients, palette ramps, deterministic noise, fractals, analytic masks, signed-distance fields, convolution, and blend operations. Historic Filter Factory `.afs` filters remain supported through the legacy compatibility path.
 
-**Current stable release: v2.6.7**
+**Current stable release: v2.7.0**
 
 ## Features
 
@@ -24,11 +24,11 @@ The engine combines four-channel RGBA formula authoring with WebGPU rendering an
 - Auto / GPU / CPU renderer selection with live eligibility and fallback diagnostics.
 - Deterministic benchmark presets for CPU/WebGPU performance comparisons.
 - Native Filter FabJS JSON import/export plus historic Filter Factory `.afs` import.
-- Editable filter descriptions and persistent custom local presets.
+- Editable filter descriptions, searchable local presets, user tags, and favorites.
 - PNG loading/export, clipboard copy/paste, and alpha-aware preview.
 - Modular development source plus a standalone single-file release build.
 
-Filter FabJS v2.6.7 uses a typed, renderer-neutral intermediate representation, with the CPU and WebGPU renderers consuming the same semantic formula program.
+Filter FabJS v2.7.0 uses a typed, renderer-neutral intermediate representation, with the CPU and WebGPU renderers consuming the same semantic formula program.
 
 See [Project Status](docs/PROJECT_STATUS.md) for implementation details, compatibility notes, and current boundaries.
 
@@ -61,7 +61,7 @@ npm run build
 Build output:
 
 - `dist/site/` — deployable static site.
-- `dist/filter-fabjs-v2.6.7.html` — standalone single-file distribution.
+- `dist/filter-fabjs-v2.7.0.html` — standalone single-file distribution.
 
 The build uses Node.js and has no package dependencies.
 
@@ -93,3 +93,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidance.
 Filter FabJS is distributed under the GNU General Public License v2.0 or later. See [LICENSE](LICENSE).
 
 The project is inspired by the open-source [Filter Foundry project](https://github.com/danielmarschall/filter_foundry) and preserves the relevant attribution in the source.
+
+## Search, tags, and favorites
+
+Use the **Filter search** button beside the filter dropdown to open **Filters**. Search stored names, descriptions, authors, and tags; combine source, Favorites only, and match-all tags. Save updates the current custom ID; Save as new makes a separate copy. Imported filters remain unsaved drafts until saved. Rendering does not save a filter.
+
+See [Filter library](docs/FILTER_LIBRARY.md) for metadata limits, portable export behavior, storage caveats, and the release validation record.

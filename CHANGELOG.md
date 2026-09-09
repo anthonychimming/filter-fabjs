@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.7.0
+
+- Fixed native dropdown input/change ordering so sidebar status updates cannot reset a requested filter before it loads; regression coverage now includes the input event and its microtask checkpoint.
+
+- Restored the compact filter dropdown with a separate Filter search button, Name/Author on row two, and Save/Delete/Reset on row three; both selection paths preserve draft protection.
+
+- Simplified filter results by removing redundant Details dropdowns and showing each tag as a separate button that browses all filters with that tag.
+
+- Added a searchable modal browser alongside the preset selector, metadata relevance sorting, source restrictions, match-all tags, local favorites, and bounded 50-result pages.
+- Added curated built-in tags, immediate browser-local personal tag additions for built-ins, and editable portable tags for custom filters and drafts.
+- Added explicit saved/imported/draft identity, ID-based updates and copies, duplicate-import decisions, replacement guards, conflict detection, and persistence-failure recovery that preserves malformed stored records.
+- Preserved optional portable IDs and validated tags in native JSON v2 without changing formula, ten-control, IR, AFS, CPU or WebGPU contracts. Older readers retain rendering compatibility but drop the new metadata.
+- Added Node and browser workflow regressions, performance measurements, and a versioned standalone review build. See docs/FILTER_LIBRARY.md for behavior and validation limitations.
+
 ## 2.6.7
 
 - Audited all 31 built-in filters and migrated every active control to semantic rich-control metadata, including percentage, degree, pixel, channel-level, multiplier, integer, and deterministic seed presentations while preserving control indices and canonical raw defaults.

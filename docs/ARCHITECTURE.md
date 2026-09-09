@@ -1,6 +1,6 @@
 # Architecture
 
-Filter FabJS v2.6.7 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
+Filter FabJS v2.7.0 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
 
 ```text
 Formula text
@@ -51,3 +51,9 @@ Filter descriptions are optional top-level metadata beside `name` and `author`. 
 The Phase 3.5 WebGPU subset covers supported deterministic stateless operations: arithmetic, conditions, ten controls, image and polar sampling, normalized and centered coordinates, coordinate shaping and repetition, scalar palette ramps, gradients, procedural patterns, analytic shape masks, signed-distance primitives and composition, deterministic noise, bounded Mandelbrot and Julia fields, blend operations, and fixed 3×3 convolution. Signed-distance fields remain ordinary scalar expressions inside the current one-pass program and become masks only through explicit fill/outline helpers; domain warping is coordinate composition rather than a second execution model. Fractal iteration is encapsulated inside compiler intrinsics with a shared 256-step ceiling; the formula language does not expose general-purpose loops. Operations outside the subset are identified by compatibility analysis and use the CPU Worker fallback. Phase 3.5D exposes the manager's authoritative analysis as a read-only diagnostic snapshot containing formula compatibility, current GPU eligibility, selected backend, fallback reason, operation count, and the current one-pass count. `pow()` remains CPU-only because WGSL does not define JavaScript-compatible results for negative bases.
 
 The CPU renderer remains the compatibility backend for legacy integer-mode AFS filters, bitwise/shift/comma expressions, and operations with sequential or shared mutable state (`rnd()`, `rst()`, `get()`, and `put()`).
+
+## Filter library
+
+`core/filter-metadata.js` owns bounded tags, portable identity validation, and metadata comparison. `app/filter-catalog.js` projects metadata, searches/ranks cached catalog entries, persists per-entry local preferences, and checks target baselines before ID-based writes. `ui/filter-browser.js` owns the native modal browser and action dialogs. The app tracks the active saved identity, portable draft identity, saved-content baseline, and source-record baseline independently of preview state. None of these modules adds renderer behavior or changes program keys. Catalog indexing never parses formulas.
+
+Custom records retain `ffw-custom-presets`; favorites and built-in additions use `ffw-entry-v1:<builtin|custom>:<id>`. Existing custom ID migration is reused. Raw malformed entries and unrelated record fields survive writes. Search criteria are session-only. Storage events invalidate catalog projections and refresh preferences without applying a filter. Update re-reads its target and checks the captured record baseline, but shared-list localStorage writes are not atomic across tabs.

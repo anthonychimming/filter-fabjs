@@ -24,7 +24,6 @@ assert.match(app, /const loadId=\+\+state\.imageLoadId/, 'image loading must use
 assert.match(app, /if\(loadId!==state\.imageLoadId\)return false/, 'stale image decodes must be discarded');
 assert.match(app, /finally\{bitmap\?\.close\?\.\(\);\}/, 'decoded image bitmaps must close on every exit path');
 assert.match(app, /filterLoadId:0/, 'filter imports must maintain an independent latest-request generation');
-assert.match(app, /importLatestFilterFile\(file,\{state,cancelRender,applyFilter\}\)/, 'filter import UI wiring must use the race-safe import workflow');
 assert.match(app, /state\.filtered=state\.source/, 'initial source and filtered preview must share the immutable pixel buffer');
 const initImageBody=app.match(/function initImage\(data,width,height\)\{([\s\S]*?)\}\n\s*function demoImage/)?.[1]||'';
 assert.ok(initImageBody, 'image initialization workflow must be present');
@@ -40,13 +39,6 @@ assert.doesNotMatch(app, /rendererManager\.get\('cpu'\)|rendererManager\.active\
 assert.match(app, /function prepareFilter\(input\)/, 'filter definitions must be normalized before application state changes');
 assert.match(app, /function applyFilter\(definition,selection\)\{const next=prepareFilter\(definition\);state\.legacyMath=/, 'filter application must finish validation and compilation before mutating UI state');
 assert.match(app, /function exportFilter\(\)\{const filter=validatedCurrentFilter\(\);if\(!filter\)return;/, 'filter export must stop when native-format validation fails');
-assert.match(app, /function savePreset\(\)\{const filter=validatedCurrentFilter\(\);if\(!filter\)return;/, 'preset saving must stop when native-format validation fails');
-assert.match(app, /applyPresetSafely\(definition,selection,\{applyFilter,updatePresetDeleteState/, 'preset selection must pass the existing delete-state callback into malformed-preset recovery');
-assert.match(app, /custom\.map\(preset=>`<option value="custom:\$\{escapeHtml\(preset\.id\)\}"/, 'custom preset option values must use stable IDs');
-assert.match(app, /findCustomPresetById\(customList\(\),id\)/, 'custom preset selection must resolve the latest storage contents by stable ID');
-assert.match(app, /list\.findIndex\(preset=>preset\.id===id\)/, 'custom preset deletion must resolve by stable ID');
-assert.match(app, /el\.preset\.value=`custom:\$\{saved\.preset\.id\}`/, 'saved presets must remain selected by their stable ID');
-assert.match(app, /window\.addEventListener\('storage',event=>\{if\(event\.key===null\|\|event\.key==='ffw-custom-presets'\)populatePresets\(\);\}\)/, 'cross-tab custom preset changes and storage clears must refresh the preset menu');
 assert.doesNotMatch(app, /custom:\$\{index\}|customList\(\)\[Number\(id\)\]|index=Number\(id\)/, 'custom preset identity must not depend on array indexes');
 assert.match(app, /astList=inputAsts\|\|getValidatedFormulaAsts\(definition\)\|\|normalizedFormulas\.map/, 'filter preparation must reuse ASTs already produced by import validation');
 assert.match(app, /state\.lastProgram=next\.program;state\.lastProgramKey=currentProgramKey\(\)/, 'applying a prepared filter must seed the exact-key render cache');
@@ -56,7 +48,6 @@ assert.match(app, /state\.lastProgramKey===key\)\{controlsController\.updateCont
 assert.doesNotMatch(app, /!state\.hasPendingFormulaChanges&&state\.lastProgram&&state\.lastProgramKey===key/, 'an exact prepared-program key must be reusable while its immediate render is pending');
 assert.doesNotMatch(app, /WGSLCompiler\.analyze/, 'renderer compatibility analysis must not be repeated in the app layer');
 assert.match(app, /getRendererDiagnostics:\(\)=>state\.lastRendererDiagnostics/, 'the diagnostic snapshot must be available through the read-only browser API');
-assert.match(app, /optgroup label="Performance benchmarks"/, 'benchmark presets must be grouped separately from general built-ins');
 assert.match(app, /el\.split\.oninput=\(\)=>\{state\.split=Number\(el\.split\.value\);canvasView\.requestDraw\(\);\}/, 'split-preview input must coalesce redraws through animation frames');
 assert.match(controls, /input\.oninput=\(\)=>\{updateCanonical\(index,input\.value\)/, 'range input must map displayed values back to canonical state continuously');
 assert.match(controls, /input\.onchange=\(\)=>scheduleRender\(\)/, 'range control must render only after the edit is committed');
@@ -82,3 +73,20 @@ assert.match(app, /el\.description\.value=next\.description/, 'applying imported
 assert.match(app, /description=String\(definition\.description\?\?''\)\.trim\(\)/, 'older filters must normalize a missing description to an empty string');
 
 console.log('UI wiring smoke checks passed.');
+
+assert.match(html,/id="browseFiltersBtn"[^>]+aria-haspopup="dialog"/);
+assert.match(html,/<select id="presetSelect"[^>]+aria-label="Filter"/);
+assert.ok(html.indexOf('class="filter-picker-row"')<html.indexOf('class="filter-meta"')&&html.indexOf('class="filter-meta"')<html.indexOf('class="preset-row"'));
+assert.match(app,/beforeApply:async definition=>/);
+assert.match(app,/writeLibraryRecord\(localStorage,normalizeCustomPresetList,filter,\{targetId,expected\}\)/);
+assert.match(app,/async function savePreset\(\)[\s\S]*?const filter=validatedCurrentFilter\(\);if\(!filter\)\{[\s\S]*?return false/);
+assert.match(app,/requestedOption=.*Array\.from\(el\.preset\.options\)/,'dropdown refresh checks whether a pending native selection is still valid');
+assert.match(app,/forceSelection\|\|!requestedOption\|\|requestedSelection===activeDocument\.key/,'generic header refreshes preserve a pending dropdown selection');
+assert.match(app,/updateDocumentHeader\(\{forceSelection:true\}\)/,'completed filter application restores the committed dropdown identity');
+assert.doesNotMatch(html,/id="tagSectionTitle"/,'the redundant tag-section heading is omitted');
+assert.doesNotMatch(app,/tagSectionTitle/,'tag rendering does not depend on the removed heading');
+const filterBrowser=fs.readFileSync('src/ui/filter-browser.js','utf8');
+assert.match(filterBrowser,/filterBrowserTitle/,'filter browser exposes a labelled title');
+assert.match(filterBrowser,/textContent='Filter search'/,'filter browser title is Filter search');
+assert.match(filterBrowser,/const sourceLabel[\s\S]*const authorLabel/,'filter results include source and author metadata');
+assert.match(css,/\.filter-browser \.result-tags button\{min-height:0;/,'filter tags use compact buttons');

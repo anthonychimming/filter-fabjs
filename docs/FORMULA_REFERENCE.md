@@ -1,6 +1,6 @@
 # Filter FabJS Formula Reference
 
-**Applies to Filter FabJS v2.6.7 · native filter format v2 · typed IR v1**
+**Applies to Filter FabJS v2.7.0 · native filter format v2 · typed IR v1**
 
 This is the compact, implementation-oriented reference for writing Filter FabJS formulas. For worked explanations and tutorials, see the [Filter FabJS Programming Guide (PDF)](Filter_FabJS_Programming_Guide_v2.4.7.pdf). For analytic mask details, see [ANALYTIC_SHAPES.md](ANALYTIC_SHAPES.md).
 
@@ -449,3 +449,9 @@ Missing control entries are filled to ten controls with value `128`, so existing
 - Preserve alpha with `a` unless the filter intentionally changes transparency.
 - Prefer deterministic `hash2()`/noise functions over `rnd()` for GPU-compatible filters.
 - Use `X`, `Y`, and `min(X,Y)` instead of hard-coding image dimensions.
+
+## Filter library metadata (v2.7.0)
+
+Native JSON v2 accepts optional `id` (1–80 ASCII letters, digits, underscores or hyphens) and `tags` (at most 20 strings, each 1–32 Unicode code points). Tags normalize NFC, outer/repeated whitespace, and case-insensitive identity; punctuation and accents remain meaningful. Control/format characters are rejected. Missing tags normalize to an empty array. Invalid IDs/tags fail before editor mutation. Favorites are local preferences and never exported.
+
+IDs and tags round-trip in v2.7.0. Earlier v2.6.7 readers still accept the known rendering fields but discard these new fields on re-export. Built-in export allocates a portable custom ID and includes supplied plus personal tags; exporting does not save a library record. See [Filter library](FILTER_LIBRARY.md) for identity and storage behavior.

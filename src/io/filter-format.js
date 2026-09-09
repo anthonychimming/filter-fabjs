@@ -3,6 +3,7 @@
  * Modular source extracted from v2.0.7; modular architecture v2.1.0.
  * Licensed GPL-2.0-or-later. See LICENSE and README.md.
  */
+import { normalizeTags, validatePortableId } from '../core/filter-metadata.js';
 import { clamp } from '../core/utils.js';
 import { CONTROL_COUNT, CONTROL_DEFINITIONS, cloneControlUI, normalizeControlUI } from '../core/controls.js';
 import { FORMULA_LIMITS, Parser } from '../core/formula-language.js';
@@ -56,7 +57,7 @@ export function validateNativeFilter(data){
   if(!Number.isInteger(data.version)||![1,2].includes(data.version))throw new Error('Native filter version must be 1 or 2');
   if(data.mathMode!==undefined&&!['float','legacy'].includes(data.mathMode))throw new Error('Native filter mathMode must be “float” or “legacy”');
   const formulas=validatedFormulas(Array.isArray(data.formulas)?data.formulas:data.f);
-  const result={format:'filter-fab-js',version:data.version,mathMode:data.mathMode??(data.version===1?'legacy':'float'),name:boundedString(data.name,'name',120,'Untitled Filter'),description:boundedString(data.description,'description',FILTER_DESCRIPTION_MAX_LENGTH),author:boundedString(data.author,'author',120),formulas:formulas.normalized,controls:normalizeNativeControls(data)};
+  const result={format:'filter-fab-js',version:data.version,...(data.id===undefined?{}:{id:validatePortableId(data.id)}),tags:normalizeTags(data.tags),mathMode:data.mathMode??(data.version===1?'legacy':'float'),name:boundedString(data.name,'name',120,'Untitled Filter'),description:boundedString(data.description,'description',FILTER_DESCRIPTION_MAX_LENGTH),author:boundedString(data.author,'author',120),formulas:formulas.normalized,controls:normalizeNativeControls(data)};
   validatedFormulaAsts.set(result,formulas.asts);return result;
 }
 export function cleanAFSFormula(group){

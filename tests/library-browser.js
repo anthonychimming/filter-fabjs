@@ -1,0 +1,95 @@
+import { catalogEntry } from '../src/app/filter-catalog.js';
+import { createFilterBrowser } from '../src/ui/filter-browser.js';
+const output=document.querySelector('#results');
+function assert(value,message){if(!value)throw new Error(message);output.textContent+=`PASS ${message}\n`;}
+async function until(test){await new Promise(resolve=>setTimeout(resolve,30));for(let i=0;i<300;i++){if(test())return;await new Promise(resolve=>setTimeout(resolve,30));}throw new Error('Timed out waiting for UI');}
+const portable={format:'filter-fab-js',version:2,id:'test-existing',name:'Test Saved',description:'portrait',tags:['Retro'],formulas:['r','g','b','a']};
+async function run(url){
+  output.textContent='';const keys=Object.keys(localStorage).filter(key=>key==='ffw-custom-presets'||key.startsWith('ffw-entry-v1:')),backup=new Map(keys.map(key=>[key,localStorage.getItem(key)]));let frame;
+  try{
+    for(const key of keys)localStorage.removeItem(key);
+    localStorage.setItem('ffw-custom-presets',JSON.stringify([portable,null,{unknown:'retain'},{...portable,id:'broken',name:'Broken',formulas:['r+','g','b','a']}]));
+    frame=document.createElement('iframe');frame.src=url;document.querySelector('#fixture').replaceChildren(frame);await new Promise(resolve=>frame.onload=resolve);
+    const win=frame.contentWindow,doc=frame.contentDocument,$=selector=>doc.querySelector(selector),clickText=text=>{const buttons=[...doc.querySelectorAll('dialog[open] button')];const button=buttons.reverse().find(node=>node.textContent===text);if(!button)throw new Error(`Missing action: ${text}`);button.click();},input=(selector,value)=>{const node=$(selector);node.value=value;node.dispatchEvent(new win.Event('input',{bubbles:true}));},ready=()=>!doc.body.classList.contains('ui-locked');
+    await until(()=>win.FilterFabJS&&ready());
+    async function selectPreset(key){
+      // Finish the preceding editor interaction before beginning the selection.
+      await Promise.resolve();
+      const select=$('#presetSelect');select.value=key;
+      select.dispatchEvent(new win.Event('input',{bubbles:true}));
+      // Native select input can finish a task before change is dispatched.
+      await Promise.resolve();
+      assert(select.value===key,'input event preserves the requested dropdown selection until change');
+      select.dispatchEvent(new win.Event('change',{bubbles:true}));
+    }
+    assert($('#presetSelect').value==='builtin:pass','dropdown starts at the loaded built-in ID');
+    input('#filterName','Dropdown draft');await selectPreset('builtin:duotone');await until(()=>$('.filter-choice[open]'));clickText('Cancel');await until(()=>!$('.filter-choice[open]'));assert($('#presetSelect').value==='builtin:pass'&&$('#filterName').value==='Dropdown draft','cancelled dropdown selection retains identity and draft');
+    await selectPreset('builtin:duotone');await until(()=>$('.filter-choice[open]'));clickText('Discard changes');await until(()=>$('#presetSelect').value==='builtin:duotone'&&ready());assert($('#filterName').value==='Duotone','dropdown loads through the validated filter path');
+    await selectPreset('builtin:pass');await until(()=>$('#presetSelect').value==='builtin:pass'&&ready());
+    const observedBackend=win.FilterFabJS.getRendererDiagnostics()?.rendererId;
+    const initialProgram=JSON.stringify(win.FilterFabJS.getLastProgram()),canvas=$('#displayCanvas'),pixels=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;
+    input('#newTag','  Test   Tag  ');$('#addTagBtn').click();assert($('#savedDocumentStatus').textContent==='Saved','built-in personal tags do not dirty the document');
+    const exported=[],originalURL=win.URL.createObjectURL,originalClick=win.HTMLAnchorElement.prototype.click;win.URL.createObjectURL=blob=>{exported.push(blob);return originalURL.call(win.URL,blob);};win.HTMLAnchorElement.prototype.click=function(){};
+    $('#exportFilterBtn').click();$('#exportFilterBtn').click();const firstExport=JSON.parse(await exported[0].text()),secondExport=JSON.parse(await exported[1].text());assert(firstExport.id===secondExport.id&&firstExport.id,'exports retain a portable custom ID');assert(firstExport.tags.includes('Test Tag')&&firstExport.tags.includes('Utility'),'built-in export includes supplied and personal tags');assert(!('favorite' in firstExport),'favorites are not exported');assert($('#savedDocumentStatus').textContent==='Saved','export does not alter saved status');win.URL.createObjectURL=originalURL;win.HTMLAnchorElement.prototype.click=originalClick;
+    input('#formulaR','r+1');await new Promise(resolve=>setTimeout(resolve,300));
+    $('#browseFiltersBtn').click();input('[data-search]','Test Saved');$('.filter-results [data-entry-action="favorite"]').focus();$('.filter-results [data-entry-action="favorite"]').click();assert($('#formulaR').value==='r+1','starring preserves a dirty formula');
+    assert(JSON.stringify(win.FilterFabJS.getLastProgram())===initialProgram,'organization preserves compiled program');
+    const afterPixels=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;assert(pixels.every((value,index)=>value===afterPixels[index]),'organization preserves preview pixels');
+    $('[data-favorites]').checked=true;$('[data-favorites]').dispatchEvent(new win.Event('change'));$('.filter-results [data-entry-action="favorite"]').focus();$('.filter-results [data-entry-action="favorite"]').click();assert($('.filter-results').textContent.includes('No favorites yet'),'unstar last favorite shows empty state');assert(doc.activeElement.textContent==='Show all filters','empty favorite state receives focus');
+    clickText('Reset view');input('[data-search]','Broken');$('.filter-results [data-entry-action="load"]').click();await until(()=>$('[data-error]').textContent.includes('Could not load'));assert($('#formulaR').value==='r+1','invalid load leaves editor intact');
+    input('[data-search]','Test Saved');$('.filter-results [data-entry-action="load"]').click();await until(()=>$('.filter-choice[open]'));clickText('Cancel');await until(()=>!$('.filter-choice[open]'));assert($('#formulaR').value==='r+1','cancel replacement preserves draft');
+    $('.filter-results [data-entry-action="favorite"]').click();$('.filter-results [data-entry-action="load"]').click();await until(()=>$('.filter-choice[open]'));clickText('Discard changes');await until(()=>!$('.filter-browser[open]')&&ready());
+    input('#filterName','Renamed Test');$('#savePresetBtn').click();await until(()=>$('.filter-choice[open]'));clickText('Update this filter');await until(()=>!$('.filter-choice[open]'));
+    let stored=JSON.parse(localStorage.getItem('ffw-custom-presets'));assert(stored.find(item=>item?.id==='test-existing').name==='Renamed Test','rename updates the same ID');assert(JSON.parse(localStorage.getItem('ffw-entry-v1:custom:test-existing')).favorite,'rename preserves favorites');assert(stored.some(item=>item?.unknown==='retain')&&stored.includes(null),'saving preserves malformed raw records');
+    input('#newTag','Custom tag');$('#addTagBtn').click();$('#savePresetBtn').click();await until(()=>$('.filter-choice[open]'));clickText('Save as new filter');await until(()=>!$('.filter-choice[open]'));
+    stored=JSON.parse(localStorage.getItem('ffw-custom-presets'));const copy=stored.find(item=>item?.id!=='test-existing'&&item?.name==='Renamed Test');assert(copy&&copy.tags.includes('Custom tag'),'copy has a new ID and document tags');assert(!localStorage.getItem(`ffw-entry-v1:custom:${copy.id}`),'copy starts without favorites');
+    // Ordinary external edit: storage event must not replace the draft.
+    input('#filterName','My draft');const changed=stored.map(item=>item?.id===copy.id?{...item,name:'Other tab'}:item);localStorage.setItem('ffw-custom-presets',JSON.stringify(changed));win.dispatchEvent(new win.StorageEvent('storage',{key:'ffw-custom-presets'}));assert($('#filterName').value==='My draft','storage refresh preserves draft');
+    $('#savePresetBtn').click();await until(()=>$('.filter-choice[open]'));clickText('Update this filter');await until(()=>$('.filter-choice h2')?.textContent.includes('another tab'));clickText('Cancel');await until(()=>!$('.filter-choice[open]'));assert(JSON.parse(localStorage.getItem('ffw-custom-presets')).find(item=>item?.id===copy.id).name==='Other tab','cancel conflict protects external edit');
+    // Import remains unsaved; malformed tags must not mutate the editor.
+    async function importData(data){const transfer=new win.DataTransfer();transfer.items.add(new win.File([JSON.stringify(data)],'test.json',{type:'application/json'}));$('#filterInput').files=transfer.files;$('#filterInput').dispatchEvent(new win.Event('change'));}
+    await importData({...portable,tags:[5]});await new Promise(resolve=>setTimeout(resolve,100));assert($('#filterName').value==='My draft','invalid import fails before replacement');
+    await importData({...portable,id:'incoming',name:'Incoming'});await until(()=>$('.filter-choice[open]'));clickText('Discard changes');await until(()=>$('#filterName').value==='Incoming'&&ready());assert($('#savedDocumentStatus').textContent==='Imported · not saved','import displays explicit unsaved identity');assert($('#presetSelect').value===''&&$('#presetSelect').selectedOptions[0].textContent.includes('Incoming'),'dropdown represents imported drafts without a false saved selection');assert(!JSON.parse(localStorage.getItem('ffw-custom-presets')).some(item=>item?.id==='incoming'),'import does not add a library record');
+    $('#resetBtn').click();await until(()=>$('.filter-choice[open]'));clickText('Cancel');await until(()=>!$('.filter-choice[open]'));assert($('#filterName').value==='Incoming','unmodified imported draft receives replacement protection');
+    // Quota failure in the application's realm must not mark a draft saved.
+    const originalSet=win.Storage.prototype.setItem;win.Storage.prototype.setItem=function(){throw new Error('Test quota exceeded');};
+    $('#savePresetBtn').click();await until(()=>$('.filter-choice[open]'));clickText('Save as new filter');await until(()=>$('.filter-choice h2')?.textContent==='Could not save filter');clickText('Keep editing');win.Storage.prototype.setItem=originalSet;assert($('#savedDocumentStatus').textContent==='Imported · not saved','failed save retains unsaved identity');
+    // Reimport equality and changed-ID decisions use portable content, never names.
+    const savedRecord=JSON.parse(localStorage.getItem('ffw-custom-presets')).find(item=>item?.id==='test-existing');await importData(savedRecord);await until(()=>$('.filter-choice[open]'));clickText('Discard changes');await until(()=>$('#filterName').value===savedRecord.name&&ready());$('#savePresetBtn').click();await until(()=>$('.filter-choice[open]'));clickText('Save as new filter');await until(()=>$('.filter-choice h2')?.textContent==='Already saved');clickText('Use saved record');await until(()=>!$('.filter-choice[open]'));assert($('#savedDocumentStatus').textContent==='Saved','equal imported ID offers existing record without duplicating');
+    await importData({...savedRecord,description:'Changed incoming content'});await until(()=>$('#savedDocumentStatus').textContent==='Imported · not saved'&&ready());$('#savePresetBtn').click();await until(()=>$('.filter-choice[open]'));clickText('Save as new filter');await until(()=>$('.filter-choice h2')?.textContent==='An existing filter has this ID.');clickText('Update existing');await until(()=>!$('.filter-choice[open]'));assert(JSON.parse(localStorage.getItem('ffw-custom-presets')).find(item=>item?.id==='test-existing').description==='Changed incoming content','changed imported ID updates only after explicit decision');
+    input('#filterName','Keep deleted draft');$('#deletePresetBtn').click();await until(()=>$('.filter-choice[open]'));clickText('Delete and keep unsaved draft');await until(()=>!$('.filter-choice[open]'));assert($('#filterName').value==='Keep deleted draft'&&$('#savedDocumentStatus').textContent==='Not saved','delete can keep a dirty draft');assert(!JSON.parse(localStorage.getItem('ffw-custom-presets')).some(item=>item?.id==='test-existing'),'delete targets the loaded ID');assert(!localStorage.getItem('ffw-entry-v1:custom:test-existing'),'delete cleans only its own preferences');
+    // Invalid formulas block Save and continue, but leave explicit discard available.
+    input('#formulaR','r+');$('#resetBtn').click();await until(()=>$('.filter-choice[open]'));clickText('Save and continue');await until(()=>$('.filter-choice h2')?.textContent==='Could not save filter');clickText('Keep editing');await until(()=>!$('.filter-choice[open]'));assert($('#formulaR').value==='r+'&&$('#filterName').value==='Keep deleted draft','failed Save and continue blocks replacement');
+    output.textContent+=`Backend observed: ${observedBackend}\n`;
+    // Measure actual bounded DOM construction after catalog projection.
+    const launcher=document.createElement('button');launcher.textContent='Performance fixture';document.body.append(launcher);
+    const entries=Array.from({length:1000},(_,i)=>catalogEntry({...portable,id:`perf-${i}`,name:`Filter ${i}`,description:`Portrait ${i%10}`},'custom',{favorite:false,tags:[]}));
+    const browser=createFilterBrowser({launcher,getEntries:()=>entries,load:()=>false,toggleFavorite:()=>{},onError:error=>{throw error;}}),start=performance.now();launcher.click();browser.dialog.getBoundingClientRect();const opening=performance.now()-start,times=[];
+    for(let i=0;i<30;i++){const field=browser.dialog.querySelector('[data-search]'),before=performance.now();field.value=`portrait ${i%10}`;field.dispatchEvent(new Event('input'));browser.dialog.querySelector('.filter-results').getBoundingClientRect();times.push(performance.now()-before);}
+    const search=browser.dialog.querySelector('[data-search]'),source=browser.dialog.querySelector('[data-source]'),favorites=browser.dialog.querySelector('[data-favorites]');
+    search.value='Filter 1';source.value='custom';search.dispatchEvent(new Event('input'));
+    assert(!browser.dialog.querySelector('.filter-results details'),'results have no Details dropdown');
+    assert(browser.dialog.querySelector('.result-meta')?.textContent.includes('Author not specified'),'result rows include source and author metadata');
+    const tagButton=browser.dialog.querySelector('.result-tags button');assert(tagButton?.textContent==='Retro','result tags are separate labeled buttons');
+    // Set an incompatible favorite restriction without refreshing to verify that a tag click clears it.
+    favorites.checked=true;tagButton.focus();tagButton.click();
+    assert(search.value===''&&source.value==='all'&&!favorites.checked,'tag browsing clears other restrictions');
+    assert(browser.dialog.querySelector('[data-selected]').textContent.includes('Retro'),'clicked tag becomes the visible selection');
+    assert(document.activeElement===browser.dialog.querySelector('[data-selected] button'),'tag browsing restores focus to the selected-tag control');
+    assert(browser.dialog.querySelector('[data-page]').textContent==='Page 1 of 20','tag browsing includes all 1000 matching filters from page one');
+    assert(browser.dialog.querySelectorAll('.filter-results li').length<=50,'1000-entry catalog renders at most 50 rows');times.sort((a,b)=>a-b);output.textContent+=`1000 entries: opening ${opening.toFixed(1)} ms; p95 query + DOM/layout ${times[Math.ceil(times.length*.95)-1].toFixed(1)} ms. ${navigator.userAgent}\n`;browser.dialog.close();browser.dialog.remove();launcher.remove();
+    output.textContent+='ALL WORKFLOWS PASSED\n';
+  }catch(error){output.textContent+=`FAIL ${error.stack}\n`;}
+  finally{for(const key of Object.keys(localStorage).filter(key=>key==='ffw-custom-presets'||key.startsWith('ffw-entry-v1:')))localStorage.removeItem(key);for(const [key,value] of backup)localStorage.setItem(key,value);}
+}
+document.querySelector('#run').onclick=()=>run('../index.html');document.querySelector('#standalone').onclick=()=>run('../dist/filter-fabjs-v2.7.0.html');
+
+async function inspectLayout(width,height){
+  const frame=document.createElement('iframe');frame.style.width=`${width}px`;frame.style.height=`${height}px`;frame.src='../index.html';document.querySelector('#fixture').replaceChildren(frame);await new Promise(resolve=>frame.onload=resolve);
+  const doc=frame.contentDocument;await until(()=>frame.contentWindow.FilterFabJS&&!doc.body.classList.contains('ui-locked'));doc.querySelector('#browseFiltersBtn').click();
+  output.textContent=`Layout viewport ${doc.documentElement.clientWidth} × ${doc.documentElement.clientHeight} CSS px\n`;
+  const dialog=doc.querySelector('.filter-browser'),bounds=dialog.getBoundingClientRect();assert(bounds.left>=0&&bounds.right<=width&&bounds.top>=0&&bounds.bottom<=height,'dialog remains inside viewport');
+  for(const selector of ['[data-close]','[data-search]','[data-reset]','.filter-results','.browser-pages']){dialog.querySelector(selector).scrollIntoView({block:'nearest'});const box=dialog.querySelector(selector).getBoundingClientRect();assert(box.top>=bounds.top&&box.bottom<=bounds.bottom,`${selector} remains reachable`);}
+}
+document.querySelector('#narrow').onclick=()=>inspectLayout(320,800).catch(error=>output.textContent+=`FAIL ${error.message}`);
+document.querySelector('#zoom').onclick=()=>inspectLayout(640,360).catch(error=>output.textContent+=`FAIL ${error.message}`);
