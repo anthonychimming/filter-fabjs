@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.7.1
+
+- Added nine exported native-v2 filters as built-ins: C64 Multicolor Bitmap, Difference Clouds, Linear Prism Echo, LomoChrome Purple XR, Pop Print Quad, Spectral Tear Glitch, Teal Lime Modular Weave, Touching Random Capsules, and VHS Tracking Glitch. Their formulas, controls, descriptions, authors, and tags are preserved; stable built-in IDs replace their portable export IDs.
+- Documented the accepted large-image CPU work-budget limitation for seven of the contributed filters while preserving WebGPU compatibility and smaller-image CPU execution.
+- Removed the unsaved-changes warning shown when switching filters, loading a search result, importing a filter, or resetting. These actions now replace the current draft immediately; save decisions and deletion confirmations remain unchanged.
+- Removed the Cellular Edges, Channel Split Glitch, Directional Echo, Midnight Tartan, and Mirror Horizontal built-in filters. The remaining 26 built-ins retain their existing IDs, formulas, metadata, WebGPU compatibility, and custom-filter behavior.
+- Added regression coverage for the exact built-in count, unique remaining identities, and absence of both the legacy IDs and display names for all five removed filters.
+- Updated the application version, interface copy, documentation, browser workflow target, and standalone build filename to v2.7.1.
+
 ## 2.7.0
 
 - Fixed native dropdown input/change ordering so sidebar status updates cannot reset a requested filter before it loads; regression coverage now includes the input event and its microtask checkpoint.

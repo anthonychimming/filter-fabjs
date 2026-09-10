@@ -11,6 +11,7 @@ const order = [
   'src/core/formula-language.js',
   'src/core/chroma.js',
   'src/core/ir.js',
+  'src/presets/contributed-builtins.js',
   'src/presets/builtins.js',
   'src/renderers/cpu-worker-source.js',
   'src/gpu/params-layout.js',

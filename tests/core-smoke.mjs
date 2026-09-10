@@ -22,7 +22,7 @@ for (const preset of presets) {
   else cpuFallback += 1;
 }
 
-assert.equal(presets.length, 31);
+assert.equal(presets.length, 35, 'v2.7.1 must expose the revised built-in catalog size');
 assert.equal(gpuCompatible, presets.length, 'every native built-in must compile for WebGPU after Phase 3.5');
 assert.equal(cpuFallback, 0, 'native built-ins must not require CPU fallback');
 assert.equal(gpuCompatible + cpuFallback, presets.length);
@@ -141,10 +141,37 @@ const sierpinskiProgram=compileFilterProgram(sierpinskiPreset.f.map(formula=>new
 assert.ok(sierpinskiProgram.metadata.functions.includes('sierpinski'), 'Sierpiński fractal preset must use the self-similar mask');
 assert.doesNotThrow(()=>WGSLCompiler.compile(sierpinskiProgram), 'Sierpiński fractal preset must generate valid WGSL source');
 
-const tartanPreset=presets.find(preset=>preset.id==='midnighttartan');
-assert.ok(tartanPreset, 'Midnight Tartan preset must be present');
-const tartanProgram=compileFilterProgram(tartanPreset.f.map(formula=>new Parser(formula).parse()));
-for(const name of ['grid','checker'])assert.ok(tartanProgram.metadata.functions.includes(name), `Midnight Tartan must use ${name}()`);
-assert.doesNotThrow(()=>WGSLCompiler.compile(tartanProgram), 'Midnight Tartan must generate valid WGSL source');
+const removedBuiltins=new Map([
+  ['cellular','Cellular Edges'],
+  ['channelglitch','Channel Split Glitch'],
+  ['directionalecho','Directional Echo'],
+  ['midnighttartan','Midnight Tartan'],
+  ['mirrorx','Mirror Horizontal']
+]);
+const contributedBuiltins=new Map([
+  ['c64multicolorbitmap','C64 Multicolor Bitmap'],
+  ['differenceclouds','Difference Clouds'],
+  ['linearprismecho','Linear Prism Echo'],
+  ['lomochromepurplexr','LomoChrome Purple XR'],
+  ['popprintquad','Pop Print Quad'],
+  ['spectraltearglitch','Spectral Tear Glitch'],
+  ['teallimemodularweave','Teal Lime Modular Weave'],
+  ['touchingrandomcapsules','Touching Random Capsules'],
+  ['vhstrackingglitch','VHS Tracking Glitch']
+]);
+assert.equal(presets.length,35,'v2.7.1 must expose 26 retained plus nine contributed built-in filters');
+assert.equal(new Set(presets.map(preset=>preset.id)).size,presets.length,'remaining built-in IDs must stay unique');
+assert.equal(new Set(presets.map(preset=>preset.name)).size,presets.length,'remaining built-in names must stay unique');
+for(const [id,name] of contributedBuiltins){
+  const preset=presets.find(item=>item.id===id);
+  assert.equal(preset?.name,name,`${name} must retain its assigned built-in identity`);
+  assert.equal(preset.controls.length,CONTROL_COUNT,`${name} must preserve all ten exported control definitions`);
+  assert.ok(preset.description.trim(),`${name} must preserve its exported description`);
+  assert.ok(preset.tags.length>=3,`${name} must preserve its exported searchable tags`);
+}
+for(const [id,name] of removedBuiltins){
+  assert.equal(presets.some(preset=>preset.id===id),false,`${name} legacy ID must be absent`);
+  assert.equal(presets.some(preset=>preset.name===name),false,`${name} must be absent from the built-in catalog`);
+}
 
 console.log(`Core smoke: ${presets.length} presets, ${gpuCompatible} GPU-compatible, ${cpuFallback} CPU fallback.`);

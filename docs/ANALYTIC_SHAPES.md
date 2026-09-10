@@ -68,4 +68,4 @@ sdfFill(
 
 Domain warping remains ordinary coordinate composition. For example, pass noise-offset `x` and `y` expressions into an SDF primitive before composing the field. The built-in **Warped SDF Bloom** demonstrates this without adding loops, mutable state, intermediate textures, or another execution model.
 
-The built-in **Analytic Shape Sampler** presents the six mask primitives as a clean reference sheet. **Sierpiński Fractal** uses `sierpinski()` for genuine repeated structure. **Midnight Tartan** layers repeated `grid()` masks, checker modulation, and rotated coordinates to produce adjustable bands, pinstripes, and diagonal weave. **Warped SDF Bloom** demonstrates composited distance fields with deterministic coordinate warping. All four remain stateless and GPU-compatible.
+The built-in **Analytic Shape Sampler** presents the six mask primitives as a clean reference sheet. **Sierpiński Fractal** uses `sierpinski()` for genuine repeated structure. **Warped SDF Bloom** demonstrates composited distance fields with deterministic coordinate warping. All three remain stateless and GPU-compatible.

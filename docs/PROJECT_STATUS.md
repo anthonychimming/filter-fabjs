@@ -4,7 +4,7 @@ This document describes the implementation currently present in the public repos
 
 ## Release
 
-- Application version: **2.7.0**
+- Application version: **2.7.1**
 - Native filter format: **version 2**
 - Typed IR: **version 1**
 - Development layout: native ES modules
@@ -47,7 +47,9 @@ The current formula engine includes:
 
 ## WebGPU compatibility
 
-The WebGPU backend supports the deterministic stateless formula language, including ten controls; normalized and centered coordinates; radius, angle, repeat, mirror-repeat, and scalar palette-ramp helpers; hash, value, Perlin, Worley, FBM, turbulence, ridged and periodic noise; bounded Mandelbrot and Julia fields; procedural patterns; analytic shape, signed-distance composition, and Sierpiński masks; polar sampling; and fixed 3×3 convolution. All 31 native built-in filters are WebGPU-compatible. Mandelbrot Atlas, Layered Noise Benchmark, and Warped SDF Bloom are grouped as deterministic performance workloads for manual like-for-like CPU/WebGPU timing comparisons.
+The WebGPU backend supports the deterministic stateless formula language, including ten controls; normalized and centered coordinates; radius, angle, repeat, mirror-repeat, and scalar palette-ramp helpers; hash, value, Perlin, Worley, FBM, turbulence, ridged and periodic noise; bounded Mandelbrot and Julia fields; procedural patterns; analytic shape, signed-distance composition, and Sierpiński masks; polar sampling; and fixed 3×3 convolution. All 35 native built-in filters are WebGPU-compatible. Mandelbrot Atlas, Layered Noise Benchmark, and Warped SDF Bloom are grouped as deterministic performance workloads for manual like-for-like CPU/WebGPU timing comparisons.
+
+Seven contributed built-ins preserve their exported formula programs even though those programs can exceed the `3,000,000,000` CPU work-unit limit on sufficiently large images: C64 Multicolor Bitmap, Linear Prism Echo, Pop Print Quad, Spectral Tear Glitch, Teal Lime Modular Weave, Touching Random Capsules, and VHS Tracking Glitch. The limit depends on total pixel count and program cost. These filters remain available to the CPU backend for smaller images; on a large image without usable WebGPU, the render fails closed with the existing work-budget error.
 
 Sequential random-state functions (`rnd()` and `rst()`), shared cell operations (`get()` and `put()`), bitwise/shift/comma expressions, direct `pow()` formulas, and legacy integer compatibility remain CPU-only by design.
 
@@ -58,8 +60,8 @@ Compatibility is analyzed from typed IR before a render is dispatched.
 Current workflows include:
 
 - Strictly validated and normalized Filter FabJS native JSON v1/v2 import plus version 2 export.
-- Additive rich-control `ui` metadata preserved through native import/export, browser-local presets, switching, save, and reset. All 31 built-ins provide semantic display ranges and widgets for their active controls; missing metadata and historic AFS controls receive the generic 0–255 slider presentation.
-- Optional multiline filter descriptions, bounded to 2,000 characters and preserved through all 31 built-ins, native import/export, and browser-local presets; missing descriptions normalize to an empty string.
+- Additive rich-control `ui` metadata preserved through native import/export, browser-local presets, switching, save, and reset. All 35 built-ins provide semantic display ranges and widgets for their active controls; missing metadata and historic AFS controls receive the generic 0–255 slider presentation.
+- Optional multiline filter descriptions, bounded to 2,000 characters and preserved through all 35 built-ins, native import/export, and browser-local presets; missing descriptions normalize to an empty string.
 - Historic `.afs` import with legacy integer math, eight whole-token integer controls with legacy 0–255 clamping, exactly four formula groups, preserved physical line-comment boundaries, and the same formula budgets.
 - Image loading and drag-and-drop.
 - Clipboard image paste.
@@ -111,8 +113,8 @@ For hardware parity, run `npm run dev` and open `http://localhost:8080/tests/web
 - CPU and GPU floating-point implementations may have small numerical differences.
 - Historic Filter Factory behavior is not guaranteed to be bit-exact for every edge case.
 - Clipboard interoperability depends on the browser and receiving application.
-- Display ranges are linear; logarithmic curves, enums, colour controls, grouping, conditional visibility, and control reordering are not part of v2.7.0.
+- Display ranges are linear; logarithmic curves, enums, colour controls, grouping, conditional visibility, and control reordering are not part of v2.7.1.
 
 ## Search and organization (2.7.0)
 
-The Filter search button beside the preset dropdown opens a temporary metadata browser with text search, source/favorite/tag restrictions, A–Z/relevance order, and 50-entry paging. All 31 built-ins carry curated tags. Custom tags are portable; favorites and built-in personal additions persist locally by stable namespaced ID. ID-based save/copy decisions, explicit imported drafts, replacement guards, source-baseline conflict checks, and failure feedback protect ordinary editing workflows. See [FILTER_LIBRARY.md](FILTER_LIBRARY.md) for the validation record and remaining limitations.
+The Filter search button beside the preset dropdown opens a temporary metadata browser with text search, source/favorite/tag restrictions, A–Z/relevance order, and 50-entry paging. All 35 built-ins carry curated tags. Custom tags are portable; favorites and built-in personal additions persist locally by stable namespaced ID. Filter selection, search-result loading, import, and reset replace the current draft immediately without an unsaved-changes warning. ID-based save/copy decisions, explicit imported drafts, source-baseline conflict checks, and failure feedback remain in place. See [FILTER_LIBRARY.md](FILTER_LIBRARY.md) for the validation record and remaining limitations.

@@ -144,15 +144,10 @@ export function initFilterFabApp(){
     const suggestions=$('#tagSuggestions');suggestions.replaceChildren();const all=[...new Set(catalog().flatMap(entry=>entry.tags))].filter(tag=>!tags.some(item=>tagKey(item)===tagKey(tag))).filter(tag=>tag.toLowerCase().includes($('#newTag').value.toLowerCase())).slice(0,50);for(const tag of all){const option=document.createElement('option');option.value=tag;suggestions.append(option);}
   }
   function commitTags(tags){try{const normalized=normalizeTags(tags);if(activeDocument.key?.startsWith('builtin:')){normalizeTags([...new Map([...activeDocument.tags,...normalized].map(tag=>[tagKey(tag),tag])).values()]);writeEntryPreference(localStorage,activeDocument.key,{tags:normalized});}else activeDocument.tags=normalized;$('#tagError').textContent='';catalogCache=null;refreshTags();populatePresets();return true;}catch(error){$('#tagError').textContent=error.message;return false;}}
-  async function guardReplacement(){
-    if(!isDirty())return true;
-    const {action}=await chooseFilterAction(`Save changes to ${$('#filterName').value||'Untitled Filter'}?`,[['save','Save and continue'],['discard','Discard changes'],['cancel','Cancel']]);
-    return action==='discard'||(action==='save'&&await savePreset());
-  }
   async function loadCatalogEntry(entry,focusTarget=el.searchFilters){
     const definition=entry.source==='builtin'?presets.find(item=>`builtin:${item.id}`===entry.key):findCustomPresetById(library().presets,entry.document.id);
     if(!definition)throw new Error('This filter was deleted in another tab.');
-    prepareFilter(definition);if(!await guardReplacement())return false;
+    prepareFilter(definition);
     applyFilter(definition,entry.key);if(state.isRendering)state.focusSnapshot={node:focusTarget};return true;
   }
   function currentFilter(){return{format:'filter-fab-js',version:2,...(activeDocument.id?{id:activeDocument.id}:{}),tags:effectiveTags(),mathMode:state.legacyMath?'legacy':'float',name:$('#filterName').value.trim().slice(0,120)||'Untitled Filter',description:el.description.value.trim().slice(0,FILTER_DESCRIPTION_MAX_LENGTH),author:$('#filterAuthor').value.trim().slice(0,120),formulas:el.formulas.map(field=>field.value.trim()),controls:state.controls.map((value,index)=>({label:String(state.labels[index]??'').slice(0,80)||`Control ${index+1}`,value,ui:cloneControlUI(state.controlUIs[index])}))};}
@@ -250,7 +245,7 @@ export function initFilterFabApp(){
       browser?.refresh();
     }catch(error){organizationError(error);}
   }
-  async function importFilterFile(file){if(!file)return;try{const result=await importLatestFilterFile(file,{state,cancelRender,applyFilter,beforeApply:async definition=>{prepareFilter(definition);return guardReplacement();}});if(!result)return;toast(result.kind==='afs'?'AFS filter imported · CPU legacy mode':'Filter FabJS project imported');}catch(error){console.error('Filter import failed',error);toast(`Import failed: ${error.message}`);}finally{el.filterInput.value='';}}
+  async function importFilterFile(file){if(!file)return;try{const result=await importLatestFilterFile(file,{state,cancelRender,applyFilter});if(!result)return;toast(result.kind==='afs'?'AFS filter imported · CPU legacy mode':'Filter FabJS project imported');}catch(error){console.error('Filter import failed',error);toast(`Import failed: ${error.message}`);}finally{el.filterInput.value='';}}
   async function savePreset(){
     const filter=validatedCurrentFilter();if(!filter){await chooseFilterAction('Could not save filter',[['cancel','Keep editing']],{detail:el.statusText.textContent});return false;}
     try{
@@ -292,7 +287,7 @@ export function initFilterFabApp(){
     $('#savePresetBtn').onclick=savePreset;
     el.deletePreset.onclick=deletePreset;
     el.renderBtn.onclick=()=>render({focusInvalid:true});
-    $('#resetBtn').onclick=async()=>{if(await guardReplacement())applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');};
+    $('#resetBtn').onclick=()=>applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');
     browser=createFilterBrowser({launcher:el.searchFilters,getEntries:catalog,load:loadCatalogEntry,toggleFavorite:entry=>{writeEntryPreference(localStorage,entry.key,{favorite:!entry.favorite});catalogCache=null;},onError:organizationError});
     populatePresets();
     el.preset.onchange=async()=>{
@@ -349,7 +344,7 @@ export function initFilterFabApp(){
     window.addEventListener('beforeunload',()=>state.rendererManager?.dispose());
   }
 
-  window.FilterFabJS=Object.freeze({version:'2.7.0',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getRendererPreference:()=>state.rendererPreference});
+  window.FilterFabJS=Object.freeze({version:'2.7.1',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getRendererPreference:()=>state.rendererPreference});
   controlsController.buildSliders();wire();const demo=demoImage();initImage(demo.data,demo.width,demo.height);applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');
   return{state,render,applyFilter,loadImageFile};
 }

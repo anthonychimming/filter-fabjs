@@ -117,11 +117,17 @@ const maximalFormula=Array(2048).fill('r').join('+'),maximalProgram=compileFilte
 assert.ok(estimateCpuProgramCost(maximalProgram)>MAX_CPU_RENDER_WORK/(1800*1800));
 assert.throws(()=>assertCpuRenderBudget(maximalProgram,1800,1800),error=>error?.name==='RenderBudgetError','maximal imported programs must be rejected before full-size CPU dispatch');
 assert.doesNotThrow(()=>assertCpuRenderBudget(maximalProgram,64,64),'the CPU budget must remain image-scaled for small previews');
+const largeImageCpuLimitedBuiltins=new Set(['c64multicolorbitmap','linearprismecho','popprintquad','spectraltearglitch','teallimemodularweave','touchingrandomcapsules','vhstrackingglitch']);
 for(const preset of presets){
-  const program=compileFilterProgram(preset.f.map(formula=>new Parser(formula).parse()));assert.doesNotThrow(()=>assertCpuRenderBudget(program,1800,1800),`built-in ${preset.id} must remain CPU-renderable at the maximum image size`);
+  const program=compileFilterProgram(preset.f.map(formula=>new Parser(formula).parse()));
+  if(largeImageCpuLimitedBuiltins.has(preset.id)){
+    assert.throws(()=>assertCpuRenderBudget(program,1800,1800),error=>error?.name==='RenderBudgetError',`documented large-image CPU limit for ${preset.id} must remain explicit`);
+    assert.doesNotThrow(()=>assertCpuRenderBudget(program,512,512),`CPU compatibility for ${preset.id} must remain available on smaller images`);
+  }else assert.doesNotThrow(()=>assertCpuRenderBudget(program,1800,1800),`built-in ${preset.id} must remain CPU-renderable at the maximum image size`);
   const defaults=defaultControlValues();preset.controls.forEach((control,index)=>defaults[index]=control.value);
   for(const controls of [defaults,defaults.map(()=>0),defaults.map(()=>255)])assert.equal((await render(preset.f,{controls})).length,16,`built-in ${preset.id} must render at default and control extremes`);
 }
+assert.equal([...largeImageCpuLimitedBuiltins].filter(id=>presets.some(preset=>preset.id===id)).length,largeImageCpuLimitedBuiltins.size,'every documented CPU-limited contributed built-in must be present');
 const firstCachedResult=await renderProgram(cachedProgram,'identity-program');
 const reusedCachedResult=await renderProgram(null,'identity-program',false);
 assert.deepEqual([...reusedCachedResult],[...firstCachedResult],'the worker must reuse a previously validated IR program when only its cache key is sent');

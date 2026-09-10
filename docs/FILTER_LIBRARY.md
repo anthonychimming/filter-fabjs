@@ -1,8 +1,8 @@
-# Filter library — v2.7.0
+# Filter library — v2.7.1
 
 The browser panel is titled **Filter search**.
 
-The Filter dropdown provides direct access to built-ins, benchmarks, and My Filters. The separate Filter search button beside it opens the temporary Filters dialog. Name and Author occupy row two; Save, Delete, Reset, and saved status occupy row three. Buttons use the compact heights from v2.6.7. Dropdown changes use the same validation and unsaved-replacement guard as search results; imported drafts have their own unsaved display option. Search matches stored names, descriptions, authors, and tags, never formula source or unsaved edits. Every whitespace-separated query term must match somewhere in the metadata. Matching ignores case and diacritics; tag identity preserves accents and punctuation. Relevance sorts exact names first, then name prefixes, all terms in the name, and other matches. Ties use name, source, and stable identity.
+The Filter dropdown provides direct access to built-ins, benchmarks, and My Filters. The separate Filter search button beside it opens the temporary Filters dialog. Name and Author occupy row two; Save, Delete, Reset, and saved status occupy row three. Buttons use the compact heights from v2.6.7. Dropdown and search-result selections validate the target and then replace the current editor contents immediately without an unsaved-changes warning; imported drafts have their own unsaved display option. Search matches stored names, descriptions, authors, and tags, never formula source or unsaved edits. Every whitespace-separated query term must match somewhere in the metadata. Matching ignores case and diacritics; tag identity preserves accents and punctuation. Relevance sorts exact names first, then name prefixes, all terms in the name, and other matches. Ties use name, source, and stable identity.
 
 Source, Favorites only, text, and selected tags combine with AND. Selected tags match all. Tag choices come from the source/favorite scope before text and tag restrictions. Reset view clears all criteria; Clear search clears only text. Each result shows its source and author metadata, followed by compact individual tag buttons instead of a Details dropdown. Clicking a result tag clears text, source, favorites, and previous tag restrictions, then shows all filters with that exact normalized tag from page 1. Every tag is available as a button; they wrap when needed. Results are paged at 50 entries. Search state lasts for the page session.
 
@@ -14,13 +14,13 @@ Custom filters and drafts have document tags below Description. Built-ins show r
 
 Exporting a built-in includes the union of supplied and personal tags. Personal additions therefore become visible portable metadata. Favorites never leave browser storage.
 
-## Identity and draft protection
+## Identity and drafts
 
 Existing `builtin:<id>` and `custom:<id>` identities are retained. A rename with Update preserves the ID, favorites, and creation timestamp. Save as new creates a fresh identity and starts without favorites. A matching name never selects an update target; a distinct name is suggested but not required.
 
 An import loads an unsaved draft and does not add a library record. Saving an imported portable ID offers Use saved record when normalized portable content is equal, or explicit Update existing / Save as new / Cancel when it differs. Missing IDs are allocated on Save or Export. An exported built-in/detached working copy retains its newly allocated portable ID for subsequent exports or first save. Export does not mark a draft saved.
 
-Saved state is separate from preview state. Changes to name, author, description, tags, math mode, formulas, control values, labels, or control presentation metadata participate in draft comparison. Rendering never clears unsaved changes. Load, Reset, and Import offer Save and continue / Discard changes / Cancel when replacing a dirty or imported draft. Invalid formulas and failed saves block Save and continue. Delete targets the loaded custom ID and can retain dirty content as a detached unsaved draft.
+Saved state is separate from preview state. Changes to name, author, description, tags, math mode, formulas, control values, labels, or control presentation metadata participate in draft comparison. Rendering never clears unsaved changes. Filter selection, search-result loading, Reset, and Import replace dirty or imported drafts immediately without a warning dialog. Invalid target filters fail validation before replacement. Delete targets the loaded custom ID and can retain dirty content as a detached unsaved draft.
 
 ## Persistence and compatibility
 
@@ -41,8 +41,8 @@ The normal dialog keeps controls above the scrolling results. At viewport height
 ## Validation record — September 9, 2026
 
 - `npm run verify`: passed syntax checks, all Node smoke suites, production build, and standalone/build-output validation.
-- All 31 built-ins still compile as GPU-compatible programs. Formula, IR, CPU, GPU, and manager implementation files are unchanged.
-- Browser workflow fixture: `tests/library-browser.html`. Modular and standalone workflows passed, including export identity/tag preservation, local-only favorites, no preview/program changes while organizing, focus after unfavoriting, invalid-load recovery, guarded replacement, ID-based rename/copy, malformed-record preservation, cross-tab conflict cancellation, unsaved imports, quota failures, duplicate-import decisions, dirty deletion retention, and invalid-formula Save-and-continue protection.
+- All 35 built-ins compile as GPU-compatible programs. Formula, IR, CPU, GPU, and manager implementation files are unchanged. Seven contributed filters retain formula programs that can exceed the CPU work budget on sufficiently large images; this accepted limitation is documented in `PROJECT_STATUS.md` and covered by explicit budget tests.
+- Browser workflow fixture: `tests/library-browser.html`. Modular and standalone workflows cover export identity/tag preservation, local-only favorites, no preview/program changes while organizing, focus after unfavoriting, invalid-load recovery, immediate filter/search/import/reset replacement without the retired warning dialog, ID-based rename/copy, malformed-record preservation, cross-tab conflict cancellation, unsaved imports, quota failures, duplicate-import decisions, and dirty deletion retention.
 - Native Enter/Escape and launcher focus restoration were checked. Layout checks passed at 318 × 798 CSS pixels (320-pixel iframe including borders) and 638 × 358 CSS pixels, approximating a 1280 × 720 desktop viewport at 200% zoom. The latter exposed a clipped result area; the short-height scrolling adaptation fixed it. Actual browser zoom, physical touch, and screen-reader speech were not independently tested.
 - Performance: Windows x64, Codex in-app browser reporting Chromium 152, 1,000 synthetic metadata entries, 30 queries, forced DOM layout, bounded 50-row results. Observed openings were approximately 11–23 ms and p95 query-plus-layout approximately 12–26 ms. These are local observations, not cross-device guarantees. Hardware model enumeration was denied by the environment; timing starts after catalog projection and does not measure cold storage loading.
 - Hardware CPU/WebGPU parity: **40/44 fixtures passed**. The same untouched v2.6.7 baseline produced identical failures:
@@ -56,4 +56,4 @@ The normal dialog keeps controls above the scrolling results. At viewport height
 
 These pre-existing numeric differences were not changed as part of search and organization. CPU fallback and compatibility smoke tests pass; this result does not claim universal hardware parity.
 
-The standalone HTML was tested over localhost. Direct `file://` navigation was blocked by the browser tool's URL policy; local-file opening remains a user test. The deliverable is `dist/filter-fabjs-v2.7.0.html`. Existing generated output was backed up under `tmp/search-tags-original-dist` before rebuilding. No commit, push, or deployment was performed.
+The standalone HTML is tested over localhost. Direct `file://` behavior can vary by browser security policy, so local-file opening remains a user test. The v2.7.1 deliverable is `dist/filter-fabjs-v2.7.1.html`. No commit, push, or deployment is performed by the release workflow.

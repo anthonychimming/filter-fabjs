@@ -1,4 +1,4 @@
-# Filter FabJS v2.7.0
+# Filter FabJS v2.7.1
 
 **A browser-based procedural image filter editor with WebGPU acceleration.**
 
@@ -8,7 +8,7 @@ Filter FabJS is an open-source, browser-native procedural RGBA image-processing 
 
 The engine combines four-channel RGBA formula authoring with WebGPU rendering and automatic CPU Worker fallback. Its procedural vocabulary includes image sampling, coordinate transforms, gradients, palette ramps, deterministic noise, fractals, analytic masks, signed-distance fields, convolution, and blend operations. Historic Filter Factory `.afs` filters remain supported through the legacy compatibility path.
 
-**Current stable release: v2.7.0**
+**Current stable release: v2.7.1**
 
 ## Features
 
@@ -23,12 +23,13 @@ The engine combines four-channel RGBA formula authoring with WebGPU rendering an
 - Fixed 3×3 convolution.
 - Auto / GPU / CPU renderer selection with live eligibility and fallback diagnostics.
 - Deterministic benchmark presets for CPU/WebGPU performance comparisons.
+- Thirty-five built-in filters with searchable descriptions and tags.
 - Native Filter FabJS JSON import/export plus historic Filter Factory `.afs` import.
 - Editable filter descriptions, searchable local presets, user tags, and favorites.
 - PNG loading/export, clipboard copy/paste, and alpha-aware preview.
 - Modular development source plus a standalone single-file release build.
 
-Filter FabJS v2.7.0 uses a typed, renderer-neutral intermediate representation, with the CPU and WebGPU renderers consuming the same semantic formula program.
+Filter FabJS v2.7.1 uses a typed, renderer-neutral intermediate representation, with the CPU and WebGPU renderers consuming the same semantic formula program.
 
 See [Project Status](docs/PROJECT_STATUS.md) for implementation details, compatibility notes, and current boundaries.
 
@@ -43,6 +44,8 @@ npm run dev
 Open `http://localhost:8080`.
 
 WebGPU and Clipboard APIs normally require HTTPS or `localhost`, so opening `index.html` directly is not the supported development path.
+
+Seven formula-heavy contributed built-ins—C64 Multicolor Bitmap, Linear Prism Echo, Pop Print Quad, Spectral Tear Glitch, Teal Lime Modular Weave, Touching Random Capsules, and VHS Tracking Glitch—can exceed the bounded CPU work budget on sufficiently large images. They remain WebGPU-compatible and can run through the CPU backend at smaller image sizes.
 
 ## Verify and build
 
@@ -61,7 +64,7 @@ npm run build
 Build output:
 
 - `dist/site/` — deployable static site.
-- `dist/filter-fabjs-v2.7.0.html` — standalone single-file distribution.
+- `dist/filter-fabjs-v2.7.1.html` — standalone single-file distribution.
 
 The build uses Node.js and has no package dependencies.
 

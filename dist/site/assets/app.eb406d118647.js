@@ -379,12 +379,1279 @@ function compileFilterProgram(astList,{legacyMath=false}={}){
 }
 
 
+/* src/presets/contributed-builtins.js */
+/**
+ * Filter FabJS contributed built-in filters.
+ * Licensed GPL-2.0-or-later. See LICENSE and README.md.
+ */
+const contributedPresetDefinitions=[
+  {
+    "id": "c64multicolorbitmap",
+    "name": "C64 Multicolor Bitmap",
+    "description": "Approximation of Commodore 64 VIC-II Multicolor Bitmap Mode. Uses a 160x200 logical raster and a 40x25 cell grid. Every 4x8 logical-pixel cell is restricted to black plus one three-colour VIC-II bank selected from the cell's source colour. Logical-pixel luminance selects one of those four colours. Uses Colodore-style VIC-II RGB values. Tone changes conversion brightness, Dither adds logical-pixel checker dithering, and Chroma Threshold controls when a cell uses the neutral grey bank.",
+    "author": "",
+    "tags": [
+      "Retro",
+      "Pixelate",
+      "Color",
+      "Dither"
+    ],
+    "controls": [
+      {
+        "label": "Tone",
+        "value": 123.515625,
+        "ui": {
+          "widget": "slider",
+          "displayMin": -64,
+          "displayMax": 64,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Dither",
+        "value": 54.64285714285714,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 28,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Chroma Threshold",
+        "value": 137.0625,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 10,
+          "displayMax": 90,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 4",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 5",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 6",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 7",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 8",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 9",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 10",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      }
+    ],
+    "f": [
+      "((max(max(src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,0),src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,1)),src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,2))-min(min(src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,0),src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,1)),src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,2))<val(2,10,90))?gradient4(min(3,floor(clamp(((src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,0)+2*src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,1)+src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,2))/4+val(0,-64,64)+(checker(x*160/X,y*200/Y,1,1)*2-1)*val(1,0,28)),0,255)/64))/3,0,74,178,255):(src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,1)>src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,0)&&src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,1)>src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,2)?gradient4(min(3,floor(clamp(((src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,0)+2*src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,1)+src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,2))/4+val(0,-64,64)+(checker(x*160/X,y*200/Y,1,1)*2-1)*val(1,0,28)),0,255)/64))/3,0,86,169,237):(src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,0)>src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,2)?gradient4(min(3,floor(clamp(((src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,0)+2*src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,1)+src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,2))/4+val(0,-64,64)+(checker(x*160/X,y*200/Y,1,1)*2-1)*val(1,0,28)),0,255)/64))/3,0,85,129,237):gradient4(min(3,floor(clamp(((src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,0)+2*src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,1)+src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,2))/4+val(0,-64,64)+(checker(x*160/X,y*200/Y,1,1)*2-1)*val(1,0,28)),0,255)/64))/3,0,46,117,112))))",
+      "((max(max(src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,0),src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,1)),src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,2))-min(min(src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,0),src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,1)),src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,2))<val(2,10,90))?gradient4(min(3,floor(clamp(((src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,0)+2*src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,1)+src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,2))/4+val(0,-64,64)+(checker(x*160/X,y*200/Y,1,1)*2-1)*val(1,0,28)),0,255)/64))/3,0,74,178,255):(src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,1)>src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,0)&&src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,1)>src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,2)?gradient4(min(3,floor(clamp(((src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,0)+2*src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,1)+src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,2))/4+val(0,-64,64)+(checker(x*160/X,y*200/Y,1,1)*2-1)*val(1,0,28)),0,255)/64))/3,0,172,255,241):(src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,0)>src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,2)?gradient4(min(3,floor(clamp(((src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,0)+2*src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,1)+src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,2))/4+val(0,-64,64)+(checker(x*160/X,y*200/Y,1,1)*2-1)*val(1,0,28)),0,255)/64))/3,0,56,51,241):gradient4(min(3,floor(clamp(((src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,0)+2*src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,1)+src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,2))/4+val(0,-64,64)+(checker(x*160/X,y*200/Y,1,1)*2-1)*val(1,0,28)),0,255)/64))/3,0,44,206,109))))",
+      "((max(max(src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,0),src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,1)),src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,2))-min(min(src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,0),src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,1)),src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,2))<val(2,10,90))?gradient4(min(3,floor(clamp(((src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,0)+2*src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,1)+src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,2))/4+val(0,-64,64)+(checker(x*160/X,y*200/Y,1,1)*2-1)*val(1,0,28)),0,255)/64))/3,0,74,178,255):(src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,1)>src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,0)&&src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,1)>src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,2)?gradient4(min(3,floor(clamp(((src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,0)+2*src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,1)+src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,2))/4+val(0,-64,64)+(checker(x*160/X,y*200/Y,1,1)*2-1)*val(1,0,28)),0,255)/64))/3,0,77,159,113):(src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,0)>src((floor(x*40/X)+0.5)*X/40,(floor(y*25/Y)+0.5)*Y/25,2)?gradient4(min(3,floor(clamp(((src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,0)+2*src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,1)+src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,2))/4+val(0,-64,64)+(checker(x*160/X,y*200/Y,1,1)*2-1)*val(1,0,28)),0,255)/64))/3,0,0,56,113):gradient4(min(3,floor(clamp(((src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,0)+2*src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,1)+src((floor(x*160/X)+0.5)*X/160,(floor(y*200/Y)+0.5)*Y/200,2))/4+val(0,-64,64)+(checker(x*160/X,y*200/Y,1,1)*2-1)*val(1,0,28)),0,255)/64))/3,0,155,200,235))))",
+      "a"
+    ]
+  },
+  {
+    "id": "differenceclouds",
+    "name": "Difference Clouds",
+    "description": "Generates soft FBM cloud fields and applies difference blending against the source image. Cloud Scale controls structure size, Cloud Contrast adjusts the harshness of the cloud field, Seed regenerates the pattern, and Effect Mix controls blend strength.",
+    "author": "",
+    "tags": [
+      "Noise",
+      "Procedural",
+      "Texture"
+    ],
+    "controls": [
+      {
+        "label": "Cloud Scale",
+        "value": 80,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 16,
+          "displayMax": 220,
+          "step": 1,
+          "format": "number",
+          "unit": "px"
+        }
+      },
+      {
+        "label": "Cloud Contrast",
+        "value": 31.166666666666664,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0.6,
+          "displayMax": 2.4,
+          "step": 0.01,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Seed",
+        "value": 18.440188037607523,
+        "ui": {
+          "widget": "seed",
+          "displayMin": 1,
+          "displayMax": 9999,
+          "step": 1,
+          "format": "integer",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Effect Mix",
+        "value": 255,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 100,
+          "step": 1,
+          "format": "number",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Control 5",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 6",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 7",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 8",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 9",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 10",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      }
+    ],
+    "f": [
+      "difference(r,clamp((fbm(x,y,val(0,16,220),5,2,0.5,round(val(2,1,9999)))-0.5)*val(1,0.6,2.4)+0.5,0,1)*255,ctl(3))",
+      "difference(g,clamp((fbm(x+173,y+59,val(0,16,220),5,2,0.5,round(val(2,1,9999))+101)-0.5)*val(1,0.6,2.4)+0.5,0,1)*255,ctl(3))",
+      "difference(b,clamp((fbm(x+347,y+281,val(0,16,220),5,2,0.5,round(val(2,1,9999))+202)-0.5)*val(1,0.6,2.4)+0.5,0,1)*255,ctl(3))",
+      "a"
+    ]
+  },
+  {
+    "id": "linearprismecho",
+    "name": "Linear Prism Echo",
+    "description": "Creates a linear prism-lens echo using the source plus three progressively faded, directional bilinear samples. Echo Spacing controls the separation, Angle rotates the echo train, Echo Fade controls attenuation, Chromatic Dispersion slightly varies the offset per RGB channel, and Effect Mix blends the result with the original.",
+    "author": "",
+    "tags": [
+      "Distortion",
+      "Color",
+      "Blur"
+    ],
+    "controls": [
+      {
+        "label": "Echo Spacing",
+        "value": 85,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 30,
+          "step": 1,
+          "format": "number",
+          "unit": "% width"
+        }
+      },
+      {
+        "label": "Angle",
+        "value": 235.16666666666669,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 360,
+          "step": 1,
+          "format": "number",
+          "unit": "deg"
+        }
+      },
+      {
+        "label": "Echo Fade",
+        "value": 140.25,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 35,
+          "displayMax": 95,
+          "step": 1,
+          "format": "number",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Chromatic Dispersion",
+        "value": 255,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 8,
+          "step": 0.1,
+          "format": "number",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Effect Mix",
+        "value": 204,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 100,
+          "step": 1,
+          "format": "number",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Control 6",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 7",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 8",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 9",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 10",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      }
+    ],
+    "f": [
+      "lerp(\n  c,\n  (\n    c\n    +\n    srcLinear(\n      x-r2x(\n        val(1,0,360)*1024/360,\n        X*val(0,0,30)/100*(1+(z-1)*val(3,0,8)/100)\n      ),\n      y-r2y(\n        val(1,0,360)*1024/360,\n        X*val(0,0,30)/100*(1+(z-1)*val(3,0,8)/100)\n      ),\n      z\n    )*val(2,35,95)/100\n    +\n    srcLinear(\n      x-r2x(\n        val(1,0,360)*1024/360,\n        X*val(0,0,30)/100*2*(1+(z-1)*val(3,0,8)/100)\n      ),\n      y-r2y(\n        val(1,0,360)*1024/360,\n        X*val(0,0,30)/100*2*(1+(z-1)*val(3,0,8)/100)\n      ),\n      z\n    )*val(2,35,95)/100*val(2,35,95)/100\n    +\n    srcLinear(\n      x-r2x(\n        val(1,0,360)*1024/360,\n        X*val(0,0,30)/100*3*(1+(z-1)*val(3,0,8)/100)\n      ),\n      y-r2y(\n        val(1,0,360)*1024/360,\n        X*val(0,0,30)/100*3*(1+(z-1)*val(3,0,8)/100)\n      ),\n      z\n    )*val(2,35,95)/100*val(2,35,95)/100*val(2,35,95)/100\n  )\n  /\n  (\n    1\n    +val(2,35,95)/100\n    +val(2,35,95)/100*val(2,35,95)/100\n    +val(2,35,95)/100*val(2,35,95)/100*val(2,35,95)/100\n  ),\n  ctl(4)\n)",
+      "lerp(\n  c,\n  (\n    c\n    +\n    srcLinear(\n      x-r2x(\n        val(1,0,360)*1024/360,\n        X*val(0,0,30)/100*(1+(z-1)*val(3,0,8)/100)\n      ),\n      y-r2y(\n        val(1,0,360)*1024/360,\n        X*val(0,0,30)/100*(1+(z-1)*val(3,0,8)/100)\n      ),\n      z\n    )*val(2,35,95)/100\n    +\n    srcLinear(\n      x-r2x(\n        val(1,0,360)*1024/360,\n        X*val(0,0,30)/100*2*(1+(z-1)*val(3,0,8)/100)\n      ),\n      y-r2y(\n        val(1,0,360)*1024/360,\n        X*val(0,0,30)/100*2*(1+(z-1)*val(3,0,8)/100)\n      ),\n      z\n    )*val(2,35,95)/100*val(2,35,95)/100\n    +\n    srcLinear(\n      x-r2x(\n        val(1,0,360)*1024/360,\n        X*val(0,0,30)/100*3*(1+(z-1)*val(3,0,8)/100)\n      ),\n      y-r2y(\n        val(1,0,360)*1024/360,\n        X*val(0,0,30)/100*3*(1+(z-1)*val(3,0,8)/100)\n      ),\n      z\n    )*val(2,35,95)/100*val(2,35,95)/100*val(2,35,95)/100\n  )\n  /\n  (\n    1\n    +val(2,35,95)/100\n    +val(2,35,95)/100*val(2,35,95)/100\n    +val(2,35,95)/100*val(2,35,95)/100*val(2,35,95)/100\n  ),\n  ctl(4)\n)",
+      "lerp(\n  c,\n  (\n    c\n    +\n    srcLinear(\n      x-r2x(\n        val(1,0,360)*1024/360,\n        X*val(0,0,30)/100*(1+(z-1)*val(3,0,8)/100)\n      ),\n      y-r2y(\n        val(1,0,360)*1024/360,\n        X*val(0,0,30)/100*(1+(z-1)*val(3,0,8)/100)\n      ),\n      z\n    )*val(2,35,95)/100\n    +\n    srcLinear(\n      x-r2x(\n        val(1,0,360)*1024/360,\n        X*val(0,0,30)/100*2*(1+(z-1)*val(3,0,8)/100)\n      ),\n      y-r2y(\n        val(1,0,360)*1024/360,\n        X*val(0,0,30)/100*2*(1+(z-1)*val(3,0,8)/100)\n      ),\n      z\n    )*val(2,35,95)/100*val(2,35,95)/100\n    +\n    srcLinear(\n      x-r2x(\n        val(1,0,360)*1024/360,\n        X*val(0,0,30)/100*3*(1+(z-1)*val(3,0,8)/100)\n      ),\n      y-r2y(\n        val(1,0,360)*1024/360,\n        X*val(0,0,30)/100*3*(1+(z-1)*val(3,0,8)/100)\n      ),\n      z\n    )*val(2,35,95)/100*val(2,35,95)/100*val(2,35,95)/100\n  )\n  /\n  (\n    1\n    +val(2,35,95)/100\n    +val(2,35,95)/100*val(2,35,95)/100\n    +val(2,35,95)/100*val(2,35,95)/100*val(2,35,95)/100\n  ),\n  ctl(4)\n)",
+      "a"
+    ]
+  },
+  {
+    "id": "lomochromepurplexr",
+    "name": "LomoChrome Purple XR",
+    "description": "An  approximation of the Lomography LomoChrome Purple XR 100–400 look. Green foliage is pushed much toward purple/magenta, yellow-green vegetation can skew pink, and blue-dominant areas can drift toward cyan. XR ISO changes the overall warm/cool bias, Grain adds fine deterministic texture, Contrast shapes density, and Effect Mix controls the final blend. Best results come from foliage, parks, trees, grass, flowers, and open-sky outdoor scenes.",
+    "author": "",
+    "tags": [
+      "Color",
+      "Retro",
+      "Film",
+      "Foliage"
+    ],
+    "controls": [
+      {
+        "label": "Purple Strength",
+        "value": 130.05,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 100,
+          "step": 1,
+          "format": "number",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Green Selectivity",
+        "value": 81.60000000000001,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 100,
+          "step": 1,
+          "format": "number",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Blue→Cyan",
+        "value": 96,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 100,
+          "step": 1,
+          "format": "number",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Yellow→Pink",
+        "value": 210,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 100,
+          "step": 1,
+          "format": "number",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "XR ISO",
+        "value": 26,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 100,
+          "displayMax": 400,
+          "step": 1,
+          "format": "integer",
+          "unit": "ISO"
+        }
+      },
+      {
+        "label": "Grain",
+        "value": 70,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 100,
+          "step": 1,
+          "format": "number",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Contrast",
+        "value": 186,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 80,
+          "displayMax": 140,
+          "step": 1,
+          "format": "number",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Effect Mix",
+        "value": 255,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 100,
+          "step": 1,
+          "format": "number",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Control 9",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 10",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      }
+    ],
+    "f": [
+      "lerp(r,clamp((lerp(lerp(lerp(r,clamp(i*1.08+72+val(4,22,-14),0,255),smoothstep(val(1,-10,18),val(1,18,85),g-(r+b)/2)*val(0,0,1)),clamp(i*0.10+val(4,8,-8),0,255),smoothstep(6,80,b-(r+g)/2)*val(2,0,1)),clamp(i*1.15+82+val(4,14,-14),0,255),smoothstep(8,75,min(r,g)-b)*val(3,0,1))-128)*val(6,0.8,1.4)+128+(hash2(x,y,101)-0.5)*val(5,0,28)*(0.7+0.3*(1-i/255)),0,255),ctl(7))",
+      "lerp(g,clamp((lerp(lerp(lerp(g,clamp(i*0.12+4+val(4,2,10),0,255),smoothstep(val(1,-10,18),val(1,18,85),g-(r+b)/2)*val(0,0,1)),clamp(i*0.88+60+val(4,-6,6),0,255),smoothstep(6,80,b-(r+g)/2)*val(2,0,1)),clamp(i*0.32+12+val(4,4,-2),0,255),smoothstep(8,75,min(r,g)-b)*val(3,0,1))-128)*val(6,0.8,1.4)+128+(hash2(x,y,131)-0.5)*val(5,0,24)*(0.7+0.3*(1-i/255)),0,255),ctl(7))",
+      "lerp(b,clamp((lerp(lerp(lerp(b,clamp(i*1.02+92+val(4,-2,18),0,255),smoothstep(val(1,-10,18),val(1,18,85),g-(r+b)/2)*val(0,0,1)),clamp(i*0.96+90+val(4,2,18),0,255),smoothstep(6,80,b-(r+g)/2)*val(2,0,1)),clamp(i*0.80+82+val(4,2,8),0,255),smoothstep(8,75,min(r,g)-b)*val(3,0,1))-128)*val(6,0.8,1.4)+128+(hash2(x,y,151)-0.5)*val(5,0,32)*(0.7+0.3*(1-i/255)),0,255),ctl(7))",
+      "a"
+    ]
+  },
+  {
+    "id": "popprintquad",
+    "name": "Pop Print Quad",
+    "description": "Four-panel Pop Art treatment inspired by screenprint and comic-print aesthetics. Repeats the source into a 2×2 grid, compresses luminance into black/midtone/background bands, assigns a distinct high-chroma palette to each quadrant, and overlays deterministic black stipple. Tone Bias changes the tonal breakup; Dot Spacing, Density, Radius, and Seed control the print texture; Style Mix blends between the clean 2×2 source grid and the full effect.",
+    "author": "",
+    "tags": [
+      "Print",
+      "Color",
+      "Pop Art",
+      "Halftone"
+    ],
+    "controls": [
+      {
+        "label": "Tone Bias",
+        "value": 71.71875,
+        "ui": {
+          "widget": "slider",
+          "displayMin": -64,
+          "displayMax": 64,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Dot Spacing",
+        "value": 159.375,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 4,
+          "displayMax": 12,
+          "step": 1,
+          "format": "number",
+          "unit": "px"
+        }
+      },
+      {
+        "label": "Dot Density",
+        "value": 79.05,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 100,
+          "step": 1,
+          "format": "number",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Seed",
+        "value": 50.57661532306461,
+        "ui": {
+          "widget": "seed",
+          "displayMin": 1,
+          "displayMax": 9999,
+          "step": 1,
+          "format": "integer",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Dot Radius",
+        "value": 18.2142857142857,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0.08,
+          "displayMax": 0.22,
+          "step": 0.01,
+          "format": "number",
+          "unit": "ratio"
+        }
+      },
+      {
+        "label": "Style Mix",
+        "value": 255,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 100,
+          "step": 1,
+          "format": "number",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Control 7",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 8",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 9",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 10",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      }
+    ],
+    "f": [
+      "lerp(srcLinear(repeat(x,X/2)*2,repeat(y,Y/2)*2,z),(circle(repeat(x,val(1,4,12)),repeat(y,val(1,4,12)),val(1,4,12)/2,val(1,4,12)/2,val(1,4,12)*val(4,0.08,0.22),0.35)>0.5&&hash2(floor(x/val(1,4,12)),floor(y/val(1,4,12)),val(3,1,9999)+(x>=X/2?101:0)+(y>=Y/2?211:0))>val(2,0.998,0.80))?0:gradient3(round(clamp(((299*srcLinear(repeat(x,X/2)*2,repeat(y,Y/2)*2,0)+587*srcLinear(repeat(x,X/2)*2,repeat(y,Y/2)*2,1)+114*srcLinear(repeat(x,X/2)*2,repeat(y,Y/2)*2,2))/1000)+val(0,-64,64),0,255)*2/255)/2,0,y<Y/2?(x<X/2?(z==0?255:z==1?166:73):(z==0?244:z==1?141:206)):(x<X/2?(z==0?67:z==1?224:211):(z==0?255:z==1?225:83)),y<Y/2?(x<X/2?(z==0?75:z==1?255:22):(z==0?24:z==1?210:247)):(x<X/2?(z==0?255:z==1?240:26):(z==0?241:z==1?45:153))),ctl(5))",
+      "lerp(srcLinear(repeat(x,X/2)*2,repeat(y,Y/2)*2,z),(circle(repeat(x,val(1,4,12)),repeat(y,val(1,4,12)),val(1,4,12)/2,val(1,4,12)/2,val(1,4,12)*val(4,0.08,0.22),0.35)>0.5&&hash2(floor(x/val(1,4,12)),floor(y/val(1,4,12)),val(3,1,9999)+(x>=X/2?101:0)+(y>=Y/2?211:0))>val(2,0.998,0.80))?0:gradient3(round(clamp(((299*srcLinear(repeat(x,X/2)*2,repeat(y,Y/2)*2,0)+587*srcLinear(repeat(x,X/2)*2,repeat(y,Y/2)*2,1)+114*srcLinear(repeat(x,X/2)*2,repeat(y,Y/2)*2,2))/1000)+val(0,-64,64),0,255)*2/255)/2,0,y<Y/2?(x<X/2?(z==0?255:z==1?166:73):(z==0?244:z==1?141:206)):(x<X/2?(z==0?67:z==1?224:211):(z==0?255:z==1?225:83)),y<Y/2?(x<X/2?(z==0?75:z==1?255:22):(z==0?24:z==1?210:247)):(x<X/2?(z==0?255:z==1?240:26):(z==0?241:z==1?45:153))),ctl(5))",
+      "lerp(srcLinear(repeat(x,X/2)*2,repeat(y,Y/2)*2,z),(circle(repeat(x,val(1,4,12)),repeat(y,val(1,4,12)),val(1,4,12)/2,val(1,4,12)/2,val(1,4,12)*val(4,0.08,0.22),0.35)>0.5&&hash2(floor(x/val(1,4,12)),floor(y/val(1,4,12)),val(3,1,9999)+(x>=X/2?101:0)+(y>=Y/2?211:0))>val(2,0.998,0.80))?0:gradient3(round(clamp(((299*srcLinear(repeat(x,X/2)*2,repeat(y,Y/2)*2,0)+587*srcLinear(repeat(x,X/2)*2,repeat(y,Y/2)*2,1)+114*srcLinear(repeat(x,X/2)*2,repeat(y,Y/2)*2,2))/1000)+val(0,-64,64),0,255)*2/255)/2,0,y<Y/2?(x<X/2?(z==0?255:z==1?166:73):(z==0?244:z==1?141:206)):(x<X/2?(z==0?67:z==1?224:211):(z==0?255:z==1?225:83)),y<Y/2?(x<X/2?(z==0?75:z==1?255:22):(z==0?24:z==1?210:247)):(x<X/2?(z==0?255:z==1?240:26):(z==0?241:z==1?45:153))),ctl(5))",
+      "srcLinear(repeat(x,X/2)*2,repeat(y,Y/2)*2,3)"
+    ]
+  },
+  {
+    "id": "spectraltearglitch",
+    "name": "Spectral Tear Glitch",
+    "description": "Analog-style glitch filter with horizontal tear bands, watery ripple distortion, monochrome bias, and RGB fringe. RGB Fringe Amount controls split distance; Fringe Intensity controls how visible the split-color edge is.",
+    "author": "",
+    "tags": [
+      "Glitch",
+      "Distortion",
+      "Color",
+      "Retro"
+    ],
+    "controls": [
+      {
+        "label": "Slice Height",
+        "value": 40,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 4,
+          "displayMax": 80,
+          "step": 1,
+          "format": "number",
+          "unit": "px"
+        }
+      },
+      {
+        "label": "Tear Strength",
+        "value": 76,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 120,
+          "step": 1,
+          "format": "number",
+          "unit": "px"
+        }
+      },
+      {
+        "label": "Ripple Amount",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 24,
+          "step": 1,
+          "format": "number",
+          "unit": "px"
+        }
+      },
+      {
+        "label": "Ripple Period",
+        "value": 96,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 16,
+          "displayMax": 320,
+          "step": 1,
+          "format": "number",
+          "unit": "px"
+        }
+      },
+      {
+        "label": "RGB Fringe Amount",
+        "value": 96,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 16,
+          "step": 1,
+          "format": "number",
+          "unit": "px"
+        }
+      },
+      {
+        "label": "Fringe Intensity",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 200,
+          "step": 1,
+          "format": "number",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Monochrome",
+        "value": 194,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 100,
+          "step": 1,
+          "format": "number",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Tear Density",
+        "value": 108,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 5,
+          "displayMax": 95,
+          "step": 1,
+          "format": "number",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Seed",
+        "value": 82,
+        "ui": {
+          "widget": "seed",
+          "displayMin": 1,
+          "displayMax": 9999,
+          "step": 1,
+          "format": "integer",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Effect Mix",
+        "value": 255,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 100,
+          "step": 1,
+          "format": "number",
+          "unit": "%"
+        }
+      }
+    ],
+    "f": [
+      "lerp(c,clamp(lerp(srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),z),(srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),0)*299+srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),1)*587+srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),2)*114)/1000,val(6,0,1))+(srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy))))+(z-1)*val(4,0,16),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),z)-srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),z))*val(5,0,2),0,255),ctl(9))",
+      "lerp(c,clamp(lerp(srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),z),(srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),0)*299+srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),1)*587+srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),2)*114)/1000,val(6,0,1))+(srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy))))+(z-1)*val(4,0,16),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),z)-srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),z))*val(5,0,2),0,255),ctl(9))",
+      "lerp(c,clamp(lerp(srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),z),(srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),0)*299+srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),1)*587+srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),2)*114)/1000,val(6,0,1))+(srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy))))+(z-1)*val(4,0,16),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),z)-srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),z))*val(5,0,2),0,255),ctl(9))",
+      "a"
+    ]
+  },
+  {
+    "id": "teallimemodularweave",
+    "name": "Teal Lime Modular Weave",
+    "description": "A modular weave. Horizontal Phase and Vertical Phase wrap the pattern. Hue Shift performs a chroma rotation through the original palette. Saturation scales the chroma while preserving each swatch's luminance structure.",
+    "author": "",
+    "tags": [
+      "Pattern",
+      "Textile",
+      "Procedural",
+      "Color"
+    ],
+    "controls": [
+      {
+        "label": "Horizontal Phase",
+        "value": 127.5,
+        "ui": {
+          "widget": "slider",
+          "displayMin": -50,
+          "displayMax": 50,
+          "step": 1,
+          "format": "number",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Vertical Phase",
+        "value": 127.5,
+        "ui": {
+          "widget": "slider",
+          "displayMin": -50,
+          "displayMax": 50,
+          "step": 1,
+          "format": "number",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Hue Shift",
+        "value": 127.5,
+        "ui": {
+          "widget": "slider",
+          "displayMin": -180,
+          "displayMax": 180,
+          "step": 1,
+          "format": "number",
+          "unit": "deg"
+        }
+      },
+      {
+        "label": "Saturation",
+        "value": 127.5,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 200,
+          "step": 1,
+          "format": "number",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Seed",
+        "value": 157.31546309261853,
+        "ui": {
+          "widget": "seed",
+          "displayMin": 1,
+          "displayMax": 9999,
+          "step": 1,
+          "format": "integer",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 6",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 7",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 8",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 9",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 10",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      }
+    ],
+    "f": [
+      "clamp(gradient3((floor(wrap(ny+val(1,-0.5,0.5),1)*16)<9?(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<3?wrap(2-floor(wrap(nx+val(0,-0.5,0.5),1)*5)-(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2)+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3):wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)-2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<2?wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)+1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0),3):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==2?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3):(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==3?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0):wrap(2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3)):(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),3,val(4,1,9999))>0.5?2:0):wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3))))))/2,220.666667,193.333333,146.333333)+gradient3((floor(wrap(ny+val(1,-0.5,0.5),1)*16)<9?(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<3?wrap(2-floor(wrap(nx+val(0,-0.5,0.5),1)*5)-(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2)+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3):wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)-2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<2?wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)+1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0),3):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==2?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3):(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==3?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0):wrap(2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3)):(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),3,val(4,1,9999))>0.5?2:0):wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3))))))/2,10.088497,43.471574,55.633723)*val(3,0,200)/100*cos(gradient3((floor(wrap(ny+val(1,-0.5,0.5),1)*16)<9?(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<3?wrap(2-floor(wrap(nx+val(0,-0.5,0.5),1)*5)-(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2)+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3):wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)-2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<2?wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)+1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0),3):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==2?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3):(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==3?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0):wrap(2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3)):(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),3,val(4,1,9999))>0.5?2:0):wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3))))))/2,123.371593,183.667346,528.943533)+val(2,-512,512))/512,0,255)",
+      "clamp(gradient3((floor(wrap(ny+val(1,-0.5,0.5),1)*16)<9?(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<3?wrap(2-floor(wrap(nx+val(0,-0.5,0.5),1)*5)-(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2)+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3):wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)-2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<2?wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)+1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0),3):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==2?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3):(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==3?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0):wrap(2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3)):(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),3,val(4,1,9999))>0.5?2:0):wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3))))))/2,220.666667,193.333333,146.333333)+gradient3((floor(wrap(ny+val(1,-0.5,0.5),1)*16)<9?(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<3?wrap(2-floor(wrap(nx+val(0,-0.5,0.5),1)*5)-(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2)+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3):wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)-2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<2?wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)+1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0),3):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==2?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3):(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==3?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0):wrap(2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3)):(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),3,val(4,1,9999))>0.5?2:0):wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3))))))/2,10.088497,43.471574,55.633723)*val(3,0,200)/100*cos(gradient3((floor(wrap(ny+val(1,-0.5,0.5),1)*16)<9?(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<3?wrap(2-floor(wrap(nx+val(0,-0.5,0.5),1)*5)-(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2)+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3):wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)-2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<2?wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)+1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0),3):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==2?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3):(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==3?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0):wrap(2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3)):(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),3,val(4,1,9999))>0.5?2:0):wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3))))))/2,123.371593,183.667346,528.943533)+val(2,-512,512)-341.333333)/512,0,255)",
+      "clamp(gradient3((floor(wrap(ny+val(1,-0.5,0.5),1)*16)<9?(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<3?wrap(2-floor(wrap(nx+val(0,-0.5,0.5),1)*5)-(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2)+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3):wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)-2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<2?wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)+1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0),3):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==2?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3):(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==3?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0):wrap(2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3)):(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),3,val(4,1,9999))>0.5?2:0):wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3))))))/2,220.666667,193.333333,146.333333)+gradient3((floor(wrap(ny+val(1,-0.5,0.5),1)*16)<9?(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<3?wrap(2-floor(wrap(nx+val(0,-0.5,0.5),1)*5)-(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2)+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3):wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)-2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<2?wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)+1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0),3):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==2?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3):(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==3?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0):wrap(2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3)):(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),3,val(4,1,9999))>0.5?2:0):wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3))))))/2,10.088497,43.471574,55.633723)*val(3,0,200)/100*cos(gradient3((floor(wrap(ny+val(1,-0.5,0.5),1)*16)<9?(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<3?wrap(2-floor(wrap(nx+val(0,-0.5,0.5),1)*5)-(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2)+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3):wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)-2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<2?wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)+1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0),3):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==2?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3):(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==3?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0):wrap(2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3)):(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),3,val(4,1,9999))>0.5?2:0):wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3))))))/2,123.371593,183.667346,528.943533)+val(2,-512,512)+341.333333)/512,0,255)",
+      "a"
+    ]
+  },
+  {
+    "id": "touchingrandomcapsules",
+    "name": "Touching Random Capsules",
+    "description": "Staggered capsule pattern with no vertical spacing. Every two-unit vertical block is either one tall capsule or two shorter touching capsules, chosen deterministically from Seed.",
+    "author": "",
+    "tags": [
+      "Pattern",
+      "Shapes",
+      "Procedural"
+    ],
+    "controls": [
+      {
+        "label": "Column Spacing",
+        "value": 130.33333333333331,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 110,
+          "displayMax": 200,
+          "step": 1,
+          "format": "integer",
+          "unit": "px"
+        }
+      },
+      {
+        "label": "Pill Width",
+        "value": 223.125,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 80,
+          "displayMax": 96,
+          "step": 0.1,
+          "format": "number",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Base Height",
+        "value": 175.95,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 200,
+          "displayMax": 400,
+          "step": 1,
+          "format": "integer",
+          "unit": "px"
+        }
+      },
+      {
+        "label": "Edge Softness",
+        "value": 85,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 3,
+          "step": 0.05,
+          "format": "number",
+          "unit": "px"
+        }
+      },
+      {
+        "label": "Horizontal Phase",
+        "value": 0,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 200,
+          "step": 1,
+          "format": "integer",
+          "unit": "px"
+        }
+      },
+      {
+        "label": "Vertical Phase",
+        "value": 0,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 800,
+          "step": 1,
+          "format": "integer",
+          "unit": "px"
+        }
+      },
+      {
+        "label": "Seed",
+        "value": 31.44778955791158,
+        "ui": {
+          "widget": "seed",
+          "displayMin": 1,
+          "displayMax": 9999,
+          "step": 1,
+          "format": "integer",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Effect Mix",
+        "value": 255,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 100,
+          "step": 1,
+          "format": "number",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Hue Shift",
+        "value": 0,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 300,
+          "step": 1,
+          "format": "integer",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Saturation",
+        "value": 127.5,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 200,
+          "step": 1,
+          "format": "integer",
+          "unit": "%"
+        }
+      }
+    ],
+    "f": [
+      "lerp(c,255+((((((floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2))*2)+(hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55&&repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)>=val(2,200,400)?1:0)+floor((x+val(4,0,200))/val(0,110,200)))%3)==0?val(8,0,3)<1?lerp(clamp(108+(0-108)*val(9,0,2),0,255),clamp(108+(157-108)*val(9,0,2),0,255),val(8,0,3)):val(8,0,3)<2?lerp(clamp(108+(157-108)*val(9,0,2),0,255),clamp(108+(136-108)*val(9,0,2),0,255),val(8,0,3)-1):lerp(clamp(108+(136-108)*val(9,0,2),0,255),clamp(108+(0-108)*val(9,0,2),0,255),val(8,0,3)-2):((((floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2))*2)+(hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55&&repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)>=val(2,200,400)?1:0)+floor((x+val(4,0,200))/val(0,110,200)))%3)==1?val(8,0,3)<1?lerp(clamp(153+(89-153)*val(9,0,2),0,255),clamp(153+(189-153)*val(9,0,2),0,255),val(8,0,3)):val(8,0,3)<2?lerp(clamp(153+(189-153)*val(9,0,2),0,255),clamp(153+(139-153)*val(9,0,2),0,255),val(8,0,3)-1):lerp(clamp(153+(139-153)*val(9,0,2),0,255),clamp(153+(89-153)*val(9,0,2),0,255),val(8,0,3)-2):val(8,0,3)<1?lerp(clamp(192+(164-192)*val(9,0,2),0,255),clamp(192+(217-192)*val(9,0,2),0,255),val(8,0,3)):val(8,0,3)<2?lerp(clamp(192+(217-192)*val(9,0,2),0,255),clamp(192+(137-192)*val(9,0,2),0,255),val(8,0,3)-1):lerp(clamp(192+(137-192)*val(9,0,2),0,255),clamp(192+(164-192)*val(9,0,2),0,255),val(8,0,3)-2))))-255)*line(repeat(x+val(4,0,200),val(0,110,200)),repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2),val(0,110,200)/2,((hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55?(repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)<val(2,200,400)?0:val(2,200,400)):0)+(val(0,110,200)*val(1,80,96)/100)/2),val(0,110,200)/2,((hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55?(repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)<val(2,200,400)?val(2,200,400):val(2,200,400)*2):val(2,200,400)*2)-(val(0,110,200)*val(1,80,96)/100)/2),(val(0,110,200)*val(1,80,96)/100),val(3,0,3)),ctl(7))",
+      "lerp(c,255+((((((floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2))*2)+(hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55&&repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)>=val(2,200,400)?1:0)+floor((x+val(4,0,200))/val(0,110,200)))%3)==0?val(8,0,3)<1?lerp(clamp(108+(157-108)*val(9,0,2),0,255),clamp(108+(136-108)*val(9,0,2),0,255),val(8,0,3)):val(8,0,3)<2?lerp(clamp(108+(136-108)*val(9,0,2),0,255),clamp(108+(0-108)*val(9,0,2),0,255),val(8,0,3)-1):lerp(clamp(108+(0-108)*val(9,0,2),0,255),clamp(108+(157-108)*val(9,0,2),0,255),val(8,0,3)-2):((((floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2))*2)+(hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55&&repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)>=val(2,200,400)?1:0)+floor((x+val(4,0,200))/val(0,110,200)))%3)==1?val(8,0,3)<1?lerp(clamp(153+(189-153)*val(9,0,2),0,255),clamp(153+(139-153)*val(9,0,2),0,255),val(8,0,3)):val(8,0,3)<2?lerp(clamp(153+(139-153)*val(9,0,2),0,255),clamp(153+(89-153)*val(9,0,2),0,255),val(8,0,3)-1):lerp(clamp(153+(89-153)*val(9,0,2),0,255),clamp(153+(189-153)*val(9,0,2),0,255),val(8,0,3)-2):val(8,0,3)<1?lerp(clamp(192+(217-192)*val(9,0,2),0,255),clamp(192+(137-192)*val(9,0,2),0,255),val(8,0,3)):val(8,0,3)<2?lerp(clamp(192+(137-192)*val(9,0,2),0,255),clamp(192+(164-192)*val(9,0,2),0,255),val(8,0,3)-1):lerp(clamp(192+(164-192)*val(9,0,2),0,255),clamp(192+(217-192)*val(9,0,2),0,255),val(8,0,3)-2))))-255)*line(repeat(x+val(4,0,200),val(0,110,200)),repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2),val(0,110,200)/2,((hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55?(repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)<val(2,200,400)?0:val(2,200,400)):0)+(val(0,110,200)*val(1,80,96)/100)/2),val(0,110,200)/2,((hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55?(repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)<val(2,200,400)?val(2,200,400):val(2,200,400)*2):val(2,200,400)*2)-(val(0,110,200)*val(1,80,96)/100)/2),(val(0,110,200)*val(1,80,96)/100),val(3,0,3)),ctl(7))",
+      "lerp(c,255+((((((floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2))*2)+(hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55&&repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)>=val(2,200,400)?1:0)+floor((x+val(4,0,200))/val(0,110,200)))%3)==0?val(8,0,3)<1?lerp(clamp(108+(136-108)*val(9,0,2),0,255),clamp(108+(0-108)*val(9,0,2),0,255),val(8,0,3)):val(8,0,3)<2?lerp(clamp(108+(0-108)*val(9,0,2),0,255),clamp(108+(157-108)*val(9,0,2),0,255),val(8,0,3)-1):lerp(clamp(108+(157-108)*val(9,0,2),0,255),clamp(108+(136-108)*val(9,0,2),0,255),val(8,0,3)-2):((((floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2))*2)+(hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55&&repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)>=val(2,200,400)?1:0)+floor((x+val(4,0,200))/val(0,110,200)))%3)==1?val(8,0,3)<1?lerp(clamp(153+(139-153)*val(9,0,2),0,255),clamp(153+(89-153)*val(9,0,2),0,255),val(8,0,3)):val(8,0,3)<2?lerp(clamp(153+(89-153)*val(9,0,2),0,255),clamp(153+(189-153)*val(9,0,2),0,255),val(8,0,3)-1):lerp(clamp(153+(189-153)*val(9,0,2),0,255),clamp(153+(139-153)*val(9,0,2),0,255),val(8,0,3)-2):val(8,0,3)<1?lerp(clamp(192+(137-192)*val(9,0,2),0,255),clamp(192+(164-192)*val(9,0,2),0,255),val(8,0,3)):val(8,0,3)<2?lerp(clamp(192+(164-192)*val(9,0,2),0,255),clamp(192+(217-192)*val(9,0,2),0,255),val(8,0,3)-1):lerp(clamp(192+(217-192)*val(9,0,2),0,255),clamp(192+(137-192)*val(9,0,2),0,255),val(8,0,3)-2))))-255)*line(repeat(x+val(4,0,200),val(0,110,200)),repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2),val(0,110,200)/2,((hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55?(repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)<val(2,200,400)?0:val(2,200,400)):0)+(val(0,110,200)*val(1,80,96)/100)/2),val(0,110,200)/2,((hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55?(repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)<val(2,200,400)?val(2,200,400):val(2,200,400)*2):val(2,200,400)*2)-(val(0,110,200)*val(1,80,96)/100)/2),(val(0,110,200)*val(1,80,96)/100),val(3,0,3)),ctl(7))",
+      "a"
+    ]
+  },
+  {
+    "id": "vhstrackingglitch",
+    "name": "VHS Tracking Glitch",
+    "description": "Static one-pass VHS damage approximation with horizontal tracking jitter, tear bands, RGB chroma misregistration, tape smear, scanline darkening, deterministic tape noise, and sparse dropout hits. Best for title cards, degraded video frames, horror graphics, and analog-video stylization. Tracking Distortion and Band Height shape the horizontal instability; Tear Scale controls where stronger tracking regions appear; Chroma Offset splits RGB registration; Smear softens detail horizontally; Scanlines and Noise add tape texture; Dropouts adds sparse bright defects; Effect Mix blends back to the source.",
+    "author": "OpenAI",
+    "tags": [
+      "Glitch",
+      "Retro",
+      "Distortion",
+      "Noise"
+    ],
+    "controls": [
+      {
+        "label": "Tracking Distortion",
+        "value": 127.5,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 24,
+          "step": 1,
+          "format": "number",
+          "unit": "px"
+        }
+      },
+      {
+        "label": "Band Height",
+        "value": 69.54545454545455,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 2,
+          "displayMax": 24,
+          "step": 1,
+          "format": "number",
+          "unit": "px"
+        }
+      },
+      {
+        "label": "Tear Scale",
+        "value": 105,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 24,
+          "displayMax": 160,
+          "step": 1,
+          "format": "number",
+          "unit": "px"
+        }
+      },
+      {
+        "label": "Chroma Offset",
+        "value": 102,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 5,
+          "step": 0.25,
+          "format": "number",
+          "unit": "px"
+        }
+      },
+      {
+        "label": "Smear",
+        "value": 76.5,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 10,
+          "step": 0.5,
+          "format": "number",
+          "unit": "px"
+        }
+      },
+      {
+        "label": "Scanlines",
+        "value": 111.5625,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 32,
+          "step": 1,
+          "format": "number",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Noise",
+        "value": 85,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 18,
+          "step": 0.5,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Seed",
+        "value": 122.16943388677736,
+        "ui": {
+          "widget": "seed",
+          "displayMin": 1,
+          "displayMax": 9999,
+          "step": 1,
+          "format": "integer",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Dropouts",
+        "value": 68,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 45,
+          "step": 1,
+          "format": "number",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Effect Mix",
+        "value": 255,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 100,
+          "step": 1,
+          "format": "number",
+          "unit": "%"
+        }
+      }
+    ],
+    "f": [
+      "lerp(\n  c,\n  clamp(\n    (\n      srcLinear(\n        wrap(\n          x\n          +(valueNoise(0,floor(y/val(1,2,24))*val(1,2,24),64,val(7,1,9999))-0.5)\n           *2*val(0,0,24)\n           *(0.35+1.65*smoothstep(0.55,0.9,valueNoise(0,y,val(2,24,160),val(7,1,9999)+23)))\n          +(z-1)*val(3,0,5)\n           *(0.4+0.6*smoothstep(0.55,0.9,valueNoise(0,y,val(2,24,160),val(7,1,9999)+23))),\n          X\n        ),\n        y,\n        z\n      )*0.74\n      +\n      srcLinear(\n        wrap(\n          x\n          +(valueNoise(0,floor(y/val(1,2,24))*val(1,2,24),64,val(7,1,9999))-0.5)\n           *2*val(0,0,24)\n           *(0.35+1.65*smoothstep(0.55,0.9,valueNoise(0,y,val(2,24,160),val(7,1,9999)+23)))\n          +(z-1)*val(3,0,5)\n           *(0.4+0.6*smoothstep(0.55,0.9,valueNoise(0,y,val(2,24,160),val(7,1,9999)+23)))\n          +val(4,0,10),\n          X\n        ),\n        y,\n        z\n      )*0.26\n    )\n    *(1-val(5,0,0.32)*step(0.25,fract(y/2)))\n    +(hash2(x,floor(y/2),val(7,1,9999)+47)-0.5)*val(6,0,18)\n    +255*smoothstep(0.9985,0.99995,hash2(x*0.5,y*13,val(7,1,9999)+59))*val(8,0,0.45),\n    0,\n    255\n  ),\n  ctl(9)\n)",
+      "lerp(\n  c,\n  clamp(\n    (\n      srcLinear(\n        wrap(\n          x\n          +(valueNoise(0,floor(y/val(1,2,24))*val(1,2,24),64,val(7,1,9999))-0.5)\n           *2*val(0,0,24)\n           *(0.35+1.65*smoothstep(0.55,0.9,valueNoise(0,y,val(2,24,160),val(7,1,9999)+23)))\n          +(z-1)*val(3,0,5)\n           *(0.4+0.6*smoothstep(0.55,0.9,valueNoise(0,y,val(2,24,160),val(7,1,9999)+23))),\n          X\n        ),\n        y,\n        z\n      )*0.74\n      +\n      srcLinear(\n        wrap(\n          x\n          +(valueNoise(0,floor(y/val(1,2,24))*val(1,2,24),64,val(7,1,9999))-0.5)\n           *2*val(0,0,24)\n           *(0.35+1.65*smoothstep(0.55,0.9,valueNoise(0,y,val(2,24,160),val(7,1,9999)+23)))\n          +(z-1)*val(3,0,5)\n           *(0.4+0.6*smoothstep(0.55,0.9,valueNoise(0,y,val(2,24,160),val(7,1,9999)+23)))\n          +val(4,0,10),\n          X\n        ),\n        y,\n        z\n      )*0.26\n    )\n    *(1-val(5,0,0.32)*step(0.25,fract(y/2)))\n    +(hash2(x,floor(y/2),val(7,1,9999)+47)-0.5)*val(6,0,18)\n    +255*smoothstep(0.9985,0.99995,hash2(x*0.5,y*13,val(7,1,9999)+59))*val(8,0,0.45),\n    0,\n    255\n  ),\n  ctl(9)\n)",
+      "lerp(\n  c,\n  clamp(\n    (\n      srcLinear(\n        wrap(\n          x\n          +(valueNoise(0,floor(y/val(1,2,24))*val(1,2,24),64,val(7,1,9999))-0.5)\n           *2*val(0,0,24)\n           *(0.35+1.65*smoothstep(0.55,0.9,valueNoise(0,y,val(2,24,160),val(7,1,9999)+23)))\n          +(z-1)*val(3,0,5)\n           *(0.4+0.6*smoothstep(0.55,0.9,valueNoise(0,y,val(2,24,160),val(7,1,9999)+23))),\n          X\n        ),\n        y,\n        z\n      )*0.74\n      +\n      srcLinear(\n        wrap(\n          x\n          +(valueNoise(0,floor(y/val(1,2,24))*val(1,2,24),64,val(7,1,9999))-0.5)\n           *2*val(0,0,24)\n           *(0.35+1.65*smoothstep(0.55,0.9,valueNoise(0,y,val(2,24,160),val(7,1,9999)+23)))\n          +(z-1)*val(3,0,5)\n           *(0.4+0.6*smoothstep(0.55,0.9,valueNoise(0,y,val(2,24,160),val(7,1,9999)+23)))\n          +val(4,0,10),\n          X\n        ),\n        y,\n        z\n      )*0.26\n    )\n    *(1-val(5,0,0.32)*step(0.25,fract(y/2)))\n    +(hash2(x,floor(y/2),val(7,1,9999)+47)-0.5)*val(6,0,18)\n    +255*smoothstep(0.9985,0.99995,hash2(x*0.5,y*13,val(7,1,9999)+59))*val(8,0,0.45),\n    0,\n    255\n  ),\n  ctl(9)\n)",
+      "a"
+    ]
+  }
+];
+
+
 /* src/presets/builtins.js */
 /**
  * Filter FabJS
  * Modular source extracted from v2.0.7; modular architecture v2.1.0.
  * Licensed GPL-2.0-or-later. See LICENSE and README.md.
  */
+
 const unionMasks=terms=>terms.reduce((left,right)=>`max(${left},${right})`);
 const richControl=(label,value,widget,displayMin,displayMax,step=1,format='number',unit='')=>({label,value,ui:{widget,displayMin,displayMax,step,format,unit}});
 const unusedControl=index=>richControl(`Control ${index+1}`,128,'slider',0,255);
@@ -414,24 +1681,6 @@ const sierpinskiFormulas=[
   `lerp(r,ctl(6)+(ctl(3)-ctl(6))*${sierpinskiMask}*${sierpinskiShade},ctl(7))`,
   `lerp(g,ctl(6)+(ctl(4)-ctl(6))*${sierpinskiMask}*${sierpinskiShade},ctl(7))`,
   `lerp(b,ctl(6)+(ctl(5)-ctl(6))*${sierpinskiMask}*${sierpinskiShade},ctl(7))`,
-  'a'
-];
-const tartanScale='val(0,54,132)',tartanBroad='val(1,8,34)',tartanThread='val(2,0.6,3.4)',tartanFeather='0.65';
-const tartanPrimary=`grid(x,y,${tartanScale},${tartanScale},${tartanBroad},${tartanFeather})`;
-const tartanSecondary=`grid(x+${tartanScale}*0.3,y+${tartanScale}*0.3,${tartanScale},${tartanScale},${tartanBroad}*0.42,${tartanFeather})`;
-const tartanBands=`clamp(${tartanPrimary}+${tartanSecondary}*0.72,0,1.45)`;
-const tartanPinstripes=unionMasks([
-  `grid(x+${tartanScale}*0.07,y+${tartanScale}*0.07,${tartanScale},${tartanScale},${tartanThread},${tartanFeather})`,
-  `grid(x-${tartanScale}*0.07,y-${tartanScale}*0.07,${tartanScale},${tartanScale},${tartanThread},${tartanFeather})`
-]);
-const tartanAngle='val(5,80,176)',tartanDiagonal=`x*r2x(${tartanAngle},1)+y*r2y(${tartanAngle},1)`;
-const tartanWeave='val(3,3,10)',tartanHatch=`grid(${tartanDiagonal},512,${tartanWeave},1024,${tartanThread}*0.42,0.35)*(0.72+checker(x,y,${tartanWeave},${tartanWeave})*0.28)`;
-const tartanStrength='ctl(4)/255',tartanTone='val(6,0.75,1.35)';
-const tartanTarget=(base,band,pin)=>`clamp((${base}+${tartanStrength}*(${band}*${tartanBands}*(0.42+0.58*${tartanHatch})+${pin}*${tartanPinstripes}))*${tartanTone},0,255)`;
-const tartanFormulas=[
-  `lerp(r,${tartanTarget(6,18,12)},ctl(7))`,
-  `lerp(g,${tartanTarget(18,43,26)},ctl(7))`,
-  `lerp(b,${tartanTarget(35,74,45)},ctl(7))`,
   'a'
 ];
 const mandelbrotX='cx*X/min(X,Y)*val(0,1,2)+val(1,-1.5,0.5)';
@@ -470,19 +1719,14 @@ const presetDescriptions={
   analyticshapesampler:'Demonstrates the analytic line, circle, ring, rotated-box, triangle, and grid masks with adjustable geometry, colour, and source mixing.',
   analoggrain:'Adds deterministic monochrome grain to simulate a lightly textured analog image. Adjust Amount for intensity and Seed for a different grain pattern.',
   brightcontrast:'Adjusts image brightness and contrast while preserving colour relationships and alpha.',
-  cellular:'Blends the source with deterministic Worley-cell edges. Smaller cells create finer structures; Seed changes the cellular layout.',
-  channelglitch:'Offsets RGB channels by deterministic horizontal bands to create a colour-split glitch. Adjust band height, displacement, seed, and source mix.',
   chromasolar:'Solarizes each colour channel around a shared threshold with adjustable channel separation.',
   digitalglitch:'Displaces RGB channels in deterministic rectangular blocks. Block dimensions, displacement, and seed control the glitch structure.',
-  directionalecho:'Blends two directional source samples with the original image to create a repeated motion echo.',
   duotone:'Maps source luminance between editable shadow and highlight colours for a two-colour treatment.',
   fractalclouds:'Blends the image with deterministic multi-octave fractal noise. Adjust scale, seed, and mix to create cloud-like texture.',
   sierpinskifractal:'Generates a recursive triangular Sierpiński mask with adjustable depth, scale, edge softness, colours, and source mix.',
   halftone:'Converts luminance into a repeating field of soft halftone dots with adjustable cell size, dot size, and softness.',
   mandelbrotatlas:'Renders a bounded Mandelbrot escape-time field with adjustable framing, iterations, palette accents, and source mix. It also serves as the fractal compute benchmark.',
   layerednoisebenchmark:'Exercises bounded FBM, turbulence, and ridged noise in separate colour channels for repeatable CPU/WebGPU performance and parity comparisons.',
-  mirrorx:'Mirrors the source image horizontally while preserving all four channels.',
-  midnighttartan:'Builds a dark tartan textile from layered grid masks, pinstripes, rotated thread hatching, and adjustable source mixing.',
   mosaic:'Samples the centre of repeating rectangular blocks to produce a pixelated mosaic.',
   noisedisplace:'Displaces source-image coordinates with two deterministic value-noise fields. Adjust scale, strength, and seed to vary the distortion.',
   poster:'Reduces each RGB channel to a controlled number of tonal levels while preserving alpha.',
@@ -504,19 +1748,14 @@ const presetDefinitions=[
 {id:'analyticshapesampler',name:'Analytic Shape Sampler',controls:[richControl('Box Rotation',156,'slider',-45,45,1,'number','°'),richControl('Stroke Width',70,'slider',1,9,0.1,'number','px'),richControl('Edge Softness',48,'slider',0,4,0.1,'number','px'),richControl('Grid Size',18,'slider',10,28,1,'integer','px'),richControl('Foreground R',228,'number',0,255,1,'integer'),richControl('Foreground G',210,'number',0,255,1,'integer'),richControl('Foreground B',230,'number',0,255,1,'integer'),richControl('Effect Mix',255,'slider',0,100,1,'number','%')],f:analyticShapeFormulas},
 {id:'analoggrain',name:'Analog Grain',controls:[richControl('Amount',52,'slider',0,90,1,'number','levels'),richControl('Seed',91,'seed',1,9999,1,'integer')],f:Array(3).fill('clamp(c+(hash2(x,y,val(1,1,9999))-0.5)*val(0,0,90),0,255)').concat('a')},
 {id:'brightcontrast',name:'Brightness / Contrast',controls:[richControl('Brightness',128,'slider',-128,128,1,'number','levels'),richControl('Contrast',85,'slider',0,300,1,'number','%')],f:Array(3).fill('clamp(((c-128)*val(1,0,300))/100+128+val(0,-128,128),0,255)').concat('a')},
-{id:'cellular',name:'Cellular Edges',controls:[richControl('Cell Size',54,'slider',8,120,1,'integer','px'),richControl('Seed',91,'seed',1,9999,1,'integer'),richControl('Blend',190,'slider',0,100,1,'number','%')],f:Array(3).fill('lerp(c,clamp((worleyF2(x,y,val(0,8,120),val(1,1,9999))-worleyF1(x,y,val(0,8,120),val(1,1,9999)))*900,0,255),ctl(2))').concat('a')},
-{id:'channelglitch',name:'Channel Split Glitch',controls:[richControl('Shift',72,'slider',0,54,1,'number','px'),richControl('Band Height',72,'slider',4,48,1,'integer','px'),richControl('Mix',170,'slider',0,100,1,'number','%'),richControl('Seed',61,'seed',1,9999,1,'integer')],f:['lerp(r,srcWrap(x+(hash2(floor(y/val(1,4,48)),0,val(3,1,9999))-0.5)*val(0,0,54),y,0),ctl(2))','lerp(g,srcWrap(x+(hash2(floor(y/val(1,4,48)),1,val(3,1,9999))-0.5)*val(0,0,18),y,1),ctl(2))','lerp(b,srcWrap(x-(hash2(floor(y/val(1,4,48)),2,val(3,1,9999))-0.5)*val(0,0,54),y,2),ctl(2))','a']},
 {id:'chromasolar',name:'Chromatic Solarize',controls:[richControl('Threshold',128,'slider',0,255,1,'integer'),richControl('Channel Spread',64,'slider',-72,72,1,'number','levels')],f:['r>=clamp(ctl(0)+val(1,-72,72),0,255)?255-r:r','g>=ctl(0)?255-g:g','b>=clamp(ctl(0)-val(1,-72,72),0,255)?255-b:b','a']},
 {id:'digitalglitch',name:'Digital Block Glitch',controls:[richControl('Displacement',77,'slider',0,100,1,'number','px'),richControl('Block Width',64,'slider',8,96,1,'integer','px'),richControl('Block Height',45,'slider',4,48,1,'integer','px'),richControl('Seed',91,'seed',1,9999,1,'integer')],f:['srcWrap(x+(hash2(floor(x/val(1,8,96)),floor(y/val(2,4,48)),val(3,1,9999))-0.5)*val(0,0,100),y,0)','srcWrap(x+(hash2(floor(x/val(1,8,96))+11,floor(y/val(2,4,48)),val(3,1,9999))-0.5)*val(0,0,70),y,1)','srcWrap(x+(hash2(floor(x/val(1,8,96))+23,floor(y/val(2,4,48)),val(3,1,9999))-0.5)*val(0,0,100),y,2)','a']},
-{id:'directionalecho',name:'Directional Echo',controls:[richControl('Distance',88,'slider',0,52,1,'number','px'),richControl('Angle',32,'slider',0,360,1,'number','°'),richControl('Mix',150,'slider',0,100,1,'number','%')],f:Array(3).fill('lerp(c,(c+srcLinear(x-r2x(val(1,0,1024),val(0,0,26)),y-r2y(val(1,0,1024),val(0,0,26)),z)+srcLinear(x-r2x(val(1,0,1024),val(0,0,52)),y-r2y(val(1,0,1024),val(0,0,52)),z))/3,ctl(2))').concat('a')},
 {id:'duotone',name:'Duotone',controls:[richControl('Shadow R',25,'number',0,255,1,'integer'),richControl('Shadow G',35,'number',0,255,1,'integer'),richControl('Shadow B',75,'number',0,255,1,'integer'),richControl('Highlight R',235,'number',0,255,1,'integer'),richControl('Highlight G',205,'number',0,255,1,'integer'),richControl('Highlight B',150,'number',0,255,1,'integer')],f:['scl(i,0,255,ctl(0),ctl(3))','scl(i,0,255,ctl(1),ctl(4))','scl(i,0,255,ctl(2),ctl(5))','a']},
 {id:'fractalclouds',name:'Fractal Clouds',controls:[richControl('Scale',58,'slider',12,180,1,'integer','px'),richControl('Seed',135,'seed',1,9999,1,'integer'),richControl('Blend',190,'slider',0,100,1,'number','%')],f:Array(3).fill('lerp(c,fbm(x,y,val(0,12,180),5,2,0.5,val(1,1,9999))*255,ctl(2))').concat('a')},
 {id:'sierpinskifractal',name:'Sierpiński Fractal',controls:[richControl('Recursion Depth',174,'number',2,9,1,'integer'),richControl('Fractal Scale',208,'slider',0.5,0.96,0.01),richControl('Edge Softness',32,'slider',0,2.5,0.1,'number','px'),richControl('Foreground R',238,'number',0,255,1,'integer'),richControl('Foreground G',232,'number',0,255,1,'integer'),richControl('Foreground B',214,'number',0,255,1,'integer'),richControl('Background',8,'number',0,255,1,'integer'),richControl('Effect Mix',255,'slider',0,100,1,'number','%')],f:sierpinskiFormulas},
 {id:'halftone',name:'Halftone Dots',controls:[richControl('Cell Size',72,'slider',4,32,1,'integer','px'),richControl('Dot Size',150,'slider',1,14,0.5,'number','px'),richControl('Softness',34,'slider',0,4,0.1,'number','px')],f:Array(3).fill('(1-smoothstep((255-i)/255*val(1,1,14),(255-i)/255*val(1,1,14)+val(2,0,4),c2m(wrap(x,val(0,4,32))-val(0,4,32)/2,wrap(y,val(0,4,32))-val(0,4,32)/2)))*255').concat('a')},
 {id:'mandelbrotatlas',name:'Mandelbrot Atlas',benchmark:true,controls:[richControl('Scale',128,'slider',1,2,0.01),richControl('Center X',96,'number',-1.5,0.5,0.01),richControl('Center Y',128,'number',-1,1,0.01),richControl('Iterations',128,'slider',24,192,1,'integer'),richControl('Red Accent',190,'slider',0,255,1,'integer'),richControl('Blue Accent',220,'slider',0,255,1,'integer'),richControl('Interior',8,'number',0,255,1,'integer'),richControl('Effect Mix',255,'slider',0,100,1,'number','%')],f:mandelbrotFormulas},
 {id:'layerednoisebenchmark',name:'Layered Noise Benchmark',benchmark:true,controls:[richControl('Noise Scale',92,'slider',10,96,1,'integer','px'),richControl('Octaves',192,'slider',2,8,1,'integer'),richControl('Seed',73,'seed',1,9999,1,'integer'),richControl('Contrast',150,'slider',0.65,1.65,0.01,'number','×'),unusedControl(4),unusedControl(5),unusedControl(6),unusedControl(7),unusedControl(8),richControl('Effect Mix',255,'slider',0,100,1,'number','%')],f:benchmarkNoiseFormulas},
-{id:'mirrorx',name:'Mirror Horizontal',controls:[],f:['src(X-1-x,y,0)','src(X-1-x,y,1)','src(X-1-x,y,2)','src(X-1-x,y,3)']},
-{id:'midnighttartan',name:'Midnight Tartan',controls:[richControl('Sett Scale',150,'slider',54,132,1,'integer','px'),richControl('Broad Stripe',130,'slider',8,34,1,'integer','px'),richControl('Fine Thread',100,'slider',0.6,3.4,0.1,'number','px'),richControl('Weave Spacing',75,'slider',3,10,0.1,'number','px'),richControl('Pattern Strength',215,'slider',0,100,1,'number','%'),richControl('Weave Angle',128,'slider',28,62,1,'number','°'),richControl('Blue Tone',124,'slider',0.75,1.35,0.01,'number','×'),richControl('Effect Mix',255,'slider',0,100,1,'number','%')],f:tartanFormulas},
 {id:'mosaic',name:'Mosaic',controls:[richControl('Block Width',35,'slider',2,64,1,'integer','px'),richControl('Block Height',35,'slider',2,64,1,'integer','px')],f:Array(4).fill('srcLinear(floor(x/val(0,2,64))*val(0,2,64)+val(0,2,64)/2,floor(y/val(1,2,64))*val(1,2,64)+val(1,2,64)/2,z)')},
 {id:'noisedisplace',name:'Noise Displacement',controls:[richControl('Noise Scale',52,'slider',8,120,1,'integer','px'),richControl('Strength',90,'slider',0,52,1,'number','px'),richControl('Seed',91,'seed',1,9999,1,'integer')],f:Array(3).fill('srcLinear(x+(valueNoise(x,y,val(0,8,120),val(2,1,9999))-0.5)*val(1,0,52),y+(valueNoise(x+431,y+719,val(0,8,120),val(2,1,9999))-0.5)*val(1,0,52),z)').concat('a')},
 {id:'poster',name:'Posterize',controls:[richControl('Levels',72,'slider',2,16,1,'integer')],f:Array(3).fill('round(c*(val(0,2,16)-1)/255)*255/(val(0,2,16)-1)').concat('a')},
@@ -531,9 +1770,12 @@ const presetDefinitions=[
 {id:'warmcool',name:'Warm–Cool Gradient',controls:[richControl('Warm Strength',120,'slider',0,100,1,'number','%'),richControl('Cool Strength',120,'slider',0,100,1,'number','%')],f:['clamp(r+linearGrad(x,y,0,0,X,Y)*val(0,0,70)-val(1,0,30),0,255)','g','clamp(b+(1-linearGrad(x,y,0,0,X,Y))*val(1,0,70)-val(0,0,30),0,255)','a']}
 ];
 
-const presetTags={"pass": ["Utility"], "invert": ["Color", "Negative"], "amberfilm": ["Retro", "Warm", "Portrait"], "analyticshapesampler": ["Shapes", "Procedural"], "analoggrain": ["Noise", "Retro"], "brightcontrast": ["Tone"], "cellular": ["Noise", "Texture"], "channelglitch": ["Glitch", "Color"], "chromasolar": ["Color", "Retro"], "digitalglitch": ["Glitch"], "directionalecho": ["Blur", "Distortion"], "duotone": ["Color", "Print"], "fractalclouds": ["Noise", "Procedural"], "sierpinskifractal": ["Fractal", "Shapes"], "halftone": ["Monochrome", "Print"], "mandelbrotatlas": ["Fractal", "Procedural"], "layerednoisebenchmark": ["Noise", "Procedural"], "mirrorx": ["Transform"], "midnighttartan": ["Pattern", "Textile"], "mosaic": ["Pixelate"], "noisedisplace": ["Noise", "Distortion"], "poster": ["Color", "Print"], "rgbshift": ["Color", "Distortion"], "saturation": ["Color"], "sharpen": ["Detail"], "softfocus": ["Blur", "Portrait"], "swirl": ["Distortion"], "thresholddither": ["Monochrome", "Print"], "vignettepro": ["Tone", "Portrait"], "warpedsdfbloom": ["Shapes", "Procedural"], "warmcool": ["Color", "Gradient"]};
+const presetTags={"pass": ["Utility"], "invert": ["Color", "Negative"], "amberfilm": ["Retro", "Warm", "Portrait"], "analyticshapesampler": ["Shapes", "Procedural"], "analoggrain": ["Noise", "Retro"], "brightcontrast": ["Tone"], "chromasolar": ["Color", "Retro"], "digitalglitch": ["Glitch"], "duotone": ["Color", "Print"], "fractalclouds": ["Noise", "Procedural"], "sierpinskifractal": ["Fractal", "Shapes"], "halftone": ["Monochrome", "Print"], "mandelbrotatlas": ["Fractal", "Procedural"], "layerednoisebenchmark": ["Noise", "Procedural"], "mosaic": ["Pixelate"], "noisedisplace": ["Noise", "Distortion"], "poster": ["Color", "Print"], "rgbshift": ["Color", "Distortion"], "saturation": ["Color"], "sharpen": ["Detail"], "softfocus": ["Blur", "Portrait"], "swirl": ["Distortion"], "thresholddither": ["Monochrome", "Print"], "vignettepro": ["Tone", "Portrait"], "warpedsdfbloom": ["Shapes", "Procedural"], "warmcool": ["Color", "Gradient"]};
 
-const presets=presetDefinitions.map(preset=>({...preset,tags:[...(presetTags[preset.id]||[]),...(preset.benchmark?['Benchmark']:[])],description:presetDescriptions[preset.id]}));
+const presets=[
+  ...presetDefinitions.map(preset=>({...preset,tags:[...(presetTags[preset.id]||[]),...(preset.benchmark?['Benchmark']:[])],description:presetDescriptions[preset.id]})),
+  ...contributedPresetDefinitions.map(preset=>({...preset,tags:[...preset.tags],controls:preset.controls.map(control=>({...control,ui:{...control.ui}})),f:[...preset.f]}))
+];
 
 
 /* src/renderers/cpu-worker-source.js */
@@ -1738,15 +2980,10 @@ function initFilterFabApp(){
     const suggestions=$('#tagSuggestions');suggestions.replaceChildren();const all=[...new Set(catalog().flatMap(entry=>entry.tags))].filter(tag=>!tags.some(item=>tagKey(item)===tagKey(tag))).filter(tag=>tag.toLowerCase().includes($('#newTag').value.toLowerCase())).slice(0,50);for(const tag of all){const option=document.createElement('option');option.value=tag;suggestions.append(option);}
   }
   function commitTags(tags){try{const normalized=normalizeTags(tags);if(activeDocument.key?.startsWith('builtin:')){normalizeTags([...new Map([...activeDocument.tags,...normalized].map(tag=>[tagKey(tag),tag])).values()]);writeEntryPreference(localStorage,activeDocument.key,{tags:normalized});}else activeDocument.tags=normalized;$('#tagError').textContent='';catalogCache=null;refreshTags();populatePresets();return true;}catch(error){$('#tagError').textContent=error.message;return false;}}
-  async function guardReplacement(){
-    if(!isDirty())return true;
-    const {action}=await chooseFilterAction(`Save changes to ${$('#filterName').value||'Untitled Filter'}?`,[['save','Save and continue'],['discard','Discard changes'],['cancel','Cancel']]);
-    return action==='discard'||(action==='save'&&await savePreset());
-  }
   async function loadCatalogEntry(entry,focusTarget=el.searchFilters){
     const definition=entry.source==='builtin'?presets.find(item=>`builtin:${item.id}`===entry.key):findCustomPresetById(library().presets,entry.document.id);
     if(!definition)throw new Error('This filter was deleted in another tab.');
-    prepareFilter(definition);if(!await guardReplacement())return false;
+    prepareFilter(definition);
     applyFilter(definition,entry.key);if(state.isRendering)state.focusSnapshot={node:focusTarget};return true;
   }
   function currentFilter(){return{format:'filter-fab-js',version:2,...(activeDocument.id?{id:activeDocument.id}:{}),tags:effectiveTags(),mathMode:state.legacyMath?'legacy':'float',name:$('#filterName').value.trim().slice(0,120)||'Untitled Filter',description:el.description.value.trim().slice(0,FILTER_DESCRIPTION_MAX_LENGTH),author:$('#filterAuthor').value.trim().slice(0,120),formulas:el.formulas.map(field=>field.value.trim()),controls:state.controls.map((value,index)=>({label:String(state.labels[index]??'').slice(0,80)||`Control ${index+1}`,value,ui:cloneControlUI(state.controlUIs[index])}))};}
@@ -1844,7 +3081,7 @@ function initFilterFabApp(){
       browser?.refresh();
     }catch(error){organizationError(error);}
   }
-  async function importFilterFile(file){if(!file)return;try{const result=await importLatestFilterFile(file,{state,cancelRender,applyFilter,beforeApply:async definition=>{prepareFilter(definition);return guardReplacement();}});if(!result)return;toast(result.kind==='afs'?'AFS filter imported · CPU legacy mode':'Filter FabJS project imported');}catch(error){console.error('Filter import failed',error);toast(`Import failed: ${error.message}`);}finally{el.filterInput.value='';}}
+  async function importFilterFile(file){if(!file)return;try{const result=await importLatestFilterFile(file,{state,cancelRender,applyFilter});if(!result)return;toast(result.kind==='afs'?'AFS filter imported · CPU legacy mode':'Filter FabJS project imported');}catch(error){console.error('Filter import failed',error);toast(`Import failed: ${error.message}`);}finally{el.filterInput.value='';}}
   async function savePreset(){
     const filter=validatedCurrentFilter();if(!filter){await chooseFilterAction('Could not save filter',[['cancel','Keep editing']],{detail:el.statusText.textContent});return false;}
     try{
@@ -1886,7 +3123,7 @@ function initFilterFabApp(){
     $('#savePresetBtn').onclick=savePreset;
     el.deletePreset.onclick=deletePreset;
     el.renderBtn.onclick=()=>render({focusInvalid:true});
-    $('#resetBtn').onclick=async()=>{if(await guardReplacement())applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');};
+    $('#resetBtn').onclick=()=>applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');
     browser=createFilterBrowser({launcher:el.searchFilters,getEntries:catalog,load:loadCatalogEntry,toggleFavorite:entry=>{writeEntryPreference(localStorage,entry.key,{favorite:!entry.favorite});catalogCache=null;},onError:organizationError});
     populatePresets();
     el.preset.onchange=async()=>{
@@ -1943,7 +3180,7 @@ function initFilterFabApp(){
     window.addEventListener('beforeunload',()=>state.rendererManager?.dispose());
   }
 
-  window.FilterFabJS=Object.freeze({version:'2.7.0',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getRendererPreference:()=>state.rendererPreference});
+  window.FilterFabJS=Object.freeze({version:'2.7.1',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getRendererPreference:()=>state.rendererPreference});
   controlsController.buildSliders();wire();const demo=demoImage();initImage(demo.data,demo.width,demo.height);applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');
   return{state,render,applyFilter,loadImageFile};
 }
