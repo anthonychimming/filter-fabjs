@@ -6,9 +6,25 @@ const controls = fs.readFileSync('src/ui/controls.js', 'utf8');
 const html = fs.readFileSync('index.html', 'utf8');
 const css = fs.readFileSync('styles/app.css', 'utf8');
 
-assert.match(html, /id="renderBtn"/, 'formula editor must expose an explicit Render action');
+assert.match(html, /id="renderBtn"[\s\S]*?<span>Update Preview<\/span>/, 'formula editor must expose an explicit Update Preview action');
 assert.match(html, /id="formulaEditStatus"/, 'formula editor must expose preview state');
 assert.match(html, /id="rendererDiagnostics"[^>]+aria-live="polite"/, 'the renderer toolbar must expose live GPU eligibility and fallback diagnostics');
+assert.match(html, /id="workspaceMode"[^>]+role="tablist"[^>]+aria-label="Workspace mode"/, 'the inspector must expose a labelled workspace-mode tab list');
+assert.match(html, /id="exploreModeTab"[^>]+role="tab"[^>]+aria-selected="true"[^>]+aria-controls="explorePanel"/, 'Explore must be the selected initial mode');
+assert.match(html, /id="authorModeTab"[^>]+role="tab"[^>]+aria-selected="false"[^>]+aria-controls="authorPanel"/, 'Author must be available without being initially selected');
+assert.match(html, /id="authorPanel"[^>]+role="tabpanel"[^>]+hidden/, 'inactive Author content must not remain tabbable');
+assert.ok(html.indexOf('id="explorePanel"')<html.indexOf('id="sliderGrid"')&&html.indexOf('id="sliderGrid"')<html.indexOf('id="authorPanel"'), 'runtime controls must be primary content in Explore');
+assert.ok(html.indexOf('id="authorPanel"')<html.indexOf('id="formulaR"')&&html.indexOf('id="authorPanel"')<html.indexOf('id="filterName"'), 'formulas and metadata must live in Author');
+assert.match(html, /<label for="filterName">Filter name/, 'filter name must have a visible label');
+assert.match(html, /<label for="filterAuthor">Author/, 'filter author must have a visible label');
+assert.match(html, /<details class="reference diagnostics"><summary>Advanced \/ Diagnostics<\/summary>/, 'detailed renderer diagnostics must be disclosed in Author');
+assert.match(html, /id="rendererSummary"[^>]+aria-live="polite"/, 'Explore must expose a compact renderer summary');
+assert.match(app, /workspaceMode:'explore'/, 'workspace mode must default to Explore in UI-only state');
+const modeSwitchBody=app.match(/function setWorkspaceMode\(mode\)\{[\s\S]*?modePanels\.forEach\(panel=>panel\.hidden=panel\.dataset\.modePanel!==mode\);\}/)?.[0]||'';
+assert.ok(modeSwitchBody, 'workspace mode switching must be wired');
+assert.match(modeSwitchBody, /state\.workspaceMode=mode/, 'mode switching must update the UI-only mode state');
+assert.doesNotMatch(modeSwitchBody, /render\(|applyFilter|savePreset|storageSet|localStorage/, 'mode switching must not render or mutate the filter document');
+assert.match(app, /event\.key==='ArrowRight'[\s\S]*?event\.key==='ArrowLeft'/, 'workspace tabs must support predictable arrow-key navigation');
 
 const formulaInputHandler = app.match(/field\.oninput=\(\)=>\{([\s\S]*?)\n\s*\};\n\s*field\.onblur/)?.[1] || '';
 assert.ok(formulaInputHandler, 'formula input handler must be present');
@@ -57,7 +73,8 @@ assert.match(app, /el\.split\.oninput=\(\)=>\{state\.split=Number\(el\.split\.va
 assert.match(controls, /input\.oninput=\(\)=>\{updateCanonical\(index,input\.value\)/, 'range input must map displayed values back to canonical state continuously');
 assert.match(controls, /input\.onchange=\(\)=>scheduleRender\(\)/, 'range control must render only after the edit is committed');
 assert.match(html, /id="controlEditorLabel"[^>]+maxlength="80"/, 'control labels must stay within the serialized metadata limit');
-assert.match(controls, /for\(const definition of CONTROL_DEFINITIONS\)/, 'the control panel must be generated from the shared control definitions');
+assert.match(controls, /CONTROL_DEFINITIONS\.filter\(definition=>state\.usedControls\[definition\.index\]\)/, 'Explore must render only control definitions used by the current program');
+assert.match(controls, /el\.controlsEmpty\.hidden=active\.length>0/, 'filters without controls must expose the compact empty state');
 assert.match(html, /id="editControlsBtn"[^>]*>Edit controls</, 'the Controls header must expose the authoring action');
 assert.match(html, /id="editControlsDialog"[^>]+aria-labelledby="controlEditorTitle"/, 'control metadata must be authored in a dedicated accessible dialog');
 for(const widget of ['slider','number','toggle','seed'])assert.match(html,new RegExp(`<option value="${widget}">`),`the editor must expose the ${widget} widget`);
@@ -84,9 +101,9 @@ assert.match(app, /Imported from PNG · Not saved/, 'PNG imports must display th
 
 console.log('UI wiring smoke checks passed.');
 
-assert.match(html,/id="browseFiltersBtn"[^>]+aria-haspopup="dialog"/);
-assert.match(html,/<select id="presetSelect"[^>]+aria-label="Filter"/);
-assert.ok(html.indexOf('class="filter-picker-row"')<html.indexOf('class="filter-meta"')&&html.indexOf('class="filter-meta"')<html.indexOf('class="preset-row"'));
+assert.match(html,/id="browseFiltersBtn"[^>]+aria-haspopup="dialog"[^>]*>Browse filters</);
+assert.match(html,/<select id="presetSelect"[^>]+aria-label="Current filter"/);
+assert.ok(html.indexOf('id="authorPanel"')<html.indexOf('class="filter-picker-row"')&&html.indexOf('class="filter-picker-row"')<html.indexOf('class="filter-meta"')&&html.indexOf('class="filter-meta"')<html.indexOf('class="preset-row"'));
 assert.match(app,/importLatestFilterFile\(file,\{state,cancelRender,applyFilter\}\)/,'imports replace the current draft without opening the retired warning dialog');
 assert.doesNotMatch(app,/guardReplacement|Save and continue|Discard changes/,'filter replacement warning wiring must remain removed');
 assert.match(app,/writeLibraryRecord\(localStorage,normalizeCustomPresetList,filter,\{targetId,expected\}\)/);
@@ -102,3 +119,5 @@ assert.match(filterBrowser,/filterBrowserTitle/,'filter browser exposes a labell
 assert.match(filterBrowser,/textContent='Filter search'/,'filter browser title is Filter search');
 assert.match(filterBrowser,/const sourceLabel[\s\S]*const authorLabel/,'filter results include source and author metadata');
 assert.match(css,/\.filter-browser \.result-tags button\{min-height:0;/,'filter tags use compact buttons');
+assert.match(css,/\.workspace\{grid-template-columns:minmax\(360px,1fr\) clamp\(320px,28vw,430px\)\}/,'desktop workspace must use a flexible inspector width');
+assert.match(css,/\.mode-panel\[hidden\]\{display:none\}/,'hidden mode panels must be removed from layout and tab order');

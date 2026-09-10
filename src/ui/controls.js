@@ -42,7 +42,7 @@ export function createControlsController({state,el,scheduleRender,applyInteracti
   function buildRuntimeControl(definition){
     const index=definition.index,ui=normalizeControlUI(state.controlUIs[index]),value=displayValue(index),row=append(grid,'div','slider-row');row.dataset.controlIndex=String(index);
     append(row,'span','slider-index',String(index));
-    const label=append(row,'button','control-label-button',controlName(index));label.type='button';label.title=`Edit ${controlName(index)}`;label.setAttribute('aria-label',`Edit ${accessibleName(index)}`);label.onclick=()=>openEditor(index);
+    append(row,'span','control-label',controlName(index));
     const widget=append(row,'div',`control-widget control-widget-${ui.widget}`),name=accessibleName(index);let readout;
     if(ui.widget==='slider'){
       const input=append(widget,'input','slider-range');input.type='range';input.min=String(ui.displayMin);input.max=String(ui.displayMax);input.step=String(ui.step);input.value=String(value);input.setAttribute('aria-label',name);readout=addReadout(row,index,ui,value);
@@ -59,9 +59,9 @@ export function createControlsController({state,el,scheduleRender,applyInteracti
     }
     const usage=append(row,'span','control-usage-status visually-hidden',state.usedControls[index]?'Used':'Unused');usage.setAttribute('aria-live','polite');
   }
-  function buildSliders(){grid.replaceChildren();for(const definition of CONTROL_DEFINITIONS)buildRuntimeControl(definition);applyInteractionLocks();}
+  function buildSliders(){grid.replaceChildren();const active=CONTROL_DEFINITIONS.filter(definition=>state.usedControls[definition.index]);for(const definition of active)buildRuntimeControl(definition);el.controlsEmpty.hidden=active.length>0;applyInteractionLocks();}
   function syncSliders(){buildSliders()}
-  function updateControlUsage(program){state.usedControls=program?.metadata?.controlMask?[...program.metadata.controlMask]:Array(CONTROL_COUNT).fill(true);const count=state.usedControls.filter(Boolean).length;el.controlsUsage.textContent=count?`${count} active`:'No controls used';grid.querySelectorAll('.control-usage-status').forEach((status,index)=>status.textContent=state.usedControls[index]?'Used':'Unused');if(dialog.open)renderEditorList();applyInteractionLocks();}
+  function updateControlUsage(program){const next=program?.metadata?.controlMask?[...program.metadata.controlMask]:Array(CONTROL_COUNT).fill(true),changed=next.some((used,index)=>used!==state.usedControls[index]);state.usedControls=next;const count=state.usedControls.filter(Boolean).length,label=count?`${count} active`:'No controls used';el.controlsUsage.textContent=label;el.authorControlsUsage.textContent=label;if(changed)buildSliders();else{grid.querySelectorAll('.control-usage-status').forEach(status=>{const index=Number(status.closest('.slider-row')?.dataset.controlIndex);status.textContent=state.usedControls[index]?'Used':'Unused';});applyInteractionLocks();}if(dialog.open)renderEditorList();}
   function refreshControlUsage(){try{updateControlUsage(compileCurrentProgram())}catch{updateControlUsage(null)}}
 
   function draftEntry(index){return draft[index]}

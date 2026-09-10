@@ -22,7 +22,7 @@ for (const preset of presets) {
   else cpuFallback += 1;
 }
 
-assert.equal(presets.length, 35, 'v2.8.0 must expose the revised built-in catalog size');
+assert.equal(presets.length, 35, 'v2.8.1 must expose the revised built-in catalog size');
 assert.equal(gpuCompatible, presets.length, 'every native built-in must compile for WebGPU after Phase 3.5');
 assert.equal(cpuFallback, 0, 'native built-ins must not require CPU fallback');
 assert.equal(gpuCompatible + cpuFallback, presets.length);
@@ -159,7 +159,7 @@ const contributedBuiltins=new Map([
   ['touchingrandomcapsules','Touching Random Capsules'],
   ['vhstrackingglitch','VHS Tracking Glitch']
 ]);
-assert.equal(presets.length,35,'v2.8.0 must expose 26 retained plus nine contributed built-in filters');
+assert.equal(presets.length,35,'v2.8.1 must expose 26 retained plus nine contributed built-in filters');
 assert.equal(new Set(presets.map(preset=>preset.id)).size,presets.length,'remaining built-in IDs must stay unique');
 assert.equal(new Set(presets.map(preset=>preset.name)).size,presets.length,'remaining built-in names must stay unique');
 for(const [id,name] of contributedBuiltins){

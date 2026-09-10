@@ -1,4 +1,4 @@
-# Filter library — v2.8.0
+# Filter library — v2.8.1
 
 The browser panel is titled **Filter search**.
 
@@ -56,4 +56,4 @@ The normal dialog keeps controls above the scrolling results. At viewport height
 
 These pre-existing numeric differences were not changed as part of search and organization. CPU fallback and compatibility smoke tests pass; this result does not claim universal hardware parity.
 
-The standalone HTML is tested over localhost. Direct `file://` behavior can vary by browser security policy, so local-file opening remains a user test. The v2.8.0 deliverable is `dist/filter-fabjs-v2.8.0.html`. No commit, push, or deployment is performed by the release workflow.
+The standalone HTML is tested over localhost. Direct `file://` behavior can vary by browser security policy, so local-file opening remains a user test. The v2.8.1 deliverable is `dist/filter-fabjs-v2.8.1.html`. No deployment is performed by the release workflow.

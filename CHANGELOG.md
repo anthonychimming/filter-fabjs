@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.8.1
+
+- Added an artist-first Explore workspace that makes the active filter, filter discovery, used runtime controls, and compact renderer state the default inspector experience.
+- Added an Author workspace for labelled metadata, filter selection, tags, channel formulas, control-definition editing, and detailed renderer diagnostics without changing filter or render semantics.
+- Renamed the manual formula action to Update Preview, added accessible tab semantics and keyboard navigation, and made the inspector width responsive across desktop, tablet, narrow, and zoomed layouts.
+- Added focused UI regressions and updated current-release documentation while preserving native v2, AFS, typed IR v1, CPU/WebGPU fallback, local filter storage, and PNG metadata behavior.
+
 ## 2.8.0
 
 - Embedded the current validated native-v2 filter document in exported PNGs using a bounded, CRC-checked, uncompressed `FilterFabJS` iTXt envelope without changing image pixels.
