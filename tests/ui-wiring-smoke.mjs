@@ -20,7 +20,8 @@ assert.match(app, /focusSnapshot=captureFocus\(\)/, 'render lock must capture fo
 assert.match(app, /restoreFocus\(snapshot\)/, 'render unlock must restore focus');
 assert.match(app, /mathMode:state\.legacyMath\?'legacy':'float'/, 'filter serialization must preserve legacy math mode');
 assert.doesNotMatch(app, /mathMode:'float'/, 'filter serialization must not hard-code float math');
-assert.match(app, /const loadId=\+\+state\.imageLoadId/, 'image loading must use a latest-request generation');
+assert.match(app, /const requestId=\+\+state\.imageLoadId/, 'file image routing must reserve a latest-request generation before metadata inspection');
+assert.match(app, /requestId===state\.imageLoadId\?loadImageFile\(image,\{requestId\}\):false/, 'metadata choices must not revive a stale image request');
 assert.match(app, /if\(loadId!==state\.imageLoadId\)return false/, 'stale image decodes must be discarded');
 assert.match(app, /finally\{bitmap\?\.close\?\.\(\);\}/, 'decoded image bitmaps must close on every exit path');
 assert.match(app, /filterLoadId:0/, 'filter imports must maintain an independent latest-request generation');
@@ -31,13 +32,17 @@ assert.match(initImageBody, /initializeImagePreview/, 'image initialization must
 assert.match(initImageBody, /initializeRendererSource/, 'image initialization must still synchronize renderer sources');
 assert.ok(initImageBody.indexOf('initializeImagePreview')<initImageBody.indexOf('initializeRendererSource'), 'the source preview must be drawn before renderer initialization can delay or fail');
 assert.match(app, /async function exportPNG\(\)/, 'PNG export must use the asynchronous encoding path');
-assert.match(app, /blob=await canvasBlob\(canvas,'image\/png'\)/, 'PNG export must download an encoded Blob');
+assert.match(app, /encoded=await canvasBlob\(canvas,'image\/png'\)/, 'PNG export must encode the rendered pixels once');
+assert.match(app, /blob=await embedFilterFabMetadata\(encoded,envelope\)/, 'PNG export must embed the validated filter envelope without rerendering');
+assert.match(app, /lastSuccessfulRenderSignature!==filterRenderSignature\(filter\)/, 'PNG export must reject stale render-affecting state');
+assert.match(app, /state\.lastSuccessfulRenderSignature=renderSignature;[\s\S]*?markPreviewCurrent\(\)/, 'only a successful render result may make PNG provenance current');
+assert.match(app, /function initImage\(data,width,height\)\{state\.renderId\+\+;state\.lastSuccessfulRenderSignature=null;/, 'a new source image must invalidate export provenance until its render succeeds');
 assert.doesNotMatch(app, /toDataURL\(/, 'PNG export must not block on a base64 data URL');
 assert.match(app, /rendererManager\.renderWithFallback\(/, 'the renderer manager must own runtime CPU fallback');
 assert.match(app, /rendererManager\.diagnose\(program,state\.rendererPreference\)/, 'the UI inspector must consume manager-owned renderer diagnostics');
 assert.doesNotMatch(app, /rendererManager\.get\('cpu'\)|rendererManager\.active\s*=/, 'the app must not bypass manager-owned fallback state');
 assert.match(app, /function prepareFilter\(input\)/, 'filter definitions must be normalized before application state changes');
-assert.match(app, /function applyFilter\(definition,selection\)\{const next=prepareFilter\(definition\);state\.legacyMath=/, 'filter application must finish validation and compilation before mutating UI state');
+assert.match(app, /function applyFilter\(definition,selection,\{importSource=selection\?null:'file'\}=\{\}\)\{const next=prepareFilter\(definition\);state\.legacyMath=/, 'filter application must finish validation and compilation before mutating UI state');
 assert.match(app, /function exportFilter\(\)\{const filter=validatedCurrentFilter\(\);if\(!filter\)return;/, 'filter export must stop when native-format validation fails');
 assert.doesNotMatch(app, /custom:\$\{index\}|customList\(\)\[Number\(id\)\]|index=Number\(id\)/, 'custom preset identity must not depend on array indexes');
 assert.match(app, /astList=inputAsts\|\|getValidatedFormulaAsts\(definition\)\|\|normalizedFormulas\.map/, 'filter preparation must reuse ASTs already produced by import validation');
@@ -71,6 +76,11 @@ assert.match(css, /\.filter-description textarea\{height:82px;max-height:82px;re
 assert.match(app, /description:el\.description\.value\.trim\(\)\.slice\(0,FILTER_DESCRIPTION_MAX_LENGTH\)/, 'native exports and local presets must read bounded filter-level description metadata');
 assert.match(app, /el\.description\.value=next\.description/, 'applying imported and built-in filters must restore description metadata into the editor');
 assert.match(app, /description=String\(definition\.description\?\?''\)\.trim\(\)/, 'older filters must normalize a missing description to an empty string');
+assert.match(app, /el\.imageInput\.onchange=.*openImageFile/, 'Open Image must use the shared PNG metadata route');
+assert.match(app, /addEventListener\('drop',[\s\S]*?openImageFile/, 'drag-and-drop must use the same PNG metadata route');
+assert.match(app, /pasteImageFromClipboard[\s\S]*?loadImageFile\(blob/, 'clipboard paste must retain the ordinary image path without metadata inspection');
+assert.match(app, /activeDocument\.importSource=null/, 'saving or adopting a library document must clear PNG provenance');
+assert.match(app, /Imported from PNG · Not saved/, 'PNG imports must display their exact unsaved provenance');
 
 console.log('UI wiring smoke checks passed.');
 

@@ -4,7 +4,7 @@ This document describes the implementation currently present in the public repos
 
 ## Release
 
-- Application version: **2.7.2**
+- Application version: **2.8.0**
 - Native filter format: **version 2**
 - Typed IR: **version 1**
 - Development layout: native ES modules
@@ -63,10 +63,10 @@ Current workflows include:
 - Additive rich-control `ui` metadata preserved through native import/export, browser-local presets, switching, save, and reset. All 35 built-ins provide semantic display ranges and widgets for their active controls; missing metadata and historic AFS controls receive the generic 0–255 slider presentation.
 - Optional multiline filter descriptions, bounded to 2,000 characters and preserved through all 35 built-ins, native import/export, and browser-local presets; missing descriptions normalize to an empty string.
 - Historic `.afs` import with legacy integer math, eight whole-token integer controls with legacy 0–255 clamping, exactly four formula groups, preserved physical line-comment boundaries, and the same formula budgets.
-- Image loading and drag-and-drop.
+- Image loading and drag-and-drop with pre-mutation detection of embedded Filter FabJS PNG metadata.
 - Clipboard image paste.
 - RGBA PNG copy where browser clipboard support permits it.
-- Asynchronous Blob-based PNG export.
+- Asynchronous Blob-based PNG export with a bounded, versioned native-v2 filter iTXt envelope and render-provenance guard.
 - Original, filtered, and split preview modes with zero-copy cached `ImageData` wrappers and animation-frame-coalesced split redraws.
 - Transparency checkerboard preview.
 
@@ -113,7 +113,7 @@ For hardware parity, run `npm run dev` and open `http://localhost:8080/tests/web
 - CPU and GPU floating-point implementations may have small numerical differences.
 - Historic Filter Factory behavior is not guaranteed to be bit-exact for every edge case.
 - Clipboard interoperability depends on the browser and receiving application.
-- Display ranges are linear; logarithmic curves, enums, colour controls, grouping, conditional visibility, and control reordering are not part of v2.7.2.
+- Display ranges are linear; logarithmic curves, enums, colour controls, grouping, conditional visibility, and control reordering are not part of v2.8.0.
 
 ## Search and organization (2.7.0)
 

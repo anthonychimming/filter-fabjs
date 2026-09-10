@@ -23,8 +23,11 @@ assert.match(deployedJavaScript, /background\.addColorStop\(0,'#08050d'\)/, 'dep
 const escapedVersion = packageMetadata.version.replaceAll('.', '\\.');
 assert.match(deployedJavaScript, new RegExp(`version:'${escapedVersion}'`), 'deployed JavaScript API must report the package version');
 assert.match(deployedJavaScript, /getRendererDiagnostics/, 'deployed JavaScript must expose the Phase 3.5D renderer diagnostic snapshot');
+assert.match(deployedJavaScript, /filter-fab-js\/png/, 'deployed JavaScript must bundle the PNG metadata envelope schema');
+assert.match(deployedJavaScript, /function embedFilterFabMetadata/, 'deployed JavaScript must bundle the PNG metadata codec');
 
 assert.match(standaloneHtml, new RegExp(`<title>Filter FabJS v${packageMetadata.version.replaceAll('.', '\\.')}<\\/title>`), 'standalone title must match package version');
 assert.doesNotMatch(standaloneHtml, /<link[^>]+href=|<script[^>]+src=|type="module"/, 'standalone build must not depend on external CSS or JavaScript');
+assert.match(standaloneHtml, /filter-fab-js\/png/, 'standalone build must contain the PNG metadata carrier');
 
 console.log(`Build output smoke: ${cssReference}, ${jsReference}, and standalone v${packageMetadata.version} pass.`);

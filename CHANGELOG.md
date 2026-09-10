@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.8.0
+
+- Embedded the current validated native-v2 filter document in exported PNGs using a bounded, CRC-checked, uncompressed `FilterFabJS` iTXt envelope without changing image pixels.
+- Added shared Open Image and drag-and-drop detection with Import Filter, Open Image, and Cancel choices; importing preserves the current source image and remains unsaved until stored in My Filters.
+- Added render-provenance checks so formula, math-mode, or control-value changes require a successful render before PNG export, while descriptive metadata edits do not.
+- Added codec, validation, image-integrity, routing, provenance, and UI-wiring regressions and updated release documentation for v2.8.0.
+
 ## 2.7.2
 
 - Fixed custom-filter deletion so the removed filter disappears from the dropdown and filter search immediately, without restarting the app.

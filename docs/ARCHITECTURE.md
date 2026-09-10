@@ -1,6 +1,6 @@
 # Architecture
 
-Filter FabJS v2.7.2 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
+Filter FabJS v2.8.0 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
 
 ```text
 Formula text
@@ -22,6 +22,7 @@ RGBA pixel output
 - `src/core/controls.js` — shared definitions for the ten public controls, rich-presentation validation, raw/display mapping, formatting, and the five control pairs.
 - `src/core/chroma.js` — math-mode-specific chroma bounds shared by CPU and WebGPU code generation.
 - `src/core/ir.js` — conversion from syntax trees to renderer-neutral typed IR, semantic metadata including simple constant-`val()` mapping inspection, and memoized canonical program keys.
+- `src/io/png-metadata.js` — bounded PNG chunk parsing plus the versioned, CRC-checked Filter FabJS iTXt carrier; native filter validation remains in `src/io/filter-format.js`.
 - `src/gpu/wgsl-compiler.js` — WebGPU compatibility analysis and typed-IR-to-WGSL compilation.
 - `src/gpu/params-layout.js` — aligned WebGPU parameter-buffer sizing with twelve reserved control slots for the ten public controls.
 - `src/renderers/renderer-backend.js` — shared renderer contract.
