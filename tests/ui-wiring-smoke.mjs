@@ -81,6 +81,7 @@ assert.match(app,/importLatestFilterFile\(file,\{state,cancelRender,applyFilter\
 assert.doesNotMatch(app,/guardReplacement|Save and continue|Discard changes/,'filter replacement warning wiring must remain removed');
 assert.match(app,/writeLibraryRecord\(localStorage,normalizeCustomPresetList,filter,\{targetId,expected\}\)/);
 assert.match(app,/async function savePreset\(\)[\s\S]*?const filter=validatedCurrentFilter\(\);if\(!filter\)\{[\s\S]*?return false/);
+assert.match(app,/catalogCache=null;\s*if\(action==='keep'\)\{[^}]+refreshTags\(\);\}else applyFilter\([^;]+;\s*populatePresets\(\);/,'both custom-filter deletion choices must rebuild the dropdown and search catalog');
 assert.match(app,/requestedOption=.*Array\.from\(el\.preset\.options\)/,'dropdown refresh checks whether a pending native selection is still valid');
 assert.match(app,/forceSelection\|\|!requestedOption\|\|requestedSelection===activeDocument\.key/,'generic header refreshes preserve a pending dropdown selection');
 assert.match(app,/updateDocumentHeader\(\{forceSelection:true\}\)/,'completed filter application restores the committed dropdown identity');

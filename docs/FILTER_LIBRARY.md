@@ -1,4 +1,4 @@
-# Filter library — v2.7.1
+# Filter library — v2.7.2
 
 The browser panel is titled **Filter search**.
 
@@ -20,7 +20,7 @@ Existing `builtin:<id>` and `custom:<id>` identities are retained. A rename with
 
 An import loads an unsaved draft and does not add a library record. Saving an imported portable ID offers Use saved record when normalized portable content is equal, or explicit Update existing / Save as new / Cancel when it differs. Missing IDs are allocated on Save or Export. An exported built-in/detached working copy retains its newly allocated portable ID for subsequent exports or first save. Export does not mark a draft saved.
 
-Saved state is separate from preview state. Changes to name, author, description, tags, math mode, formulas, control values, labels, or control presentation metadata participate in draft comparison. Rendering never clears unsaved changes. Filter selection, search-result loading, Reset, and Import replace dirty or imported drafts immediately without a warning dialog. Invalid target filters fail validation before replacement. Delete targets the loaded custom ID and can retain dirty content as a detached unsaved draft.
+Saved state is separate from preview state. Changes to name, author, description, tags, math mode, formulas, control values, labels, or control presentation metadata participate in draft comparison. Rendering never clears unsaved changes. Filter selection, search-result loading, Reset, and Import replace dirty or imported drafts immediately without a warning dialog. Invalid target filters fail validation before replacement. Delete targets the loaded custom ID, can retain dirty content as a detached unsaved draft, and immediately removes the deleted entry from both the dropdown and search catalog.
 
 ## Persistence and compatibility
 
@@ -38,11 +38,11 @@ The browser uses native dialogs, labels, checkboxes, buttons, lists, the Tags ex
 
 The normal dialog keeps controls above the scrolling results. At viewport heights of 500 CSS pixels or less, the controls also scroll independently to preserve access to all actions with usable touch targets. This is a deliberate small-viewport adaptation. Narrow layouts wrap fields and tags without widening the canvas.
 
-## Validation record — September 9, 2026
+## Validation record — September 10, 2026
 
 - `npm run verify`: passed syntax checks, all Node smoke suites, production build, and standalone/build-output validation.
 - All 35 built-ins compile as GPU-compatible programs. Formula, IR, CPU, GPU, and manager implementation files are unchanged. Seven contributed filters retain formula programs that can exceed the CPU work budget on sufficiently large images; this accepted limitation is documented in `PROJECT_STATUS.md` and covered by explicit budget tests.
-- Browser workflow fixture: `tests/library-browser.html`. Modular and standalone workflows cover export identity/tag preservation, local-only favorites, no preview/program changes while organizing, focus after unfavoriting, invalid-load recovery, immediate filter/search/import/reset replacement without the retired warning dialog, ID-based rename/copy, malformed-record preservation, cross-tab conflict cancellation, unsaved imports, quota failures, duplicate-import decisions, and dirty deletion retention.
+- Browser workflow fixture: `tests/library-browser.html`. Modular and standalone workflows cover export identity/tag preservation, local-only favorites, no preview/program changes while organizing, focus after unfavoriting, invalid-load recovery, immediate filter/search/import/reset replacement without the retired warning dialog, ID-based rename/copy, malformed-record preservation, cross-tab conflict cancellation, unsaved imports, quota failures, duplicate-import decisions, dirty deletion retention, and immediate dropdown/search removal after clean deletion.
 - Native Enter/Escape and launcher focus restoration were checked. Layout checks passed at 318 × 798 CSS pixels (320-pixel iframe including borders) and 638 × 358 CSS pixels, approximating a 1280 × 720 desktop viewport at 200% zoom. The latter exposed a clipped result area; the short-height scrolling adaptation fixed it. Actual browser zoom, physical touch, and screen-reader speech were not independently tested.
 - Performance: Windows x64, Codex in-app browser reporting Chromium 152, 1,000 synthetic metadata entries, 30 queries, forced DOM layout, bounded 50-row results. Observed openings were approximately 11–23 ms and p95 query-plus-layout approximately 12–26 ms. These are local observations, not cross-device guarantees. Hardware model enumeration was denied by the environment; timing starts after catalog projection and does not measure cold storage loading.
 - Hardware CPU/WebGPU parity: **40/44 fixtures passed**. The same untouched v2.6.7 baseline produced identical failures:
@@ -56,4 +56,4 @@ The normal dialog keeps controls above the scrolling results. At viewport height
 
 These pre-existing numeric differences were not changed as part of search and organization. CPU fallback and compatibility smoke tests pass; this result does not claim universal hardware parity.
 
-The standalone HTML is tested over localhost. Direct `file://` behavior can vary by browser security policy, so local-file opening remains a user test. The v2.7.1 deliverable is `dist/filter-fabjs-v2.7.1.html`. No commit, push, or deployment is performed by the release workflow.
+The standalone HTML is tested over localhost. Direct `file://` behavior can vary by browser security policy, so local-file opening remains a user test. The v2.7.2 deliverable is `dist/filter-fabjs-v2.7.2.html`. No commit, push, or deployment is performed by the release workflow.

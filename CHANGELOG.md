@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.7.2
+
+- Fixed custom-filter deletion so the removed filter disappears from the dropdown and filter search immediately, without restarting the app.
+- Updated the application version, interface copy, documentation, browser workflow target, and standalone build filename to v2.7.2.
+
 ## 2.7.1
 
 - Added nine exported native-v2 filters as built-ins: C64 Multicolor Bitmap, Difference Clouds, Linear Prism Echo, LomoChrome Purple XR, Pop Print Quad, Spectral Tear Glitch, Teal Lime Modular Weave, Touching Random Capsules, and VHS Tracking Glitch. Their formulas, controls, descriptions, authors, and tags are preserved; stable built-in IDs replace their portable export IDs.

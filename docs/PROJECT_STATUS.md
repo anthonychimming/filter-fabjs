@@ -4,7 +4,7 @@ This document describes the implementation currently present in the public repos
 
 ## Release
 
-- Application version: **2.7.1**
+- Application version: **2.7.2**
 - Native filter format: **version 2**
 - Typed IR: **version 1**
 - Development layout: native ES modules
@@ -113,8 +113,8 @@ For hardware parity, run `npm run dev` and open `http://localhost:8080/tests/web
 - CPU and GPU floating-point implementations may have small numerical differences.
 - Historic Filter Factory behavior is not guaranteed to be bit-exact for every edge case.
 - Clipboard interoperability depends on the browser and receiving application.
-- Display ranges are linear; logarithmic curves, enums, colour controls, grouping, conditional visibility, and control reordering are not part of v2.7.1.
+- Display ranges are linear; logarithmic curves, enums, colour controls, grouping, conditional visibility, and control reordering are not part of v2.7.2.
 
 ## Search and organization (2.7.0)
 
-The Filter search button beside the preset dropdown opens a temporary metadata browser with text search, source/favorite/tag restrictions, A–Z/relevance order, and 50-entry paging. All 35 built-ins carry curated tags. Custom tags are portable; favorites and built-in personal additions persist locally by stable namespaced ID. Filter selection, search-result loading, import, and reset replace the current draft immediately without an unsaved-changes warning. ID-based save/copy decisions, explicit imported drafts, source-baseline conflict checks, and failure feedback remain in place. See [FILTER_LIBRARY.md](FILTER_LIBRARY.md) for the validation record and remaining limitations.
+The Filter search button beside the preset dropdown opens a temporary metadata browser with text search, source/favorite/tag restrictions, A–Z/relevance order, and 50-entry paging. All 35 built-ins carry curated tags. Custom tags are portable; favorites and built-in personal additions persist locally by stable namespaced ID. Filter selection, search-result loading, import, and reset replace the current draft immediately without an unsaved-changes warning. Deleting a custom filter immediately rebuilds both the dropdown and search catalog. ID-based save/copy decisions, explicit imported drafts, source-baseline conflict checks, and failure feedback remain in place. See [FILTER_LIBRARY.md](FILTER_LIBRARY.md) for the validation record and remaining limitations.
