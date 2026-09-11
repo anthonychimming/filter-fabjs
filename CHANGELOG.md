@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.8.3
+
+- Replaced decorative Filter Library swatches with real low-resolution previews rendered from the current source image through each filter's validated typed-IR program.
+- Added a dedicated thumbnail subsystem with a 160-pixel source bound, isolated renderer manager, single-job priority queue, main-render suspension, source/request generations, and a 48-entry render-semantic LRU cache.
+- Added lazy visible/near-visible scheduling with an eight-card fallback for browsers without `IntersectionObserver`, plus neutral, rendering, ready, and accessible unavailable card states.
+- Added source/cache/queue/cancellation/failure regressions and browser workflow coverage proving thumbnail isolation while preserving Phase 2 Apply/Cancel behavior.
+
 ## 2.8.2
 
 - Replaced metadata-first Filter Search with a canvas-visible Filter Library drawer containing visual cards, source labels, descriptions, tags, and separate favorite actions.

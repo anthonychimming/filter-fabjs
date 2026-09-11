@@ -1,4 +1,4 @@
-# Filter Library — v2.8.2
+# Filter Library — v2.8.3
 
 The Explore workspace opens a canvas-visible **Filter Library**. On desktop it docks as a right-side drawer with no backdrop blur over the artwork; on narrow screens it becomes a bottom sheet so part of the canvas remains visible.
 
@@ -18,6 +18,8 @@ The application layer owns the temporary session. Opening the library snapshots 
 
 Selecting a visual card validates the target through the normal preparation path, presents it temporarily, and renders it against the current source image. The selected card receives a persistent pressed/selected state and the library remains open. Rapid selection increments both a library request generation and the existing render generation; stale work is cancelled before the newest candidate is presented.
 
+Card thumbnails are a separate preview tier. Their low-resolution render never selects a candidate, changes the active document, updates the main canvas, or substitutes for the authoritative candidate render required before Apply Filter is enabled.
+
 Candidate preview does not write local storage and does not update the persistent active key, portable ID, imported flag, saved-content baseline, or source-record baseline. Favorite and built-in personal-tag actions retain their separate immediate preference semantics.
 
 If validation fails, the working presentation is not changed. If rendering fails, the preceding candidate or opening presentation is restored and the error is announced inside the library.
@@ -32,7 +34,13 @@ Search matches stored names, descriptions, authors, and tags, never formula sour
 
 Source, Favorites only, text, and selected tags combine with AND. Selected tags match all. Tag choices come from the source/favorite scope before text and tag restrictions. Reset view clears all criteria; Clear search clears only text. Clicking a card tag clears the other restrictions and browses that exact normalized tag from page one.
 
-Each card contains a bounded decorative swatch, filter name, Built-in/My Filter source badge, author, concise description, tags, and a separate favorite control. The swatch is a lightweight placeholder derived from the stable entry key; only the selected card renders the full current source image. The library never eagerly renders every card.
+Each card contains a real source-based thumbnail, filter name, Built-in/My Filter source badge, author, concise description, tags, and a separate favorite control. Cards appear immediately with a neutral checkerboard placeholder. Visible and near-visible cards move through queued/rendering to ready; a failed thumbnail shows **Preview unavailable** without removing or disabling the filter. Actual thumbnail canvases are decorative and do not add keyboard stops.
+
+One downsized immutable source is prepared for each loaded image with a maximum dimension of 160 pixels and no upscaling. A dedicated `RendererManager` executes the same validated typed-IR programs as the main renderer, using normal WebGPU analysis and CPU fallback without publishing its diagnostics to the ordinary renderer UI. Thumbnail concurrency is one. Starting an authoritative main-canvas render suspends and cancels active thumbnail work; current requested work resumes afterward.
+
+`IntersectionObserver` requests only cards within or 180 pixels beyond the scrolling results viewport. Browsers without it request a bounded first batch of eight cards. Search, restrictions, sorting, paging, and library close discard pending DOM-specific requests. Source, request, and render generations prevent late results from attaching to replacement cards.
+
+Completed pixel buffers use a 48-entry LRU cache. Keys contain the source revision, thumbnail dimensions, and the same math-mode/formula/control render signature used for main render provenance. Formula, control, math-mode, and source changes therefore miss or invalidate the cache; name, author, description, tags, favorites, search, source label, and sort order do not. The cache remains in memory only and is retained across library close for the current source.
 
 Results are paged at 50 entries. Pagination is hidden when the complete result set fits on one page.
 
@@ -52,18 +60,20 @@ Storage events refresh the catalog and preferences without intentionally applyin
 
 ## Accessibility and layouts
 
-The launcher exposes dialog semantics and the generated library is labelled by **Filter Library**. Search receives initial focus. Card preview and favorite are separate keyboard-focusable controls with independent pressed states. Click/tap is sufficient; hover is not required. Status and errors use live/alert semantics. Apply is disabled until preview succeeds. Ordinary Tab navigation reaches search, restrictions, tags, cards, Cancel, and Apply.
+The launcher exposes dialog semantics and the generated library is labelled by **Filter Library**. Search receives initial focus. Card preview and favorite are separate keyboard-focusable controls with independent pressed states. Thumbnail visibility also responds to keyboard focus and touch selection; hover is not required. Thumbnail canvases are decorative, failures add concise descriptive text to the existing card action, and background completions are not announced through a live region. The optional fade respects `prefers-reduced-motion`. Status and errors use live/alert semantics. Apply is disabled until the authoritative candidate preview succeeds. Ordinary Tab navigation reaches search, restrictions, tags, cards, Cancel, and Apply.
 
 Desktop uses a full-height right drawer. At 920 CSS pixels or narrower the library uses a viewport-bounded bottom sheet; short-height layouts make tools and results independently reachable. Pagination is removed from layout when hidden. No physical touch or screen-reader speech claim is made without dedicated testing.
 
 ## Validation record — September 11, 2026
 
-- `npm run verify`: passed syntax checks, all Node smoke suites, the production build, and build-output validation after the Phase 2 implementation.
-- Browser workflow fixture: `tests/library-browser.html`. Both the modular application and generated standalone passed open-state identity, initial focus, hidden single-page pagination, favorite isolation, invalid-candidate recovery, rapid candidate switching, preview storage isolation, exact dirty pixel/document Cancel, Apply identity, Escape, dirty custom restoration, imported restoration, catalog filters, and existing save/import/delete conflict behavior.
-- Responsive browser checks passed at 1,440 × 900, 1,366 × 768, 1,024 × 768, 768 × 1,024, 318 × 798, and 638 × 358 CSS pixels. These cover the desktop drawer, portrait bottom sheet, narrow mobile, and 200%-zoom-equivalent layouts.
-- The same fixture retains the bounded 1,000-entry performance projection. One local Chromium 152 run observed a 31.6 ms opening and 12.2 ms p95 query-plus-layout time; timings are local observations, not cross-device guarantees.
+- `npm run verify`: passed syntax checks, all Node smoke suites (including the lazy thumbnail service), the production build, and build-output validation after the Phase 2.1 implementation.
+- Browser workflow fixture: `tests/library-browser.html`. Both the modular application and generated standalone passed the Phase 2 workflows plus bounded thumbnail dimensions, single-render concurrency, lazy opening, main-program/canvas isolation, cache reuse, keyboard-stop behavior, and close cancellation. The generated standalone used WebGPU in the available Chromium session.
+- A direct browser pass observed 4 of 35 thumbnails ready on initial open and 10 after scrolling, with the rest remaining lazy. Scrolling back reused completed previews; search reused the matching cached preview; an offscreen selected candidate was prioritized and rendered normally without changing the active filter until Apply.
+- Responsive browser checks passed at 1,366 × 768, 1,024 × 768, 768 × 1,024, 318 × 798, and 638 × 358 CSS pixels. These cover the desktop drawer, portrait bottom sheet, narrow mobile, and 200%-zoom-equivalent layouts. A keyboard pass opened the library with Enter, reached search, restrictions, the first preview and its separate favorite action with Tab, skipped the decorative thumbnail canvas, and restored launcher focus with Escape.
+- WebGPU and forced-CPU rendering were exercised in the browser; both produced real lazy card thumbnails. Coarse-pointer emulation, physical touch, and screen-reader speech were not tested.
+- The same fixture retains the bounded 1,000-entry performance projection. One generated-standalone run in local Chromium 152 observed a 30.4 ms opening and 12.8 ms p95 query-plus-layout time; timings are local observations, not cross-device guarantees.
 - Renderer/compiler/formula source was not changed. All 35 built-ins continue to compile as WebGPU-compatible in the automated suite.
-- The release build is `dist/filter-fabjs-v2.8.2.html`. Direct `file://` behavior can vary by browser security policy, so localhost remains the supported test path.
+- The release build is `dist/filter-fabjs-v2.8.3.html`. Direct `file://` behavior can vary by browser security policy, so localhost remains the supported test path.
 
 Run the complete verification workflow with:
 

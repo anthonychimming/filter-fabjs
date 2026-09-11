@@ -22,6 +22,7 @@ const order = [
   'src/renderers/renderer-manager.js',
   'src/io/filter-format.js',
   'src/io/image-io.js',
+  'src/app/filter-thumbnail-service.js',
   'src/io/png-metadata.js',
   'src/app/filter-catalog.js',
   'src/ui/filter-browser.js',

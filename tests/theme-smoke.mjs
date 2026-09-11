@@ -40,6 +40,8 @@ assert.match(css, /\.canvas-stage\{[^}]*background-color:#090b0f[^}]*#10141b/i, 
 assert.match(css, /\.canvas-wrap\{[^}]*background-color:#d4d4d4[^}]*#ececec/i, 'transparency checkerboard must remain neutral grey');
 assert.match(css, /textarea\.edited:not\(\.invalid\)[^{]*\{[^}]*196,41,163/i, 'edited formula state must use the magenta semantic accent');
 assert.match(css, /\.renderer-control span\{[^}]*var\(--info\)/i, 'renderer label must use the cyan technical accent');
+assert.match(css, /\*\{scrollbar-color:var\(--line2\) transparent;scrollbar-width:thin\}/, 'all scrollbars must use the branded Firefox colors');
+assert.match(css, /\*::-webkit-scrollbar-thumb\{background:var\(--line2\);[^}]*border-radius:999px\}/, 'all Chromium scrollbars must use the branded thumb color');
 assert.match(html, /id="githubBtn"[^>]*href="https:\/\/github\.com\/anthonychimming"/i, 'GitHub button must target the current profile URL');
 
 console.log('Brand theme smoke checks passed.');

@@ -1,6 +1,6 @@
 # Architecture
 
-Filter FabJS v2.8.2 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
+Filter FabJS v2.8.3 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
 
 ```text
 Formula text
@@ -32,6 +32,7 @@ RGBA pixel output
 - `src/presets/builtins.js` — built-in filter definitions, human-readable descriptions, and selected rich-control showcases.
 - `src/io/filter-format.js` — size-bounded native JSON and historic AFS validation, normalized filter/control metadata, parsing, and validated-AST handoff to application preparation.
 - `src/io/image-io.js` — image and clipboard encoding helpers.
+- `src/app/filter-thumbnail-service.js` — bounded source downscaling, isolated thumbnail rendering, cancellation, prioritization, stale-result protection, and render-semantic LRU caching.
 - `src/ui/*` — DOM, controls, and canvas presentation.
 - `src/app/filter-fab-app.js` — application state and browser UI orchestration.
 
@@ -55,6 +56,8 @@ The CPU renderer remains the compatibility backend for legacy integer-mode AFS f
 
 ## Filter library
 
-`core/filter-metadata.js` owns bounded tags, portable identity validation, and metadata comparison. `app/filter-catalog.js` projects metadata, searches/ranks cached catalog entries, persists per-entry local preferences, and checks target baselines before ID-based writes. `ui/filter-browser.js` owns the visual drawer, search/cards, and action dialogs. The app owns the temporary library session: it snapshots the working presentation, rendered pixels, active saved/imported identity, saved-content baseline, and source-record baseline before any candidate is shown. Candidate presentation and rendering reuse normal validation and renderer-generation protection but do not commit identity or persistence. Apply promotes the prepared candidate; Cancel restores the snapshot without rerendering. None of these modules adds renderer behavior or changes program keys. Catalog indexing never parses formulas.
+`core/filter-metadata.js` owns bounded tags, portable identity validation, and metadata comparison. `app/filter-catalog.js` projects metadata, searches/ranks cached catalog entries, persists per-entry local preferences, and checks target baselines before ID-based writes. `ui/filter-browser.js` owns the visual drawer, search/cards, lazy visibility observation, and action dialogs. The app owns the temporary library session: it snapshots the working presentation, rendered pixels, active saved/imported identity, saved-content baseline, and source-record baseline before any candidate is shown. Candidate presentation and rendering reuse normal validation and renderer-generation protection but do not commit identity or persistence. Apply promotes the prepared candidate; Cancel restores the snapshot without rerendering.
+
+`app/filter-thumbnail-service.js` is a third, isolated preview path. It downsizes each new immutable source once to a maximum dimension of 160 pixels and gives that source to a dedicated `RendererManager`. Visible and near-visible cards enqueue their real validated program at concurrency one. Main-canvas rendering suspends and cancels thumbnail work, which resumes afterward if its UI request remains current. A 48-entry LRU uses source revision, thumbnail dimensions, and the existing render-semantic filter signature, so metadata/search/sort changes reuse pixels while formula, control, math-mode, and source changes do not. Thumbnail diagnostics never replace main renderer diagnostics, and no thumbnail result writes application document or canvas state. Catalog indexing never parses formulas.
 
 Custom records retain `ffw-custom-presets`; favorites and built-in additions use `ffw-entry-v1:<builtin|custom>:<id>`. Existing custom ID migration is reused. Raw malformed entries and unrelated record fields survive writes. Search criteria are session-only. Storage events invalidate catalog projections and refresh preferences without applying a filter. Update re-reads its target and checks the captured record baseline, but shared-list localStorage writes are not atomic across tabs.
