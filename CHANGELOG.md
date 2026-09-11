@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.8.2
+
+- Replaced metadata-first Filter Search with a canvas-visible Filter Library drawer containing visual cards, source labels, descriptions, tags, and separate favorite actions.
+- Added application-owned candidate-preview sessions: selecting a card renders temporarily without changing saved/imported identity, dirty baselines, or local storage; Apply Filter explicitly commits the rendered candidate.
+- Added exact Cancel, Close, and Escape restoration for dirty built-in, custom, and imported working filters, including formula/control metadata, preview provenance, renderer diagnostics, and pre-library canvas pixels.
+- Added stale-preview cancellation, hidden single-page pagination, responsive drawer/bottom-sheet layouts, focus restoration, and browser workflow regressions for rapid switching, apply/cancel, storage isolation, failures, and identity preservation.
+
 ## 2.8.1
 
 - Added an artist-first Explore workspace that makes the active filter, filter discovery, used runtime controls, and compact renderer state the default inspector experience.

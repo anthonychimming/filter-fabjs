@@ -58,11 +58,18 @@ assert.match(app, /rendererManager\.renderWithFallback\(/, 'the renderer manager
 assert.match(app, /rendererManager\.diagnose\(program,state\.rendererPreference\)/, 'the UI inspector must consume manager-owned renderer diagnostics');
 assert.doesNotMatch(app, /rendererManager\.get\('cpu'\)|rendererManager\.active\s*=/, 'the app must not bypass manager-owned fallback state');
 assert.match(app, /function prepareFilter\(input\)/, 'filter definitions must be normalized before application state changes');
-assert.match(app, /function applyFilter\(definition,selection,\{importSource=selection\?null:'file'\}=\{\}\)\{const next=prepareFilter\(definition\);state\.legacyMath=/, 'filter application must finish validation and compilation before mutating UI state');
+assert.match(app, /function applyFilter\(definition,selection,\{importSource=selection\?null:'file'\}=\{\}\)\{[\s\S]*?const next=prepareFilter\(definition\);applyPreparedPresentation\(next\);commitActiveDocument/, 'filter application must finish validation and compilation before mutating UI state');
+assert.match(app, /function applyPreparedPresentation\(next\)\{[\s\S]*?state\.legacyMath=next\.legacyMath/, 'validated filters must have a presentation-only application path for temporary previews');
 assert.match(app, /function exportFilter\(\)\{const filter=validatedCurrentFilter\(\);if\(!filter\)return;/, 'filter export must stop when native-format validation fails');
 assert.doesNotMatch(app, /custom:\$\{index\}|customList\(\)\[Number\(id\)\]|index=Number\(id\)/, 'custom preset identity must not depend on array indexes');
 assert.match(app, /astList=inputAsts\|\|getValidatedFormulaAsts\(definition\)\|\|normalizedFormulas\.map/, 'filter preparation must reuse ASTs already produced by import validation');
 assert.match(app, /state\.lastProgram=next\.program;state\.lastProgramKey=currentProgramKey\(\)/, 'applying a prepared filter must seed the exact-key render cache');
+assert.match(app, /originalWorkingDocument:captureLibraryWorkingState\(\)/, 'opening the library must capture the complete working presentation and document state');
+assert.match(app, /function previewLibraryEntry\(entry\)[\s\S]*?applyPreparedPresentation\(prepared\)[\s\S]*?session\.candidateRendered=true/, 'candidate previews must render through temporary presentation state');
+assert.match(app, /function cancelLibrarySession\(\)[\s\S]*?librarySession=null;restoreLibraryWorkingState\(session\.originalWorkingDocument\)/, 'Cancel and Escape must restore the opening snapshot');
+assert.match(app, /function applyLibraryCandidate\(\)[\s\S]*?commitActiveDocument\(session\.candidatePrepared,session\.candidateDefinition,session\.candidateEntry\.key\)/, 'Apply Filter must promote the rendered candidate into normal identity state');
+assert.match(app, /cancelRender\(\{silent:true\}\)/, 'rapid preview replacement must use the renderer cancellation generation without cancellation toasts');
+assert.match(app, /getLibraryPreviewState:/, 'library preview identity must be available through a read-only diagnostic snapshot');
 assert.match(app, /FILTER_FILE_MAX_BYTES/, 'filter imports must reject oversized files before reading them');
 assert.match(app, /lastProgramKey/, 'the app must retain a stable key for parsed-program reuse');
 assert.match(app, /state\.lastProgramKey===key\)\{controlsController\.updateControlUsage\(state\.lastProgram\);updateRendererDiagnostics\(state\.lastProgram\);return state\.lastProgram\}/, 'control-only renders must reuse the last parsed IR program and cached compatibility analysis');
@@ -101,7 +108,7 @@ assert.match(app, /Imported from PNG · Not saved/, 'PNG imports must display th
 
 console.log('UI wiring smoke checks passed.');
 
-assert.match(html,/id="browseFiltersBtn"[^>]+aria-haspopup="dialog"[^>]*>Browse filters</);
+assert.match(html,/id="browseFiltersBtn"[^>]+aria-haspopup="dialog"[^>]*>Open Filter Library</);
 assert.match(html,/<select id="presetSelect"[^>]+aria-label="Current filter"/);
 assert.ok(html.indexOf('id="authorPanel"')<html.indexOf('class="filter-picker-row"')&&html.indexOf('class="filter-picker-row"')<html.indexOf('class="filter-meta"')&&html.indexOf('class="filter-meta"')<html.indexOf('class="preset-row"'));
 assert.match(app,/importLatestFilterFile\(file,\{state,cancelRender,applyFilter\}\)/,'imports replace the current draft without opening the retired warning dialog');
@@ -116,8 +123,14 @@ assert.doesNotMatch(html,/id="tagSectionTitle"/,'the redundant tag-section headi
 assert.doesNotMatch(app,/tagSectionTitle/,'tag rendering does not depend on the removed heading');
 const filterBrowser=fs.readFileSync('src/ui/filter-browser.js','utf8');
 assert.match(filterBrowser,/filterBrowserTitle/,'filter browser exposes a labelled title');
-assert.match(filterBrowser,/textContent='Filter search'/,'filter browser title is Filter search');
-assert.match(filterBrowser,/const sourceLabel[\s\S]*const authorLabel/,'filter results include source and author metadata');
+assert.match(filterBrowser,/id="filterBrowserTitle">Filter Library</,'filter browser title is Filter Library');
+assert.match(filterBrowser,/data-cancel>Cancel<[\s\S]*?data-apply disabled>Apply Filter</,'the library exposes explicit Cancel and disabled-until-preview Apply actions');
+assert.match(filterBrowser,/data-entry-action='preview'|dataset\.entryAction='preview'/,'filter cards use a non-committing preview action');
+assert.match(filterBrowser,/dialog\.addEventListener\('cancel',[\s\S]*?cancelAndClose/,'Escape must use the same restoration path as Cancel');
+assert.match(filterBrowser,/pages\.hidden=results\.length<=PAGE_SIZE/,'single-page result sets must hide pagination');
+assert.match(filterBrowser,/const sourceLabel[\s\S]*authorLabel/,'filter results include source and author metadata');
 assert.match(css,/\.filter-browser \.result-tags button\{min-height:0;/,'filter tags use compact buttons');
+assert.match(css,/\.filter-browser::backdrop\{background:[^}]+backdrop-filter:none/, 'the canvas-visible library drawer must not blur the artwork');
+assert.match(css,/\.filter-card\[data-selected=true\]/, 'the selected preview card must have a persistent visual state');
 assert.match(css,/\.workspace\{grid-template-columns:minmax\(360px,1fr\) clamp\(320px,28vw,430px\)\}/,'desktop workspace must use a flexible inspector width');
 assert.match(css,/\.mode-panel\[hidden\]\{display:none\}/,'hidden mode panels must be removed from layout and tab order');

@@ -1,4 +1,4 @@
-# Filter FabJS v2.8.1
+# Filter FabJS v2.8.2
 
 **A browser-based procedural image filter editor with WebGPU acceleration.**
 
@@ -8,12 +8,13 @@ Filter FabJS is an open-source, browser-native procedural RGBA image-processing 
 
 The engine combines four-channel RGBA formula authoring with WebGPU rendering and automatic CPU Worker fallback. Its procedural vocabulary includes image sampling, coordinate transforms, gradients, palette ramps, deterministic noise, fractals, analytic masks, signed-distance fields, convolution, and blend operations. Historic Filter Factory `.afs` filters remain supported through the legacy compatibility path.
 
-**Current stable release: v2.8.1**
+**Current stable release: v2.8.2**
 
 ## Features
 
 - Custom R, G, B, and Alpha formulas with live validation and preview rendering.
 - Artist-first Explore mode for active-filter adjustments, with metadata, formulas, control authoring, and diagnostics collected in Author mode.
+- Canvas-visible Filter Library with visual cards, non-destructive candidate previews, and explicit Apply/Cancel behavior.
 - WebGPU / WGSL acceleration with automatic CPU fallback for unsupported or legacy formulas.
 - Ten data-driven controls with author-defined slider, number, toggle, and seed presentations.
 - Normalized, centered, polar, repeated, and mirrored coordinate systems.
@@ -30,7 +31,7 @@ The engine combines four-channel RGBA formula authoring with WebGPU rendering an
 - PNG loading/export with portable embedded filter metadata, clipboard copy/paste, and alpha-aware preview.
 - Modular development source plus a standalone single-file release build.
 
-Filter FabJS v2.8.1 uses a typed, renderer-neutral intermediate representation, with the CPU and WebGPU renderers consuming the same semantic formula program.
+Filter FabJS v2.8.2 uses a typed, renderer-neutral intermediate representation, with the CPU and WebGPU renderers consuming the same semantic formula program.
 
 See [Project Status](docs/PROJECT_STATUS.md) for implementation details, compatibility notes, and current boundaries.
 
@@ -65,7 +66,7 @@ npm run build
 Build output:
 
 - `dist/site/` — deployable static site.
-- `dist/filter-fabjs-v2.8.1.html` — standalone single-file distribution.
+- `dist/filter-fabjs-v2.8.2.html` — standalone single-file distribution.
 
 The build uses Node.js and has no package dependencies.
 
@@ -100,7 +101,7 @@ The project is inspired by the open-source [Filter Foundry project](https://gith
 
 ## Search, tags, and favorites
 
-Explore is the default workspace. Use **Browse filters** to open the existing Filter search, then adjust only the controls used by the active filter. Switch to **Author** for the filter dropdown, metadata, tags, formulas, control definitions, and detailed renderer diagnostics. Search stored names, descriptions, authors, and tags; combine source, Favorites only, and match-all tags. Save updates the current custom ID; Save as new makes a separate copy. Imported filters remain unsaved drafts until saved. Updating the preview does not save a filter.
+Explore is the default workspace. Use **Open Filter Library** to browse visual cards and preview a candidate on the main canvas. **Apply Filter** commits the candidate; **Cancel**, Close, or Escape restores the exact filter and rendered preview that were active when the library opened. Switch to **Author** for the compact direct-selection dropdown, metadata, tags, formulas, control definitions, and detailed renderer diagnostics. Search stored names, descriptions, authors, and tags; combine source, Favorites only, and match-all tags. Save updates the current custom ID; Save as new makes a separate copy. Imported filters remain unsaved drafts until saved. Updating the preview does not save a filter.
 
 See [Filter library](docs/FILTER_LIBRARY.md) for metadata limits, portable export behavior, storage caveats, and the release validation record.
 

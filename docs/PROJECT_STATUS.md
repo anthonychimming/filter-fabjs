@@ -4,7 +4,7 @@ This document describes the implementation currently present in the public repos
 
 ## Release
 
-- Application version: **2.8.1**
+- Application version: **2.8.2**
 - Native filter format: **version 2**
 - Typed IR: **version 1**
 - Development layout: native ES modules
@@ -113,12 +113,14 @@ For hardware parity, run `npm run dev` and open `http://localhost:8080/tests/web
 - CPU and GPU floating-point implementations may have small numerical differences.
 - Historic Filter Factory behavior is not guaranteed to be bit-exact for every edge case.
 - Clipboard interoperability depends on the browser and receiving application.
-- Display ranges are linear; logarithmic curves, enums, colour controls, grouping, conditional visibility, and control reordering are not part of v2.8.1.
+- Display ranges are linear; logarithmic curves, enums, colour controls, grouping, conditional visibility, and control reordering are not part of v2.8.2.
 
 ## Explore and Author workspace
 
-The inspector opens in Explore, where the active filter summary, Browse filters action, used runtime controls, Reset, and a compact renderer state are visually primary. Filters with no referenced controls show an explanatory empty state instead of disabled slots. Author contains the filter dropdown, labelled metadata fields, tags, Save/Delete/Reset actions, formula editing, control-schema editing, full renderer selection and diagnostics, and the formula reference. Workspace mode is session-local UI state and does not participate in filter persistence, dirty comparison, rendering, or typed IR.
+The inspector opens in Explore, where the active filter summary, Open Filter Library action, used runtime controls, Reset, and a compact renderer state are visually primary. Filters with no referenced controls show an explanatory empty state instead of disabled slots. Author contains the filter dropdown, labelled metadata fields, tags, Save/Delete/Reset actions, formula editing, control-schema editing, full renderer selection and diagnostics, and the formula reference. Workspace mode is session-local UI state and does not participate in filter persistence, dirty comparison, rendering, or typed IR.
 
-## Search and organization (2.7.0)
+## Filter Library and organization (2.8.2)
 
-The Browse filters action in Explore opens the existing temporary Filter search with text search, source/favorite/tag restrictions, A–Z/relevance order, and 50-entry paging. The compact filter dropdown remains available in Author. All 35 built-ins carry curated tags. Custom tags are portable; favorites and built-in personal additions persist locally by stable namespaced ID. Filter selection, search-result loading, import, and reset replace the current draft immediately without an unsaved-changes warning. Deleting a custom filter immediately rebuilds both the dropdown and search catalog. ID-based save/copy decisions, explicit imported drafts, source-baseline conflict checks, and failure feedback remain in place. See [FILTER_LIBRARY.md](FILTER_LIBRARY.md) for the validation record and remaining limitations.
+Open Filter Library presents visual cards in a canvas-visible desktop drawer and a narrow-screen bottom sheet. Text search, source/favorite/tag restrictions, A–Z/relevance order, and bounded 50-entry paging remain available; pagination is omitted when one page is sufficient. Card selection validates and renders a temporary candidate while leaving the saved/imported identity, dirty baselines, and browser storage unchanged. Apply Filter commits the selected candidate. Cancel, Close, or Escape cancels stale rendering and restores the exact opening editor/pixel snapshot. The compact filter dropdown remains available in Author as an intentional direct-switch mechanism and retains its existing immediate replacement semantics.
+
+All 35 built-ins carry curated tags. Custom tags are portable; favorites and built-in personal additions persist locally by stable namespaced ID and remain separate actions that do not preview a card. Import and reset continue to replace the current draft immediately without an unsaved-changes warning. Deleting a custom filter immediately rebuilds both the dropdown and library catalog. ID-based save/copy decisions, explicit imported drafts, source-baseline conflict checks, and failure feedback remain in place. See [FILTER_LIBRARY.md](FILTER_LIBRARY.md) for the validation record and remaining limitations.

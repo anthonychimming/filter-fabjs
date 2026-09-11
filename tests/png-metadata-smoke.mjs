@@ -23,7 +23,7 @@ function filter(overrides={}){return{format:'filter-fab-js',version:2,id:'portab
 function rawMetadataPng(payload,{keyword=FILTER_FAB_PNG_KEYWORD,count=1}={}){return rgbaPng().arrayBuffer().then(buffer=>{const bytes=new Uint8Array(buffer),iend=chunks(bytes).at(-1),data=concat(encoder.encode(keyword),Uint8Array.of(0,0,0,0,0),encoder.encode(payload)),metadata=Array.from({length:count},()=>makeChunk('iTXt',data));return new Blob([bytes.subarray(0,iend.start),...metadata,bytes.subarray(iend.start)],{type:'image/png'});});}
 async function rejectsCode(promise,code){await assert.rejects(promise,error=>error instanceof PngMetadataError&&error.code===code);}
 
-const original=rgbaPng(),validated=validateNativeFilter(filter()),envelope=createFilterFabPngEnvelope(validated,'2.8.1'),embedded=await embedFilterFabMetadata(original,envelope);
+const original=rgbaPng(),validated=validateNativeFilter(filter()),envelope=createFilterFabPngEnvelope(validated,'2.8.2'),embedded=await embedFilterFabMetadata(original,envelope);
 const extracted=await extractFilterFabMetadata(embedded);
 assert.deepEqual(extracted,envelope,'UTF-8 envelope metadata must round trip without loss');
 assert.equal(validateFilterFabPngEnvelope(extracted),extracted,'envelope validation must return the validated carrier');
@@ -53,7 +53,7 @@ await rejectsCode(extractFilterFabMetadata(await rawMetadataPng(JSON.stringify({
 await rejectsCode(extractFilterFabMetadata(await rawMetadataPng(JSON.stringify({...envelope,documentType:'graph'}))), 'unsupported');
 await rejectsCode(extractFilterFabMetadata(await rawMetadataPng(JSON.stringify({...envelope,schema:'other/png'}))), 'invalid');
 assert.equal(await extractFilterFabMetadata(original),null,'ordinary PNGs must report no FilterFabJS metadata');
-assert.throws(()=>createFilterFabPngEnvelope({...validated,version:1},'2.8.1'),/version 2/,'the PNG carrier must not weaken its native-v2 document contract');
+assert.throws(()=>createFilterFabPngEnvelope({...validated,version:1},'2.8.2'),/version 2/,'the PNG carrier must not weaken its native-v2 document contract');
 
 for(const invalid of [
   filter({formulas:['r+','g','b','a']}),

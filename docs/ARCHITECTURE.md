@@ -1,6 +1,6 @@
 # Architecture
 
-Filter FabJS v2.8.1 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
+Filter FabJS v2.8.2 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
 
 ```text
 Formula text
@@ -55,6 +55,6 @@ The CPU renderer remains the compatibility backend for legacy integer-mode AFS f
 
 ## Filter library
 
-`core/filter-metadata.js` owns bounded tags, portable identity validation, and metadata comparison. `app/filter-catalog.js` projects metadata, searches/ranks cached catalog entries, persists per-entry local preferences, and checks target baselines before ID-based writes. `ui/filter-browser.js` owns the native modal browser and action dialogs. The app tracks the active saved identity, portable draft identity, saved-content baseline, and source-record baseline independently of preview state. None of these modules adds renderer behavior or changes program keys. Catalog indexing never parses formulas.
+`core/filter-metadata.js` owns bounded tags, portable identity validation, and metadata comparison. `app/filter-catalog.js` projects metadata, searches/ranks cached catalog entries, persists per-entry local preferences, and checks target baselines before ID-based writes. `ui/filter-browser.js` owns the visual drawer, search/cards, and action dialogs. The app owns the temporary library session: it snapshots the working presentation, rendered pixels, active saved/imported identity, saved-content baseline, and source-record baseline before any candidate is shown. Candidate presentation and rendering reuse normal validation and renderer-generation protection but do not commit identity or persistence. Apply promotes the prepared candidate; Cancel restores the snapshot without rerendering. None of these modules adds renderer behavior or changes program keys. Catalog indexing never parses formulas.
 
 Custom records retain `ffw-custom-presets`; favorites and built-in additions use `ffw-entry-v1:<builtin|custom>:<id>`. Existing custom ID migration is reused. Raw malformed entries and unrelated record fields survive writes. Search criteria are session-only. Storage events invalidate catalog projections and refresh preferences without applying a filter. Update re-reads its target and checks the captured record baseline, but shared-list localStorage writes are not atomic across tabs.

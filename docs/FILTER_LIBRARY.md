@@ -1,59 +1,72 @@
-# Filter library — v2.8.1
+# Filter Library — v2.8.2
 
-The browser panel is titled **Filter search**.
+The Explore workspace opens a canvas-visible **Filter Library**. On desktop it docks as a right-side drawer with no backdrop blur over the artwork; on narrow screens it becomes a bottom sheet so part of the canvas remains visible.
 
-The Filter dropdown provides direct access to built-ins, benchmarks, and My Filters. The separate Filter search button beside it opens the temporary Filters dialog. Name and Author occupy row two; Save, Delete, Reset, and saved status occupy row three. Buttons use the compact heights from v2.6.7. Dropdown and search-result selections validate the target and then replace the current editor contents immediately without an unsaved-changes warning; imported drafts have their own unsaved display option. Search matches stored names, descriptions, authors, and tags, never formula source or unsaved edits. Every whitespace-separated query term must match somewhere in the metadata. Matching ignores case and diacritics; tag identity preserves accents and punctuation. Relevance sorts exact names first, then name prefixes, all terms in the name, and other matches. Ties use name, source, and stable identity.
+The compact Current filter dropdown remains in Author for intentional direct switching. Dropdown selection retains its existing immediate replacement behavior. The Explore library instead uses an explicit session:
 
-Source, Favorites only, text, and selected tags combine with AND. Selected tags match all. Tag choices come from the source/favorite scope before text and tag restrictions. Reset view clears all criteria; Clear search clears only text. Each result shows its source and author metadata, followed by compact individual tag buttons instead of a Details dropdown. Clicking a result tag clears text, source, favorites, and previous tag restrictions, then shows all filters with that exact normalized tag from page 1. Every tag is available as a button; they wrap when needed. Results are paged at 50 entries. Search state lasts for the page session.
+```text
+Open Filter Library
+→ select one or more temporary candidates
+→ Apply Filter to commit the current candidate
+   or
+→ Cancel / Close / Escape to restore the opening state
+```
 
-## Tags and favorites
+## Candidate-preview state
 
-Tags normalize to NFC, trim outer whitespace, collapse internal whitespace, and compare by lowercase identity. They retain their readable label. Each document accepts up to 20 tags of 1–32 Unicode code points. Control and format characters are rejected. Commas remain literal punctuation, not separators. Existing-tag suggestions are searchable and bounded to 50.
+The application layer owns the temporary session. Opening the library snapshots the exact working presentation and document state, including raw metadata/formula fields, math mode, controls and control UI definitions, compiled-program state, active built-in/custom/imported identity, dirty and record baselines, imported source, rendered pixels, render provenance, formula validation UI, and renderer diagnostics.
 
-Custom filters and drafts have document tags below Description. Built-ins show read-only Included tags plus My tags, which save immediately in this browser without making the document dirty. Favorites belong to saved entries. Starring does not load, render, or save the editor draft. Failed preference writes leave the previous visible state intact and report an error.
+Selecting a visual card validates the target through the normal preparation path, presents it temporarily, and renders it against the current source image. The selected card receives a persistent pressed/selected state and the library remains open. Rapid selection increments both a library request generation and the existing render generation; stale work is cancelled before the newest candidate is presented.
 
-Exporting a built-in includes the union of supplied and personal tags. Personal additions therefore become visible portable metadata. Favorites never leave browser storage.
+Candidate preview does not write local storage and does not update the persistent active key, portable ID, imported flag, saved-content baseline, or source-record baseline. Favorite and built-in personal-tag actions retain their separate immediate preference semantics.
 
-## Identity and drafts
+If validation fails, the working presentation is not changed. If rendering fails, the preceding candidate or opening presentation is restored and the error is announced inside the library.
 
-Existing `builtin:<id>` and `custom:<id>` identities are retained. A rename with Update preserves the ID, favorites, and creation timestamp. Save as new creates a fresh identity and starts without favorites. A matching name never selects an update target; a distinct name is suggested but not required.
+**Apply Filter** is enabled only after a candidate renders successfully. Applying promotes the already rendered presentation into the normal built-in or custom identity and baseline without an unnecessary second render. A custom record that was deleted or changed in another tab must be previewed again before it can be applied.
 
-An import loads an unsaved draft and does not add a library record. Saving an imported portable ID offers Use saved record when normalized portable content is equal, or explicit Update existing / Save as new / Cancel when it differs. Missing IDs are allocated on Save or Export. An exported built-in/detached working copy retains its newly allocated portable ID for subsequent exports or first save. Export does not mark a draft saved.
+**Cancel**, the close button, and **Escape** share the same restoration path. Active preview work is cancelled silently, the exact opening state and pixel buffer are restored without rerendering, the library closes, and focus returns to the launcher. This preserves dirty built-in, dirty custom, imported, pending-formula, and invalid-formula work.
 
-Saved state is separate from preview state. Changes to name, author, description, tags, math mode, formulas, control values, labels, or control presentation metadata participate in draft comparison. Rendering never clears unsaved changes. Filter selection, search-result loading, Reset, and Import replace dirty or imported drafts immediately without a warning dialog. Invalid target filters fail validation before replacement. Delete targets the loaded custom ID, can retain dirty content as a detached unsaved draft, and immediately removes the deleted entry from both the dropdown and search catalog.
+## Search, cards, tags, and favorites
 
-## Persistence and compatibility
+Search matches stored names, descriptions, authors, and tags, never formula source or unsaved edits. Every whitespace-separated query term must match somewhere in the metadata. Matching ignores case and diacritics; tag identity preserves accents and punctuation. Relevance sorts exact names first, then name prefixes, all terms in the name, and other matches. Ties use name, source, and stable identity.
 
-The custom library retains `ffw-custom-presets` and its existing ID migration. Optional `tags` and portable `id` are preserved by the native v2 validator. Native v1/v2 and historic AFS rendering remain supported. AFS begins without tags/portable identity and retains legacy math mode. Existing ten-control presentations and both renderer boundaries are unchanged.
+Source, Favorites only, text, and selected tags combine with AND. Selected tags match all. Tag choices come from the source/favorite scope before text and tag restrictions. Reset view clears all criteria; Clear search clears only text. Clicking a card tag clears the other restrictions and browses that exact normalized tag from page one.
 
-Per-entry preferences use `ffw-entry-v1:<entry-key>` with `{version:1,favorite:boolean,tags:string[]}`. Custom entries have no extra personal tag layer. Unknown record fields and malformed raw entries survive library writes; corrupt storage is not replaced with an empty list. Native exports retain only validated portable fields.
+Each card contains a bounded decorative swatch, filter name, Built-in/My Filter source badge, author, concise description, tags, and a separate favorite control. The swatch is a lightweight placeholder derived from the stable entry key; only the selected card renders the full current source image. The library never eagerly renders every card.
 
-Storage events refresh the catalog and preferences without replacing the draft. A changed source record requires an explicit decision before Update; a deleted source detaches the draft. Updates re-read and compare the target baseline immediately before writing. **localStorage is not transactional**: simultaneous shared-list writes can still race. This release does not provide collection backup, cloud sync, graph documents, or batch management. Export important filters individually.
+Results are paged at 50 entries. Pagination is hidden when the complete result set fits on one page.
 
-The v2.6.7 validator was tested against a v2 document containing the new fields: known rendering fields remain readable, but `id` and `tags` are dropped by that older reader. Older-version re-export is not a metadata-preserving round trip.
+Tags normalize to NFC, trim outer whitespace, collapse internal whitespace, and compare by lowercase identity. They retain their readable label. Each document accepts up to 20 tags of 1–32 Unicode code points. Control and format characters are rejected. Existing-tag suggestions are searchable and bounded to 50.
+
+Custom filters and drafts have document tags below Description in Author. Built-ins show read-only Included tags plus My tags, which save immediately in this browser without making the document dirty. Exporting a built-in includes the union of supplied and personal tags. Favorites never leave browser storage.
+
+## Identity, persistence, and compatibility
+
+Existing `builtin:<id>` and `custom:<id>` identities are retained. A rename with Update preserves the ID, favorites, and creation timestamp. Save as new creates a fresh identity and starts without favorites. A matching name never selects an update target.
+
+An import loads an unsaved draft and does not add a library record. Saving an imported portable ID offers the existing equality/conflict decisions. Missing IDs are allocated on Save or Export. Export and rendering do not mark a draft saved.
+
+The custom library retains `ffw-custom-presets` and its existing ID migration. Per-entry preferences retain `ffw-entry-v1:<entry-key>` with `{version:1,favorite:boolean,tags:string[]}`. Unknown record fields and malformed raw entries survive library writes; corrupt storage is not replaced with an empty list. Native v1/v2, historic AFS, rich-control metadata, PNG metadata, typed IR v1, WebGPU selection, and CPU fallback contracts are unchanged.
+
+Storage events refresh the catalog and preferences without intentionally applying a candidate. Update re-reads and compares the target baseline immediately before writing. **localStorage is not transactional**: simultaneous shared-list writes can still race. Export important filters individually.
 
 ## Accessibility and layouts
 
-The browser uses native dialogs, labels, checkboxes, buttons, lists, the Tags expander, and ordinary Tab navigation. Search gets initial focus; Enter in Search does not load a result. Close/Escape return focus to the launcher. Favorites have separate actions and pressed states. Removing the last focused favorite moves focus to Show all filters. The launcher locks during rendering.
+The launcher exposes dialog semantics and the generated library is labelled by **Filter Library**. Search receives initial focus. Card preview and favorite are separate keyboard-focusable controls with independent pressed states. Click/tap is sufficient; hover is not required. Status and errors use live/alert semantics. Apply is disabled until preview succeeds. Ordinary Tab navigation reaches search, restrictions, tags, cards, Cancel, and Apply.
 
-The normal dialog keeps controls above the scrolling results. At viewport heights of 500 CSS pixels or less, the controls also scroll independently to preserve access to all actions with usable touch targets. This is a deliberate small-viewport adaptation. Narrow layouts wrap fields and tags without widening the canvas.
+Desktop uses a full-height right drawer. At 920 CSS pixels or narrower the library uses a viewport-bounded bottom sheet; short-height layouts make tools and results independently reachable. Pagination is removed from layout when hidden. No physical touch or screen-reader speech claim is made without dedicated testing.
 
-## Validation record — September 10, 2026
+## Validation record — September 11, 2026
 
-- `npm run verify`: passed syntax checks, all Node smoke suites, production build, and standalone/build-output validation.
-- All 35 built-ins compile as GPU-compatible programs. Formula, IR, CPU, GPU, and manager implementation files are unchanged. Seven contributed filters retain formula programs that can exceed the CPU work budget on sufficiently large images; this accepted limitation is documented in `PROJECT_STATUS.md` and covered by explicit budget tests.
-- Browser workflow fixture: `tests/library-browser.html`. Modular and standalone workflows cover export identity/tag preservation, local-only favorites, no preview/program changes while organizing, focus after unfavoriting, invalid-load recovery, immediate filter/search/import/reset replacement without the retired warning dialog, ID-based rename/copy, malformed-record preservation, cross-tab conflict cancellation, unsaved imports, quota failures, duplicate-import decisions, dirty deletion retention, and immediate dropdown/search removal after clean deletion.
-- Native Enter/Escape and launcher focus restoration were checked. Layout checks passed at 318 × 798 CSS pixels (320-pixel iframe including borders) and 638 × 358 CSS pixels, approximating a 1280 × 720 desktop viewport at 200% zoom. The latter exposed a clipped result area; the short-height scrolling adaptation fixed it. Actual browser zoom, physical touch, and screen-reader speech were not independently tested.
-- Performance: Windows x64, Codex in-app browser reporting Chromium 152, 1,000 synthetic metadata entries, 30 queries, forced DOM layout, bounded 50-row results. Observed openings were approximately 11–23 ms and p95 query-plus-layout approximately 12–26 ms. These are local observations, not cross-device guarantees. Hardware model enumeration was denied by the environment; timing starts after catalog projection and does not measure cold storage loading.
-- Hardware CPU/WebGPU parity: **40/44 fixtures passed**. The same untouched v2.6.7 baseline produced identical failures:
+- `npm run verify`: passed syntax checks, all Node smoke suites, the production build, and build-output validation after the Phase 2 implementation.
+- Browser workflow fixture: `tests/library-browser.html`. Both the modular application and generated standalone passed open-state identity, initial focus, hidden single-page pagination, favorite isolation, invalid-candidate recovery, rapid candidate switching, preview storage isolation, exact dirty pixel/document Cancel, Apply identity, Escape, dirty custom restoration, imported restoration, catalog filters, and existing save/import/delete conflict behavior.
+- Responsive browser checks passed at 1,440 × 900, 1,366 × 768, 1,024 × 768, 768 × 1,024, 318 × 798, and 638 × 358 CSS pixels. These cover the desktop drawer, portrait bottom sheet, narrow mobile, and 200%-zoom-equivalent layouts.
+- The same fixture retains the bounded 1,000-entry performance projection. One local Chromium 152 run observed a 31.6 ms opening and 12.2 ms p95 query-plus-layout time; timings are local observations, not cross-device guarantees.
+- Renderer/compiler/formula source was not changed. All 35 built-ins continue to compile as WebGPU-compatible in the automated suite.
+- The release build is `dist/filter-fabjs-v2.8.2.html`. Direct `file://` behavior can vary by browser security policy, so localhost remains the supported test path.
 
-| Fixture | Maximum byte difference | Mean difference |
-| --- | ---: | ---: |
-| Mandelbrot field | 189 | 0.5330 |
-| Centered angle | 128 | 0.1795 |
-| Signed-zero angle | 128 | 128.0000 |
-| Angular gradient | 255 | 4.3072 |
+Run the complete verification workflow with:
 
-These pre-existing numeric differences were not changed as part of search and organization. CPU fallback and compatibility smoke tests pass; this result does not claim universal hardware parity.
-
-The standalone HTML is tested over localhost. Direct `file://` behavior can vary by browser security policy, so local-file opening remains a user test. The v2.8.1 deliverable is `dist/filter-fabjs-v2.8.1.html`. No deployment is performed by the release workflow.
+```bash
+npm run verify
+```

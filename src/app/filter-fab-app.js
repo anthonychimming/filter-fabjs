@@ -93,7 +93,7 @@ export function initFilterFabApp(){
   const {el,ctx}=getDom();
   const state={source:null,filtered:null,width:0,height:0,view:'filtered',workspaceMode:'explore',split:50,zoom:'fit',zoomLevel:1,controls:defaultControlValues(),labels:defaultControlLabels(),controlUIs:defaultControlUIs(),renderId:0,imageLoadId:0,filterLoadId:0,rendererManager:null,rendererPreference:storageGet('ffw-renderer','auto'),lastProgram:null,lastProgramKey:null,lastSuccessfulRenderSignature:null,lastWGSL:null,lastGpuAnalysis:null,lastRendererDiagnostics:null,isRendering:false,usedControls:Array(CONTROL_COUNT).fill(false),legacyMath:false,hasPendingFormulaChanges:false,focusSnapshot:null};
   const canvasView=createCanvasView({state,el,ctx});
-  let controlsController,browser,catalogCache=null;
+  let controlsController,browser,catalogCache=null,librarySession=null;
   const activeDocument={key:null,id:undefined,tags:[],baseline:null,recordBaseline:null,imported:false,importSource:null};
 
   const rendererFactories={
@@ -106,7 +106,7 @@ export function initFilterFabApp(){
   function toast(text){el.toast.textContent=text;el.toast.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.toast.classList.remove('show'),1800);}
   const interactiveNodes=()=>Array.from(document.querySelectorAll('button,input,select,textarea'));
   function updatePresetDeleteState(){const custom=activeDocument.key?.startsWith('custom:');el.deletePreset.disabled=state.isRendering||!custom;el.deletePreset.title=custom?'Delete current saved filter':'Load a saved custom filter to delete';}
-  function applyInteractionLocks(){interactiveNodes().forEach(node=>{node.disabled=state.isRendering;});$$('.slider-row',$('#sliderGrid')).forEach(row=>{const index=Number(row.dataset.controlIndex),unused=!state.usedControls[index];row.classList.toggle('control-unused',unused);row.setAttribute('aria-disabled',String(state.isRendering||unused));row.title=unused?'Unused — not referenced by any channel formula':'';$$('button,input,select',row).forEach(node=>{node.disabled=state.isRendering||unused;});});updatePresetDeleteState();}
+  function applyInteractionLocks(){interactiveNodes().forEach(node=>{if(librarySession&&node.closest('.filter-browser'))return;node.disabled=state.isRendering;});$$('.slider-row',$('#sliderGrid')).forEach(row=>{const index=Number(row.dataset.controlIndex),unused=!state.usedControls[index];row.classList.toggle('control-unused',unused);row.setAttribute('aria-disabled',String(state.isRendering||unused));row.title=unused?'Unused — not referenced by any channel formula':'';$$('button,input,select',row).forEach(node=>{node.disabled=state.isRendering||unused;});});updatePresetDeleteState();}
   function captureFocus(){const node=document.activeElement;if(!(node instanceof Element)||node===document.body||!node.matches('button,input,select,textarea'))return null;const snapshot={node};if(typeof node.selectionStart==='number'){snapshot.start=node.selectionStart;snapshot.end=node.selectionEnd;snapshot.direction=node.selectionDirection;}return snapshot;}
   function restoreFocus(snapshot){if(!snapshot?.node?.isConnected||snapshot.node.disabled)return;requestAnimationFrame(()=>{if(!snapshot.node.isConnected||snapshot.node.disabled)return;snapshot.node.focus({preventScroll:true});if(typeof snapshot.start==='number'&&typeof snapshot.node.setSelectionRange==='function')snapshot.node.setSelectionRange(snapshot.start,snapshot.end,snapshot.direction||'none');});}
   function setFormulaEditStatus(kind,text){el.formulaEditStatus.dataset.state=kind;el.formulaEditStatus.textContent=text;}
@@ -122,7 +122,7 @@ export function initFilterFabApp(){
   function setProgress(pct,row,total){const safePct=clamp(Number.isFinite(Number(pct))?Number(pct):0,0,100),safeTotal=Math.max(0,Math.trunc(Number(total)||0)),safeRow=clamp(Math.trunc(Number(row)||0),0,safeTotal||0);el.progressFill.style.width=`${safePct}%`;el.progressFill.parentElement?.setAttribute('aria-valuenow',String(Math.round(safePct)));el.progressPercent.textContent=`${Math.round(safePct)}%`;el.progressRows.textContent=safeTotal?`${safeRow} / ${safeTotal} rows`:'Preparing…';}
   function setUILocked(locked,pct=0,row=0,total=0){const wasRendering=state.isRendering,nextRendering=Boolean(locked);if(nextRendering&&!wasRendering)state.focusSnapshot=captureFocus();state.isRendering=nextRendering;document.body.classList.toggle('ui-locked',state.isRendering);document.body.setAttribute('aria-busy',String(state.isRendering));applyInteractionLocks();el.renderOverlay.classList.toggle('show',state.isRendering);el.renderOverlay.setAttribute('aria-hidden',String(!state.isRendering));if(state.isRendering)setProgress(pct,row,total);else if(wasRendering){const snapshot=state.focusSnapshot;state.focusSnapshot=null;restoreFocus(snapshot);}}
   function initializeRendererSource(){if(!state.source||!state.width||!state.height)return Promise.resolve();return state.rendererManager.setSource(state.source,state.width,state.height);}
-  async function cancelRender(){if(!state.isRendering)return false;state.renderId++;try{await state.rendererManager?.cancelActive();}catch(error){console.error('Renderer cancellation failed',error);}setUILocked(false);setProgress(0,0,state.height||0);setStatus('Render cancelled');el.renderInfo.textContent=`${state.rendererManager?.active?.label||'Renderer'} · cancelled`;toast('Rendering cancelled');return true;}
+  async function cancelRender({silent=false}={}){if(!state.isRendering)return false;state.renderId++;try{await state.rendererManager?.cancelActive();}catch(error){console.error('Renderer cancellation failed',error);}setUILocked(false);setProgress(0,0,state.height||0);if(!silent){setStatus('Render cancelled');el.renderInfo.textContent=`${state.rendererManager?.active?.label||'Renderer'} · cancelled`;toast('Rendering cancelled');}return true;}
 
   function currentProgramKey(){return JSON.stringify([state.legacyMath,...el.formulas.map(field=>field.value)])}
   function compileCurrentProgram(){const key=currentProgramKey();if(state.lastProgram&&state.lastProgramKey===key)return state.lastProgram;const astList=el.formulas.map(field=>new Parser(field.value).parse());return compileFilterProgram(astList,{legacyMath:state.legacyMath});}
@@ -140,9 +140,9 @@ export function initFilterFabApp(){
   function importedStatus(){return activeDocument.importSource==='png'?'Imported from PNG · Not saved':'Imported · not saved';}
   function isDirty(){return activeDocument.imported||!activeDocument.key||documentSnapshot()!==activeDocument.baseline;}
   function updateActiveFilterSummary(status){
-    const name=$('#filterName').value.trim()||'Untitled Filter',key=activeDocument.key,source=key?.startsWith('builtin:')?'Built-in':key?.startsWith('custom:')?'My Filter':'Unsaved',description=el.description.value.trim();
+    const previewEntry=librarySession?.candidateEntry,name=$('#filterName').value.trim()||'Untitled Filter',key=previewEntry?.key||activeDocument.key,source=previewEntry?(previewEntry.source==='builtin'?'Built-in preview':'My Filter preview'):key?.startsWith('builtin:')?'Built-in':key?.startsWith('custom:')?'My Filter':'Unsaved',description=el.description.value.trim();
     el.activeFilterName.textContent=name;el.activeFilterSource.textContent=source;el.activeFilterStatus.textContent=status;el.activeFilterDescription.textContent=description||'No description provided.';
-    if(!key){el.activeFavorite.hidden=true;el.activeFavorite.setAttribute('aria-pressed','false');return;}
+    if(!key||previewEntry){el.activeFavorite.hidden=Boolean(previewEntry)||!key;el.activeFavorite.setAttribute('aria-pressed','false');return;}
     const favorite=preference(key).favorite;el.activeFavorite.hidden=false;el.activeFavorite.setAttribute('aria-pressed',String(favorite));el.activeFavorite.textContent=favorite?'★ Favorited':'☆ Favorite';el.activeFavorite.setAttribute('aria-label',`${favorite?'Remove':'Add'} ${name} ${favorite?'from':'to'} favorites`);
   }
   function updateDocumentHeader({forceSelection=false}={}){
@@ -153,7 +153,7 @@ export function initFilterFabApp(){
     const requestedOption=requestedSelection&&Array.from(el.preset.options).some(option=>option.value===requestedSelection);
     if(forceSelection||!requestedOption||requestedSelection===activeDocument.key)el.preset.value=activeDocument.key||'';
     el.preset.title=name;
-    const status=activeDocument.imported?importedStatus():!activeDocument.key?'Not saved':isDirty()?'Unsaved changes':'Saved';$('#savedDocumentStatus').textContent=status;updateActiveFilterSummary(status);updatePresetDeleteState();
+    const previewing=Boolean(librarySession?.candidateEntry),status=previewing?'Preview · not applied':activeDocument.imported?importedStatus():!activeDocument.key?'Not saved':isDirty()?'Unsaved changes':'Saved';$('#savedDocumentStatus').textContent=status;updateActiveFilterSummary(status);updatePresetDeleteState();
   }
   function populatePresets(){
     catalogCache=null;el.preset.replaceChildren();
@@ -174,8 +174,9 @@ export function initFilterFabApp(){
     const suggestions=$('#tagSuggestions');suggestions.replaceChildren();const all=[...new Set(catalog().flatMap(entry=>entry.tags))].filter(tag=>!tags.some(item=>tagKey(item)===tagKey(tag))).filter(tag=>tag.toLowerCase().includes($('#newTag').value.toLowerCase())).slice(0,50);for(const tag of all){const option=document.createElement('option');option.value=tag;suggestions.append(option);}
   }
   function commitTags(tags){try{const normalized=normalizeTags(tags);if(activeDocument.key?.startsWith('builtin:')){normalizeTags([...new Map([...activeDocument.tags,...normalized].map(tag=>[tagKey(tag),tag])).values()]);writeEntryPreference(localStorage,activeDocument.key,{tags:normalized});}else activeDocument.tags=normalized;$('#tagError').textContent='';catalogCache=null;refreshTags();populatePresets();return true;}catch(error){$('#tagError').textContent=error.message;return false;}}
+  function resolveCatalogDefinition(entry){return entry.source==='builtin'?presets.find(item=>`builtin:${item.id}`===entry.key):findCustomPresetById(library().presets,entry.document.id);}
   async function loadCatalogEntry(entry,focusTarget=el.searchFilters){
-    const definition=entry.source==='builtin'?presets.find(item=>`builtin:${item.id}`===entry.key):findCustomPresetById(library().presets,entry.document.id);
+    const definition=resolveCatalogDefinition(entry);
     if(!definition)throw new Error('This filter was deleted in another tab.');
     prepareFilter(definition);
     applyFilter(definition,entry.key);if(state.isRendering)state.focusSnapshot={node:focusTarget};return true;
@@ -208,19 +209,76 @@ export function initFilterFabApp(){
     const tags=normalizeTags(definition.tags),id=definition.format==='filter-factory-afs'?undefined:validatePortableId(definition.id);
     return{tags,id,legacyMath,formulas:normalizedFormulas,controls,labels,controlUIs,name,description,author,program};
   }
-  function applyFilter(definition,selection,{importSource=selection?null:'file'}={}){const next=prepareFilter(definition);state.legacyMath=next.legacyMath;el.formulas.forEach((field,index)=>field.value=next.formulas[index]);state.controls=next.controls;state.labels=next.labels;state.controlUIs=next.controlUIs;state.lastProgram=next.program;state.lastProgramKey=currentProgramKey();$('#filterName').value=next.name;el.description.value=next.description;$('#filterAuthor').value=next.author;controlsController.syncSliders();controlsController.updateControlUsage(next.program);activeDocument.key=selection||null;activeDocument.id=selection?.startsWith('builtin:')?undefined:next.id;activeDocument.tags=next.tags;activeDocument.imported=!selection;activeDocument.importSource=selection?null:importSource;activeDocument.recordBaseline=selection?.startsWith('custom:')?JSON.stringify(definition):null;activeDocument.baseline=documentSnapshot();refreshTags();updateDocumentHeader({forceSelection:true});markFormulaPending();render();}
+  function applyPreparedPresentation(next){
+    state.legacyMath=next.legacyMath;el.formulas.forEach((field,index)=>field.value=next.formulas[index]);state.controls=[...next.controls];state.labels=[...next.labels];state.controlUIs=next.controlUIs.map(cloneControlUI);state.lastProgram=next.program;state.lastProgramKey=currentProgramKey();$('#filterName').value=next.name;el.description.value=next.description;$('#filterAuthor').value=next.author;controlsController.updateControlUsage(next.program);controlsController.syncSliders();
+  }
+  function commitActiveDocument(next,definition,selection,{importSource=selection?null:'file'}={}){
+    activeDocument.key=selection||null;activeDocument.id=selection?.startsWith('builtin:')?undefined:next.id;activeDocument.tags=[...next.tags];activeDocument.imported=!selection;activeDocument.importSource=selection?null:importSource;activeDocument.recordBaseline=selection?.startsWith('custom:')?JSON.stringify(definition):null;activeDocument.baseline=documentSnapshot();
+  }
+  function applyFilter(definition,selection,{importSource=selection?null:'file'}={}){
+    const next=prepareFilter(definition);applyPreparedPresentation(next);commitActiveDocument(next,definition,selection,{importSource});refreshTags();updateDocumentHeader({forceSelection:true});markFormulaPending();render();
+  }
+
+  function captureLibraryWorkingState(){
+    return{
+      activeDocument:{...activeDocument,tags:[...activeDocument.tags]},
+      presentation:{
+        legacyMath:state.legacyMath,controls:[...state.controls],labels:[...state.labels],controlUIs:state.controlUIs.map(cloneControlUI),lastProgram:state.lastProgram,lastProgramKey:state.lastProgramKey,lastSuccessfulRenderSignature:state.lastSuccessfulRenderSignature,lastWGSL:state.lastWGSL,lastGpuAnalysis:state.lastGpuAnalysis,lastRendererDiagnostics:state.lastRendererDiagnostics,filtered:state.filtered,usedControls:[...state.usedControls],hasPendingFormulaChanges:state.hasPendingFormulaChanges,
+        name:$('#filterName').value,description:el.description.value,author:$('#filterAuthor').value,
+        formulas:el.formulas.map(field=>{const box=field.closest('.formula'),icon=$('.formula-state',box),error=$('.formula-error',box);return{value:field.value,className:field.className,invalid:field.getAttribute('aria-invalid'),iconClassName:icon.className,iconText:icon.textContent,errorClassName:error.className,errorText:error.textContent};})
+      },
+      ui:{formulaState:el.formulaEditStatus.dataset.state,formulaText:el.formulaEditStatus.textContent,statusClass:el.statusDot.className,statusText:el.statusText.textContent,renderInfo:el.renderInfo.textContent,rendererDiagnosticsState:el.rendererDiagnostics.dataset.state,rendererDiagnosticsText:el.rendererDiagnostics.textContent,rendererDiagnosticsTitle:el.rendererDiagnostics.title,rendererSummaryState:el.rendererSummary.dataset.state,rendererSummaryText:el.rendererSummary.textContent,rendererSummaryTitle:el.rendererSummary.title}
+    };
+  }
+  function restoreLibraryWorkingState(snapshot){
+    const saved=snapshot.presentation;Object.assign(activeDocument,snapshot.activeDocument);activeDocument.tags=[...snapshot.activeDocument.tags];
+    state.legacyMath=saved.legacyMath;state.controls=[...saved.controls];state.labels=[...saved.labels];state.controlUIs=saved.controlUIs.map(cloneControlUI);state.lastProgram=saved.lastProgram;state.lastProgramKey=saved.lastProgramKey;state.lastSuccessfulRenderSignature=saved.lastSuccessfulRenderSignature;state.lastWGSL=saved.lastWGSL;state.lastGpuAnalysis=saved.lastGpuAnalysis;state.lastRendererDiagnostics=saved.lastRendererDiagnostics;state.filtered=saved.filtered;state.usedControls=[...saved.usedControls];state.hasPendingFormulaChanges=saved.hasPendingFormulaChanges;
+    $('#filterName').value=saved.name;el.description.value=saved.description;$('#filterAuthor').value=saved.author;
+    saved.formulas.forEach((formula,index)=>{const field=el.formulas[index],box=field.closest('.formula'),icon=$('.formula-state',box),error=$('.formula-error',box);field.value=formula.value;field.className=formula.className;if(formula.invalid===null)field.removeAttribute('aria-invalid');else field.setAttribute('aria-invalid',formula.invalid);icon.className=formula.iconClassName;icon.textContent=formula.iconText;error.className=formula.errorClassName;error.textContent=formula.errorText;});
+    controlsController.syncSliders();refreshTags();updateDocumentHeader({forceSelection:true});
+    el.formulaEditStatus.dataset.state=snapshot.ui.formulaState;el.formulaEditStatus.textContent=snapshot.ui.formulaText;el.statusDot.className=snapshot.ui.statusClass;el.statusText.textContent=snapshot.ui.statusText;el.renderInfo.textContent=snapshot.ui.renderInfo;el.rendererDiagnostics.dataset.state=snapshot.ui.rendererDiagnosticsState;el.rendererDiagnostics.textContent=snapshot.ui.rendererDiagnosticsText;el.rendererDiagnostics.title=snapshot.ui.rendererDiagnosticsTitle;el.rendererSummary.dataset.state=snapshot.ui.rendererSummaryState;el.rendererSummary.textContent=snapshot.ui.rendererSummaryText;el.rendererSummary.title=snapshot.ui.rendererSummaryTitle;canvasView.drawView();
+  }
+  async function beginLibrarySession(){
+    if(librarySession)return true;
+    if(state.isRendering)throw new Error('Wait for the current render to finish before opening the library.');
+    librarySession={originalWorkingDocument:captureLibraryWorkingState(),candidateEntry:null,candidateDefinition:null,candidatePrepared:null,candidateRendered:false,requestId:0};return true;
+  }
+  async function previewLibraryEntry(entry){
+    const session=librarySession;if(!session)throw new Error('The Filter Library session is no longer open.');
+    const requestId=++session.requestId,definition=resolveCatalogDefinition(entry);if(!definition)throw new Error('This filter was deleted in another tab.');
+    const prepared=prepareFilter(definition),previousWorkingState=captureLibraryWorkingState(),previousCandidate={entry:session.candidateEntry,definition:session.candidateDefinition,prepared:session.candidatePrepared,rendered:session.candidateRendered};
+    if(state.isRendering)await cancelRender({silent:true});
+    if(librarySession!==session||requestId!==session.requestId)return false;
+    applyPreparedPresentation(prepared);session.candidateEntry=entry;session.candidateDefinition=definition;session.candidatePrepared=prepared;session.candidateRendered=false;markFormulaPending();updateDocumentHeader({forceSelection:true});
+    const rendered=await render();
+    if(librarySession!==session||requestId!==session.requestId)return false;
+    if(!rendered){session.candidateEntry=previousCandidate.entry;session.candidateDefinition=previousCandidate.definition;session.candidatePrepared=previousCandidate.prepared;session.candidateRendered=previousCandidate.rendered;restoreLibraryWorkingState(previousWorkingState);throw new Error('The candidate could not be rendered. Your previous preview was restored.');}
+    session.candidateRendered=true;updateDocumentHeader({forceSelection:true});return true;
+  }
+  async function cancelLibrarySession(){
+    const session=librarySession;if(!session)return true;session.requestId++;
+    if(state.isRendering)await cancelRender({silent:true});
+    if(librarySession!==session)return false;librarySession=null;restoreLibraryWorkingState(session.originalWorkingDocument);return true;
+  }
+  async function applyLibraryCandidate(){
+    const session=librarySession;if(!session?.candidateEntry||!session.candidatePrepared||!session.candidateRendered)throw new Error('Choose a successfully rendered candidate first.');
+    if(session.candidateEntry.source==='custom'){
+      const current=resolveCatalogDefinition(session.candidateEntry);if(!current)throw new Error('This filter was deleted in another tab.');if(JSON.stringify(current)!==JSON.stringify(session.candidateDefinition))throw new Error('This filter changed in another tab. Preview the updated filter before applying it.');
+    }
+    session.requestId++;librarySession=null;commitActiveDocument(session.candidatePrepared,session.candidateDefinition,session.candidateEntry.key);refreshTags();updateDocumentHeader({forceSelection:true});toast(`${session.candidatePrepared.name} applied`);return true;
+  }
 
   function compileAll({cache=true}={}){const key=currentProgramKey();if(cache&&state.lastProgram&&state.lastProgramKey===key){controlsController.updateControlUsage(state.lastProgram);updateRendererDiagnostics(state.lastProgram);return state.lastProgram}const astList=[];let ok=true;el.formulas.forEach(field=>{const box=field.closest('.formula'),icon=$('.formula-state',box),errorElement=$('.formula-error',box);try{astList.push(new Parser(field.value).parse());field.classList.remove('invalid');field.setAttribute('aria-invalid','false');icon.textContent='✓';icon.classList.remove('bad','pending');errorElement.textContent='';errorElement.classList.remove('show');}catch(error){ok=false;astList.push(null);field.classList.add('invalid');field.setAttribute('aria-invalid','true');icon.textContent='!';icon.classList.remove('pending');icon.classList.add('bad');errorElement.textContent=`${error.message} at character ${(error.pos??0)+1}`;errorElement.classList.add('show');}});if(!ok){controlsController.updateControlUsage(null);clearRendererDiagnostics('GPU diagnostics unavailable','Fix formula errors to inspect renderer eligibility.');return null;}try{const program=compileFilterProgram(astList,{legacyMath:state.legacyMath});if(cache){state.lastProgram=program;state.lastProgramKey=key}controlsController.updateControlUsage(program);updateRendererDiagnostics(program);return program;}catch(error){console.error('IR compilation failed',error);setStatus(`Compiler error: ${error.message}`,'error');controlsController.updateControlUsage(null);clearRendererDiagnostics('GPU diagnostics unavailable',error.message);return null;}}
   function showFormulaFailure(){const hasFieldError=el.formulas.some(field=>field.classList.contains('invalid'));setFormulaEditStatus('invalid',hasFieldError?'Fix formula errors':'Compiler error');clearRendererDiagnostics('GPU diagnostics unavailable',hasFieldError?'Fix formula errors to inspect renderer eligibility.':'The typed IR could not be compiled.');if(hasFieldError)setStatus('Fix formula errors before rendering','error');}
   function validatedCurrentFilter(){return validateFilterForPersistence(currentFilter(),error=>{console.error('Filter validation failed',error);compileAll();showFormulaFailure();setStatus(`Filter validation error: ${error.message}`,'error');toast(`Filter validation failed: ${error.message}`);});}
   function validatePendingFormulas(){if(!state.hasPendingFormulaChanges||state.isRendering)return;const program=compileAll({cache:false});if(program){setFormulaEditStatus('pending','Ready to render');setStatus('Formula valid · render to update preview','pending');}else showFormulaFailure();}
   async function render({focusInvalid=false}={}){
-    if(!state.source||state.isRendering)return;
+    if(!state.source||state.isRendering)return false;
     const program=compileAll();
     if(!program){
       showFormulaFailure();
       if(focusInvalid)el.formulas.find(field=>field.classList.contains('invalid'))?.focus();
-      return;
+      return false;
     }
     const id=++state.renderId,renderSignature=filterRenderSignature(currentFilter()),irLabel=`IR v${program.irVersion} · ${program.metadata.nodeCount} ops`;
     setUILocked(true,0,0,state.height||0);
@@ -233,7 +291,7 @@ export function initFilterFabApp(){
       },onProgress:message=>{
         if(id!==state.renderId||!selection)return;const fallback=selection.fallbackReason?' · CPU fallback':'';setProgress(message.pct,message.row,message.total);setStatus(runtimeFallback?`GPU failed; CPU fallback… ${Math.round(message.pct)}%`:`Rendering with ${selection.renderer.label}… ${Math.round(message.pct)}%`,'busy');el.renderInfo.textContent=`${selection.renderer.label}${fallback} · ${irLabel} · ${message.row} / ${message.total} rows`;
       }}),result=outcome.result;
-      if(id!==state.renderId)return;
+      if(id!==state.renderId)return false;
       state.filtered=result.pixels;
       state.lastSuccessfulRenderSignature=renderSignature;
       canvasView.drawView();
@@ -242,12 +300,14 @@ export function initFilterFabApp(){
       const reason=outcome.fallbackReason?` · ${outcome.fallbackReason}`:'';
       el.renderInfo.textContent=`${result.label} · ${irLabel} · ${result.ms.toFixed(0)} ms${reason}`;
       updateRendererDiagnostics(program,{rendererId:result.backend,fallbackReason:outcome.fallbackReason,runtimeFallback:outcome.runtimeFallback});
+      return true;
     }catch(error){
-      if(id!==state.renderId||error?.name==='RenderCancelledError')return;
+      if(id!==state.renderId||error?.name==='RenderCancelledError')return false;
       console.error('Render failed',error);
       setStatus(`Renderer error: ${error.message}`,'error');
       el.renderInfo.textContent=`${selection?.renderer?.label||'Renderer'} · ${irLabel} · error`;
       setRendererDiagnosticsState('error',`Renderer error · ${irLabel}`,error.message);
+      return false;
     }finally{
       if(id===state.renderId)setUILocked(false);
     }
@@ -268,7 +328,7 @@ export function initFilterFabApp(){
 
   function triggerDownload(href,name,revoke=false){try{const anchor=document.createElement('a');anchor.href=href;anchor.download=name;anchor.rel='noopener';anchor.style.display='none';document.body.appendChild(anchor);anchor.click();setTimeout(()=>{anchor.remove();if(revoke)URL.revokeObjectURL(href);},10000);toast(`Download started: ${name}`);return true;}catch(error){console.error('Download failed',error);toast(`Download failed: ${error.message||'browser blocked the file'}`);return false;}}
   function downloadBlob(blob,name){if(!(blob instanceof Blob)||!blob.size){toast('Nothing was generated to download');return false;}return triggerDownload(URL.createObjectURL(blob),name,true);}
-  async function exportPNG(){if(!state.filtered||!state.width||!state.height){toast('Load and render an image before exporting');return;}const filter=validatedCurrentFilter();if(!filter)return;if(state.lastSuccessfulRenderSignature!==filterRenderSignature(filter)){setStatus('Render the current filter changes before exporting.','error');toast('Render the current filter changes before exporting.');return;}setStatus('Encoding PNG…','busy');try{const canvas=renderedImageCanvas(state.filtered,state.width,state.height),name=slug($('#filterName').value||'filtered-image')+'.png',encoded=await canvasBlob(canvas,'image/png'),envelope=createFilterFabPngEnvelope(filter,'2.8.1'),blob=await embedFilterFabMetadata(encoded,envelope);if(downloadBlob(blob,name))setStatus('Ready');}catch(error){console.error('PNG export failed',error);setStatus('PNG export failed','error');toast(`PNG export failed: ${error.message}`);}}
+  async function exportPNG(){if(!state.filtered||!state.width||!state.height){toast('Load and render an image before exporting');return;}const filter=validatedCurrentFilter();if(!filter)return;if(state.lastSuccessfulRenderSignature!==filterRenderSignature(filter)){setStatus('Render the current filter changes before exporting.','error');toast('Render the current filter changes before exporting.');return;}setStatus('Encoding PNG…','busy');try{const canvas=renderedImageCanvas(state.filtered,state.width,state.height),name=slug($('#filterName').value||'filtered-image')+'.png',encoded=await canvasBlob(canvas,'image/png'),envelope=createFilterFabPngEnvelope(filter,'2.8.2'),blob=await embedFilterFabMetadata(encoded,envelope);if(downloadBlob(blob,name))setStatus('Ready');}catch(error){console.error('PNG export failed',error);setStatus('PNG export failed','error');toast(`PNG export failed: ${error.message}`);}}
   function exportFilter(){const filter=validatedCurrentFilter();if(!filter)return;if(!activeDocument.id)activeDocument.id=createCustomPresetId();filter.id=activeDocument.id;const base=slug(filter.name);try{downloadBlob(new Blob([JSON.stringify(filter,null,2)+'\n'],{type:'application/json;charset=utf-8'}),base+'.json');}catch(error){console.error('Filter export failed',error);toast(`Filter export failed: ${error.message}`);}}
   async function deletePreset(){
     if(!activeDocument.key?.startsWith('custom:'))return;
@@ -329,7 +389,7 @@ export function initFilterFabApp(){
     el.renderBtn.onclick=()=>render({focusInvalid:true});
     const resetFilter=()=>applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');$('#resetBtn').onclick=resetFilter;$('#exploreResetBtn').onclick=resetFilter;
     el.activeFavorite.onclick=()=>{if(!activeDocument.key)return;try{const current=preference(activeDocument.key);writeEntryPreference(localStorage,activeDocument.key,{favorite:!current.favorite});catalogCache=null;browser?.refresh();updateDocumentHeader();}catch(error){organizationError(error);}};
-    browser=createFilterBrowser({launcher:el.searchFilters,getEntries:catalog,load:loadCatalogEntry,toggleFavorite:entry=>{writeEntryPreference(localStorage,entry.key,{favorite:!entry.favorite});catalogCache=null;if(entry.key===activeDocument.key)updateDocumentHeader();},onError:organizationError});
+    browser=createFilterBrowser({launcher:el.searchFilters,getEntries:catalog,begin:beginLibrarySession,preview:previewLibraryEntry,apply:applyLibraryCandidate,cancel:cancelLibrarySession,toggleFavorite:entry=>{writeEntryPreference(localStorage,entry.key,{favorite:!entry.favorite});catalogCache=null;if(entry.key===activeDocument.key)updateDocumentHeader();},onError:organizationError});
     populatePresets();
     el.preset.onchange=async()=>{
       const key=el.preset.value;
@@ -385,7 +445,7 @@ export function initFilterFabApp(){
     window.addEventListener('beforeunload',()=>state.rendererManager?.dispose());
   }
 
-  window.FilterFabJS=Object.freeze({version:'2.8.1',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getRendererPreference:()=>state.rendererPreference,getWorkspaceMode:()=>state.workspaceMode});
+  window.FilterFabJS=Object.freeze({version:'2.8.2',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getRendererPreference:()=>state.rendererPreference,getWorkspaceMode:()=>state.workspaceMode,getLibraryPreviewState:()=>({open:Boolean(librarySession),candidateKey:librarySession?.candidateEntry?.key||null,candidateRendered:Boolean(librarySession?.candidateRendered),activeKey:activeDocument.key,activeId:activeDocument.id,imported:activeDocument.imported,importSource:activeDocument.importSource,baseline:activeDocument.baseline,recordBaseline:activeDocument.recordBaseline})});
   controlsController.buildSliders();wire();const demo=demoImage();initImage(demo.data,demo.width,demo.height);applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');
   return{state,render,applyFilter,loadImageFile,openImageFile};
 }
