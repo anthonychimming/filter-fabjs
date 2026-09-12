@@ -23,7 +23,7 @@ function filter(overrides={}){return{format:'filter-fab-js',version:2,id:'portab
 function rawMetadataPng(payload,{keyword=FILTER_FAB_PNG_KEYWORD,count=1}={}){return rgbaPng().arrayBuffer().then(buffer=>{const bytes=new Uint8Array(buffer),iend=chunks(bytes).at(-1),data=concat(encoder.encode(keyword),Uint8Array.of(0,0,0,0,0),encoder.encode(payload)),metadata=Array.from({length:count},()=>makeChunk('iTXt',data));return new Blob([bytes.subarray(0,iend.start),...metadata,bytes.subarray(iend.start)],{type:'image/png'});});}
 async function rejectsCode(promise,code){await assert.rejects(promise,error=>error instanceof PngMetadataError&&error.code===code);}
 
-const original=rgbaPng(),validated=validateNativeFilter(filter()),envelope=createFilterFabPngEnvelope(validated,'2.8.3'),embedded=await embedFilterFabMetadata(original,envelope);
+const original=rgbaPng(),validated=validateNativeFilter(filter()),envelope=createFilterFabPngEnvelope(validated,'2.8.4'),embedded=await embedFilterFabMetadata(original,envelope);
 const extracted=await extractFilterFabMetadata(embedded);
 assert.deepEqual(extracted,envelope,'UTF-8 envelope metadata must round trip without loss');
 assert.equal(validateFilterFabPngEnvelope(extracted),extracted,'envelope validation must return the validated carrier');
@@ -53,7 +53,7 @@ await rejectsCode(extractFilterFabMetadata(await rawMetadataPng(JSON.stringify({
 await rejectsCode(extractFilterFabMetadata(await rawMetadataPng(JSON.stringify({...envelope,documentType:'graph'}))), 'unsupported');
 await rejectsCode(extractFilterFabMetadata(await rawMetadataPng(JSON.stringify({...envelope,schema:'other/png'}))), 'invalid');
 assert.equal(await extractFilterFabMetadata(original),null,'ordinary PNGs must report no FilterFabJS metadata');
-assert.throws(()=>createFilterFabPngEnvelope({...validated,version:1},'2.8.3'),/version 2/,'the PNG carrier must not weaken its native-v2 document contract');
+assert.throws(()=>createFilterFabPngEnvelope({...validated,version:1},'2.8.4'),/version 2/,'the PNG carrier must not weaken its native-v2 document contract');
 
 for(const invalid of [
   filter({formulas:['r+','g','b','a']}),
@@ -68,6 +68,12 @@ workflow=await route({choice:'import'});assert.deepEqual(workflow.events,['choos
 workflow=await route({choice:'cancel'});assert.deepEqual(workflow.events,['choose:valid']);assert.equal(workflow.state.source,workflow.source,'Cancel must preserve image state');assert.equal(workflow.state.filter,undefined,'Cancel must preserve filter state');
 workflow=await route({metadata:null});assert.deepEqual(workflow.events,['open'],'ordinary PNGs must keep the normal opening path');
 const invalidEnvelope={...envelope,document:{...envelope.document,formulas:['r+','g','b','a']}};workflow=await route({metadata:invalidEnvelope,choice:'open'});assert.deepEqual(workflow.events,['choose:invalid','open'],'invalid metadata must still allow normal image opening');
+await routeImageFileWithMetadata({name:'test.png',type:'image/png'},{extractMetadata:async()=>envelope,chooseAction:async prompt=>{
+  assert.deepEqual(prompt.choices,[['import','Apply Embedded Filter'],['open','Open Image Only'],['cancel','Cancel']]);
+  assert.match(prompt.detail,/keeps your current source image/);
+  assert.match(prompt.detail,/without applying its filter/);
+  return 'cancel';
+},openImage:()=>assert.fail('cancel must not open an image'),importFilter:()=>assert.fail('cancel must not apply a filter')});
 
 const rendered=validateNativeFilter(filter()),signatureValue=filterRenderSignature(rendered);
 assert.equal(filterRenderSignature({...rendered,name:'Renamed',description:'Edited',tags:['New'],controls:rendered.controls.map(control=>({...control,label:'Changed',ui:{...control.ui,unit:'px'}}))}),signatureValue,'metadata-only edits must not stale rendered output');

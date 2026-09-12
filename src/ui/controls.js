@@ -38,7 +38,7 @@ export function createControlsController({state,el,scheduleRender,applyInteracti
   function accessibleName(index){return `${controlName(index)}, control ${index}`}
   function displayValue(index){return rawToDisplay(state.controls[index],state.controlUIs[index])}
   function updateCanonical(index,value){state.controls[index]=displayToRaw(value,state.controlUIs[index])}
-  function addReadout(row,index,ui,value){const readout=append(row,'output','control-readout');readout.textContent=formatControlValue(value,ui);if(ui.unit)append(readout,'span','control-unit',` ${ui.unit}`);readout.setAttribute('aria-label',`${accessibleName(index)} value`);return readout}
+  function addReadout(row,index,ui,value){const readout=append(row,'output','control-readout');readout.textContent=formatControlValue(value,ui);if(ui.unit)append(readout,'span','control-unit',` ${ui.unit}`);readout.setAttribute('aria-live','off');readout.setAttribute('aria-label',`${accessibleName(index)} value`);return readout}
   function buildRuntimeControl(definition){
     const index=definition.index,ui=normalizeControlUI(state.controlUIs[index]),value=displayValue(index),row=append(grid,'div','slider-row');row.dataset.controlIndex=String(index);
     append(row,'span','slider-index',String(index));
@@ -57,7 +57,7 @@ export function createControlsController({state,el,scheduleRender,applyInteracti
       const input=append(widget,'input','toggle-input');input.type='checkbox';input.setAttribute('role','switch');input.checked=normalizeToggleRaw(state.controls[index])===255;input.setAttribute('aria-label',name);input.setAttribute('aria-checked',String(input.checked));readout=addReadout(row,index,ui,input.checked?1:0);readout.textContent=input.checked?'On':'Off';
       input.onchange=()=>{state.controls[index]=input.checked?255:0;input.setAttribute('aria-checked',String(input.checked));readout.textContent=input.checked?'On':'Off';scheduleRender();};
     }
-    const usage=append(row,'span','control-usage-status visually-hidden',state.usedControls[index]?'Used':'Unused');usage.setAttribute('aria-live','polite');
+    const usage=append(row,'span','control-usage-status visually-hidden',state.usedControls[index]?'Used':'Unused');usage.setAttribute('aria-live','off');
   }
   function buildSliders(){grid.replaceChildren();const active=CONTROL_DEFINITIONS.filter(definition=>state.usedControls[definition.index]);for(const definition of active)buildRuntimeControl(definition);el.controlsEmpty.hidden=active.length>0;applyInteractionLocks();}
   function syncSliders(){buildSliders()}

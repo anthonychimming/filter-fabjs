@@ -1,4 +1,4 @@
-# Filter FabJS v2.8.3
+# Filter FabJS v2.8.4
 
 **A browser-based procedural image filter editor with WebGPU acceleration.**
 
@@ -8,13 +8,14 @@ Filter FabJS is an open-source, browser-native procedural RGBA image-processing 
 
 The engine combines four-channel RGBA formula authoring with WebGPU rendering and automatic CPU Worker fallback. Its procedural vocabulary includes image sampling, coordinate transforms, gradients, palette ramps, deterministic noise, fractals, analytic masks, signed-distance fields, convolution, and blend operations. Historic Filter Factory `.afs` filters remain supported through the legacy compatibility path.
 
-**Current stable release: v2.8.3**
+**Current stable release: v2.8.4**
 
 ## Features
 
 - Custom R, G, B, and Alpha formulas with live validation and preview rendering.
 - Artist-first Explore mode for active-filter adjustments, with metadata, formulas, control authoring, and diagnostics collected in Author mode.
 - Canvas-visible Filter Library with lazy source-based thumbnails, non-destructive candidate previews, and explicit Apply/Cancel behavior.
+- Clear action labels, keyboard focus and state cues, and larger coarse-pointer targets with responsive tablet layouts; see [Phase 3 interaction notes](docs/UI_PHASE_3.md).
 - WebGPU / WGSL acceleration with automatic CPU fallback for unsupported or legacy formulas.
 - Ten data-driven controls with author-defined slider, number, toggle, and seed presentations.
 - Normalized, centered, polar, repeated, and mirrored coordinate systems.
@@ -23,7 +24,7 @@ The engine combines four-channel RGBA formula authoring with WebGPU rendering an
 - Mandelbrot, Julia, and finite-depth Sierpiński fractal functions.
 - Analytic shape masks and signed-distance-field composition.
 - Fixed 3×3 convolution.
-- Auto / GPU / CPU renderer selection with live eligibility and fallback diagnostics.
+- Auto / GPU / CPU renderer selection with concise Explore status and detailed eligibility/fallback reasons in Author.
 - Deterministic benchmark presets for CPU/WebGPU performance comparisons.
 - Thirty-five built-in filters with searchable descriptions and tags.
 - Native Filter FabJS JSON import/export plus historic Filter Factory `.afs` import.
@@ -31,7 +32,7 @@ The engine combines four-channel RGBA formula authoring with WebGPU rendering an
 - PNG loading/export with portable embedded filter metadata, clipboard copy/paste, and alpha-aware preview.
 - Modular development source plus a standalone single-file release build.
 
-Filter FabJS v2.8.3 uses a typed, renderer-neutral intermediate representation, with the CPU and WebGPU renderers consuming the same semantic formula program.
+Filter FabJS v2.8.4 uses a typed, renderer-neutral intermediate representation, with the CPU and WebGPU renderers consuming the same semantic formula program.
 
 See [Project Status](docs/PROJECT_STATUS.md) for implementation details, compatibility notes, and current boundaries.
 
@@ -66,7 +67,7 @@ npm run build
 Build output:
 
 - `dist/site/` — deployable static site.
-- `dist/filter-fabjs-v2.8.3.html` — standalone single-file distribution.
+- `dist/filter-fabjs-v2.8.4.html` — standalone single-file distribution.
 
 The build uses Node.js and has no package dependencies.
 

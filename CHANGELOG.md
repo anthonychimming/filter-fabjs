@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.8.4
+
+- Clarified identity-aware Save Filter / Update Filter / Save as New actions, named the existing reset behavior Reset to Pass Through, and explained Apply Embedded Filter / Open Image Only without changing their semantics.
+- Kept Explore status concise and moved fallback reasons into readable Author technical diagnostics. Reduced duplicate live announcements and retained native progress and range semantics.
+- Strengthened essential interactive boundaries and keyboard focus, exposed preview mode selection, added visible selected-card and edited-formula cues, and prevented completed candidate previews from stealing search focus.
+- Added coarse-pointer targets and slider interaction areas of at least 44 pixels, responsive toolbar/control layouts, and reachable library actions on narrow or short screens.
+- Preserved filter identity, Apply/Cancel restoration, isolated lazy thumbnails, file compatibility, and renderer fallback. No Undo/Redo or control-memory feature was introduced.
+
 ## 2.8.3
 
 - Replaced decorative Filter Library swatches with real low-resolution previews rendered from the current source image through each filter's validated typed-IR program.

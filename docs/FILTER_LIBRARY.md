@@ -1,4 +1,6 @@
-# Filter Library — v2.8.3
+# Filter Library — v2.8.4
+
+Phase 3 adds visible selection cues, touch targets, and focus improvements. Current testing notes and action semantics are in [UI Phase 3](UI_PHASE_3.md); the Phase 2/2.1 measurements below describe the earlier thumbnail release.
 
 The Explore workspace opens a canvas-visible **Filter Library**. On desktop it docks as a right-side drawer with no backdrop blur over the artwork; on narrow screens it becomes a bottom sheet so part of the canvas remains visible.
 
@@ -73,7 +75,7 @@ Desktop uses a full-height right drawer. At 920 CSS pixels or narrower the libra
 - WebGPU and forced-CPU rendering were exercised in the browser; both produced real lazy card thumbnails. Coarse-pointer emulation, physical touch, and screen-reader speech were not tested.
 - The same fixture retains the bounded 1,000-entry performance projection. One generated-standalone run in local Chromium 152 observed a 30.4 ms opening and 12.8 ms p95 query-plus-layout time; timings are local observations, not cross-device guarantees.
 - Renderer/compiler/formula source was not changed. All 35 built-ins continue to compile as WebGPU-compatible in the automated suite.
-- The release build is `dist/filter-fabjs-v2.8.3.html`. Direct `file://` behavior can vary by browser security policy, so localhost remains the supported test path.
+- The release build is `dist/filter-fabjs-v2.8.4.html`. Direct `file://` behavior can vary by browser security policy, so localhost remains the supported test path.
 
 Run the complete verification workflow with:
 

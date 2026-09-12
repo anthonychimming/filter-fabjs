@@ -9,7 +9,16 @@ const css = fs.readFileSync('styles/app.css', 'utf8');
 
 assert.match(html, /id="renderBtn"[\s\S]*?<span>Update Preview<\/span>/, 'formula editor must expose an explicit Update Preview action');
 assert.match(html, /id="formulaEditStatus"/, 'formula editor must expose preview state');
-assert.match(html, /id="rendererDiagnostics"[^>]+aria-live="polite"/, 'the renderer toolbar must expose live GPU eligibility and fallback diagnostics');
+assert.match(html,/id="exploreResetBtn"[^>]*>Reset to Pass Through</,'Explore reset must describe replacing the active filter');
+assert.match(html,/id="resetBtn"[^>]*>Reset to Pass Through</,'Author reset must describe the same replacement');
+assert.match(app,/const resetFilter=\(\)=>applyFilter\(presets.find\(preset=>preset.id==='pass'\),'builtin:pass'\)/,'reset copy must preserve its actual Pass Through behavior');
+assert.match(app,/textContent=activeDocument.key\?\.startsWith\('custom:'\)\?'Update Filter':'Save Filter'/,'save label must follow saved custom identity');
+assert.match(html,/id="rendererReason"/,'fallback reasons must be visible inside Author diagnostics without hovering');
+assert.match(html,/id="statusText"[^>]*role="status"/,'render completion and errors need a status region');
+assert.match(controls,/readout.setAttribute\('aria-live','off'\)/,'native value changes must not produce duplicate live announcements');
+assert.match(html,/id="zoomOut"[^>]*aria-label="Zoom out"/,'icon actions need explicit accessible names');
+assert.match(app,/item.setAttribute\('aria-pressed',String\(item===button\)\)/,'preview mode selection must be exposed programmatically');
+assert.match(html, /id="rendererDiagnostics"[^>]+aria-live="off"/, 'technical diagnostics must be readable without duplicate live announcements');
 assert.match(html, /id="workspaceMode"[^>]+role="tablist"[^>]+aria-label="Workspace mode"/, 'the inspector must expose a labelled workspace-mode tab list');
 assert.match(html, /id="exploreModeTab"[^>]+role="tab"[^>]+aria-selected="true"[^>]+aria-controls="explorePanel"/, 'Explore must be the selected initial mode');
 assert.match(html, /id="authorModeTab"[^>]+role="tab"[^>]+aria-selected="false"[^>]+aria-controls="authorPanel"/, 'Author must be available without being initially selected');
@@ -18,7 +27,7 @@ assert.ok(html.indexOf('id="explorePanel"')<html.indexOf('id="sliderGrid"')&&htm
 assert.ok(html.indexOf('id="authorPanel"')<html.indexOf('id="formulaR"')&&html.indexOf('id="authorPanel"')<html.indexOf('id="filterName"'), 'formulas and metadata must live in Author');
 assert.match(html, /<label for="filterName">Filter name/, 'filter name must have a visible label');
 assert.match(html, /<label for="filterAuthor">Author/, 'filter author must have a visible label');
-assert.match(html, /<details class="reference diagnostics"><summary>Advanced \/ Diagnostics<\/summary>/, 'detailed renderer diagnostics must be disclosed in Author');
+assert.match(html, /<details class="reference diagnostics"><summary>Technical diagnostics<\/summary>/, 'detailed renderer diagnostics must be disclosed in Author');
 assert.match(html, /id="rendererSummary"[^>]+aria-live="polite"/, 'Explore must expose a compact renderer summary');
 assert.match(app, /workspaceMode:'explore'/, 'workspace mode must default to Explore in UI-only state');
 const modeSwitchBody=app.match(/function setWorkspaceMode\(mode\)\{[\s\S]*?modePanels\.forEach\(panel=>panel\.hidden=panel\.dataset\.modePanel!==mode\);\}/)?.[0]||'';
@@ -53,7 +62,7 @@ assert.match(app, /encoded=await canvasBlob\(canvas,'image\/png'\)/, 'PNG export
 assert.match(app, /blob=await embedFilterFabMetadata\(encoded,envelope\)/, 'PNG export must embed the validated filter envelope without rerendering');
 assert.match(app, /lastSuccessfulRenderSignature!==filterRenderSignature\(filter\)/, 'PNG export must reject stale render-affecting state');
 assert.match(app, /state\.lastSuccessfulRenderSignature=renderSignature;[\s\S]*?markPreviewCurrent\(\)/, 'only a successful render result may make PNG provenance current');
-assert.match(app, /function initImage\(data,width,height\)\{state\.renderId\+\+;state\.lastSuccessfulRenderSignature=null;/, 'a new source image must invalidate export provenance until its render succeeds');
+assert.match(app, /function initImage\(data,width,height\)\{state\.renderId\+\+;[\s\S]*?state\.lastSuccessfulRenderSignature=null;/, 'a new source image must invalidate export provenance until its render succeeds');
 assert.doesNotMatch(app, /toDataURL\(/, 'PNG export must not block on a base64 data URL');
 assert.match(app, /rendererManager\.renderWithFallback\(/, 'the renderer manager must own runtime CPU fallback');
 assert.match(app, /rendererManager\.diagnose\(program,state\.rendererPreference\)/, 'the UI inspector must consume manager-owned renderer diagnostics');

@@ -35,6 +35,14 @@ expectContrast('accent', 'panel', 4.5);
 expectContrast('accent-ink', 'accent', 4.5);
 expectContrast('code-text', 'code-bg', 4.5);
 expectContrast('info', 'panel', 4.5);
+for(const surface of ['bg','panel','panel2','panel3','surface-hover']){
+  expectContrast('control-border',surface,3);
+  expectContrast('accent',surface,3);
+}
+assert.match(css,/textarea:focus-visible,summary:focus-visible\{outline:3px solid var\(--accent\)/,'textareas and disclosures need an explicit focus indicator');
+assert.match(css,/@media\(pointer:coarse\)\{[\s\S]*?min-height:44px/,'coarse pointers need comfortable control heights');
+assert.match(css,/input\[type=range\]\{min-height:44px/,'touch sliders need an enlarged native interaction area');
+assert.match(css,/@media\(pointer:coarse\) and \(hover:none\)\{\.render-button kbd\{display:none\}/,'keyboard badges must not clutter touch layouts');
 
 assert.match(css, /\.canvas-stage\{[^}]*background-color:#090b0f[^}]*#10141b/i, 'preview stage must remain neutral black/grey');
 assert.match(css, /\.canvas-wrap\{[^}]*background-color:#d4d4d4[^}]*#ececec/i, 'transparency checkerboard must remain neutral grey');

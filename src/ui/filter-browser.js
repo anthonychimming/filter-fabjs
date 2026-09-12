@@ -78,15 +78,14 @@ export function createFilterBrowser({launcher,getEntries,begin,preview,apply,can
         const accepted=await preview(entry);if(id!==actionId)return;
         if(!accepted){selectedKey=previousKey;previewing=false;refresh();syncActions();return;}
         previewing=false;find('[data-preview-status]').textContent=`Previewing ${entry.name}. Apply it or keep browsing.`;refresh();syncActions();
-        dialog.querySelector(`[data-entry-key="${CSS.escape(entry.key)}"] [data-entry-action="preview"]`)?.focus();
-      }catch(error){if(id!==actionId)return;selectedKey=previousKey;previewing=false;refresh();syncActions();find('[data-error]').textContent=`Could not preview: ${error.message}`;}
+      }catch(error){if(id!==actionId)return;selectedKey=previousKey;previewing=false;refresh();syncActions();find('[data-error]').textContent=`Could not preview this filter. Your previous preview was kept.`;}
     });
     previewButton.className='filter-card-preview';previewButton.setAttribute('aria-label',`Preview ${entry.name}`);previewButton.setAttribute('aria-pressed',String(entry.key===selectedKey));previewButton.dataset.entryKey=entry.key;previewButton.dataset.entryAction='preview';
     const thumb=browserNode('span',null,'filter-thumbnail');thumb.dataset.thumbnailState='idle';thumb.setAttribute('aria-hidden','true');const thumbnailCanvas=browserNode('canvas',null,'filter-thumbnail-image'),thumbnailState=browserNode('span','Preview','filter-thumbnail-state'),thumbnailDescription=browserNode('span',null,'visually-hidden thumbnail-accessibility');thumbnailCanvas.width=1;thumbnailCanvas.height=1;thumbnailDescription.id=`filterThumbnailStatus${++thumbnailId}`;thumb.append(thumbnailCanvas,thumbnailState);previewButton.append(thumb,thumbnailDescription);
     const copy=browserNode('span',null,'filter-card-copy'),heading=browserNode('span',entry.name,'filter-card-name'),meta=browserNode('span',null,'result-meta');
     const sourceLabel=entry.source==='builtin'?'Built-in':'My Filter',authorLabel=entry.author||(entry.source==='builtin'?'Filter FabJS':'Author not specified');
     meta.append(browserNode('span',sourceLabel,'source-badge'),document.createTextNode(` · ${authorLabel}${entry.document.benchmark?' · Benchmark':''}${entry.unavailable?' · Unavailable':''}`));
-    copy.append(heading,meta,browserNode('span',entry.description||'No description provided.','filter-excerpt'));previewButton.append(copy);
+    if(entry.key===selectedKey)copy.append(browserNode('span','✓ Selected preview','filter-selection-label'));copy.append(heading,meta,browserNode('span',entry.description||'No description provided.','filter-excerpt'));previewButton.append(copy);
     const star=browserButton(entry.favorite?'★':'☆',()=>{try{toggleFavorite(entry);find('[data-error]').textContent='';refresh();}catch(error){find('[data-error]').textContent=`Couldn’t save favorites in this browser. ${error.message}`;onError(error);}});star.className='filter-card-favorite';star.setAttribute('aria-pressed',String(entry.favorite));star.setAttribute('aria-label',`${entry.favorite?'Remove':'Add'} ${entry.name} ${entry.favorite?'from':'to'} favorites`);star.dataset.entryKey=entry.key;star.dataset.entryAction='favorite';
     cardTop.append(previewButton,star);row.append(cardTop);
     const tags=browserNode('div',null,'result-tags');
