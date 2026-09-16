@@ -15,6 +15,9 @@ const WEBGPU_UNARY=new Set(['+','-','!']);
 const WEBGPU_BINARY=new Set(['+','-','*','/','%','<','<=','>','>=','==','!=','&&','||']);
 const WEBGPU_BOOLEAN_BINARY=new Set(['<','<=','>','>=','==','!=','&&','||']);
 const EXACT_INTEGER_NOISE_FUNCTIONS=new Set(['hash2','valueNoise','perlin','worleyF1','worleyF2','fbm','turbulence','ridged','periodicNoise']);
+// Calls with bounded iteration or repeated sampling. Classification is local to
+// WGSL lowering and never changes neutral IR metadata or compatibility.
+const EXPENSIVE_BRANCH_FUNCTIONS=new Set(['mandelbrot','julia','fbm','turbulence','ridged','worleyF1','worleyF2','cnv','cnv0','cnv1','sierpinski']);
 export const MAX_WEBGPU_IR_NODES=4096;
 export class WGSLCompiler{
   static analyze(program){
@@ -61,12 +64,41 @@ export class WGSLCompiler{
     const malformed=code.match(/\breturn(?:\s+[^;\n{}]+)?}/g);
     if(malformed?.length)throw new WGSLCompileError('Generated WGSL contains an unterminated return statement',[...new Set(malformed)]);
   }
-  constructor(program){this.program=program}
+  constructor(program){this.program=program;this.statements=[];this.nextTemporary=0;this.expensiveNodes=new WeakMap()}
+  hasExpensiveWork(node){
+    if(this.expensiveNodes.has(node))return this.expensiveNodes.get(node);
+    let expensive=false;
+    switch(node.op){
+      case'call':expensive=EXPENSIVE_BRANCH_FUNCTIONS.has(node.fn)||node.args.some(arg=>this.hasExpensiveWork(arg));break;
+      case'unary':expensive=this.hasExpensiveWork(node.input);break;
+      case'binary':expensive=this.hasExpensiveWork(node.left)||this.hasExpensiveWork(node.right);break;
+      case'select':expensive=this.hasExpensiveWork(node.condition)||this.hasExpensiveWork(node.whenTrue)||this.hasExpensiveWork(node.whenFalse);break;
+    }
+    this.expensiveNodes.set(node,expensive);return expensive;
+  }
+  captureStatements(emit){
+    const parent=this.statements;this.statements=[];
+    try{const expression=emit();return{expression,statements:this.statements.join('\n')}}finally{this.statements=parent}
+  }
+  selectValue(node,channel){
+    if(!this.hasExpensiveWork(node.whenTrue)&&!this.hasExpensiveWork(node.whenFalse))return`select(${this.value(node.whenFalse,channel)}, ${this.value(node.whenTrue,channel)}, ${this.bool(node.condition,channel)})`;
+    const condition=this.bool(node.condition,channel),name=`ff_branch_${this.nextTemporary++}`;
+    const yes=this.captureStatements(()=>this.value(node.whenTrue,channel)),no=this.captureStatements(()=>this.value(node.whenFalse,channel));
+    this.statements.push(`var ${name}:f32;\nif (${condition}) {\n${yes.statements}\n${name} = ${yes.expression};\n} else {\n${no.statements}\n${name} = ${no.expression};\n}`);
+    return name;
+  }
+  logicalValue(node,channel){
+    const left=this.value(node.left,channel),right=this.captureStatements(()=>this.value(node.right,channel));
+    if(!right.statements)return`(ff_bool(${left}) ${node.operator} ff_bool(${right.expression}))`;
+    // A nested lazy select on the RHS must stay inside the short-circuit guard.
+    const name=`ff_logic_${this.nextTemporary++}`;
+    this.statements.push(`var ${name}:bool = ff_bool(${left});\nif (${node.operator==='&&'?name:`!${name}`}) {\n${right.statements}\n${name} = ff_bool(${right.expression});\n}`);
+    return name;
+  }
   number(value){value=Number(value);if(!Number.isFinite(value))throw new WGSLCompileError('WGSL constants must be finite');const rounded=Math.fround(value);if(!Number.isFinite(rounded))throw new WGSLCompileError(`WGSL constant ${value} is outside f32 range`);if(value!==0&&rounded===0)throw new WGSLCompileError(`WGSL constant ${value} underflows f32`);const raw=String(value);return/[.eE]/.test(raw)?raw:`${raw}.0`}
   bool(node,channel){
     if(node.op==='binary'&&['<','<=','>','>=','==','!='].includes(node.operator))return`(${this.value(node.left,channel)} ${node.operator} ${this.value(node.right,channel)})`;
-    if(node.op==='binary'&&node.operator==='&&')return`(ff_bool(${this.value(node.left,channel)}) && ff_bool(${this.value(node.right,channel)}))`;
-    if(node.op==='binary'&&node.operator==='||')return`(ff_bool(${this.value(node.left,channel)}) || ff_bool(${this.value(node.right,channel)}))`;
+    if(node.op==='binary'&&(node.operator==='&&'||node.operator==='||'))return this.logicalValue(node,channel);
     if(node.op==='unary'&&node.operator==='!')return`(!ff_bool(${this.value(node.input,channel)}))`;
     return`ff_bool(${this.value(node,channel)})`;
   }
@@ -89,7 +121,7 @@ export class WGSLCompiler{
         if(node.operator==='%')return`ff_rem(${a}, ${b})`;
         return`(${a} ${node.operator} ${b})`;
       }
-      case'select':return`select(${this.value(node.whenFalse,channel)}, ${this.value(node.whenTrue,channel)}, ${this.bool(node.condition,channel)})`;
+      case'select':return this.selectValue(node,channel);
       case'call':return this.call(node.fn,node.args.map(arg=>this.value(arg,channel)),channel);
     }
     throw new WGSLCompileError(`Unsupported IR operation ${node.op}`,[node.op]);
@@ -243,6 +275,7 @@ fn main(@builtin(global_invocation_id) gid:vec3<u32>){
   let chromaU=(-147407.0*sourceColor.x-289391.0*sourceColor.y+436798.0*sourceColor.z)/2000000.0;
   let chromaV=(614777.0*sourceColor.x-514799.0*sourceColor.y-99978.0*sourceColor.z)/2000000.0;
   let dx=widthF*0.5-pixelX;let dy=heightF*0.5-pixelY;let radius=length(vec2<f32>(dx,dy));let maxRadius=length(vec2<f32>(widthF,heightF))*0.5;let direction=ff_atan2(-dy,-dx)*1024.0/FF_TAU;
+  ${this.statements.join('\n')}
   outPixels[index]=ff_pack(vec4<f32>(${expr[0]},${expr[1]},${expr[2]},${expr[3]}));
 }`}
 }

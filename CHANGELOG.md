@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.8.5b
+
+- Completed Stage B only: GPU ternaries with Mandelbrot, Julia, or other loop-heavy branch work now emit scoped WGSL `if/else` and f32 result variables. Cheap branches retain `select()`.
+- Preserved nested ternary scopes and logical short-circuit guards when branch expressions require statements. Compatibility analysis, typed IR, CPU budgeting, the shared 512 ceiling, and CPU fallback remain unchanged.
+- Added generated-control-flow execution regressions, conditional CPU/WebGPU parity fixtures, optional hardware benchmark workloads, and source-versus-build compiler consistency checks.
+- Updated release surfaces and regenerated the site and standalone 2.8.5b builds. Stage C cross-channel optimization was not begun.
+
 ## 2.8.5
 
 - Completed fractal refinement Stage A only: shared Mandelbrot/Julia ceiling raised from 256 to 512, preserving f32 arithmetic and requests at or below 256. Existing requests above 256 can now execute more iterations and change normalized output.

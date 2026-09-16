@@ -15,3 +15,18 @@ export const fractalParityFixtures=[256,384,512,9999].flatMap(n=>[
   [`Julia slow / ${n}`,`julia(0.3,0.2,-0.8,0.156,${n})*255`],
   [`Julia bounded / ${n}`,`julia(0,0,0,0,${n})*255`]
 ]);
+export const conditionalFractalFixtures=[256,384,512].flatMap(n=>{
+  const m=`mandelbrot(-0.75,0.1,${n})`,j=`julia(0.3,0.2,-0.8,0.156,${n})`;
+  return[
+    [`Conditional fractals / ${n}`,`(x<X/2?${m}:${j})*255`],
+    [`Nested fractals / ${n}`,`(x<X/2?(y<Y/2?${m}:${j}):mandelbrot(0,0,${n}))*255`],
+    [`Conditional argument / ${n}`,`gradient3(x<X/2?${m}:${j},0,128,255)`],
+    [`Conditional short-circuit AND / ${n}`,`((x<X/2)&&(y<Y/2?${m}:${j}))*255`],
+    [`Conditional short-circuit OR / ${n}`,`((x<X/2)||(y<Y/2?${m}:${j}))*255`],
+    [`Conditional source channel / ${n}`,`c>128?${m}*255+z:${j}*255+p`]
+  ];
+});
+export const conditionalFractalWorkloads=[
+  ['Conditional bounded fractals',n=>`x<X/2?mandelbrot(0,0,${n}):julia(0,0,0,0,${n})`],
+  ['Conditional early/bounded fractals',n=>`x<X/2?mandelbrot(3,0,${n}):julia(0,0,0,0,${n})`]
+];

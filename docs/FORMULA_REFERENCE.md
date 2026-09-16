@@ -1,6 +1,6 @@
 # Filter FabJS Formula Reference
 
-**Applies to Filter FabJS v2.8.5 · native filter format v2 · typed IR v1**
+**Applies to Filter FabJS v2.8.5b · native filter format v2 · typed IR v1**
 
 This is the compact, implementation-oriented reference for writing Filter FabJS formulas. For worked explanations and tutorials, see the [Filter FabJS Programming Guide (PDF)](Filter_FabJS_Programming_Guide_v2.4.7.pdf). For analytic mask details, see [ANALYTIC_SHAPES.md](ANALYTIC_SHAPES.md).
 
@@ -460,3 +460,7 @@ Missing control entries are filled to ten controls with value `128`, so existing
 Native JSON v2 accepts optional `id` (1–80 ASCII letters, digits, underscores or hyphens) and `tags` (at most 20 strings, each 1–32 Unicode code points). Tags normalize NFC, outer/repeated whitespace, and case-insensitive identity; punctuation and accents remain meaningful. Control/format characters are rejected. Missing tags normalize to an empty array. Invalid IDs/tags fail before editor mutation. Favorites are local preferences and never exported.
 
 IDs and tags round-trip in v2.7.0. Earlier v2.6.7 readers still accept the known rendering fields but discard these new fields on re-export. Built-in export allocates a portable custom ID and includes supplied plus personal tags; exporting does not save a library record. See [Filter library](FILTER_LIBRARY.md) for identity and storage behavior.
+
+## GPU conditional execution (2.8.5b)
+
+Ternary formulas such as `(x<X/2 ? mandelbrot(cx,cy,512) : julia(cx,cy,-0.8,0.156,512))*255` now use GPU `if/else` when either branch contains bounded fractal, multi-octave noise, Worley, convolution, or Sierpiński work. Only the selected expensive branch is evaluated. This includes expensive calls nested in wrappers or other ternaries; `&&` and `||` still short-circuit when they contain these selections. Cheap ternaries retain WGSL `select()` lowering. The formula syntax and numerical result contract do not change. CPU ternaries were already lazy, and their Stage A budget estimate is unchanged. This optimization does not share repeated expressions between RGBA channels.

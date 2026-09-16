@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import vm from 'node:vm';
+import { Parser } from '../src/core/formula-language.js';
+import { compileFilterProgram } from '../src/core/ir.js';
+import { WGSLCompiler } from '../src/gpu/wgsl-compiler.js';
 
 const packageMetadata = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 const siteHtml = fs.readFileSync('dist/site/index.html', 'utf8');
@@ -21,6 +25,16 @@ for(const output of [deployedJavaScript,standaloneHtml]){
   assert.match(output,/MAX_FRACTAL_ITERATIONS=512/,'both builds must carry the shared 512 ceiling');
   assert.match(output,/function numericBounds\(/,'both builds must include numeric budgeting support');
   assert.match(output,/Math\.max\(costs\.get\(node\.whenTrue\),costs\.get\(node\.whenFalse\)\)/,'both builds must budget ternaries lazily');
+}
+// Exercise the compiler from each generated artifact, stopping before DOM init.
+const conditionalProgram=compileFilterProgram(Array(4).fill('x?mandelbrot(0,0,512):julia(0,0,0,0,512)').map(f=>new Parser(f).parse()));
+for(const script of [deployedJavaScript,standaloneHtml.match(/<script>([\s\S]*?)<\/script>/)?.[1]]){
+  assert.ok(script,'build must contain executable JavaScript');
+  const init=script.lastIndexOf('initFilterFabApp();');
+  assert.ok(init>=0,'build must retain its application entry point');
+  const context=vm.createContext({TextEncoder,TextDecoder});
+  vm.runInContext(script.slice(0,init)+'globalThis.BuiltCompiler=WGSLCompiler;\n})();',context);
+  assert.equal(context.BuiltCompiler.compile(conditionalProgram).code,WGSLCompiler.compile(conditionalProgram).code,'built compilers must emit the same scoped conditional WGSL as source');
 }
 assert.match(deployedCss, /--accent:#e1ec1a/, 'deployed CSS must contain the v2.1.2 chartreuse accent');
 assert.match(deployedCss, /--panel2:#180e23/, 'deployed CSS must contain the v2.1.2 aubergine surface');

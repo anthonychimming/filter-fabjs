@@ -1,6 +1,6 @@
 # Architecture
 
-Filter FabJS v2.8.5 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
+Filter FabJS v2.8.5b uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
 
 ```text
 Formula text
@@ -68,6 +68,14 @@ Custom records retain `ffw-custom-presets`; favorites and built-in additions use
 
 CPU selects cost one node plus the condition and the maximum branch cost, including nested operations. Other operations retain their existing conservative estimates. The 3,000,000,000 work-unit guard is unchanged. A literal 128-iteration call previously cost 256 loop units and now costs 128; `val(3,32,256)` costs 256 and `val(3,32,512)` costs 512. Pop Print Quad now fits the maximum image size with the corrected lazy-branch estimate.
 
-Stage B and Stage C are excluded: GPU ternaries still lower to WGSL `select`, and output channels still generate separate expressions without cross-channel common-subexpression hoisting. Automatic CPU fallback, cancellation, native format v2, legacy AFS, typed IR v1, and the one-pass architecture remain unchanged.
+Stage A did not change GPU ternaries. Stage B (2.8.5b), described below, adds scoped conditional lowering; Stage C remains excluded and output channels still generate separate expressions without cross-channel common-subexpression hoisting. Automatic CPU fallback, cancellation, native format v2, legacy AFS, typed IR v1, and the one-pass architecture remain unchanged.
 
 Run `npm run benchmark:fractal` for deterministic 64×64 CPU Worker workloads at 128/256/512 iterations (early escape, boundary, and interior regions for both intrinsics). Timings are observational, with no timing pass/fail thresholds. The optional `tests/webgpu-parity.html` suite adds early/slow/bounded and above-ceiling fixtures at 256/384/512/9999 with the existing max-3, mean-0.35 byte tolerance. Add `?benchmark=1` for optional hardware timings in the browser console. See [Stage A validation](FRACTAL_STAGE_A.md) for the release measurements and manual test targets.
+
+## Stage B GPU conditional lowering (2.8.5b)
+
+The WGSL compiler classifies a branch as expensive when its typed-IR subtree contains `mandelbrot`, `julia`, `fbm`, `turbulence`, `ridged`, `worleyF1`, `worleyF2`, `cnv`/`cnv0`/`cnv1`, or `sierpinski`. This deterministic rule covers bounded loops and repeated sampling, including calls nested inside ordinary arithmetic, wrappers, conditions, or selections. It is compiler-local and does not change `WGSLCompiler.analyze()` or neutral IR metadata.
+
+A ternary with expensive work in either branch produces an f32 temporary assigned inside an actual WGSL `if/else`. The compiler captures each branch's statements separately, so nested work remains under the correct guard. Logical `&&`/`||` retain native short-circuit expressions unless their right operand needs statements; in that case a guarded bool temporary preserves short-circuit execution. Cheap ternaries retain inline WGSL `select()`. All names are deterministic and unique within a shader.
+
+There is no structural expression sharing, field hoisting, channel deduplication, or Stage C investigation. Each channel retains its own evaluation. The 512 ceiling, CPU execution and budgeting, numeric coercion, clamp rules, fallback, cancellation, typed IR v1, native format v2, and single-pass architecture remain unchanged. See [Stage B validation and manual checks](FRACTAL_STAGE_B.md).

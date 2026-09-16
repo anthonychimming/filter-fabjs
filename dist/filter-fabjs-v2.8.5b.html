@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Filter FabJS v2.8.5</title>
+<title>Filter FabJS v2.8.5b</title>
 <!--
   Filter FabJS
   Browser-native Filter Factory / Filter Foundry-style expression editor.
@@ -44,7 +44,7 @@
   v2.8.1 introduces the artist-first Explore workspace and moves advanced filter authoring into Author.
   v2.8.2 adds the visual, non-destructive Filter Library with explicit Apply and Cancel.
   v2.8.3 adds lazy, cached, source-based Filter Library thumbnails.
-  v2.8.5 raises bounded fractal iterations to 512 and refines CPU work budgeting.
+  v2.8.5b evaluates expensive GPU ternary branches lazily.
   Licensed GPL-2.0-or-later. Original Filter Foundry project:
   https://github.com/danielmarschall/filter_foundry
 -->
@@ -202,7 +202,7 @@ body[data-workspace-mode=explore] #renderInfo{display:none}
 </head>
 <body data-workspace-mode="explore">
 <div class="app">
-<header class="topbar ui-lock-panel"><div class="brand"><div class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M3.5 5.5h17L14 13.2v6.8l-4-3v-3.8z"/></svg></div><div><strong>Filter FabJS</strong><small>Procedural RGBA expression editor · v2.8.5</small></div></div><div class="toolbar-group file-actions" aria-label="File and clipboard actions"><div class="toolbar-cluster" aria-label="Image actions"><button id="openImageBtn" class="primary action-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5h5l1.5-2h9.5v15H4z"/><path d="m7 16 3.4-3.5 2.5 2.3 2.2-2.1 3.4 3.3"/><circle cx="15.7" cy="8.8" r="1.3"/></svg><span>Open image</span></button><button id="pasteImageBtn" class="action-button" title="Paste an image from the clipboard (Ctrl/⌘+V)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5.5h6"/><path d="M9.5 3.5h5a1.5 1.5 0 0 1 1.5 1.5v1H8v-1a1.5 1.5 0 0 1 1.5-1.5Z"/><path d="M16 5h3v15H5V5h3"/><path d="M12 9v7"/><path d="m9 13 3 3 3-3"/></svg><span>Paste image</span></button><button id="copyImageBtn" class="action-button" title="Copy the rendered PNG with alpha when present (Ctrl/⌘+Shift+C)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/><path d="m10.5 16 2.4-2.5 1.8 1.7 1.5-1.4 1.5 1.5"/></svg><span>Copy image</span></button><button id="exportImageBtn" class="action-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M5 19h14"/></svg><span>Export PNG</span></button></div><span class="toolbar-divider" aria-hidden="true"></span><div class="toolbar-cluster" aria-label="Filter file actions"><button id="importBtn">Import filter</button><button id="exportFilterBtn">Export filter</button></div></div><div class="spacer"></div><div class="toolbar-group"><a id="githubBtn" class="icon-link" href="https://github.com/anthonychimming" target="_blank" rel="noopener noreferrer" title="Open @anthonychimming on GitHub" aria-label="Open Anthony Chimming GitHub profile"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .7A11.3 11.3 0 0 0 8.43 22.72c.57.1.78-.25.78-.55v-2.16c-3.18.69-3.85-1.35-3.85-1.35-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.68 1.24 3.33.95.1-.74.4-1.24.73-1.53-2.54-.29-5.21-1.27-5.21-5.65 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.45.11-3.03 0 0 .96-.31 3.12 1.17A10.8 10.8 0 0 1 12 6.92c.96 0 1.92.13 2.82.38 2.16-1.48 3.12-1.17 3.12-1.17.62 1.58.23 2.74.11 3.03.74.8 1.18 1.82 1.18 3.07 0 4.39-2.68 5.35-5.23 5.64.41.36.78 1.06.78 2.14v3.16c0 .3.21.66.79.55A11.3 11.3 0 0 0 12 .7Z"/></svg></a><button id="helpBtn" class="icon ghost" title="Help" aria-label="Help">?</button></div><input id="imageInput" type="file" accept="image/*" hidden><input id="filterInput" type="file" accept=".json,.afs,application/json,text/plain" hidden></header>
+<header class="topbar ui-lock-panel"><div class="brand"><div class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M3.5 5.5h17L14 13.2v6.8l-4-3v-3.8z"/></svg></div><div><strong>Filter FabJS</strong><small>Procedural RGBA expression editor · v2.8.5b</small></div></div><div class="toolbar-group file-actions" aria-label="File and clipboard actions"><div class="toolbar-cluster" aria-label="Image actions"><button id="openImageBtn" class="primary action-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5h5l1.5-2h9.5v15H4z"/><path d="m7 16 3.4-3.5 2.5 2.3 2.2-2.1 3.4 3.3"/><circle cx="15.7" cy="8.8" r="1.3"/></svg><span>Open image</span></button><button id="pasteImageBtn" class="action-button" title="Paste an image from the clipboard (Ctrl/⌘+V)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5.5h6"/><path d="M9.5 3.5h5a1.5 1.5 0 0 1 1.5 1.5v1H8v-1a1.5 1.5 0 0 1 1.5-1.5Z"/><path d="M16 5h3v15H5V5h3"/><path d="M12 9v7"/><path d="m9 13 3 3 3-3"/></svg><span>Paste image</span></button><button id="copyImageBtn" class="action-button" title="Copy the rendered PNG with alpha when present (Ctrl/⌘+Shift+C)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/><path d="m10.5 16 2.4-2.5 1.8 1.7 1.5-1.4 1.5 1.5"/></svg><span>Copy image</span></button><button id="exportImageBtn" class="action-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M5 19h14"/></svg><span>Export PNG</span></button></div><span class="toolbar-divider" aria-hidden="true"></span><div class="toolbar-cluster" aria-label="Filter file actions"><button id="importBtn">Import filter</button><button id="exportFilterBtn">Export filter</button></div></div><div class="spacer"></div><div class="toolbar-group"><a id="githubBtn" class="icon-link" href="https://github.com/anthonychimming" target="_blank" rel="noopener noreferrer" title="Open @anthonychimming on GitHub" aria-label="Open Anthony Chimming GitHub profile"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .7A11.3 11.3 0 0 0 8.43 22.72c.57.1.78-.25.78-.55v-2.16c-3.18.69-3.85-1.35-3.85-1.35-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.68 1.24 3.33.95.1-.74.4-1.24.73-1.53-2.54-.29-5.21-1.27-5.21-5.65 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.45.11-3.03 0 0 .96-.31 3.12 1.17A10.8 10.8 0 0 1 12 6.92c.96 0 1.92.13 2.82.38 2.16-1.48 3.12-1.17 3.12-1.17.62 1.58.23 2.74.11 3.03.74.8 1.18 1.82 1.18 3.07 0 4.39-2.68 5.35-5.23 5.64.41.36.78 1.06.78 2.14v3.16c0 .3.21.66.79.55A11.3 11.3 0 0 0 12 .7Z"/></svg></a><button id="helpBtn" class="icon ghost" title="Help" aria-label="Help">?</button></div><input id="imageInput" type="file" accept="image/*" hidden><input id="filterInput" type="file" accept=".json,.afs,application/json,text/plain" hidden></header>
 <main class="workspace">
 <section class="preview-pane"><div class="preview-toolbar"><div class="segmented" id="viewMode"><button data-view="filtered" class="active" aria-pressed="true">Filtered</button><button data-view="original" aria-pressed="false">Original</button><button data-view="split" aria-pressed="false">Split</button></div><div class="split-control" id="splitControl"><label for="splitRange">Split</label><input id="splitRange" type="range" min="0" max="100" value="50"></div><div class="spacer"></div><button id="zoomOut" class="icon" title="Zoom out" aria-label="Zoom out">−</button><button id="zoomFit">Fit</button><button id="zoomIn" class="icon" title="Zoom in" aria-label="Zoom in">+</button><span id="zoomLabel" style="min-width:40px;text-align:right;color:var(--muted);font-size:12px">Fit</span></div><div class="canvas-stage" id="canvasStage"><div class="canvas-wrap" id="canvasWrap"><canvas id="displayCanvas"></canvas></div><div class="drop-overlay" id="dropOverlay"><div class="drop-card"><b>Drop image here</b><span>PNG, JPEG, WebP or another browser-supported image</span></div></div><div class="render-overlay" id="renderOverlay" aria-hidden="true"><div class="render-card"><strong>Rendering filter…</strong><span>Inputs are temporarily locked while the image is processed. Press <kbd>Esc</kbd> to cancel.</span><div class="progress-bar" role="progressbar" aria-label="Render progress" aria-valuemin="0" aria-valuemax="100"><div class="progress-fill" id="progressFill"></div></div><div class="progress-meta"><span id="progressPercent">0%</span><span id="progressRows">Preparing…</span></div></div></div></div></section>
 <aside class="sidebar ui-lock-panel"><div class="sidebar-head"><div id="workspaceMode" class="workspace-mode" role="tablist" aria-label="Workspace mode"><button id="exploreModeTab" type="button" role="tab" aria-selected="true" aria-controls="explorePanel" data-workspace-mode="explore">Explore</button><button id="authorModeTab" type="button" role="tab" aria-selected="false" aria-controls="authorPanel" data-workspace-mode="author" tabindex="-1">Author</button></div></div><div class="sidebar-scroll">
@@ -2180,6 +2180,9 @@ const WEBGPU_UNARY=new Set(['+','-','!']);
 const WEBGPU_BINARY=new Set(['+','-','*','/','%','<','<=','>','>=','==','!=','&&','||']);
 const WEBGPU_BOOLEAN_BINARY=new Set(['<','<=','>','>=','==','!=','&&','||']);
 const EXACT_INTEGER_NOISE_FUNCTIONS=new Set(['hash2','valueNoise','perlin','worleyF1','worleyF2','fbm','turbulence','ridged','periodicNoise']);
+// Calls with bounded iteration or repeated sampling. Classification is local to
+// WGSL lowering and never changes neutral IR metadata or compatibility.
+const EXPENSIVE_BRANCH_FUNCTIONS=new Set(['mandelbrot','julia','fbm','turbulence','ridged','worleyF1','worleyF2','cnv','cnv0','cnv1','sierpinski']);
 const MAX_WEBGPU_IR_NODES=4096;
 class WGSLCompiler{
   static analyze(program){
@@ -2226,12 +2229,41 @@ class WGSLCompiler{
     const malformed=code.match(/\breturn(?:\s+[^;\n{}]+)?}/g);
     if(malformed?.length)throw new WGSLCompileError('Generated WGSL contains an unterminated return statement',[...new Set(malformed)]);
   }
-  constructor(program){this.program=program}
+  constructor(program){this.program=program;this.statements=[];this.nextTemporary=0;this.expensiveNodes=new WeakMap()}
+  hasExpensiveWork(node){
+    if(this.expensiveNodes.has(node))return this.expensiveNodes.get(node);
+    let expensive=false;
+    switch(node.op){
+      case'call':expensive=EXPENSIVE_BRANCH_FUNCTIONS.has(node.fn)||node.args.some(arg=>this.hasExpensiveWork(arg));break;
+      case'unary':expensive=this.hasExpensiveWork(node.input);break;
+      case'binary':expensive=this.hasExpensiveWork(node.left)||this.hasExpensiveWork(node.right);break;
+      case'select':expensive=this.hasExpensiveWork(node.condition)||this.hasExpensiveWork(node.whenTrue)||this.hasExpensiveWork(node.whenFalse);break;
+    }
+    this.expensiveNodes.set(node,expensive);return expensive;
+  }
+  captureStatements(emit){
+    const parent=this.statements;this.statements=[];
+    try{const expression=emit();return{expression,statements:this.statements.join('\n')}}finally{this.statements=parent}
+  }
+  selectValue(node,channel){
+    if(!this.hasExpensiveWork(node.whenTrue)&&!this.hasExpensiveWork(node.whenFalse))return`select(${this.value(node.whenFalse,channel)}, ${this.value(node.whenTrue,channel)}, ${this.bool(node.condition,channel)})`;
+    const condition=this.bool(node.condition,channel),name=`ff_branch_${this.nextTemporary++}`;
+    const yes=this.captureStatements(()=>this.value(node.whenTrue,channel)),no=this.captureStatements(()=>this.value(node.whenFalse,channel));
+    this.statements.push(`var ${name}:f32;\nif (${condition}) {\n${yes.statements}\n${name} = ${yes.expression};\n} else {\n${no.statements}\n${name} = ${no.expression};\n}`);
+    return name;
+  }
+  logicalValue(node,channel){
+    const left=this.value(node.left,channel),right=this.captureStatements(()=>this.value(node.right,channel));
+    if(!right.statements)return`(ff_bool(${left}) ${node.operator} ff_bool(${right.expression}))`;
+    // A nested lazy select on the RHS must stay inside the short-circuit guard.
+    const name=`ff_logic_${this.nextTemporary++}`;
+    this.statements.push(`var ${name}:bool = ff_bool(${left});\nif (${node.operator==='&&'?name:`!${name}`}) {\n${right.statements}\n${name} = ff_bool(${right.expression});\n}`);
+    return name;
+  }
   number(value){value=Number(value);if(!Number.isFinite(value))throw new WGSLCompileError('WGSL constants must be finite');const rounded=Math.fround(value);if(!Number.isFinite(rounded))throw new WGSLCompileError(`WGSL constant ${value} is outside f32 range`);if(value!==0&&rounded===0)throw new WGSLCompileError(`WGSL constant ${value} underflows f32`);const raw=String(value);return/[.eE]/.test(raw)?raw:`${raw}.0`}
   bool(node,channel){
     if(node.op==='binary'&&['<','<=','>','>=','==','!='].includes(node.operator))return`(${this.value(node.left,channel)} ${node.operator} ${this.value(node.right,channel)})`;
-    if(node.op==='binary'&&node.operator==='&&')return`(ff_bool(${this.value(node.left,channel)}) && ff_bool(${this.value(node.right,channel)}))`;
-    if(node.op==='binary'&&node.operator==='||')return`(ff_bool(${this.value(node.left,channel)}) || ff_bool(${this.value(node.right,channel)}))`;
+    if(node.op==='binary'&&(node.operator==='&&'||node.operator==='||'))return this.logicalValue(node,channel);
     if(node.op==='unary'&&node.operator==='!')return`(!ff_bool(${this.value(node.input,channel)}))`;
     return`ff_bool(${this.value(node,channel)})`;
   }
@@ -2254,7 +2286,7 @@ class WGSLCompiler{
         if(node.operator==='%')return`ff_rem(${a}, ${b})`;
         return`(${a} ${node.operator} ${b})`;
       }
-      case'select':return`select(${this.value(node.whenFalse,channel)}, ${this.value(node.whenTrue,channel)}, ${this.bool(node.condition,channel)})`;
+      case'select':return this.selectValue(node,channel);
       case'call':return this.call(node.fn,node.args.map(arg=>this.value(arg,channel)),channel);
     }
     throw new WGSLCompileError(`Unsupported IR operation ${node.op}`,[node.op]);
@@ -2408,6 +2440,7 @@ fn main(@builtin(global_invocation_id) gid:vec3<u32>){
   let chromaU=(-147407.0*sourceColor.x-289391.0*sourceColor.y+436798.0*sourceColor.z)/2000000.0;
   let chromaV=(614777.0*sourceColor.x-514799.0*sourceColor.y-99978.0*sourceColor.z)/2000000.0;
   let dx=widthF*0.5-pixelX;let dy=heightF*0.5-pixelY;let radius=length(vec2<f32>(dx,dy));let maxRadius=length(vec2<f32>(widthF,heightF))*0.5;let direction=ff_atan2(-dy,-dx)*1024.0/FF_TAU;
+  ${this.statements.join('\n')}
   outPixels[index]=ff_pack(vec4<f32>(${expr[0]},${expr[1]},${expr[2]},${expr[3]}));
 }`}
 }
@@ -3747,7 +3780,7 @@ function initFilterFabApp(){
 
   function triggerDownload(href,name,revoke=false){try{const anchor=document.createElement('a');anchor.href=href;anchor.download=name;anchor.rel='noopener';anchor.style.display='none';document.body.appendChild(anchor);anchor.click();setTimeout(()=>{anchor.remove();if(revoke)URL.revokeObjectURL(href);},10000);toast(`Download started: ${name}`);return true;}catch(error){console.error('Download failed',error);toast(`Download failed: ${error.message||'browser blocked the file'}`);return false;}}
   function downloadBlob(blob,name){if(!(blob instanceof Blob)||!blob.size){toast('Nothing was generated to download');return false;}return triggerDownload(URL.createObjectURL(blob),name,true);}
-  async function exportPNG(){if(!state.filtered||!state.width||!state.height){toast('Load and render an image before exporting');return;}const filter=validatedCurrentFilter();if(!filter)return;if(state.lastSuccessfulRenderSignature!==filterRenderSignature(filter)){setStatus('Render the current filter changes before exporting.','error');toast('Render the current filter changes before exporting.');return;}setStatus('Encoding PNG…','busy');try{const canvas=renderedImageCanvas(state.filtered,state.width,state.height),name=slug($('#filterName').value||'filtered-image')+'.png',encoded=await canvasBlob(canvas,'image/png'),envelope=createFilterFabPngEnvelope(filter,'2.8.5'),blob=await embedFilterFabMetadata(encoded,envelope);if(downloadBlob(blob,name))setStatus('Ready');}catch(error){console.error('PNG export failed',error);setStatus('PNG export failed','error');toast(`PNG export failed: ${error.message}`);}}
+  async function exportPNG(){if(!state.filtered||!state.width||!state.height){toast('Load and render an image before exporting');return;}const filter=validatedCurrentFilter();if(!filter)return;if(state.lastSuccessfulRenderSignature!==filterRenderSignature(filter)){setStatus('Render the current filter changes before exporting.','error');toast('Render the current filter changes before exporting.');return;}setStatus('Encoding PNG…','busy');try{const canvas=renderedImageCanvas(state.filtered,state.width,state.height),name=slug($('#filterName').value||'filtered-image')+'.png',encoded=await canvasBlob(canvas,'image/png'),envelope=createFilterFabPngEnvelope(filter,'2.8.5b'),blob=await embedFilterFabMetadata(encoded,envelope);if(downloadBlob(blob,name))setStatus('Ready');}catch(error){console.error('PNG export failed',error);setStatus('PNG export failed','error');toast(`PNG export failed: ${error.message}`);}}
   function exportFilter(){const filter=validatedCurrentFilter();if(!filter)return;if(!activeDocument.id)activeDocument.id=createCustomPresetId();filter.id=activeDocument.id;const base=slug(filter.name);try{downloadBlob(new Blob([JSON.stringify(filter,null,2)+'\n'],{type:'application/json;charset=utf-8'}),base+'.json');}catch(error){console.error('Filter export failed',error);toast(`Filter export failed: ${error.message}`);}}
   async function deletePreset(){
     if(!activeDocument.key?.startsWith('custom:'))return;
@@ -3864,7 +3897,7 @@ function initFilterFabApp(){
     window.addEventListener('beforeunload',()=>{thumbnailService.dispose();state.rendererManager?.dispose();});
   }
 
-  window.FilterFabJS=Object.freeze({version:'2.8.5',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getThumbnailDiagnostics:()=>thumbnailService.diagnostics(),getRendererPreference:()=>state.rendererPreference,getWorkspaceMode:()=>state.workspaceMode,getLibraryPreviewState:()=>({open:Boolean(librarySession),candidateKey:librarySession?.candidateEntry?.key||null,candidateRendered:Boolean(librarySession?.candidateRendered),activeKey:activeDocument.key,activeId:activeDocument.id,imported:activeDocument.imported,importSource:activeDocument.importSource,baseline:activeDocument.baseline,recordBaseline:activeDocument.recordBaseline})});
+  window.FilterFabJS=Object.freeze({version:'2.8.5b',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getThumbnailDiagnostics:()=>thumbnailService.diagnostics(),getRendererPreference:()=>state.rendererPreference,getWorkspaceMode:()=>state.workspaceMode,getLibraryPreviewState:()=>({open:Boolean(librarySession),candidateKey:librarySession?.candidateEntry?.key||null,candidateRendered:Boolean(librarySession?.candidateRendered),activeKey:activeDocument.key,activeId:activeDocument.id,imported:activeDocument.imported,importSource:activeDocument.importSource,baseline:activeDocument.baseline,recordBaseline:activeDocument.recordBaseline})});
   controlsController.buildSliders();wire();const demo=demoImage();initImage(demo.data,demo.width,demo.height);applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');
   return{state,render,applyFilter,loadImageFile,openImageFile};
 }
