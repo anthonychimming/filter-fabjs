@@ -1,6 +1,6 @@
 # Filter FabJS Formula Reference
 
-**Applies to Filter FabJS v2.8.4 · native filter format v2 · typed IR v1**
+**Applies to Filter FabJS v2.8.5 · native filter format v2 · typed IR v1**
 
 This is the compact, implementation-oriented reference for writing Filter FabJS formulas. For worked explanations and tutorials, see the [Filter FabJS Programming Guide (PDF)](Filter_FabJS_Programming_Guide_v2.4.7.pdf). For analytic mask details, see [ANALYTIC_SHAPES.md](ANALYTIC_SHAPES.md).
 
@@ -223,8 +223,8 @@ These deterministic functions return normalized values in approximately `0..1` a
 | `turbulence(x,y,scale,octaves,seed)` | Absolute-value fractal noise |
 | `ridged(x,y,scale,octaves,seed)` | Ridged fractal noise |
 | `periodicNoise(x,y,periodX,periodY,seed)` | Seamless periodic noise |
-| `mandelbrot(x,y,iterations)` | Normalized Mandelbrot escape-time field; iterations clamp to `1..256` |
-| `julia(x,y,cx,cy,iterations)` | Normalized Julia escape-time field for constant `cx,cy`; iterations clamp to `1..256` |
+| `mandelbrot(x,y,iterations)` | Normalized Mandelbrot escape-time field; iterations clamp to `1..512` |
+| `julia(x,y,cx,cy,iterations)` | Normalized Julia escape-time field for constant `cx,cy`; iterations clamp to `1..512` |
 
 Convert normalized fields to channel range explicitly when needed:
 
@@ -232,13 +232,18 @@ Convert normalized fields to channel range explicitly when needed:
 fbm(x,y,64,5,2,0.5,1234)*255
 ```
 
-`mandelbrot()` and `julia()` return `0` for a point that escapes on the first iteration, an intermediate normalized escape time for later escapes, and `1` for a point that remains bounded through the requested limit. Both are deterministic, stateless, WebGPU-compatible intrinsics; the iteration loop is bounded inside the CPU and WGSL backends rather than exposed as formula-language control flow.
+`mandelbrot()` and `julia()` return `0` for a point that escapes on the first iteration, an intermediate normalized escape time for later escapes, and `1` for a point that remains bounded through the requested limit. Both remain single-pass, deterministic, stateless, WebGPU-compatible intrinsics; the iteration loop is bounded inside the CPU and WGSL backends rather than exposed as formula-language control flow.
 
 Aspect-correct Mandelbrot coordinates can be written with the centered variables:
 
 ```text
 mandelbrot(cx*X/min(X,Y)*1.5-0.5,cy*Y/min(X,Y)*1.5,128)
 ```
+
+
+Since v2.8.5, requested iterations above 256 may execute up to 512; requests at or below 256 retain their previous f32-aligned behavior. Counts truncate after conversion to f32 and clamp to `1..512`. This is bounded single-pass computation, not arbitrary-precision or deep-zoom rendering. Native filter format v2 and typed IR v1 are unchanged.
+
+Escape values are normalized by the requested limit, so increasing iterations can recolor already-escaping regions. Mandelbrot Atlas intentionally retains its established `sqrt(mandelbrot(...,val(3,24,192)))` palette and 24–192 control range to preserve its default appearance. For a custom palette with a fixed escape-count scale, use an expression such as `sqrt(clamp(mandelbrot(cx,cy,512)*512/128,0,1))`; bounded points still need intentional palette treatment.
 
 ## 9. Gradients and patterns
 

@@ -68,7 +68,7 @@ const paletteRamps=await render(['gradient3(0.25,0,100,200)','gradient4(0.5,0,60
 assert.deepEqual([...paletteRamps.slice(0,4)],[50,120,0,240],'three- and four-stop palette ramps must clamp and interpolate normalized positions');
 const fractalFields=await render(['mandelbrot(0,0,0)*255','mandelbrot(2,0,4)*255','mandelbrot(3,0,9999)*255','julia(0,0,0,0,9999)*255']);
 assert.deepEqual([...fractalFields.slice(0,4)],[255,64,0,255],'bounded fractal intrinsics must normalize escape time and clamp requested iterations');
-const juliaEscape=await render(['julia(3,0,0,0,8)*255','julia(0,0,-0.8,0.156,64)*255','mandelbrot(-0.75,0.1,256)*255','mandelbrot(-0.75,0.1,9999)*255']);
+const juliaEscape=await render(['julia(3,0,0,0,8)*255','julia(0,0,-0.8,0.156,64)*255','mandelbrot(-0.75,0.1,512)*255','mandelbrot(-0.75,0.1,9999)*255']);
 assert.equal(juliaEscape[0],0,'Julia points escaping on the first iteration must return zero');
 assert.equal(juliaEscape[2],juliaEscape[3],'Mandelbrot work above the shared iteration ceiling must clamp deterministically');
 
@@ -112,12 +112,12 @@ const cachedProgram=compileFilterProgram(['r','g','b','a'].map(formula=>new Pars
 assert.equal(estimateCpuProgramCost(cachedProgram),4,'CPU work estimation must aggregate all four output expressions');
 assert.equal(assertCpuRenderBudget(cachedProgram,1800,1800),12_960_000,'ordinary full-size renders must remain within the CPU work budget');
 const fractalProgram=compileFilterProgram(['mandelbrot(0,0,256)','julia(0,0,0,0,256)','r','a'].map(formula=>new Parser(formula).parse()));
-assert.equal(estimateCpuProgramCost(fractalProgram),MAX_FRACTAL_ITERATIONS*2+10,'CPU work estimation must account for both bounded fractal loops and their arguments');
+assert.equal(estimateCpuProgramCost(fractalProgram),256*2+10,'CPU work estimation must account for both bounded fractal loops and their arguments');
 const maximalFormula=Array(2048).fill('r').join('+'),maximalProgram=compileFilterProgram(Array(4).fill(maximalFormula).map(formula=>new Parser(formula).parse()));
 assert.ok(estimateCpuProgramCost(maximalProgram)>MAX_CPU_RENDER_WORK/(1800*1800));
 assert.throws(()=>assertCpuRenderBudget(maximalProgram,1800,1800),error=>error?.name==='RenderBudgetError','maximal imported programs must be rejected before full-size CPU dispatch');
 assert.doesNotThrow(()=>assertCpuRenderBudget(maximalProgram,64,64),'the CPU budget must remain image-scaled for small previews');
-const largeImageCpuLimitedBuiltins=new Set(['c64multicolorbitmap','linearprismecho','popprintquad','spectraltearglitch','teallimemodularweave','touchingrandomcapsules','vhstrackingglitch']);
+const largeImageCpuLimitedBuiltins=new Set(['c64multicolorbitmap','linearprismecho','spectraltearglitch','teallimemodularweave','touchingrandomcapsules','vhstrackingglitch']);
 for(const preset of presets){
   const program=compileFilterProgram(preset.f.map(formula=>new Parser(formula).parse()));
   if(largeImageCpuLimitedBuiltins.has(preset.id)){

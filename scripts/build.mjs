@@ -17,6 +17,7 @@ const order = [
   'src/gpu/params-layout.js',
   'src/gpu/wgsl-compiler.js',
   'src/renderers/renderer-backend.js',
+  'src/renderers/ir-numeric-bounds.js',
   'src/renderers/cpu-renderer.js',
   'src/renderers/webgpu-renderer.js',
   'src/renderers/renderer-manager.js',

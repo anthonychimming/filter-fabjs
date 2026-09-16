@@ -67,7 +67,7 @@ for(const variable of ['nx','ny','cx','cy'])assert.ok(phase35aProgram.metadata.v
 for(const name of ['angle','gradient4','mirrorRepeat','radius','repeat'])assert.ok(phase35aProgram.metadata.functions.includes(name),`Phase 3.5A program must track ${name}()`);
 assert.doesNotThrow(()=>WGSLCompiler.compile(phase35aProgram),'Phase 3.5A vocabulary must compile for WebGPU');
 const phase35bProgram=compileFilterProgram(['mandelbrot(cx,cy,256)','julia(cx,cy,-0.8,0.156,val(0,1,256))','fbm(x,y,16,12,2,0.5,7)','a'].map(formula=>new Parser(formula).parse()));
-assert.equal(MAX_FRACTAL_ITERATIONS,256,'Phase 3.5B fractal iteration work must have a stable hard ceiling');
+assert.equal(MAX_FRACTAL_ITERATIONS,512,'Phase 3.5B fractal iteration work must have a stable hard ceiling');
 assert.equal(phase35bProgram.outputs[0].expression.type,IRType.MASK,'mandelbrot() must produce a normalized mask field');
 assert.equal(phase35bProgram.outputs[1].expression.type,IRType.MASK,'julia() must produce a normalized mask field');
 for(const name of ['fbm','julia','mandelbrot'])assert.ok(phase35bProgram.metadata.functions.includes(name),`Phase 3.5B program must track ${name}()`);

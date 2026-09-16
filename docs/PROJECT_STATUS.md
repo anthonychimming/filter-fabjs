@@ -4,7 +4,7 @@ This document describes the implementation currently present in the public repos
 
 ## Release
 
-- Application version: **2.8.4**
+- Application version: **2.8.5**
 - Native filter format: **version 2**
 - Typed IR: **version 1**
 - Development layout: native ES modules
@@ -49,7 +49,7 @@ The current formula engine includes:
 
 The WebGPU backend supports the deterministic stateless formula language, including ten controls; normalized and centered coordinates; radius, angle, repeat, mirror-repeat, and scalar palette-ramp helpers; hash, value, Perlin, Worley, FBM, turbulence, ridged and periodic noise; bounded Mandelbrot and Julia fields; procedural patterns; analytic shape, signed-distance composition, and Sierpiński masks; polar sampling; and fixed 3×3 convolution. All 35 native built-in filters are WebGPU-compatible. Mandelbrot Atlas, Layered Noise Benchmark, and Warped SDF Bloom are grouped as deterministic performance workloads for manual like-for-like CPU/WebGPU timing comparisons.
 
-Seven contributed built-ins preserve their exported formula programs even though those programs can exceed the `3,000,000,000` CPU work-unit limit on sufficiently large images: C64 Multicolor Bitmap, Linear Prism Echo, Pop Print Quad, Spectral Tear Glitch, Teal Lime Modular Weave, Touching Random Capsules, and VHS Tracking Glitch. The limit depends on total pixel count and program cost. These filters remain available to the CPU backend for smaller images; on a large image without usable WebGPU, the render fails closed with the existing work-budget error.
+Six contributed built-ins preserve their exported formula programs even though those programs can exceed the `3,000,000,000` CPU work-unit limit on sufficiently large images: C64 Multicolor Bitmap, Linear Prism Echo, Spectral Tear Glitch, Teal Lime Modular Weave, Touching Random Capsules, and VHS Tracking Glitch. The limit depends on total pixel count and program cost. These filters remain available to the CPU backend for smaller images; on a large image without usable WebGPU, the render fails closed with the existing work-budget error.
 
 Sequential random-state functions (`rnd()` and `rst()`), shared cell operations (`get()` and `put()`), bitwise/shift/comma expressions, direct `pow()` formulas, and legacy integer compatibility remain CPU-only by design.
 
@@ -114,13 +114,13 @@ For hardware parity, run `npm run dev` and open `http://localhost:8080/tests/web
 - CPU and GPU floating-point implementations may have small numerical differences.
 - Historic Filter Factory behavior is not guaranteed to be bit-exact for every edge case.
 - Clipboard interoperability depends on the browser and receiving application.
-- Display ranges are linear; logarithmic curves, enums, colour controls, grouping, conditional visibility, and control reordering are not part of v2.8.4.
+- Display ranges are linear; logarithmic curves, enums, colour controls, grouping, conditional visibility, and control reordering are not part of v2.8.5.
 
 ## Explore and Author workspace
 
 The inspector opens in Explore, where the active filter summary, Open Filter Library action, used runtime controls, Reset to Pass Through, and a compact renderer state are visually primary. Filters with no referenced controls show an explanatory empty state instead of disabled slots. Author contains the filter dropdown, labelled metadata fields, tags, Save Filter/Update Filter, Delete Filter, and Reset to Pass Through actions, formula editing, control-schema editing, full renderer selection and diagnostics, and the formula reference. Workspace mode is session-local UI state and does not participate in filter persistence, dirty comparison, rendering, or typed IR.
 
-## Filter Library and organization (2.8.4)
+## Filter Library and organization (2.8.5)
 
 Open Filter Library presents visual cards in a canvas-visible desktop drawer and a narrow-screen bottom sheet. Text search, source/favorite/tag restrictions, A–Z/relevance order, and bounded 50-entry paging remain available; pagination is omitted when one page is sufficient. Visible and near-visible cards progressively replace neutral placeholders with real source-based filter thumbnails. The isolated thumbnail renderer uses one 160-pixel-class source, concurrency one, main-render suspension, generation guards, and a render-semantic 48-entry LRU; thumbnail failures remain local to their cards. Card selection separately validates and renders the authoritative main-canvas candidate while leaving the saved/imported identity, dirty baselines, and browser storage unchanged. Apply Filter commits the selected candidate. Cancel, Close, or Escape cancels stale rendering and restores the exact opening editor/pixel snapshot. The compact filter dropdown remains available in Author as an intentional direct-switch mechanism and retains its existing immediate replacement semantics.
 

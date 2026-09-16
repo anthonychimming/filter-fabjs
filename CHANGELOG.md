@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.8.5
+
+- Completed fractal refinement Stage A only: shared Mandelbrot/Julia ceiling raised from 256 to 512, preserving f32 arithmetic and requests at or below 256. Existing requests above 256 can now execute more iterations and change normalized output.
+- Made CPU fractal budgeting iteration-aware from conservative typed-IR numeric bounds; unknown and legacy expressions retain worst-case budgeting. CPU ternaries now count the condition plus the maximum branch, preserving the 3-billion work-unit guard. Pop Print Quad consequently fits the largest supported image size.
+- Preserved Mandelbrot Atlas formulas and controls after reviewing normalized palette recoloring; documented fixed-scale palette guidance for custom formulas.
+- Added historical-output regressions, clamp and budget coverage, optional hardware parity fixtures, deterministic CPU and optional GPU benchmarks, and regenerated versioned site/standalone builds.
+- GPU ternary control flow (Stage B) and cross-channel hoisting (Stage C) remain deferred and unchanged.
+
 ## 2.8.4
 
 - Clarified identity-aware Save Filter / Update Filter / Save as New actions, named the existing reset behavior Reset to Pass Through, and explained Apply Embedded Filter / Open Image Only without changing their semantics.

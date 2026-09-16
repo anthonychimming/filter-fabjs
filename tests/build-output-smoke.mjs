@@ -17,6 +17,11 @@ assert.doesNotMatch(siteHtml, /assets\/app\.(?:css|js)/, 'deployed HTML must not
 
 const deployedCss = fs.readFileSync(`dist/site/assets/${cssReference}`, 'utf8');
 const deployedJavaScript = fs.readFileSync(`dist/site/assets/${jsReference}`, 'utf8');
+for(const output of [deployedJavaScript,standaloneHtml]){
+  assert.match(output,/MAX_FRACTAL_ITERATIONS=512/,'both builds must carry the shared 512 ceiling');
+  assert.match(output,/function numericBounds\(/,'both builds must include numeric budgeting support');
+  assert.match(output,/Math\.max\(costs\.get\(node\.whenTrue\),costs\.get\(node\.whenFalse\)\)/,'both builds must budget ternaries lazily');
+}
 assert.match(deployedCss, /--accent:#e1ec1a/, 'deployed CSS must contain the v2.1.2 chartreuse accent');
 assert.match(deployedCss, /--panel2:#180e23/, 'deployed CSS must contain the v2.1.2 aubergine surface');
 assert.match(deployedJavaScript, /background\.addColorStop\(0,'#08050d'\)/, 'deployed JavaScript must contain the v2.1.2 demo artwork');

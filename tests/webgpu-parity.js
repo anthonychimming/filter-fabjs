@@ -5,6 +5,7 @@ import { presets } from '../src/presets/builtins.js';
 import { CpuRenderer } from '../src/renderers/cpu-renderer.js';
 import { workerProgram } from '../src/renderers/cpu-worker-source.js';
 import { WebGpuRenderer } from '../src/renderers/webgpu-renderer.js';
+import { fractalParityFixtures, fractalWorkloads } from './fractal-fixtures.js';
 
 const summary = document.querySelector('#summary');
 const results = document.querySelector('#results');
@@ -24,6 +25,7 @@ for (let y = 0; y < height; y += 1) {
 source.set([0,0,255,255,255,0,0,255],0);
 
 const fixtures = [
+  ...fractalParityFixtures,
   ['Hash', 'hash2(x,y,711)*255'],
   ['Value noise', 'valueNoise(x,y,9.5,711)*255'],
   ['Perlin', 'perlin(x,y,9.5,711)*255'],
@@ -106,6 +108,17 @@ async function run() {
       const row = document.createElement('tr');
       row.innerHTML = `<td><code>${name}</code></td><td>${delta.max}</td><td>${delta.mean.toFixed(4)}</td><td class="${ok ? 'pass' : 'fail'}">${ok ? 'PASS' : 'FAIL'}</td>`;
       results.append(row);
+    }
+    if(new URLSearchParams(location.search).has('benchmark')){
+      const timings=[];
+      for(const [name,formula] of fractalWorkloads)for(const iterations of [128,256,512]){
+        const program=compileFilterProgram([`${formula(iterations)}*255`,'0','0','255'].map(f=>new Parser(f).parse()));
+        await gpu.render({program,controls});
+        const times=[];
+        for(let repeat=0;repeat<3;repeat++)times.push((await gpu.render({program,controls})).ms);
+        timings.push({name,iterations,width,height,medianMs:times.sort((a,b)=>a-b)[1]});
+      }
+      console.table(timings);
     }
   } finally {
     cpu.dispose();

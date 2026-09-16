@@ -6,6 +6,7 @@
 import { RendererBackend, RenderCancelledError } from './renderer-backend.js';
 import { MAX_FRACTAL_ITERATIONS } from '../core/formula-language.js';
 import { programCacheKey } from '../core/ir.js';
+import { numericBounds } from './ir-numeric-bounds.js';
 
 export const MAX_CPU_RENDER_WORK=3_000_000_000;
 const CPU_CALL_WEIGHTS=Object.freeze({src:2,src0:2,src1:2,srcWrap:2,srcMirror:2,srcLinear:5,rad:3,rad0:3,rad1:3,cnv:10,cnv0:10,cnv1:10,hash2:4,valueNoise:12,perlin:20,worleyF1:30,worleyF2:30,fbm:240,turbulence:240,ridged:240,periodicNoise:12,mandelbrot:MAX_FRACTAL_ITERATIONS,julia:MAX_FRACTAL_ITERATIONS,sierpinski:12});
@@ -14,9 +15,22 @@ export class RenderBudgetError extends Error{constructor(message){super(message)
 
 export function estimateCpuProgramCost(program){
   if(!Array.isArray(program?.outputs)||program.outputs.length!==4)return Infinity;
-  let cost=0;const stack=program.outputs.map(output=>output?.expression);
-  while(stack.length){const node=stack.pop();if(!node||typeof node!=='object')return Infinity;cost+=node.op==='call'?(CPU_CALL_WEIGHTS[node.fn]||1):1;switch(node.op){case'const':case'var':break;case'unary':stack.push(node.input);break;case'binary':stack.push(node.left,node.right);break;case'select':stack.push(node.condition,node.whenTrue,node.whenFalse);break;case'call':if(!Array.isArray(node.args))return Infinity;stack.push(...node.args);break;default:return Infinity}}
-  return cost;
+  const costs=new Map(),stack=program.outputs.map(output=>({node:output?.expression,visited:false}));
+  while(stack.length){
+    const {node,visited}=stack.pop();if(!node||typeof node!=='object')return Infinity;
+    let children;
+    switch(node.op){case'const':case'var':children=[];break;case'unary':children=[node.input];break;case'binary':children=[node.left,node.right];break;case'select':children=[node.condition,node.whenTrue,node.whenFalse];break;case'call':if(!Array.isArray(node.args))return Infinity;children=node.args;break;default:return Infinity}
+    if(!visited){stack.push({node,visited:true},...children.map(child=>({node:child,visited:false})));continue}
+    let weight=node.op==='call'?(CPU_CALL_WEIGHTS[node.fn]||1):1;
+    if(node.op==='call'&&(node.fn==='mandelbrot'||node.fn==='julia')&&program.mathMode==='float'){
+      const upper=numericBounds(node.args.at(-1))?.hi;
+      // Round to f32 before truncating, exactly as the fractal worker does.
+      if(Number.isFinite(upper))weight=Math.max(1,Math.min(MAX_FRACTAL_ITERATIONS,Math.trunc(Math.fround(upper))));
+    }
+    const nested=node.op==='select'?costs.get(node.condition)+Math.max(costs.get(node.whenTrue),costs.get(node.whenFalse)):children.reduce((sum,child)=>sum+costs.get(child),0);
+    costs.set(node,weight+nested);
+  }
+  return program.outputs.reduce((sum,output)=>sum+costs.get(output.expression),0);
 }
 
 export function assertCpuRenderBudget(program,width,height){
