@@ -67,7 +67,7 @@ for(const formula of fixtures)for(const channel of [0,1,2,3]){
   assert.equal(new Set(declarations).size,declarations.length,'temporary identifiers must be unique across scopes and channels');
 }
 const channels=WGSLCompiler.compile(programFor(`x?${m}:${j}`)).code.split('fn main(')[1];
-assert.equal((channels.match(/= ff_mandelbrot\(/g)||[]).length,4,'channels remain independent; no Stage C hoisting');
+assert.equal((channels.match(/= ff_mandelbrot\(/g)||[]).length,4,'branch-only calls stay independent and guarded even with Stage C enabled');
 assert.equal((channels.match(/= ff_julia\(/g)||[]).length,4);
 for(const formula of [`x?${m}:rnd(0,255)`,`x?${m}:pow(2,3)`])assert.equal(WGSLCompiler.analyze(programFor(formula)).compatible,false,'unsupported branches remain CPU-only');
 for(const [,formula] of [...conditionalFractalFixtures,...conditionalFractalWorkloads.map(([name,fn])=>[name,fn(512)])]){

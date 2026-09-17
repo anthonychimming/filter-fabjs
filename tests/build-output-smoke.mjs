@@ -28,6 +28,7 @@ for(const output of [deployedJavaScript,standaloneHtml]){
 }
 // Exercise the compiler from each generated artifact, stopping before DOM init.
 const conditionalProgram=compileFilterProgram(Array(4).fill('x?mandelbrot(0,0,512):julia(0,0,0,0,512)').map(f=>new Parser(f).parse()));
+const sharedProgram=compileFilterProgram(['mandelbrot(cx,cy,512)*255','mandelbrot(cx,cy,512)*128','mandelbrot(cx,cy,512)*64','a'].map(f=>new Parser(f).parse()));
 for(const script of [deployedJavaScript,standaloneHtml.match(/<script>([\s\S]*?)<\/script>/)?.[1]]){
   assert.ok(script,'build must contain executable JavaScript');
   const init=script.lastIndexOf('initFilterFabApp();');
@@ -35,6 +36,9 @@ for(const script of [deployedJavaScript,standaloneHtml.match(/<script>([\s\S]*?)
   const context=vm.createContext({TextEncoder,TextDecoder});
   vm.runInContext(script.slice(0,init)+'globalThis.BuiltCompiler=WGSLCompiler;\n})();',context);
   assert.equal(context.BuiltCompiler.compile(conditionalProgram).code,WGSLCompiler.compile(conditionalProgram).code,'built compilers must emit the same scoped conditional WGSL as source');
+  const sharedCode=context.BuiltCompiler.compile(sharedProgram).code;
+  assert.equal(sharedCode,WGSLCompiler.compile(sharedProgram).code,'both generated artifacts must retain source field sharing');
+  assert.equal((sharedCode.split('fn main(')[1].match(/ff_mandelbrot\(/g)||[]).length,1,'built output must compute the shared fractal once');
 }
 assert.match(deployedCss, /--accent:#e1ec1a/, 'deployed CSS must contain the v2.1.2 chartreuse accent');
 assert.match(deployedCss, /--panel2:#180e23/, 'deployed CSS must contain the v2.1.2 aubergine surface');

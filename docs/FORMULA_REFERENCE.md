@@ -1,6 +1,6 @@
 # Filter FabJS Formula Reference
 
-**Applies to Filter FabJS v2.8.5b · native filter format v2 · typed IR v1**
+**Applies to Filter FabJS v2.8.5c · native filter format v2 · typed IR v1**
 
 This is the compact, implementation-oriented reference for writing Filter FabJS formulas. For worked explanations and tutorials, see the [Filter FabJS Programming Guide (PDF)](Filter_FabJS_Programming_Guide_v2.4.7.pdf). For analytic mask details, see [ANALYTIC_SHAPES.md](ANALYTIC_SHAPES.md).
 
@@ -463,4 +463,10 @@ IDs and tags round-trip in v2.7.0. Earlier v2.6.7 readers still accept the known
 
 ## GPU conditional execution (2.8.5b)
 
-Ternary formulas such as `(x<X/2 ? mandelbrot(cx,cy,512) : julia(cx,cy,-0.8,0.156,512))*255` now use GPU `if/else` when either branch contains bounded fractal, multi-octave noise, Worley, convolution, or Sierpiński work. Only the selected expensive branch is evaluated. This includes expensive calls nested in wrappers or other ternaries; `&&` and `||` still short-circuit when they contain these selections. Cheap ternaries retain WGSL `select()` lowering. The formula syntax and numerical result contract do not change. CPU ternaries were already lazy, and their Stage A budget estimate is unchanged. This optimization does not share repeated expressions between RGBA channels.
+Ternary formulas such as `(x<X/2 ? mandelbrot(cx,cy,512) : julia(cx,cy,-0.8,0.156,512))*255` now use GPU `if/else` when either branch contains bounded fractal, multi-octave noise, Worley, convolution, or Sierpiński work. Only the selected expensive branch is evaluated. This includes expensive calls nested in wrappers or other ternaries; `&&` and `||` still short-circuit when they contain these selections. Cheap ternaries retain WGSL `select()` lowering. The formula syntax and numerical result contract do not change. CPU ternaries were already lazy, and their Stage A budget estimate is unchanged. The Stage B conditional optimization does not itself share expressions; Stage C adds the restricted sharing below.
+
+## Shared GPU procedural fields (2.8.5c)
+
+Identical `mandelbrot`, `julia`, `fbm`, `turbulence`, `ridged`, `worleyF1`, or `worleyF2` calls used unconditionally by two or more RGBA channels can now execute once per pixel. For example, the same Mandelbrot field can feed different red, green, and blue palettes without repeating its loop. Formula text and output semantics are unchanged; no variable declaration or new formula syntax is required.
+
+Sharing requires the entire field subtree to be independent of the current output channel. Calls containing `c`/`c0`/`c1`, `z`, `p`, or implicit-channel convolution remain separate. Calls only inside conditional branches or logical right operands also remain guarded and separate. Similar-looking expressions are not algebraically merged, and CPU evaluation/budgeting is unchanged. Mandelbrot Atlas benefits automatically while retaining its existing formulas, controls, and palette.

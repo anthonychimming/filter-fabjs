@@ -4,7 +4,7 @@ This document describes the implementation currently present in the public repos
 
 ## Release
 
-- Application version: **2.8.5b**
+- Application version: **2.8.5c**
 - Native filter format: **version 2**
 - Typed IR: **version 1**
 - Development layout: native ES modules
@@ -114,13 +114,13 @@ For hardware parity, run `npm run dev` and open `http://localhost:8080/tests/web
 - CPU and GPU floating-point implementations may have small numerical differences.
 - Historic Filter Factory behavior is not guaranteed to be bit-exact for every edge case.
 - Clipboard interoperability depends on the browser and receiving application.
-- Display ranges are linear; logarithmic curves, enums, colour controls, grouping, conditional visibility, and control reordering are not part of v2.8.5b.
+- Display ranges are linear; logarithmic curves, enums, colour controls, grouping, conditional visibility, and control reordering are not part of v2.8.5c.
 
 ## Explore and Author workspace
 
 The inspector opens in Explore, where the active filter summary, Open Filter Library action, used runtime controls, Reset to Pass Through, and a compact renderer state are visually primary. Filters with no referenced controls show an explanatory empty state instead of disabled slots. Author contains the filter dropdown, labelled metadata fields, tags, Save Filter/Update Filter, Delete Filter, and Reset to Pass Through actions, formula editing, control-schema editing, full renderer selection and diagnostics, and the formula reference. Workspace mode is session-local UI state and does not participate in filter persistence, dirty comparison, rendering, or typed IR.
 
-## Filter Library and organization (2.8.5b)
+## Filter Library and organization (2.8.5c)
 
 Open Filter Library presents visual cards in a canvas-visible desktop drawer and a narrow-screen bottom sheet. Text search, source/favorite/tag restrictions, A–Z/relevance order, and bounded 50-entry paging remain available; pagination is omitted when one page is sufficient. Visible and near-visible cards progressively replace neutral placeholders with real source-based filter thumbnails. The isolated thumbnail renderer uses one 160-pixel-class source, concurrency one, main-render suspension, generation guards, and a render-semantic 48-entry LRU; thumbnail failures remain local to their cards. Card selection separately validates and renders the authoritative main-canvas candidate while leaving the saved/imported identity, dirty baselines, and browser storage unchanged. Apply Filter commits the selected candidate. Cancel, Close, or Escape cancels stale rendering and restores the exact opening editor/pixel snapshot. The compact filter dropdown remains available in Author as an intentional direct-switch mechanism and retains its existing immediate replacement semantics.
 
@@ -128,4 +128,8 @@ All 35 built-ins carry curated tags. Custom tags are portable; favorites and bui
 
 ## Stage B conditional optimization (2.8.5b)
 
-Expensive GPU ternaries now emit scoped `if/else`, including nested branch and logical short-circuit contexts. Cheap selections remain inline. Stage A's 512 ceiling and conservative CPU budgets are unchanged; Stage C cross-channel optimization has not begun. The release includes conditional execution regressions, expanded optional hardware parity/benchmark fixtures, and source-versus-build compiler checks. See [Stage B report](FRACTAL_STAGE_B.md).
+Expensive GPU ternaries now emit scoped `if/else`, including nested branch and logical short-circuit contexts. Cheap selections remain inline. Stage A's 512 ceiling and conservative CPU budgets are unchanged; Stage C now adds restricted sharing as described below. The release includes conditional execution regressions, expanded optional hardware parity/benchmark fixtures, and source-versus-build compiler checks. See [Stage B report](FRACTAL_STAGE_B.md).
+
+## Stage C field sharing (2.8.5c)
+
+The compiler now shares eligible deterministic, channel-independent expensive call subtrees required unconditionally in multiple output channels. It preserves Stage B guards, CPU budgeting, fallback, IR v1, native formats, and the single-pass renderer. All 18 Stage C browser fixtures match CPU and unshared GPU output; full-suite hardware status remains 82/86 with the same four baseline discrepancies documented in Stage B. Paired heavy-region GPU measurements show a benefit on the tested backend; timings remain observational. See [Stage C report](FRACTAL_STAGE_C.md).

@@ -1,6 +1,6 @@
 # Architecture
 
-Filter FabJS v2.8.5b uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
+Filter FabJS v2.8.5c uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
 
 ```text
 Formula text
@@ -68,7 +68,7 @@ Custom records retain `ffw-custom-presets`; favorites and built-in additions use
 
 CPU selects cost one node plus the condition and the maximum branch cost, including nested operations. Other operations retain their existing conservative estimates. The 3,000,000,000 work-unit guard is unchanged. A literal 128-iteration call previously cost 256 loop units and now costs 128; `val(3,32,256)` costs 256 and `val(3,32,512)` costs 512. Pop Print Quad now fits the maximum image size with the corrected lazy-branch estimate.
 
-Stage A did not change GPU ternaries. Stage B (2.8.5b), described below, adds scoped conditional lowering; Stage C remains excluded and output channels still generate separate expressions without cross-channel common-subexpression hoisting. Automatic CPU fallback, cancellation, native format v2, legacy AFS, typed IR v1, and the one-pass architecture remain unchanged.
+Stage A did not change GPU ternaries. Stage B (2.8.5b), described below, adds scoped conditional lowering; Stage C (2.8.5c) adds the restricted cross-channel sharing described below. Automatic CPU fallback, cancellation, native format v2, legacy AFS, typed IR v1, and the one-pass architecture remain unchanged.
 
 Run `npm run benchmark:fractal` for deterministic 64×64 CPU Worker workloads at 128/256/512 iterations (early escape, boundary, and interior regions for both intrinsics). Timings are observational, with no timing pass/fail thresholds. The optional `tests/webgpu-parity.html` suite adds early/slow/bounded and above-ceiling fixtures at 256/384/512/9999 with the existing max-3, mean-0.35 byte tolerance. Add `?benchmark=1` for optional hardware timings in the browser console. See [Stage A validation](FRACTAL_STAGE_A.md) for the release measurements and manual test targets.
 
@@ -78,4 +78,16 @@ The WGSL compiler classifies a branch as expensive when its typed-IR subtree con
 
 A ternary with expensive work in either branch produces an f32 temporary assigned inside an actual WGSL `if/else`. The compiler captures each branch's statements separately, so nested work remains under the correct guard. Logical `&&`/`||` retain native short-circuit expressions unless their right operand needs statements; in that case a guarded bool temporary preserves short-circuit execution. Cheap ternaries retain inline WGSL `select()`. All names are deterministic and unique within a shader.
 
-There is no structural expression sharing, field hoisting, channel deduplication, or Stage C investigation. Each channel retains its own evaluation. The 512 ceiling, CPU execution and budgeting, numeric coercion, clamp rules, fallback, cancellation, typed IR v1, native format v2, and single-pass architecture remain unchanged. See [Stage B validation and manual checks](FRACTAL_STAGE_B.md).
+Stage B did not perform cross-channel sharing. Stage C adds eligible unconditional field sharing while preserving these branch scopes. The 512 ceiling, CPU execution and budgeting, numeric coercion, clamp rules, fallback, cancellation, typed IR v1, native format v2, and single-pass architecture remain unchanged. See [Stage B validation and manual checks](FRACTAL_STAGE_B.md).
+
+## Stage C shared procedural fields (2.8.5c)
+
+Before output emission, the WGSL compiler interns structural signatures of validated typed-IR nodes using child IDs. Signatures preserve operation, expression type, identifier/operator/function, constant value (including signed zero), and ordered arguments. The pass is bounded by the existing 4,096-node GPU compatibility limit, uses compile-local maps, and leaves IR, metadata, canonical program keys, pipeline resource limits, and compatibility analysis unchanged. No source-text matching or preset-specific rules are used.
+
+Only `mandelbrot`, `julia`, `fbm`, `turbulence`, `ridged`, `worleyF1`, and `worleyF2` call roots qualify, and only if structurally identical independent calls occur on unconditional paths in at least two output channels. Dependency-ordered f32 `let ff_shared_*` declarations then feed the existing output expressions. Cheap wrapper operations remain in their channels; this is not a general CSE pass or algebraic simplifier.
+
+Independence propagates through every child. `c`, `c0`, `c1`, `z`, `p`, and implicit-channel `cnv`/`cnv0`/`cnv1` block sharing of an enclosing field. Unsupported/stateful functions remain blocked by GPU analysis and cannot qualify. Explicit-channel source reads may qualify only when their arguments are independent; source pixels are immutable during the pass.
+
+Both ternary branches and logical right operands are treated as guarded, regardless of constant conditions. Their calls never establish eligibility. Conditions and logical left operands remain unconditional. A field already required by two unconditional channels can also be reused inside a guard, but branch-only work is never moved out. Nested field dependencies are emitted first; nested lazy arguments still use Stage B statement capture. There is no branch-local CSE, global value cache, intermediate texture, additional dispatch, new IR/schema, or CPU optimization.
+
+See [Stage C completion report](FRACTAL_STAGE_C.md) for complexity, regression risk, GPU timings, and manual test steps.

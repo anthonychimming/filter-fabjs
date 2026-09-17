@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.8.5c
+
+- Implemented bounded Stage C GPU field sharing: structurally identical Mandelbrot, Julia, FBM, turbulence, ridged, and Worley calls used unconditionally by at least two output channels now share one f32 result.
+- Excluded channel-sensitive variables, implicit-channel convolution, unsupported/stateful operations, and branch-only work. Stage B lazy control flow, CPU budgeting, the shared 512 ceiling, native formats, typed IR v1, and automatic fallback remain unchanged.
+- Added structural and execution regressions, shared/unshared/CPU browser parity, paired GPU benchmarks, and source-versus-generated-build sharing checks. Heavy 512-iteration interior benchmarks improved on the tested WebGPU backend; early-escape workloads did not show useful gains.
+- Regenerated the static site and standalone 2.8.5c build. The four previously documented browser parity discrepancies remain unchanged; all new Stage C fixtures pass.
+
 ## 2.8.5b
 
 - Completed Stage B only: GPU ternaries with Mandelbrot, Julia, or other loop-heavy branch work now emit scoped WGSL `if/else` and f32 result variables. Cheap branches retain `select()`.

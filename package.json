@@ -1,6 +1,6 @@
 {
   "name": "filter-fabjs",
-  "version": "2.8.5b",
+  "version": "2.8.5c",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,7 +8,7 @@
     "dev": "node scripts/dev-server.mjs",
     "build": "node scripts/build.mjs",
     "check": "node scripts/check.mjs",
-    "test": "node tests/fractal-smoke.mjs && node tests/core-smoke.mjs && node tests/control-definitions-smoke.mjs && node tests/app-workflows-smoke.mjs && node tests/png-metadata-smoke.mjs && node tests/wgsl-compiler-smoke.mjs && node tests/wgsl-conditional-smoke.mjs && node tests/cpu-renderer-smoke.mjs && node tests/webgpu-renderer-smoke.mjs && node tests/renderer-manager-smoke.mjs && node tests/analytic-shapes-smoke.mjs && node tests/canvas-view-smoke.mjs && node tests/thumbnail-service-smoke.mjs && node tests/ui-wiring-smoke.mjs && node tests/theme-smoke.mjs && node tests/filter-catalog-smoke.mjs",
+    "test": "node tests/fractal-smoke.mjs && node tests/core-smoke.mjs && node tests/control-definitions-smoke.mjs && node tests/app-workflows-smoke.mjs && node tests/png-metadata-smoke.mjs && node tests/wgsl-compiler-smoke.mjs && node tests/wgsl-conditional-smoke.mjs && node tests/wgsl-sharing-smoke.mjs && node tests/cpu-renderer-smoke.mjs && node tests/webgpu-renderer-smoke.mjs && node tests/renderer-manager-smoke.mjs && node tests/analytic-shapes-smoke.mjs && node tests/canvas-view-smoke.mjs && node tests/thumbnail-service-smoke.mjs && node tests/ui-wiring-smoke.mjs && node tests/theme-smoke.mjs && node tests/filter-catalog-smoke.mjs",
     "verify": "npm run check && npm test && npm run build && node tests/build-output-smoke.mjs"
   }
 }

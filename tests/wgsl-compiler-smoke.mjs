@@ -83,7 +83,7 @@ for (const [formula, emittedCall] of statelessCases) {
   assert.equal(analysis.compatible, true, `${formula} must be WebGPU-compatible`);
   assert.equal(analysis.subset, 'phase-3.5-stateless');
   const { code } = WGSLCompiler.compile(program);
-  const mainBody = code.slice(code.lastIndexOf('outPixels[index]'));
+  const mainBody = code.slice(code.lastIndexOf('fn main('));
   assert.ok(mainBody.includes(emittedCall), `${formula} must emit ${emittedCall}`);
 }
 

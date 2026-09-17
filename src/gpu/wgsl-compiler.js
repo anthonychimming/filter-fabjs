@@ -18,6 +18,9 @@ const EXACT_INTEGER_NOISE_FUNCTIONS=new Set(['hash2','valueNoise','perlin','worl
 // Calls with bounded iteration or repeated sampling. Classification is local to
 // WGSL lowering and never changes neutral IR metadata or compatibility.
 const EXPENSIVE_BRANCH_FUNCTIONS=new Set(['mandelbrot','julia','fbm','turbulence','ridged','worleyF1','worleyF2','cnv','cnv0','cnv1','sierpinski']);
+const SHAREABLE_FIELD_FUNCTIONS=new Set(['mandelbrot','julia','fbm','turbulence','ridged','worleyF1','worleyF2']);
+const CHANNEL_DEPENDENT_VARIABLES=new Set(['c','c0','c1','z','p']);
+const IMPLICIT_CHANNEL_FUNCTIONS=new Set(['cnv','cnv0','cnv1']);
 export const MAX_WEBGPU_IR_NODES=4096;
 export class WGSLCompiler{
   static analyze(program){
@@ -57,14 +60,47 @@ export class WGSLCompiler{
   static key(program){return programCacheKey(program)}
   static compile(program,analysis=this.analyze(program)){
     if(!analysis.compatible)throw new WGSLCompileError(`WebGPU subset does not support: ${analysis.blockers.join(', ')}`,analysis.blockers);
-    const compiler=new WGSLCompiler(program),expressions=program.outputs.map((output,channel)=>compiler.value(output.expression,channel));
+    const compiler=new WGSLCompiler(program);compiler.prepareSharedFields();
+    const expressions=program.outputs.map((output,channel)=>compiler.value(output.expression,channel));
     const code=compiler.shader(expressions);this.validateGeneratedSource(code);return{key:this.key(program),code,analysis};
   }
   static validateGeneratedSource(code){
     const malformed=code.match(/\breturn(?:\s+[^;\n{}]+)?}/g);
     if(malformed?.length)throw new WGSLCompileError('Generated WGSL contains an unterminated return statement',[...new Set(malformed)]);
   }
-  constructor(program){this.program=program;this.statements=[];this.nextTemporary=0;this.expensiveNodes=new WeakMap()}
+  constructor(program){this.program=program;this.statements=[];this.nextTemporary=0;this.expensiveNodes=new WeakMap();this.fieldNodes=new WeakMap();this.sharedFields=new Map()}
+  prepareSharedFields(){
+    // Intern structural signatures using child IDs: bounded by validated IR size,
+    // without serializing whole subtrees or mutating IR/cache-key metadata.
+    const signatures=new Map(),candidates=new Map();
+    const inspect=(node,channel,required)=>{
+      let children=[],tag='',independent=true;
+      switch(node.op){
+        case'const':tag=Object.is(node.value,-0)?'-0':String(node.value);break;
+        case'var':tag=node.name;independent=!CHANNEL_DEPENDENT_VARIABLES.has(node.name);break;
+        case'unary':tag=node.operator;children=[inspect(node.input,channel,required)];break;
+        case'binary':tag=node.operator;children=[inspect(node.left,channel,required),inspect(node.right,channel,required&&node.operator!=='&&'&&node.operator!=='||')];break;
+        case'select':children=[inspect(node.condition,channel,required),inspect(node.whenTrue,channel,false),inspect(node.whenFalse,channel,false)];break;
+        case'call':tag=node.fn;independent=WEBGPU_FUNCTIONS.has(node.fn)&&!IMPLICIT_CHANNEL_FUNCTIONS.has(node.fn);children=node.args.map(arg=>inspect(arg,channel,required));break;
+        default:independent=false;
+      }
+      independent=independent&&children.every(child=>child.independent);
+      const signature=JSON.stringify([node.op,node.type,tag,...children.map(child=>child.id)]);
+      if(!signatures.has(signature))signatures.set(signature,signatures.size);
+      const id=signatures.get(signature),info={id,independent};this.fieldNodes.set(node,info);
+      if(required&&independent&&node.op==='call'&&SHAREABLE_FIELD_FUNCTIONS.has(node.fn)){
+        const candidate=candidates.get(id)||{id,node,channels:0};candidate.channels|=1<<channel;candidates.set(id,candidate);
+      }
+      return info;
+    };
+    this.program.outputs.forEach((output,channel)=>inspect(output.expression,channel,true));
+    // Child IDs precede parent IDs, so nested shared fields are defined first.
+    for(const {id,node,channels} of [...candidates.values()].sort((a,b)=>a.id-b.id)){
+      if((channels&(channels-1))===0)continue;
+      const expression=this.value(node,0),name=`ff_shared_${this.sharedFields.size}`;
+      this.statements.push(`let ${name}:f32 = ${expression};`);this.sharedFields.set(id,name);
+    }
+  }
   hasExpensiveWork(node){
     if(this.expensiveNodes.has(node))return this.expensiveNodes.get(node);
     let expensive=false;
@@ -110,6 +146,7 @@ export class WGSLCompiler{
     throw new WGSLCompileError(`Variable ${name} is not supported by the WebGPU subset`,[name]);
   }
   value(node,channel){
+    const shared=this.sharedFields.get(this.fieldNodes.get(node)?.id);if(shared)return shared;
     switch(node.op){
       case'const':return this.number(node.value);
       case'var':return this.variable(node.name,channel);
