@@ -49,6 +49,30 @@ await fs.rm(path.join(root, 'dist'), { recursive: true, force: true });
 await fs.mkdir(path.join(root, 'dist', 'site', 'assets'), { recursive: true });
 
 const css = await fs.readFile(path.join(root, 'styles', 'app.css'), 'utf8');
+// Keep development URLs local, fingerprint site fonts, and embed standalone fonts.
+const fonts = ['InterVariable.woff2', 'JetBrainsMono-Variable.woff2'];
+const fontDirectory = path.join(root, 'assets', 'fonts');
+const siteFontDirectory = path.join(root, 'dist', 'site', 'assets', 'fonts');
+await fs.mkdir(siteFontDirectory, { recursive: true });
+let siteCss = css;
+let standaloneCss = css;
+for (const filename of fonts) {
+  const bytes = await fs.readFile(path.join(fontDirectory, filename));
+  const sourceUrl = `../assets/fonts/${filename}`;
+  if (!css.includes(sourceUrl) || bytes.toString('ascii', 0, 4) !== 'wOF2') {
+    throw new Error(`Missing CSS reference or invalid WOFF2 font: ${filename}`);
+  }
+  const siteFilename = filename.replace('.woff2', `.${fingerprint(bytes)}.woff2`);
+  await fs.writeFile(path.join(siteFontDirectory, siteFilename), bytes);
+  siteCss = siteCss.replaceAll(sourceUrl, `./fonts/${siteFilename}`);
+  standaloneCss = standaloneCss.replaceAll(sourceUrl, `data:font/woff2;base64,${bytes.toString('base64')}`);
+}
+for (const filename of ['OFL-Inter.txt', 'OFL-JetBrainsMono.txt', 'README.md']) {
+  const notice = await fs.readFile(path.join(fontDirectory, filename), 'utf8');
+  await fs.writeFile(path.join(siteFontDirectory, filename), notice);
+  // Each distribution carries the licenses and source/conversion provenance.
+  standaloneCss += `\n/* ${filename}\n${notice.replaceAll('*/', '* /').replace(/<\/style/gi, '<\\/style')}\n*/\n`;
+}
 const modules = [];
 for (const relative of order) {
   const source = await fs.readFile(path.join(root, relative), 'utf8');
@@ -58,7 +82,7 @@ for (const relative of order) {
 const bundle = `(()=>{'use strict';\n${modules.join('\n')}\n})();\n`;
 const html = await fs.readFile(path.join(root, 'index.html'), 'utf8');
 const packageMetadata = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'));
-const cssFilename = `app.${fingerprint(css)}.css`;
+const cssFilename = `app.${fingerprint(siteCss)}.css`;
 const jsFilename = `app.${fingerprint(bundle)}.js`;
 const standaloneFilename = `filter-fabjs-v${packageMetadata.version}.html`;
 
@@ -67,12 +91,12 @@ const siteHtml = html
   .replace('<script type="module" src="./src/main.js"></script>', `<script src="./assets/${jsFilename}" defer></script>`);
 
 await fs.writeFile(path.join(root, 'dist', 'site', 'index.html'), siteHtml);
-await fs.writeFile(path.join(root, 'dist', 'site', 'assets', cssFilename), css);
+await fs.writeFile(path.join(root, 'dist', 'site', 'assets', cssFilename), siteCss);
 await fs.writeFile(path.join(root, 'dist', 'site', 'assets', jsFilename), bundle);
 
 const safeBundle = bundle.replace(/<\/script/gi, '<\\/script');
 const standalone = html
-  .replace('<link rel="stylesheet" href="./styles/app.css">', () => `<style>\n${css}\n</style>`)
+  .replace('<link rel="stylesheet" href="./styles/app.css">', () => `<style>\n${standaloneCss}\n</style>`)
   .replace('<script type="module" src="./src/main.js"></script>', () => `<script>\n${safeBundle}\n</script>`);
 
 await fs.writeFile(path.join(root, 'dist', standaloneFilename), standalone);

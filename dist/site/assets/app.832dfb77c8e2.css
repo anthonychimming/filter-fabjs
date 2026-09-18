@@ -4,8 +4,8 @@
  * Licensed GPL-2.0-or-later. See LICENSE and README.md.
  */
 /* Vendored SIL OFL fonts; provenance and licenses: assets/fonts/README.md. */
-@font-face{font-family:"Inter Variable";src:url("../assets/fonts/InterVariable.woff2") format("woff2");font-style:normal;font-weight:100 900;font-display:swap}
-@font-face{font-family:"JetBrains Mono Variable";src:url("../assets/fonts/JetBrainsMono-Variable.woff2") format("woff2");font-style:normal;font-weight:100 800;font-display:swap}
+@font-face{font-family:"Inter Variable";src:url("./fonts/InterVariable.693b77d4f32e.woff2") format("woff2");font-style:normal;font-weight:100 900;font-display:swap}
+@font-face{font-family:"JetBrains Mono Variable";src:url("./fonts/JetBrainsMono-Variable.fe7b565a583f.woff2") format("woff2");font-style:normal;font-weight:100 800;font-display:swap}
 :root{
 --font-ui:"Inter Variable",Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
 --font-code:"JetBrains Mono Variable","JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;

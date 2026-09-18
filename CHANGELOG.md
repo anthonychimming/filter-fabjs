@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.8.7
+
+- Bundled Inter Variable for UI text and JetBrains Mono Variable for formulas, code, identifiers, diagnostics, and seed inputs, with SIL OFL licenses and provenance. Ordinary control values use UI typography with tabular numerals.
+- Centralized recurring spacing, radius, and control metrics while preserving the palette, compact density, Explore / Author structure, responsive layouts, and interaction states.
+- Added fingerprinted site fonts and embedded standalone WOFF2 fonts, licenses, and provenance. Builds remain dependency-free and require no font downloads.
+- Extended theme and build checks for exact palette preservation, typography roles, font integrity, touch targets, and self-contained distribution assets; regenerated the 2.8.7 builds.
+
 ## 2.8.6
 
 - Removed Touching Random Capsules, Analytic Shape Sampler, Duotone, Halftone Dots, Noise Displacement, Threshold Dither, and Mandelbrot Atlas from the built-in catalog.

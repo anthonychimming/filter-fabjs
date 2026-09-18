@@ -1,4 +1,4 @@
-# Filter FabJS v2.8.6
+# Filter FabJS v2.8.7
 
 **A browser-based procedural image filter editor with WebGPU acceleration.**
 
@@ -8,7 +8,7 @@ Filter FabJS is an open-source, browser-native procedural RGBA image-processing 
 
 The engine combines four-channel RGBA formula authoring with WebGPU rendering and automatic CPU Worker fallback. Its procedural vocabulary includes image sampling, coordinate transforms, gradients, palette ramps, deterministic noise, fractals, analytic masks, signed-distance fields, convolution, and blend operations. Historic Filter Factory `.afs` filters remain supported through the legacy compatibility path.
 
-**Current stable release: v2.8.6**
+**Current stable release: v2.8.7**
 
 ## Features
 
@@ -33,7 +33,7 @@ The engine combines four-channel RGBA formula authoring with WebGPU rendering an
 - PNG loading/export with portable embedded filter metadata, clipboard copy/paste, and alpha-aware preview.
 - Modular development source plus a standalone single-file release build.
 
-Filter FabJS v2.8.6 uses a typed, renderer-neutral intermediate representation, with the CPU and WebGPU renderers consuming the same semantic formula program.
+Filter FabJS v2.8.7 uses a typed, renderer-neutral intermediate representation, with the CPU and WebGPU renderers consuming the same semantic formula program.
 
 See [Project Status](docs/PROJECT_STATUS.md) for implementation details, compatibility notes, and current boundaries.
 
@@ -68,9 +68,14 @@ npm run build
 Build output:
 
 - `dist/site/` — deployable static site.
-- `dist/filter-fabjs-v2.8.6.html` — standalone single-file distribution.
+- `dist/filter-fabjs-v2.8.7.html` — standalone single-file distribution.
 
 The build uses Node.js and has no package dependencies.
+
+Inter Variable and JetBrains Mono Variable are bundled locally under SIL OFL 1.1.
+The site ships fingerprinted WOFF2 files; the standalone HTML embeds both fonts
+and their license notices, with no external font, CSS, or JavaScript dependency.
+See [font provenance](assets/fonts/README.md) and the [typography and metric tokens](docs/BRAND_THEME.md).
 
 ## Source structure
 

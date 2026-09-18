@@ -21,6 +21,31 @@ assert.doesNotMatch(siteHtml, /assets\/app\.(?:css|js)/, 'deployed HTML must not
 
 const deployedCss = fs.readFileSync(`dist/site/assets/${cssReference}`, 'utf8');
 const deployedJavaScript = fs.readFileSync(`dist/site/assets/${jsReference}`, 'utf8');
+const standaloneCss = standaloneHtml.match(/<style>([\s\S]*?)<\/style>/)?.[1];
+assert.ok(standaloneCss, 'standalone must contain its stylesheet');
+const cssUrls = css => [...css.matchAll(/url\(\s*["']?([^"')\s]+)/gi)].map(([, url]) => url);
+const siteFontUrls = cssUrls(deployedCss);
+const embeddedFontUrls = cssUrls(standaloneCss);
+assert.equal(siteFontUrls.length, 2);
+assert.equal(embeddedFontUrls.length, 2);
+for (const filename of ['InterVariable.woff2', 'JetBrainsMono-Variable.woff2']) {
+  const bytes = fs.readFileSync(`assets/fonts/${filename}`);
+  const stem = filename.slice(0, -6);
+  const siteUrl = siteFontUrls.find(url => url.startsWith(`./fonts/${stem}.`));
+  assert.ok(siteUrl, `${filename} must have a site font URL`);
+  assert.match(siteUrl, /^\.\/fonts\/[\w-]+\.[0-9a-f]{12}\.woff2$/, 'site font URLs must be local and fingerprinted');
+  assert.deepEqual(fs.readFileSync(`dist/site/assets/${siteUrl}`), bytes, 'site fonts must retain the vendored bytes');
+  assert.ok(embeddedFontUrls.includes(`data:font/woff2;base64,${bytes.toString('base64')}`), 'standalone must embed the complete vendored font');
+}
+for (const url of embeddedFontUrls) assert.match(url, /^data:font\/woff2;base64,[A-Za-z0-9+/]+=*$/, 'standalone CSS cannot request any external resource');
+for (const css of [deployedCss, standaloneCss]) assert.doesNotMatch(css, /@import\b/i, 'built CSS must not import stylesheets');
+for (const filename of ['OFL-Inter.txt', 'OFL-JetBrainsMono.txt', 'README.md']) {
+  const notice = fs.readFileSync(`assets/fonts/${filename}`, 'utf8');
+  assert.equal(fs.readFileSync(`dist/site/assets/fonts/${filename}`, 'utf8'), notice);
+  assert.ok(standaloneCss.includes(notice), `standalone must carry ${filename}`);
+}
+const palette = css => Object.fromEntries([...css.matchAll(/--([\w-]+)\s*:\s*(#[0-9a-f]{6})\b/gi)].map(([, name, color]) => [name, color]));
+for (const css of [deployedCss, standaloneCss]) assert.deepEqual(palette(css), palette(fs.readFileSync('styles/app.css', 'utf8')), 'built palette must match source');
 for(const output of [deployedJavaScript,standaloneHtml]){
   assert.match(output,/MAX_FRACTAL_ITERATIONS=512/,'both builds must carry the shared 512 ceiling');
   assert.match(output,/function numericBounds\(/,'both builds must include numeric budgeting support');
