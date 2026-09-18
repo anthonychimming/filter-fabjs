@@ -1,6 +1,6 @@
 # Filter FabJS Formula Reference
 
-**Applies to Filter FabJS v2.8.5c · native filter format v2 · typed IR v1**
+**Applies to Filter FabJS v2.8.6 · native filter format v2 · typed IR v1**
 
 This is the compact, implementation-oriented reference for writing Filter FabJS formulas. For worked explanations and tutorials, see the [Filter FabJS Programming Guide (PDF)](Filter_FabJS_Programming_Guide_v2.4.7.pdf). For analytic mask details, see [ANALYTIC_SHAPES.md](ANALYTIC_SHAPES.md).
 
@@ -243,7 +243,7 @@ mandelbrot(cx*X/min(X,Y)*1.5-0.5,cy*Y/min(X,Y)*1.5,128)
 
 Since v2.8.5, requested iterations above 256 may execute up to 512; requests at or below 256 retain their previous f32-aligned behavior. Counts truncate after conversion to f32 and clamp to `1..512`. This is bounded single-pass computation, not arbitrary-precision or deep-zoom rendering. Native filter format v2 and typed IR v1 are unchanged.
 
-Escape values are normalized by the requested limit, so increasing iterations can recolor already-escaping regions. Mandelbrot Atlas intentionally retains its established `sqrt(mandelbrot(...,val(3,24,192)))` palette and 24–192 control range to preserve its default appearance. For a custom palette with a fixed escape-count scale, use an expression such as `sqrt(clamp(mandelbrot(cx,cy,512)*512/128,0,1))`; bounded points still need intentional palette treatment.
+Escape values are normalized by the requested limit, so increasing iterations can recolor already-escaping regions. For a custom palette with a fixed escape-count scale, use an expression such as `sqrt(clamp(mandelbrot(cx,cy,512)*512/128,0,1))`; bounded points still need intentional palette treatment.
 
 ## 9. Gradients and patterns
 
@@ -469,4 +469,4 @@ Ternary formulas such as `(x<X/2 ? mandelbrot(cx,cy,512) : julia(cx,cy,-0.8,0.15
 
 Identical `mandelbrot`, `julia`, `fbm`, `turbulence`, `ridged`, `worleyF1`, or `worleyF2` calls used unconditionally by two or more RGBA channels can now execute once per pixel. For example, the same Mandelbrot field can feed different red, green, and blue palettes without repeating its loop. Formula text and output semantics are unchanged; no variable declaration or new formula syntax is required.
 
-Sharing requires the entire field subtree to be independent of the current output channel. Calls containing `c`/`c0`/`c1`, `z`, `p`, or implicit-channel convolution remain separate. Calls only inside conditional branches or logical right operands also remain guarded and separate. Similar-looking expressions are not algebraically merged, and CPU evaluation/budgeting is unchanged. Mandelbrot Atlas benefits automatically while retaining its existing formulas, controls, and palette.
+Sharing requires the entire field subtree to be independent of the current output channel. Calls containing `c`/`c0`/`c1`, `z`, `p`, or implicit-channel convolution remain separate. Calls only inside conditional branches or logical right operands also remain guarded and separate. Similar-looking expressions are not algebraically merged, and CPU evaluation/budgeting is unchanged.

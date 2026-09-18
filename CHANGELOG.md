@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.8.6
+
+- Removed Touching Random Capsules, Analytic Shape Sampler, Duotone, Halftone Dots, Noise Displacement, Threshold Dither, and Mandelbrot Atlas from the built-in catalog.
+- Added 24 pass-two filters to the built-in catalog, including revised Touching Random Capsules and Mandelbrot / Julia Atlas definitions, bringing the catalog to 52 filters.
+- Set the author metadata for every built-in filter to Anthony Chimming.
+- Updated release surfaces and regenerated the static site and standalone 2.8.6 build.
+
 ## 2.8.5c
 
 - Implemented bounded Stage C GPU field sharing: structurally identical Mandelbrot, Julia, FBM, turbulence, ridged, and Worley calls used unconditionally by at least two output channels now share one f32 result.

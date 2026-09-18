@@ -14,6 +14,7 @@ for (const preset of presets) {
   assert.equal(typeof preset.description,'string',`${preset.name} must include filter-level description metadata`);
   assert.ok(preset.description.trim(),`${preset.name} must include a useful description`);
   assert.ok(preset.description.length<=FILTER_DESCRIPTION_MAX_LENGTH,`${preset.name} description must stay within the native metadata limit`);
+  assert.equal(preset.author,'Anthony Chimming',`${preset.name} must carry the built-in author attribution`);
   assert.equal(formulas.length, 4, `${preset.name} must have four formulas`);
   const program = compileFilterProgram(formulas.map(formula => new Parser(formula).parse()));
   assert.equal(program.outputs.length, 4);
@@ -22,22 +23,17 @@ for (const preset of presets) {
   else cpuFallback += 1;
 }
 
-assert.equal(presets.length, 35, 'v2.8.4 must expose the revised built-in catalog size');
+assert.equal(presets.length, 52, 'v2.8.6 must expose the expanded built-in catalog size');
 assert.equal(gpuCompatible, presets.length, 'every native built-in must compile for WebGPU after Phase 3.5');
 assert.equal(cpuFallback, 0, 'native built-ins must not require CPU fallback');
 assert.equal(gpuCompatible + cpuFallback, presets.length);
-const mandelbrotPreset=presets.find(preset=>preset.id==='mandelbrotatlas');
-assert.equal(mandelbrotPreset?.name,'Mandelbrot Atlas','Phase 3.5B must include the native Mandelbrot reference preset');
-const mandelbrotPresetProgram=compileFilterProgram(mandelbrotPreset.f.map(formula=>new Parser(formula).parse()));
-assert.ok(mandelbrotPresetProgram.metadata.functions.includes('mandelbrot'),'the Mandelbrot reference preset must use the public intrinsic');
-assert.equal(WGSLCompiler.analyze(mandelbrotPresetProgram).compatible,true,'the Mandelbrot reference preset must remain GPU-compatible');
 const warpedSdfPreset=presets.find(preset=>preset.id==='warpedsdfbloom');
 assert.equal(warpedSdfPreset?.name,'Warped SDF Bloom','Phase 3.5C must include the domain-warped SDF reference preset');
 const warpedSdfPresetProgram=compileFilterProgram(warpedSdfPreset.f.map(formula=>new Parser(formula).parse()));
 for(const name of ['sdfCircle','sdfBox','sdfSmoothUnion','sdfSubtract','sdfFill','sdfOutline','valueNoise'])assert.ok(warpedSdfPresetProgram.metadata.functions.includes(name),`the Phase 3.5C reference preset must use ${name}()`);
 assert.equal(WGSLCompiler.analyze(warpedSdfPresetProgram).compatible,true,'the domain-warped SDF reference preset must remain GPU-compatible');
 const benchmarkPresets=presets.filter(preset=>preset.benchmark);
-assert.deepEqual(benchmarkPresets.map(preset=>preset.id),['mandelbrotatlas','layerednoisebenchmark','warpedsdfbloom'],'Phase 3.5D must expose fractal, layered-noise, and warped-SDF benchmark workloads');
+assert.deepEqual(benchmarkPresets.map(preset=>preset.id),['layerednoisebenchmark','warpedsdfbloom'],'the retained benchmark workloads must remain grouped');
 for(const preset of benchmarkPresets){const program=compileFilterProgram(preset.f.map(formula=>new Parser(formula).parse()));assert.equal(program.metadata.deterministic,true,`${preset.name} benchmark must be deterministic`);assert.equal(program.metadata.stateful,false,`${preset.name} benchmark must remain stateless`);assert.equal(WGSLCompiler.analyze(program).compatible,true,`${preset.name} benchmark must remain GPU-compatible`);}
 const layeredNoiseProgram=compileFilterProgram(benchmarkPresets.find(preset=>preset.id==='layerednoisebenchmark').f.map(formula=>new Parser(formula).parse()));
 for(const name of ['fbm','turbulence','ridged'])assert.ok(layeredNoiseProgram.metadata.functions.includes(name),`the layered-noise benchmark must exercise ${name}()`);
@@ -128,12 +124,6 @@ assert.throws(()=>new Parser('-'.repeat(FORMULA_LIMITS.maxDepth+1)+'1').parse(),
 assert.throws(()=>new Parser('1'.repeat(FORMULA_LIMITS.maxLength+1)).parse(),/character limit/,'oversized direct formula input must be rejected before tokenization');
 assert.throws(()=>new Parser(`${'1+'.repeat(2100)}1`).parse(),/token limit/,'token-heavy formulas must stop at the parser budget');
 
-const shapeSampler=presets.find(preset=>preset.id==='analyticshapesampler');
-assert.ok(shapeSampler, 'analytic shape sampler preset must be present');
-const shapeSamplerProgram=compileFilterProgram(shapeSampler.f.map(formula=>new Parser(formula).parse()));
-for(const name of ['line','circle','ring','box','triangle','grid'])assert.ok(shapeSamplerProgram.metadata.functions.includes(name), `shape sampler must use ${name}()`);
-assert.doesNotThrow(()=>WGSLCompiler.compile(shapeSamplerProgram), 'shape sampler must generate valid WGSL source');
-
 const sierpinskiPreset=presets.find(preset=>preset.id==='sierpinskifractal');
 assert.ok(sierpinskiPreset, 'Sierpiński fractal preset must be present');
 assert.equal(presets.some(preset=>preset.id==='fractalshapestudy'||preset.name.includes('Fractal Shape Study')),false,'old Fractal Shape Study preset identity must be absent');
@@ -142,11 +132,17 @@ assert.ok(sierpinskiProgram.metadata.functions.includes('sierpinski'), 'Sierpiń
 assert.doesNotThrow(()=>WGSLCompiler.compile(sierpinskiProgram), 'Sierpiński fractal preset must generate valid WGSL source');
 
 const removedBuiltins=new Map([
+  ['analyticshapesampler','Analytic Shape Sampler'],
   ['cellular','Cellular Edges'],
   ['channelglitch','Channel Split Glitch'],
   ['directionalecho','Directional Echo'],
+  ['duotone','Duotone'],
+  ['halftone','Halftone Dots'],
+  ['mandelbrotatlas','Mandelbrot Atlas'],
   ['midnighttartan','Midnight Tartan'],
-  ['mirrorx','Mirror Horizontal']
+  ['mirrorx','Mirror Horizontal'],
+  ['noisedisplace','Noise Displacement'],
+  ['thresholddither','Threshold Dither']
 ]);
 const contributedBuiltins=new Map([
   ['c64multicolorbitmap','C64 Multicolor Bitmap'],
@@ -156,10 +152,35 @@ const contributedBuiltins=new Map([
   ['popprintquad','Pop Print Quad'],
   ['spectraltearglitch','Spectral Tear Glitch'],
   ['teallimemodularweave','Teal Lime Modular Weave'],
-  ['touchingrandomcapsules','Touching Random Capsules'],
   ['vhstrackingglitch','VHS Tracking Glitch']
 ]);
-assert.equal(presets.length,35,'v2.8.4 must expose 26 retained plus nine contributed built-in filters');
+const pass2Builtins=new Map([
+  ['clarendon-cool-grade','Clarendon'],
+  ['gameboydmg01','Game Boy DMG-01'],
+  ['gingham-vintage-haze','Gingham'],
+  ['radialecho','Radial Echo'],
+  ['softmeshgradient','Soft Mesh Gradient — Seeded'],
+  ['balanced-hdr-detail','Balanced HDR Detail'],
+  ['chromatic-glass','Chromatic Glass'],
+  ['cinematic-split-grade','Cinematic Split Grade'],
+  ['circular-halftone-photo','Circular Halftone Photo'],
+  ['complementary-split-toning','Complementary Split Toning'],
+  ['duotone-gradient-map','Duotone Gradient Map'],
+  ['fractal-contours','Fractal Contour Designer'],
+  ['fractal-displacement','Julia Fractal Displacement'],
+  ['gradient-map-studio','Gradient Map Studio'],
+  ['halftone-print','Halftone Print'],
+  ['instant-print-frame','Instant Print Frame'],
+  ['iridescent-shift','Iridescent Shift'],
+  ['juno','Juno'],
+  ['mandelbrotjuliaatlas','Mandelbrot / Julia Atlas'],
+  ['radial-aura','Radial Aura'],
+  ['red-black-diagonal-plaid','Red-Black Diagonal Plaid'],
+  ['selective-color-isolate','Selective Color Isolate'],
+  ['futuristic-sci-fi-glitch-photo','Signal Rupture'],
+  ['touchingrandomcapsules','Touching Random Capsules']
+]);
+assert.equal(presets.length,52,'v2.8.6 must expose 20 retained, eight contributed, and 24 pass-two built-in filters');
 assert.equal(new Set(presets.map(preset=>preset.id)).size,presets.length,'remaining built-in IDs must stay unique');
 assert.equal(new Set(presets.map(preset=>preset.name)).size,presets.length,'remaining built-in names must stay unique');
 for(const [id,name] of contributedBuiltins){
@@ -168,6 +189,11 @@ for(const [id,name] of contributedBuiltins){
   assert.equal(preset.controls.length,CONTROL_COUNT,`${name} must preserve all ten exported control definitions`);
   assert.ok(preset.description.trim(),`${name} must preserve its exported description`);
   assert.ok(preset.tags.length>=3,`${name} must preserve its exported searchable tags`);
+}
+for(const [id,name] of pass2Builtins){
+  const preset=presets.find(item=>item.id===id);
+  assert.equal(preset?.name,name,`${name} must retain its assigned built-in identity`);
+  assert.equal(preset.controls.length,CONTROL_COUNT,`${name} must expose all ten normalized control definitions`);
 }
 for(const [id,name] of removedBuiltins){
   assert.equal(presets.some(preset=>preset.id===id),false,`${name} legacy ID must be absent`);

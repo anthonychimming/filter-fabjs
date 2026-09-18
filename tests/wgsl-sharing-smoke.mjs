@@ -52,8 +52,8 @@ for(const blocked of ['rnd(0,255)','rst(7)','get(0)','put(1,0)','pow(2,3)']){
 }
 const oversized=programFor(Array(4).fill(Array(1100).fill('r').join('+')));
 assert.ok(oversized.metadata.nodeCount>MAX_WEBGPU_IR_NODES);assert.equal(WGSLCompiler.analyze(oversized).compatible,false,'sharing never bypasses resource bounds');
-const atlas=presets.find(p=>p.id==='mandelbrotatlas'),atlasMain=WGSLCompiler.compile(programFor(atlas.f)).code.split('fn main(')[1];
-assert.equal((atlasMain.match(/ff_mandelbrot\(/g)||[]).length,1,'Atlas keeps its existing formulas while sharing the field');
+const clouds=presets.find(p=>p.id==='fractalclouds'),cloudsMain=WGSLCompiler.compile(programFor(clouds.f)).code.split('fn main(')[1];
+assert.equal((cloudsMain.match(/ff_fbm\(/g)||[]).length,1,'Fractal Clouds keeps sharing its field across colour channels');
 
 // Execute generated scope/expressions with real CPU helpers and count field calls.
 // Browser tests separately validate WGSL types and f32 arithmetic on WebGPU.

@@ -117,7 +117,11 @@ const maximalFormula=Array(2048).fill('r').join('+'),maximalProgram=compileFilte
 assert.ok(estimateCpuProgramCost(maximalProgram)>MAX_CPU_RENDER_WORK/(1800*1800));
 assert.throws(()=>assertCpuRenderBudget(maximalProgram,1800,1800),error=>error?.name==='RenderBudgetError','maximal imported programs must be rejected before full-size CPU dispatch');
 assert.doesNotThrow(()=>assertCpuRenderBudget(maximalProgram,64,64),'the CPU budget must remain image-scaled for small previews');
-const largeImageCpuLimitedBuiltins=new Set(['c64multicolorbitmap','linearprismecho','spectraltearglitch','teallimemodularweave','touchingrandomcapsules','vhstrackingglitch']);
+const largeImageCpuLimitedBuiltins=new Set([
+  'c64multicolorbitmap','linearprismecho','spectraltearglitch','teallimemodularweave','vhstrackingglitch',
+  'radialecho','softmeshgradient','chromatic-glass','fractal-contours','fractal-displacement','halftone-print',
+  'instant-print-frame','iridescent-shift','mandelbrotjuliaatlas','futuristic-sci-fi-glitch-photo','touchingrandomcapsules'
+]);
 for(const preset of presets){
   const program=compileFilterProgram(preset.f.map(formula=>new Parser(formula).parse()));
   if(largeImageCpuLimitedBuiltins.has(preset.id)){

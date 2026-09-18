@@ -1,4 +1,4 @@
-# Filter Library — v2.8.5c
+# Filter Library — v2.8.6
 
 Phase 3 adds visible selection cues, touch targets, and focus improvements. Current testing notes and action semantics are in [UI Phase 3](UI_PHASE_3.md); the Phase 2/2.1 measurements below describe the earlier thumbnail release.
 
@@ -74,8 +74,8 @@ Desktop uses a full-height right drawer. At 920 CSS pixels or narrower the libra
 - Responsive browser checks passed at 1,366 × 768, 1,024 × 768, 768 × 1,024, 318 × 798, and 638 × 358 CSS pixels. These cover the desktop drawer, portrait bottom sheet, narrow mobile, and 200%-zoom-equivalent layouts. A keyboard pass opened the library with Enter, reached search, restrictions, the first preview and its separate favorite action with Tab, skipped the decorative thumbnail canvas, and restored launcher focus with Escape.
 - WebGPU and forced-CPU rendering were exercised in the browser; both produced real lazy card thumbnails. Coarse-pointer emulation, physical touch, and screen-reader speech were not tested.
 - The same fixture retains the bounded 1,000-entry performance projection. One generated-standalone run in local Chromium 152 observed a 30.4 ms opening and 12.8 ms p95 query-plus-layout time; timings are local observations, not cross-device guarantees.
-- Renderer/compiler/formula source was not changed. All 35 built-ins continue to compile as WebGPU-compatible in the automated suite.
-- The release build is `dist/filter-fabjs-v2.8.5c.html`. Direct `file://` behavior can vary by browser security policy, so localhost remains the supported test path.
+- The v2.8.6 catalog contains 52 built-ins, all attributed to Anthony Chimming and all compiling as WebGPU-compatible in the automated suite.
+- The release build is `dist/filter-fabjs-v2.8.6.html`. Direct `file://` behavior can vary by browser security policy, so localhost remains the supported test path.
 
 Run the complete verification workflow with:
 
