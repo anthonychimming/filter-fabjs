@@ -26,6 +26,8 @@ const order = [
   'src/io/image-io.js',
   'src/app/filter-thumbnail-service.js',
   'src/io/png-metadata.js',
+  'src/io/filter-library-manifest.js',
+  'src/io/filter-library-client.js',
   'src/app/filter-catalog.js',
   'src/ui/filter-browser.js',
   'src/ui/dom.js',

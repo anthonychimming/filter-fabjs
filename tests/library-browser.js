@@ -90,7 +90,7 @@ async function run(url){
     const tagButton=browser.dialog.querySelector('.result-tags button');assert(tagButton?.textContent==='Retro','result tags are separate labeled buttons');
     // Set an incompatible favorite restriction without refreshing to verify that a tag click clears it.
     favorites.checked=true;tagButton.focus();tagButton.click();
-    assert(search.value===''&&source.value==='all'&&!favorites.checked,'tag browsing clears other restrictions');
+    assert(search.value===''&&source.value==='local'&&!favorites.checked,'tag browsing clears other restrictions');
     assert(browser.dialog.querySelector('[data-selected]').textContent.includes('Retro'),'clicked tag becomes the visible selection');
     assert(document.activeElement===browser.dialog.querySelector('[data-selected] button'),'tag browsing restores focus to the selected-tag control');
     assert(browser.dialog.querySelector('[data-page]').textContent==='Page 1 of 20','tag browsing includes all 1000 matching filters from page one');

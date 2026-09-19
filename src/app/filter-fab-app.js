@@ -4,7 +4,8 @@
  * Licensed GPL-2.0-or-later. See LICENSE and README.md.
  */
 import { normalizeTags, tagKey, portableContent, validatePortableId } from '../core/filter-metadata.js';
-import { PREFERENCE_PREFIX, readEntryPreference, writeEntryPreference, catalogEntry, readLibrary, writeLibraryRecord } from './filter-catalog.js';
+import { PREFERENCE_PREFIX, readEntryPreference, writeEntryPreference, catalogEntry, onlineCatalogEntry, readLibrary, writeLibraryRecord } from './filter-catalog.js';
+import { DEFAULT_ONLINE_LIBRARY_MANIFEST_URL, fetchOnlineLibraryManifest, resolveOnlineLibraryAssetUrl } from '../io/filter-library-client.js';
 import { createFilterBrowser, chooseFilterAction } from '../ui/filter-browser.js';
 import { $, $$, clamp, debounce, storageGet, storageSet, escapeHtml, slug } from '../core/utils.js';
 import { CONTROL_COUNT, CONTROL_DEFINITIONS, cloneControlUI, defaultControlLabels, defaultControlUIs, defaultControlValues, normalizeControlUI, normalizeToggleRaw } from '../core/controls.js';
@@ -90,11 +91,32 @@ export function upsertCustomPreset(list,filter,name,idFactory=createCustomPreset
   const next=[...list],index=next.findIndex(item=>item.name.toLowerCase()===name.toLowerCase()),used=new Set(next.map(item=>item.id)),id=index>=0?next[index].id:allocateCustomPresetId(used,idFactory),preset={...filter,name,id};if(index>=0)next[index]=preset;else next.push(preset);return{list:next,preset};
 }
 
-export function initFilterFabApp(){
+// App-owned, session-only discovery state. Loading never prepares a filter document.
+export function createOnlineLibrarySession({manifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL,fetchImpl=globalThis.fetch,preference,onChange=()=>{}}){
+  let status='idle',manifest=null,error=null,promise=null,requestId=0,controller=null,entries=null;
+  const getState=()=>({status,error});
+  function load({retry=false}={}){
+    if(promise)return promise;
+    if(status==='ready'||(status==='error'&&!retry))return Promise.resolve();
+    const id=++requestId;controller=new AbortController();status='loading';error=null;
+    promise=fetchOnlineLibraryManifest(manifestUrl,{fetchImpl,signal:controller.signal}).then(result=>{
+      if(id!==requestId)return;manifest=result.manifest;manifestUrl=result.manifestUrl;entries=null;status='ready';
+    }).catch(failure=>{if(id!==requestId)return;error=failure;status='error';}).finally(()=>{
+      if(id!==requestId)return;promise=null;controller=null;onChange();
+    });
+    onChange();return promise;
+  }
+  return{getState,load,getEntries:()=>entries??(entries=(manifest?.filters||[]).map(metadata=>onlineCatalogEntry(metadata,preference(`online:${metadata.id}`)))),
+    invalidate:()=>{entries=null;},resolvePreview:entry=>resolveOnlineLibraryAssetUrl(manifestUrl,entry.remote.preview.url),
+    dispose:()=>{requestId++;controller?.abort();controller=null;promise=null;manifest=null;entries=null;status='idle';error=null;}};
+}
+
+export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL,onlineFetchImpl=globalThis.fetch}={}){
   const {el,ctx}=getDom();
   const state={source:null,filtered:null,width:0,height:0,view:'filtered',workspaceMode:'explore',split:50,zoom:'fit',zoomLevel:1,controls:defaultControlValues(),labels:defaultControlLabels(),controlUIs:defaultControlUIs(),renderId:0,imageLoadId:0,filterLoadId:0,rendererManager:null,rendererPreference:storageGet('ffw-renderer','auto'),lastProgram:null,lastProgramKey:null,lastSuccessfulRenderSignature:null,lastWGSL:null,lastGpuAnalysis:null,lastRendererDiagnostics:null,isRendering:false,usedControls:Array(CONTROL_COUNT).fill(false),legacyMath:false,hasPendingFormulaChanges:false,focusSnapshot:null};
   const canvasView=createCanvasView({state,el,ctx});
   let controlsController,browser,catalogCache=null,librarySession=null;
+  const onlineLibrary=createOnlineLibrarySession({manifestUrl:onlineManifestUrl,fetchImpl:onlineFetchImpl,preference,onChange:()=>browser?.refreshOnline()});
   const activeDocument={key:null,id:undefined,tags:[],baseline:null,recordBaseline:null,imported:false,importSource:null};
 
   const rendererFactories={
@@ -213,6 +235,7 @@ export function initFilterFabApp(){
     return{tags,id,legacyMath,formulas:normalizedFormulas,controls,labels,controlUIs,name,description,author,program};
   }
   function requestLibraryThumbnail(entry,callback,priority=0){
+    if(entry.source==='online')return;
     try{
       const definition=resolveCatalogDefinition(entry);if(!definition)throw new Error('This filter was deleted in another tab.');const prepared=prepareFilter(definition),signature=filterRenderSignature({mathMode:prepared.legacyMath?'legacy':'float',formulas:prepared.formulas,controls:prepared.controls});
       return thumbnailService.request({entryKey:entry.key,signature,program:prepared.program,controls:prepared.controls,legacyMath:prepared.legacyMath},callback,{priority});
@@ -253,6 +276,7 @@ export function initFilterFabApp(){
     librarySession={originalWorkingDocument:captureLibraryWorkingState(),candidateEntry:null,candidateDefinition:null,candidatePrepared:null,candidateRendered:false,requestId:0};thumbnailService.open();return true;
   }
   async function previewLibraryEntry(entry){
+    if(entry.source==='online')return false;
     const session=librarySession;if(!session)throw new Error('The Filter Library session is no longer open.');
     const requestId=++session.requestId,definition=resolveCatalogDefinition(entry);if(!definition)throw new Error('This filter was deleted in another tab.');
     const prepared=prepareFilter(definition),previousWorkingState=captureLibraryWorkingState(),previousCandidate={entry:session.candidateEntry,definition:session.candidateDefinition,prepared:session.candidatePrepared,rendered:session.candidateRendered};
@@ -401,7 +425,7 @@ export function initFilterFabApp(){
     el.renderBtn.onclick=()=>render({focusInvalid:true});
     const resetFilter=()=>applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');$('#resetBtn').onclick=resetFilter;$('#exploreResetBtn').onclick=resetFilter;
     el.activeFavorite.onclick=()=>{if(!activeDocument.key)return;try{const current=preference(activeDocument.key);writeEntryPreference(localStorage,activeDocument.key,{favorite:!current.favorite});catalogCache=null;browser?.refresh();updateDocumentHeader();}catch(error){organizationError(error);}};
-    browser=createFilterBrowser({launcher:el.searchFilters,getEntries:catalog,begin:beginLibrarySession,preview:previewLibraryEntry,apply:applyLibraryCandidate,cancel:cancelLibrarySession,toggleFavorite:entry=>{writeEntryPreference(localStorage,entry.key,{favorite:!entry.favorite});catalogCache=null;if(entry.key===activeDocument.key)updateDocumentHeader();},requestThumbnail:requestLibraryThumbnail,clearThumbnailRequests:()=>thumbnailService.clearRequests(),onError:organizationError});
+    browser=createFilterBrowser({launcher:el.searchFilters,getEntries:()=>[...catalog(),...onlineLibrary.getEntries()],getOnlineState:onlineLibrary.getState,loadOnline:onlineLibrary.load,resolveOnlinePreviewUrl:onlineLibrary.resolvePreview,begin:beginLibrarySession,preview:previewLibraryEntry,apply:applyLibraryCandidate,cancel:cancelLibrarySession,toggleFavorite:entry=>{writeEntryPreference(localStorage,entry.key,{favorite:!entry.favorite});catalogCache=null;onlineLibrary.invalidate();if(entry.key===activeDocument.key)updateDocumentHeader();},requestThumbnail:requestLibraryThumbnail,clearThumbnailRequests:()=>thumbnailService.clearRequests(),onError:organizationError});
     populatePresets();
     el.preset.onchange=async()=>{
       const key=el.preset.value;
@@ -452,9 +476,9 @@ export function initFilterFabApp(){
     $('#closeHelp').onclick=()=>$('#helpDialog').close();
     window.addEventListener('storage',event=>{if(event.key===null||event.key==='ffw-custom-presets'||event.key.startsWith(PREFERENCE_PREFIX)){
       if(activeDocument.key?.startsWith('custom:')){try{const record=findCustomPresetById(library().presets,activeDocument.id);if(!record){activeDocument.key=null;activeDocument.id=undefined;activeDocument.imported=false;activeDocument.importSource=null;toast('Saved filter deleted in another tab. Save as new to keep this draft.');}else if(JSON.stringify(record)!==activeDocument.recordBaseline)toast('Saved filter changed in another tab. Update will require review.');}catch(error){organizationError(error);}}
-      catalogCache=null;refreshTags();populatePresets();
+      catalogCache=null;onlineLibrary.invalidate();refreshTags();populatePresets();
     }});
-    window.addEventListener('beforeunload',()=>{thumbnailService.dispose();state.rendererManager?.dispose();});
+    window.addEventListener('beforeunload',()=>{onlineLibrary.dispose();thumbnailService.dispose();state.rendererManager?.dispose();});
   }
 
   window.FilterFabJS=Object.freeze({version:'2.8.7',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getThumbnailDiagnostics:()=>thumbnailService.diagnostics(),getRendererPreference:()=>state.rendererPreference,getWorkspaceMode:()=>state.workspaceMode,getLibraryPreviewState:()=>({open:Boolean(librarySession),candidateKey:librarySession?.candidateEntry?.key||null,candidateRendered:Boolean(librarySession?.candidateRendered),activeKey:activeDocument.key,activeId:activeDocument.id,imported:activeDocument.imported,importSource:activeDocument.importSource,baseline:activeDocument.baseline,recordBaseline:activeDocument.recordBaseline})});

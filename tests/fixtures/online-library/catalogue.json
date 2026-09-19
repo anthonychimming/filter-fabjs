@@ -1,0 +1,10 @@
+{
+  "schema": "filter-fab-js/library",
+  "schemaVersion": 1,
+  "libraryVersion": 1,
+  "filters": [
+    {"id":"fixture-colour","revision":1,"name":"Colour Study","author":"Adele","description":"Warm bands on a standardized sample.","tags":["Colour","Abstract"],"documentType":"filter","filterFormat":2,"preview":{"url":"colour.png","width":128,"height":128},"package":{"url":"packages/not-implemented.png"}},
+    {"id":"fixture-wave","revision":1,"name":"Wave Study","author":"Bea","description":"Cool radial sample rings.","tags":["Distortion","Abstract"],"documentType":"filter","filterFormat":2,"preview":{"url":"wave.png","width":128,"height":128},"package":{"url":"packages/not-implemented.png"}},
+    {"id":"fixture-missing","revision":1,"name":"Missing Sample","author":"Cam","description":"Intentional image failure; metadata and Favorite still work.","tags":["Test"],"documentType":"filter","filterFormat":2,"preview":{"url":"intentionally-missing.png","width":128,"height":128},"package":{"url":"packages/not-implemented.png"}}
+  ]
+}

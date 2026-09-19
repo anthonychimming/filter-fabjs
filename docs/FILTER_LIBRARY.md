@@ -66,7 +66,21 @@ The launcher exposes dialog semantics and the generated library is labelled by *
 
 Desktop uses a full-height right drawer. At 920 CSS pixels or narrower the library uses a viewport-bounded bottom sheet; short-height layouts make tools and results independently reachable. Pagination is removed from layout when hidden. No physical touch or screen-reader speech claim is made without dedicated testing.
 
-## Validation record — September 11, 2026
+## Online browsing — Stage 2 development checkpoint
+
+Source now offers **All local** (default), **Built-in**, **My Filters**, and **Online**. Opening local sources never requests Online data. Selecting Online loads a bounded static manifest; loading, an empty catalogue, no search matches, and a failed request with Retry are distinct. Successful data stays in page-session memory; there is no persistent catalogue cache or automatic retry. Reset view returns to All local. Card tags browse All local for local cards and remain Online for Online cards.
+
+Online entries are metadata-only (`document: null`). They reuse metadata search, match-all tags, favorites, sorting and pagination. Online cards show lazy static **Sample** images from standardized reference artwork, with **Sample unavailable** on image failure. They do not render against the current source image. Their bodies have no candidate action; favorites do not install a filter or download its package. Browsing Online cannot enable Apply; a previously rendered local candidate remains available for Apply or Cancel. Author's preset dropdown and local thumbnail/candidate workflows stay local-only.
+
+The future static endpoint is configured once in `io/filter-library-client.js`. Transport uses HTTPS, omitted credentials, an 8 MiB response bound, a 12-second timeout, cancellation and Stage 1 validation. This is a development checkpoint: Online package loading, current-image preview, Apply and Download PNG are deferred to Stage 3; persistent caching is deferred to Stage 4.
+
+For controlled manual testing, run `npm run dev` and open `http://localhost:8080/tests/online-library-browser.html`. The test-only app initializer injects a local URL/fetch implementation. Its first request fails; Retry serves three entries, two static PNG samples and one intentional broken-image path. **Run Stage 2 browser checks** verifies failure isolation, search/favorites, unchanged canvas/program/diagnostics, local candidate coexistence and Cancel restoration. Reload the fixture before rerunning; the check restores its test favorite preference. The fixture also remains usable interactively. Existing local workflow checks remain at `tests/library-browser.html`, for both modular and standalone builds.
+
+Before Stage 3, check local default/no network; Online success and Sample labels; failure/Retry; broken sample plus usable Favorite; local Apply and exact Cancel/Escape restoration; desktop/narrow layouts; and keyboard reachability/focus restoration. Real endpoint availability/CORS and physical touch/screen-reader behavior require their own checks.
+
+Stage 2 validation: the new client/UI Node smoke tests and full `npm run verify` pass. The controlled browser fixture passes for modular code and the generated standalone (`online-library-browser.html?standalone=1`), including rapid local candidate switching, pending-formula Escape restoration, My Filter Apply, and Close restoration. Desktop and narrow sample-card layouts were inspected. The older `library-browser.html` workflow currently stops at its pre-existing “single-page catalogs hide inert pagination” assertion: the baseline now includes 52 built-ins, exceeding the 50-entry page size. That assertion has not been weakened; its fixture assumption needs a separate update before relying on the complete older browser run.
+
+## Validation record — September 11, 2026 (local library)
 
 - `npm run verify`: passed syntax checks, all Node smoke suites (including the lazy thumbnail service), the production build, and build-output validation after the Phase 2.1 implementation.
 - Browser workflow fixture: `tests/library-browser.html`. Both the modular application and generated standalone passed the Phase 2 workflows plus bounded thumbnail dimensions, single-render concurrency, lazy opening, main-program/canvas isolation, cache reuse, keyboard-stop behavior, and close cancellation. The generated standalone used WebGPU in the available Chromium session.
