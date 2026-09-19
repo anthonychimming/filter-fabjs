@@ -62,6 +62,24 @@ The CPU renderer remains the compatibility backend for legacy integer-mode AFS f
 
 Custom records retain `ffw-custom-presets`; favorites and built-in additions use `ffw-entry-v1:<builtin|custom>:<id>`. Existing custom ID migration is reused. Raw malformed entries and unrelated record fields survive writes. Search criteria are session-only. Storage events invalidate catalog projections and refresh preferences without applying a filter. Update re-reads its target and checks the captured record baseline, but shared-list localStorage writes are not atomic across tabs.
 
+### Online catalog foundation (Stage 1)
+
+```text
+Online manifest metadata
+    ↓
+src/io/filter-library-manifest.js
+    ↓
+metadata-only CatalogEntry
+    ↓
+searchCatalog()
+```
+
+`validateOnlineLibraryManifest(value)` validates an already-parsed object and returns a fresh projection of known fields. Schema `filter-fab-js/library`, schema version 1 requires a positive safe-integer `libraryVersion` and at most 1,000 filters with unique portable IDs. Entries require a positive safe-integer revision, a trimmed 1–120-character name, `documentType: 'filter'`, `filterFormat: 2`, a preview descriptor (relative PNG/WebP path, integer dimensions 1–2048), and a separate package descriptor (relative PNG path). Author and description default to empty strings and are bounded to 120 and 2,000 characters; tags default to `[]` and reuse portable tag normalization. Optional `publishedAt` must be a real `YYYY-MM-DD` date; optional `generatedAt` must be a non-empty Date.parse-compatible string retained as supplied. Asset paths are bounded to 2,048 characters and timestamps to 120. Paths are trimmed, reject schemes, leading slashes, backslashes, controls, dot/traversal segments (including encoded forms), queries and fragments, and are never resolved to absolute URLs here. Unknown fields are discarded; no native filter document is parsed or fabricated.
+
+`onlineCatalogEntry(metadata, preference)` consumes one normalized manifest entry. Its stable key is `online:<id>` and source is `online`; it projects name, description, author, curated tags, search index, favorite state, `unavailable: false`, and revision/type/format/date/asset descriptors under `remote`. Unresolved remote entries have `document: null` until a later package-resolution stage. Favorites reuse `ffw-entry-v1:online:<id>`; preference tags never augment curated Online tags. `searchCatalog()` retains default `source: 'all'` (every supplied entry), adds `local` (Built-in + Custom only), and supports `online` alongside existing individual source scopes.
+
+Manifest validation is independent of network transport, PNG parsing, and rendering; remote catalog metadata does not enter the compiler or renderer. Stage 1 makes no network request and does not connect Online entries to the UI, candidate preview, or thumbnail service. Local Built-in/My Filters behavior and the visible source selector are unchanged. Fetching with response-size limits, URL resolution, and package resolution remain future work.
+
 ## Stage A fractal refinement (2.8.5)
 
 `MAX_FRACTAL_ITERATIONS` is the single shared 512 ceiling interpolated into both worker and WGSL source. CPU static budgeting derives conservative numeric bounds from typed IR constants, unary signs, controls, constant-endpoint `val()`, `clamp()`, `min()`, `max()`, and bounded selects. It matches f32 conversion and truncation before clamping the loop cost. Unknown bounds and legacy integer-mode expressions use 512; argument evaluation remains fully counted. Control bounds assume the validated native 0–255 control contract. This internal renderer helper adds no capability predictions to neutral IR metadata.

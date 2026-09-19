@@ -18,9 +18,16 @@ export function catalogEntry(document,source,preference){
   const name=String(document.name||'Unavailable filter'),description=String(document.description||''),author=String(document.author||'');
   return{key:`${source}:${document.id}`,source,name,description,author,tags,favorite:preference.favorite,document,unavailable,index:[name,description,author,...tags].map(searchText)};
 }
+// metadata is one normalized filter from validateOnlineLibraryManifest().
+export function onlineCatalogEntry(metadata,preference){
+  const {id,revision,name,description,author,documentType,filterFormat}=metadata,tags=[...metadata.tags];
+  return{key:`online:${id}`,source:'online',name,description,author,tags,favorite:preference.favorite,document:null,unavailable:false,
+    remote:{id,revision,documentType,filterFormat,...(metadata.publishedAt===undefined?{}:{publishedAt:metadata.publishedAt}),preview:{...metadata.preview},package:{...metadata.package}},
+    index:[name,description,author,...tags].map(searchText)};
+}
 export function searchCatalog(entries,{query='',source='all',favorites=false,tags=[],sort='az'}={}){
   const text=searchText(query),terms=text.split(' ').filter(Boolean);
-  const scoped=entries.filter(entry=>(source==='all'||entry.source===source)&&(!favorites||entry.favorite));
+  const scoped=entries.filter(entry=>(source==='all'||(source==='local'?entry.source==='builtin'||entry.source==='custom':entry.source===source))&&(!favorites||entry.favorite));
   const choices=new Map();for(const entry of scoped)for(const tag of entry.tags)if(!choices.has(tagKey(tag)))choices.set(tagKey(tag),tag);
   const rank=entry=>entry.index[0]===text?0:entry.index[0].startsWith(text)?1:terms.every(term=>entry.index[0].includes(term))?2:3;
   const results=scoped.filter(entry=>tags.every(tag=>entry.tags.some(label=>tagKey(label)===tag))&&terms.every(term=>entry.index.some(field=>field.includes(term))));
