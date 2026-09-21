@@ -102,3 +102,13 @@ export async function extractFilterFabMetadata(pngBlobOrFile){
   let value;try{value=JSON.parse(text);}catch{fail('Filter FabJS PNG metadata is not valid JSON')}
   return validateFilterFabPngEnvelope(value);
 }
+
+// Publishing inspection reuses this module's bounded chunk parser; no pixel decoding.
+export async function readPngDimensions(pngBlobOrFile){
+  const chunks=parseChunks(await blobBytes(pngBlobOrFile)),header=chunks[0];
+  if(header?.type!=='IHDR'||header.data.length!==13||chunks.filter(item=>item.type==='IHDR').length!==1)fail('PNG requires one leading 13-byte IHDR');
+  if(crc32([header.typeBytes,header.data])!==header.crc)fail('PNG IHDR CRC check failed','crc');
+  const width=readU32(header.data,0),height=readU32(header.data,4);
+  if(!width||!height)fail('PNG dimensions must be positive');
+  return{width,height};
+}

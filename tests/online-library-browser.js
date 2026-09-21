@@ -3,7 +3,7 @@ let requests=0,failNext=true;
 window.fixtureFetch=async(url,options)=>{requests++;if(failNext){failNext=false;return new Response('Fixture unavailable',{status:503});}return fetch(url,options);};
 const standalone=new URLSearchParams(location.search).has('standalone');
 const html=await(await fetch(new URL(standalone?'dist/filter-fabjs-v2.8.7.html':'index.html',root))).text();
-const options=`{onlineManifestUrl:${JSON.stringify(manifestUrl)},onlineFetchImpl:(...args)=>parent.fixtureFetch(...args)}`;
+const options=`{onlineStorage:null,onlineManifestUrl:${JSON.stringify(manifestUrl)},onlineFetchImpl:(...args)=>parent.fixtureFetch(...args)}`;
 frame.srcdoc=html.replace('<head>',`<head><base href="${root.href}">`).replace(standalone?'initFilterFabApp();':'<script type="module" src="./src/main.js"></script>',standalone?`initFilterFabApp(${options});`:`<script type="module">import {initFilterFabApp} from './src/app/filter-fab-app.js';initFilterFabApp(${options});</script>`);
 const until=async test=>{const end=Date.now()+15000;while(!test()){if(Date.now()>end)throw new Error('Fixture timed out');await new Promise(resolve=>setTimeout(resolve,30));}};
 await until(()=>frame.contentWindow.FilterFabJS&&!frame.contentDocument.body.classList.contains('ui-locked'));
@@ -25,7 +25,7 @@ document.querySelector('#run').onclick=async()=>{
     change('[data-source]','builtin');change('[data-source]','custom');assert(requests===0,'individual local sources do not fetch');
     change('[data-source]','online');await until(()=>$('.filter-library-empty')?.textContent.includes('Could not reach'));assert(requests===1,'failure stays inside Online');
     $('.filter-library-empty button').click();await until(()=>doc.querySelectorAll('.filter-card').length===3);assert(requests===2,'Retry loads controlled fixture');
-    assert(!$('.filter-results [data-entry-action="preview"]')&&$('[data-apply]').disabled,'Online has no candidate action or Apply eligibility');
+    assert(doc.querySelectorAll('.filter-results [data-entry-action="preview"]').length===3&&$('[data-apply]').disabled&&!api.getLibraryPreviewState().candidateKey&&requests===2,'Online preview is explicit; browsing has no package request or Apply eligibility');
     await until(()=>doc.querySelectorAll('.filter-thumbnail[data-thumbnail-state="ready"]').length===2&&$('.filter-thumbnail[data-thumbnail-state="failed"]'));
     assert($('.filter-thumbnail[data-thumbnail-state="failed"]').textContent.includes('Sample unavailable'),'broken sample has isolated failure');
     assert(doc.querySelectorAll('.filter-sample-badge').length===3,'Sample indicators visible');

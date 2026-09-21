@@ -1,0 +1,50 @@
+import assert from 'node:assert/strict';
+import { fetchOnlineFilterPackage, onlinePackageFilename, ONLINE_LIBRARY_PACKAGE_MAX_BYTES } from '../src/io/filter-library-package.js';
+import { onlineCatalogEntry } from '../src/app/filter-catalog.js';
+import { validateOnlineLibraryManifest } from '../src/io/filter-library-manifest.js';
+import { packageFixtureBytes, packageFixtureDocument, packageFixtureMetadata, packageFixturePng } from './helpers/online-package-fixture.js';
+
+const manifestUrl='https://fixture.test/library/catalogue.json';
+const metadata=validateOnlineLibraryManifest({schema:'filter-fab-js/library',schemaVersion:1,libraryVersion:1,filters:[packageFixtureMetadata()]}).filters[0];
+const entry=onlineCatalogEntry(metadata,{favorite:false}),original=JSON.stringify(entry),bytes=await packageFixtureBytes();
+const get=(fetchImpl,options={})=>fetchOnlineFilterPackage(entry,{manifestUrl,fetchImpl,...options});
+const result=await get(async(url,options)=>{
+  assert.equal(url,'https://fixture.test/library/fixture-online-a.png');
+  assert.equal(options.method,'GET');assert.equal(options.credentials,'omit');assert.equal(options.redirect,'error');assert.ok(options.signal);
+  return new Response(bytes,{headers:{'Content-Type':'text/plain'}});
+});
+assert.deepEqual(result.bytes,bytes);assert.equal(result.entryKey,entry.key);assert.equal(result.revision,1);assert.equal(result.document.version,2);
+assert.equal(JSON.stringify(entry),original);assert.equal(entry.document,null);assert.equal(onlinePackageFilename(result.document.id),'filterfab-fixture-online-a.png');
+for(const id of [undefined,'../x','a/b','<x>','x'.repeat(81)])assert.throws(()=>onlinePackageFilename(id));
+for(const status of [404,500])await assert.rejects(get(async()=>new Response('bad',{status})),new RegExp(`HTTP ${status}`));
+await assert.rejects(get(async()=>{throw new TypeError('Network unavailable');}),/Network unavailable/);
+await assert.rejects(get(async()=>new Response(null)),/empty/);
+await assert.rejects(get(async()=>new Response(bytes,{headers:{'Content-Length':String(ONLINE_LIBRARY_PACKAGE_MAX_BYTES+1)}})),/exceeds/);
+await assert.rejects(get(async()=>new Response(new Uint8Array(ONLINE_LIBRARY_PACKAGE_MAX_BYTES+1))),/exceeds/);
+let bodyCancelled=false;
+await assert.rejects(get(async()=>new Response(new ReadableStream({pull(controller){controller.enqueue(new Uint8Array(1024*1024));},cancel(){bodyCancelled=true;}}))),/exceeds/);
+assert.equal(bodyCancelled,true,'oversized streaming body must be cancelled without buffering the rest');
+const bodyAbort=new AbortController();let started;
+const bodyStarted=new Promise(resolve=>started=resolve);
+const bodyPending=get(async()=>new Response(new ReadableStream({start(){started();},cancel(){bodyCancelled=true;}})),{signal:bodyAbort.signal});
+await bodyStarted;bodyAbort.abort();await assert.rejects(bodyPending,{name:'AbortError'});
+await assert.rejects(get(async()=>({ok:true,url:'https://other.test/escape.png',headers:new Headers(),arrayBuffer:()=>{throw new Error('Must not read escaped body');}})),/origin/);
+await assert.rejects(fetchOnlineFilterPackage({...entry,remote:{...entry.remote,package:{url:'https://other.test/a.png'}}},{manifestUrl,fetchImpl:()=>{throw new Error('Must not fetch');}}),/relative/);
+await assert.rejects(get(async()=>new Response('not PNG')),/PNG/);
+await assert.rejects(get(async()=>new Response(packageFixturePng())),/no FilterFabJS metadata/);
+const corrupt=bytes.slice();corrupt[corrupt.length-17]^=1;
+await assert.rejects(get(async()=>new Response(corrupt)),/CRC|crc/);
+for(const override of [{id:'different'},{name:'Other'},{author:'Other'},{description:'Other'},{tags:['Different']},{formulas:['r+','g','b','a']},{controls:[{value:'invalid'}]}]){
+  const invalid=await packageFixtureBytes({...packageFixtureDocument,...override});
+  await assert.rejects(get(async()=>new Response(invalid)),/match|channel|control/);
+}
+const equivalent=await packageFixtureBytes({...packageFixtureDocument,tags:[' warm ','COLOUR']});
+await get(async()=>new Response(equivalent));
+const cancelled=new AbortController();cancelled.abort();let calls=0;
+await assert.rejects(get(async()=>{calls++;},{signal:cancelled.signal}),{name:'AbortError'});assert.equal(calls,0);
+const active=new AbortController();let resolveLate,seenSignal;
+const pending=get((url,options)=>{seenSignal=options.signal;return new Promise(resolve=>resolveLate=resolve);},{signal:active.signal});
+active.abort();await assert.rejects(pending,{name:'AbortError'});assert.equal(seenSignal.aborted,true);resolveLate(new Response(bytes));
+await assert.rejects(get(()=>new Promise(()=>{}),{timeoutMs:5}),/timed out/);
+await assert.rejects(get(async()=>new Response(bytes),{timeoutMs:Infinity}),/finite/);
+console.log('Online package origin/HTTP/byte/timeout/abort, PNG/native validation, metadata identity, exact bytes and filename tests passed.');

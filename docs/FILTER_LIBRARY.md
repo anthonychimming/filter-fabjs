@@ -66,19 +66,28 @@ The launcher exposes dialog semantics and the generated library is labelled by *
 
 Desktop uses a full-height right drawer. At 920 CSS pixels or narrower the library uses a viewport-bounded bottom sheet; short-height layouts make tools and results independently reachable. Pagination is removed from layout when hidden. No physical touch or screen-reader speech claim is made without dedicated testing.
 
-## Online browsing — Stage 2 development checkpoint
+## Online Library — Stage 4 development checkpoint
 
-Source now offers **All local** (default), **Built-in**, **My Filters**, and **Online**. Opening local sources never requests Online data. Selecting Online loads a bounded static manifest; loading, an empty catalogue, no search matches, and a failed request with Retry are distinct. Successful data stays in page-session memory; there is no persistent catalogue cache or automatic retry. Reset view returns to All local. Card tags browse All local for local cards and remain Online for Online cards.
+Source now offers **All local** (default), **Built-in**, **My Filters**, and **Online**. Opening local sources never requests Online data. Selecting Online loads a bounded static manifest; loading, an empty catalogue, no search matches, and a failed request with Retry are distinct. Successful metadata is saved as a bounded last-known-good catalogue; first Online use on a later page immediately shows validated saved cards while refreshing. There is no periodic polling. Reset view returns to All local. Card tags browse All local for local cards and remain Online for Online cards.
 
-Online entries are metadata-only (`document: null`). They reuse metadata search, match-all tags, favorites, sorting and pagination. Online cards show lazy static **Sample** images from standardized reference artwork, with **Sample unavailable** on image failure. They do not render against the current source image. Their bodies have no candidate action; favorites do not install a filter or download its package. Browsing Online cannot enable Apply; a previously rendered local candidate remains available for Apply or Cancel. Author's preset dropdown and local thumbnail/candidate workflows stay local-only.
+Online entries are metadata-only (`document: null`). They reuse metadata search, match-all tags, favorites, sorting and pagination. Online cards show lazy static **Sample** images from standardized reference artwork, with **Sample unavailable** on image failure. They do not render against the current source image. Selecting an Online card explicitly loads its package and previews it on your current source image. Favorites never fetch packages or install filters. Browsing alone cannot enable Apply; a previously rendered candidate remains available for Apply or Cancel. Author's preset dropdown and local thumbnail workflows stay local-only.
 
-The future static endpoint is configured once in `io/filter-library-client.js`. Transport uses HTTPS, omitted credentials, an 8 MiB response bound, a 12-second timeout, cancellation and Stage 1 validation. This is a development checkpoint: Online package loading, current-image preview, Apply and Download PNG are deferred to Stage 3; persistent caching is deferred to Stage 4.
+The future static endpoint is configured once in `io/filter-library-client.js`. Transport uses HTTPS, omitted credentials, an 8 MiB response bound, a 12-second timeout, cancellation and Stage 1 validation. This remains a development checkpoint: production availability depends on the future publishing repository. Stage 4 caches catalogue metadata and validated packages in memory as described below; publishing and CI are deferred to Stage 5.
 
 For controlled manual testing, run `npm run dev` and open `http://localhost:8080/tests/online-library-browser.html`. The test-only app initializer injects a local URL/fetch implementation. Its first request fails; Retry serves three entries, two static PNG samples and one intentional broken-image path. **Run Stage 2 browser checks** verifies failure isolation, search/favorites, unchanged canvas/program/diagnostics, local candidate coexistence and Cancel restoration. Reload the fixture before rerunning; the check restores its test favorite preference. The fixture also remains usable interactively. Existing local workflow checks remain at `tests/library-browser.html`, for both modular and standalone builds.
 
-Before Stage 3, check local default/no network; Online success and Sample labels; failure/Retry; broken sample plus usable Favorite; local Apply and exact Cancel/Escape restoration; desktop/narrow layouts; and keyboard reachability/focus restoration. Real endpoint availability/CORS and physical touch/screen-reader behavior require their own checks.
+For discovery regressions, check local default/no network; Online success and Sample labels; failure/Retry; broken sample plus usable Favorite; local Apply and exact Cancel/Escape restoration; desktop/narrow layouts; and keyboard reachability/focus restoration. Real endpoint availability/CORS and physical touch/screen-reader behavior require their own checks.
 
 Stage 2 validation: the new client/UI Node smoke tests and full `npm run verify` pass. The controlled browser fixture passes for modular code and the generated standalone (`online-library-browser.html?standalone=1`), including rapid local candidate switching, pending-formula Escape restoration, My Filter Apply, and Close restoration. Desktop and narrow sample-card layouts were inspected. The older `library-browser.html` workflow currently stops at its pre-existing “single-page catalogs hide inert pagination” assertion: the baseline now includes 52 built-ins, exceeding the 50-entry page size. That assertion has not been weakened; its fixture assumption needs a separate update before relying on the complete older browser run.
+
+Online Preview shows **Loading preview…**, then **Previewing…**, and finally **✓ Previewing on canvas**. The card image stays a standardized Sample; the main canvas uses your current source image. Failed fetch/validation leaves the last completed candidate and canvas intact, with a retry available by selecting the card again. Rapid selection keeps only the latest intended candidate. Cancel, Close, and Escape restore the exact original working filter, including unsaved edits; source/document replacement invalidates pending work.
+
+Apply makes the resolved native filter active as **Imported from Online · Not saved**. It preserves the portable ID and does not automatically add My Filters. Use the ordinary Author Save workflow later to keep an independent local filter. No catalogue revision is added to native v2.
+
+The separate **Download PNG** icon validates the package, then downloads its exact original bytes as `filterfab-<id>.png`. It does not preview, enable Apply, change favorites, or install a filter. Duplicate clicks while that download is pending share no extra request. Package transport is limited to the manifest origin, 8 MiB and 18 seconds; the existing PNG/native validators and catalogue metadata match are mandatory. Validation establishes consistency, not cryptographic authorship. Validated packages are reused within the page session, under the Stage 4 limits below.
+
+Run `npm run dev` and open `http://localhost:8080/tests/online-package-browser.html` for controlled package/race/download checks; append `?standalone=1` after `npm run build` to test the standalone build. Run the existing Stage 2 fixture for discovery and local regressions. For local regression QA, manually check Online preview and Sample labelling; Cancel/Close/Escape during loading; rapid switching; Apply followed by Author edit/Save; Download followed by PNG image opening and embedded-filter import; malformed/unavailable packages; and keyboard/focus and narrow-screen layouts for Preview/Favorite/Download/Apply/Cancel.
+
 
 ## Validation record — September 11, 2026 (local library)
 
@@ -96,3 +105,41 @@ Run the complete verification workflow with:
 ```bash
 npm run verify
 ```
+
+### Deterministic manual Online QA (development only)
+
+From the repository, run `npm run dev`, then open **http://localhost:8080/tests/online-package-browser.html?manual=1**. Do not open the production standalone through `file://` for fixture QA: it retains the future production endpoint and a null origin. No production URL setting or production conditional is added.
+
+The manual harness uses the existing `initFilterFabApp({onlineManifestUrl, onlineFetchImpl})` test injection. It supplies a local manifest URL and controlled Response objects for that manifest and its package PNGs; Sample images are ordinary localhost assets. Responses still run through the production Stage 1 manifest validator, Stage 2 catalogue client/session, and Stage 3 bounded package client, PNG decoder and native filter validation. Packages are generated using the existing PNG metadata writer. There is no production endpoint dependency; manual mode exercises the normal Stage 4 caches.
+
+- **Online A:** valid red-inversion package, Warm/Colour tags, Fixture Author, static colour Sample.
+- **Online B:** valid green-inversion package, Cool/Colour tags, Beatrice, static wave Sample.
+- **Online Broken:** deliberately missing Sample and malformed package; Favorite still works, Preview/Download fail without replacing the current candidate.
+- Uncached catalogue/package responses wait 700 ms in manual mode for visible loading and cancellation/race checks. Downloads are real PNG files. Favorites and explicit Author Save use this localhost origin's normal storage. Manual mode never runs the automated checks or intercepts downloads.
+
+For a deterministic catalogue error, open **http://localhost:8080/tests/online-package-browser.html?manual=1&manifestFailure=1**, enter Online, then click Retry: the first manifest response is 503 and Retry succeeds. If you previously opened Online in manual mode, saved cards stay usable with a nonblocking refresh notice; otherwise the usual Online error is shown. Reload resets this failure scenario.
+
+To test the generated standalone using the same fixtures, first run `npm run build`, then open **http://localhost:8080/tests/online-package-browser.html?manual=1&standalone=1** while the dev server is running. The harness injects only into its in-memory copy of the generated app; the standalone file and production default URL remain unchanged. The production URL is still `https://anthonychimming.github.io/filter-fabjs-library/catalogue.json`.
+
+
+### Stage 4 cache QA
+
+The saved catalogue uses `ffw-online-library-cache-v1`, schema 1, tied to the exact manifest URL and revalidated on read. It stores normalized metadata only, at most 2 MiB serialized UTF-8. Storage failures are nonfatal. Equal/newer catalogue versions replace it; older/invalid/failed responses retain it. Publishing rollbacks must use a higher `libraryVersion`.
+
+Validated package reuse is memory-only: at most 12 entries / 32 MiB including document payload, evicted least-recently-used. Identity, revision and URL changes force a fresh resolution. Every Preview/Download gets independent copies; editing an applied filter cannot change later cache hits. Completed Preview → Download and Download → Preview reuse the package. Independent concurrent requests retain their existing cancellation behavior; single-flight is deferred. Reload discards packages. Saved catalogue metadata does not promise offline packages or Sample images.
+
+1. Run `npm run dev` and open `http://localhost:8080/tests/online-package-browser.html?manual=1`. Local sources remain default. Open Online and verify Samples, search/tags/favorites and both valid packages.
+2. Reload using `?manual=1&manifestFailure=1`. Enter Online: saved cards appear immediately, then the nonblocking refresh warning with Retry. Search/Preview/Download remain usable. Retry removes the warning on success without clearing the view.
+3. Preview A, switch to B, then A, and Download A. The fixture's request counter should stop increasing for reused packages. Reload and preview A: it requires a fresh package request.
+4. Rapidly switch candidates, Cancel/Close/Escape while loading, and verify original state restoration. Apply, edit in Author, reopen and preview the same Online entry: the published definition remains intact. My Filters changes only after explicit Save.
+5. Verify Online Broken still fails gracefully and Retry/favorites remain independent. Check keyboard focus and narrow layouts for the saved-catalogue notice and actions.
+
+Automated browser modes use isolated storage, so manual saved records cannot hide a tested network failure. Run `online-package-browser.html?cpu=1` for package/cache/race regressions and `online-package-browser.html?saved=1&cpu=1` for saved refresh/removal/restoration. Append `&standalone=1` after `npm run build` to exercise generated code. All three Stage 4 Node suites are part of `npm run verify`.
+
+
+Stage 4 validation: prerequisite and final `npm run verify` passed, including all three new cache suites, build and build-output validation. The integrated package fixture passed all 39 checks in modular and generated standalone forced-CPU runs; the saved-catalogue fixture passed all 8 checks; the Stage 2 discovery/local fixture passed all 27 checks. Manual localhost storage was exercised across navigation: three saved cards survived an intentional manifest failure, with nonblocking Retry. No hardware WebGPU parity, physical touch or screen-reader speech claim is made. The older local fixture pagination assumption noted above remains a separate pre-existing issue.
+
+
+## Online publishing (Stage 5)
+
+The separate `filter-fabjs-library` repository supplies the static feed. The main app owns the Node publisher and reuses its native, PNG and Online validators. See [Online Library publishing](ONLINE_LIBRARY_PUBLISHING.md) for registry/revision rules, immutable historical PNGs, deterministic builds, validator pinning, deployment gates and release QA. The centralized production URL remains `https://anthonychimming.github.io/filter-fabjs-library/catalogue.json`. Production content awaits approved reference artwork and packages; test fixtures are never publication seeds.

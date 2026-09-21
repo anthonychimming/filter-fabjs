@@ -6,6 +6,8 @@
 import { normalizeTags, tagKey, portableContent, validatePortableId } from '../core/filter-metadata.js';
 import { PREFERENCE_PREFIX, readEntryPreference, writeEntryPreference, catalogEntry, onlineCatalogEntry, readLibrary, writeLibraryRecord } from './filter-catalog.js';
 import { DEFAULT_ONLINE_LIBRARY_MANIFEST_URL, fetchOnlineLibraryManifest, resolveOnlineLibraryAssetUrl } from '../io/filter-library-client.js';
+import { createOnlinePackageCache, onlinePackageFilename } from '../io/filter-library-package.js';
+import { readOnlineLibraryCache, writeOnlineLibraryCache } from '../io/filter-library-cache.js';
 import { createFilterBrowser, chooseFilterAction } from '../ui/filter-browser.js';
 import { $, $$, clamp, debounce, storageGet, storageSet, escapeHtml, slug } from '../core/utils.js';
 import { CONTROL_COUNT, CONTROL_DEFINITIONS, cloneControlUI, defaultControlLabels, defaultControlUIs, defaultControlValues, normalizeControlUI, normalizeToggleRaw } from '../core/controls.js';
@@ -91,32 +93,45 @@ export function upsertCustomPreset(list,filter,name,idFactory=createCustomPreset
   const next=[...list],index=next.findIndex(item=>item.name.toLowerCase()===name.toLowerCase()),used=new Set(next.map(item=>item.id)),id=index>=0?next[index].id:allocateCustomPresetId(used,idFactory),preset={...filter,name,id};if(index>=0)next[index]=preset;else next.push(preset);return{list:next,preset};
 }
 
-// App-owned, session-only discovery state. Loading never prepares a filter document.
-export function createOnlineLibrarySession({manifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL,fetchImpl=globalThis.fetch,preference,onChange=()=>{}}){
-  let status='idle',manifest=null,error=null,promise=null,requestId=0,controller=null,entries=null;
-  const getState=()=>({status,error});
+// Catalogue hydration is lazy; package reuse has a separate page-session lifetime.
+export function createOnlineLibrarySession({manifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL,fetchImpl=globalThis.fetch,storage,preference,onChange=()=>{},timeoutMs}={}){
+  let status='idle',manifest=null,error=null,promise=null,requestId=0,controller=null,entries=null,hydrated=false,provenance=null,refreshing=false,refreshWarning=null;
+  const packages=createOnlinePackageCache({manifestUrl,fetchImpl});
+  const getState=()=>({status,error,provenance,refreshing,refreshWarning});
+  const getEntries=()=>entries??(entries=(manifest?.filters||[]).map(metadata=>onlineCatalogEntry(metadata,preference(`online:${metadata.id}`))));
   function load({retry=false}={}){
     if(promise)return promise;
-    if(status==='ready'||(status==='error'&&!retry))return Promise.resolve();
-    const id=++requestId;controller=new AbortController();status='loading';error=null;
-    promise=fetchOnlineLibraryManifest(manifestUrl,{fetchImpl,signal:controller.signal}).then(result=>{
-      if(id!==requestId)return;manifest=result.manifest;manifestUrl=result.manifestUrl;entries=null;status='ready';
-    }).catch(failure=>{if(id!==requestId)return;error=failure;status='error';}).finally(()=>{
-      if(id!==requestId)return;promise=null;controller=null;onChange();
+    if(!retry&&(status==='ready'||status==='error'))return Promise.resolve();
+    if(!hydrated){
+      hydrated=true;const saved=readOnlineLibraryCache({storage,manifestUrl});
+      if(saved){manifest=saved;entries=null;status='ready';provenance='saved';}
+    }
+    const id=++requestId;controller=new AbortController();status=manifest?'ready':'loading';refreshing=Boolean(manifest);error=null;refreshWarning=null;
+    promise=fetchOnlineLibraryManifest(manifestUrl,{fetchImpl,signal:controller.signal,...(timeoutMs===undefined?{}:{timeoutMs})}).then(result=>{
+      if(id!==requestId)return;
+      if(manifest&&result.manifest.libraryVersion<manifest.libraryVersion){console.warn('Ignored older Online catalogue libraryVersion');throw new Error('Online catalogue libraryVersion is older than the retained catalogue');}
+      manifest=result.manifest;entries=null;status='ready';provenance='network';
+      packages.prune(getEntries());writeOnlineLibraryCache({storage,manifestUrl,manifest});
+    }).catch(failure=>{
+      if(id!==requestId)return;
+      if(manifest){status='ready';refreshWarning=failure;}else{error=failure;status='error';}
+    }).finally(()=>{
+      if(id!==requestId)return;promise=null;controller=null;refreshing=false;onChange();
     });
     onChange();return promise;
   }
-  return{getState,load,getEntries:()=>entries??(entries=(manifest?.filters||[]).map(metadata=>onlineCatalogEntry(metadata,preference(`online:${metadata.id}`)))),
+  return{getState,load,getEntries,
     invalidate:()=>{entries=null;},resolvePreview:entry=>resolveOnlineLibraryAssetUrl(manifestUrl,entry.remote.preview.url),
-    dispose:()=>{requestId++;controller?.abort();controller=null;promise=null;manifest=null;entries=null;status='idle';error=null;}};
+    fetchPackage:(entry,signal)=>packages.resolve(entry,{signal}),
+    dispose:()=>{requestId++;controller?.abort();controller=null;promise=null;manifest=null;entries=null;status='idle';error=null;hydrated=false;provenance=null;refreshing=false;refreshWarning=null;packages.clear();}};
 }
 
-export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL,onlineFetchImpl=globalThis.fetch}={}){
+export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL,onlineFetchImpl=globalThis.fetch,onlineStorage=()=>globalThis.localStorage}={}){
   const {el,ctx}=getDom();
   const state={source:null,filtered:null,width:0,height:0,view:'filtered',workspaceMode:'explore',split:50,zoom:'fit',zoomLevel:1,controls:defaultControlValues(),labels:defaultControlLabels(),controlUIs:defaultControlUIs(),renderId:0,imageLoadId:0,filterLoadId:0,rendererManager:null,rendererPreference:storageGet('ffw-renderer','auto'),lastProgram:null,lastProgramKey:null,lastSuccessfulRenderSignature:null,lastWGSL:null,lastGpuAnalysis:null,lastRendererDiagnostics:null,isRendering:false,usedControls:Array(CONTROL_COUNT).fill(false),legacyMath:false,hasPendingFormulaChanges:false,focusSnapshot:null};
   const canvasView=createCanvasView({state,el,ctx});
   let controlsController,browser,catalogCache=null,librarySession=null;
-  const onlineLibrary=createOnlineLibrarySession({manifestUrl:onlineManifestUrl,fetchImpl:onlineFetchImpl,preference,onChange:()=>browser?.refreshOnline()});
+  const onlineLibrary=createOnlineLibrarySession({manifestUrl:onlineManifestUrl,fetchImpl:onlineFetchImpl,storage:onlineStorage,preference,onChange:()=>browser?.refreshOnline()});
   const activeDocument={key:null,id:undefined,tags:[],baseline:null,recordBaseline:null,imported:false,importSource:null};
 
   const rendererFactories={
@@ -147,7 +162,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
   function setProgress(pct,row,total){const safePct=clamp(Number.isFinite(Number(pct))?Number(pct):0,0,100),safeTotal=Math.max(0,Math.trunc(Number(total)||0)),safeRow=clamp(Math.trunc(Number(row)||0),0,safeTotal||0);el.progressFill.style.width=`${safePct}%`;el.progressFill.parentElement?.setAttribute('aria-valuenow',String(Math.round(safePct)));el.progressPercent.textContent=`${Math.round(safePct)}%`;el.progressRows.textContent=safeTotal?`${safeRow} / ${safeTotal} rows`:'Preparing…';}
   function setUILocked(locked,pct=0,row=0,total=0){const wasRendering=state.isRendering,nextRendering=Boolean(locked);if(nextRendering&&!wasRendering)state.focusSnapshot=captureFocus();state.isRendering=nextRendering;document.body.classList.toggle('ui-locked',state.isRendering);document.body.setAttribute('aria-busy',String(state.isRendering));applyInteractionLocks();el.renderOverlay.classList.toggle('show',state.isRendering);el.renderOverlay.setAttribute('aria-hidden',String(!state.isRendering));if(state.isRendering)setProgress(pct,row,total);else if(wasRendering){const snapshot=state.focusSnapshot;state.focusSnapshot=null;restoreFocus(snapshot);}syncRendererSummary();}
   function initializeRendererSource(){if(!state.source||!state.width||!state.height)return Promise.resolve();return state.rendererManager.setSource(state.source,state.width,state.height);}
-  async function cancelRender({silent=false}={}){if(!state.isRendering)return false;state.renderId++;try{await state.rendererManager?.cancelActive();}catch(error){console.error('Renderer cancellation failed',error);}setUILocked(false);setProgress(0,0,state.height||0);if(!silent){setStatus('Render cancelled');el.renderInfo.textContent=`${state.rendererManager?.active?.label||'Renderer'} · cancelled`;toast('Rendering cancelled');}return true;}
+  async function cancelRender({silent=false}={}){if(!state.isRendering)return false;const cancelledId=++state.renderId;try{await state.rendererManager?.cancelActive();}catch(error){console.error('Renderer cancellation failed',error);}if(cancelledId!==state.renderId)return true;setUILocked(false);setProgress(0,0,state.height||0);if(!silent){setStatus('Render cancelled');el.renderInfo.textContent=`${state.rendererManager?.active?.label||'Renderer'} · cancelled`;toast('Rendering cancelled');}return true;}
 
   function currentProgramKey(){return JSON.stringify([state.legacyMath,...el.formulas.map(field=>field.value)])}
   function compileCurrentProgram(){const key=currentProgramKey();if(state.lastProgram&&state.lastProgramKey===key)return state.lastProgram;const astList=el.formulas.map(field=>new Parser(field.value).parse());return compileFilterProgram(astList,{legacyMath:state.legacyMath});}
@@ -162,10 +177,10 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
   function catalog(){if(catalogCache)return catalogCache;return catalogCache=[...presets.map(item=>catalogEntry(item,'builtin',preference(`builtin:${item.id}`))),...customList().map(item=>catalogEntry(item,'custom',preference(`custom:${item.id}`)))];}
   function effectiveTags(){return activeDocument.key?.startsWith('builtin:')?[...new Map([...activeDocument.tags,...preference(activeDocument.key).tags].map(tag=>[tagKey(tag),tag])).values()]:activeDocument.tags;}
   function documentSnapshot(){return portableContent({...currentFilter(),tags:activeDocument.tags});}
-  function importedStatus(){return activeDocument.importSource==='png'?'Imported from PNG · Not saved':'Imported · not saved';}
+  function importedStatus(){return activeDocument.importSource==='online'?'Imported from Online · Not saved':activeDocument.importSource==='png'?'Imported from PNG · Not saved':'Imported · not saved';}
   function isDirty(){return activeDocument.imported||!activeDocument.key||documentSnapshot()!==activeDocument.baseline;}
   function updateActiveFilterSummary(status){
-    const previewEntry=librarySession?.candidateEntry,name=$('#filterName').value.trim()||'Untitled Filter',key=previewEntry?.key||activeDocument.key,source=previewEntry?(previewEntry.source==='builtin'?'Built-in preview':'My Filter preview'):key?.startsWith('builtin:')?'Built-in':key?.startsWith('custom:')?'My Filter':'Unsaved',description=el.description.value.trim();
+    const previewEntry=librarySession?.candidateEntry,name=$('#filterName').value.trim()||'Untitled Filter',key=previewEntry?.key||activeDocument.key,source=previewEntry?(previewEntry.source==='online'?'Online preview':previewEntry.source==='builtin'?'Built-in preview':'My Filter preview'):key?.startsWith('builtin:')?'Built-in':key?.startsWith('custom:')?'My Filter':'Unsaved',description=el.description.value.trim();
     el.activeFilterName.textContent=name;el.activeFilterSource.textContent=source;el.activeFilterStatus.textContent=status;el.activeFilterDescription.textContent=description||'No description provided.';
     if(!key||previewEntry){el.activeFavorite.hidden=Boolean(previewEntry)||!key;el.activeFavorite.setAttribute('aria-pressed','false');return;}
     const favorite=preference(key).favorite;el.activeFavorite.hidden=false;el.activeFavorite.setAttribute('aria-pressed',String(favorite));el.activeFavorite.textContent=favorite?'★ Favorited':'☆ Favorite';el.activeFavorite.setAttribute('aria-label',`${favorite?'Remove':'Add'} ${name} ${favorite?'from':'to'} favorites`);
@@ -248,7 +263,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
     activeDocument.key=selection||null;activeDocument.id=selection?.startsWith('builtin:')?undefined:next.id;activeDocument.tags=[...next.tags];activeDocument.imported=!selection;activeDocument.importSource=selection?null:importSource;activeDocument.recordBaseline=selection?.startsWith('custom:')?JSON.stringify(definition):null;activeDocument.baseline=documentSnapshot();
   }
   function applyFilter(definition,selection,{importSource=selection?null:'file'}={}){
-    const next=prepareFilter(definition);applyPreparedPresentation(next);commitActiveDocument(next,definition,selection,{importSource});refreshTags();updateDocumentHeader({forceSelection:true});markFormulaPending();render();
+    const next=prepareFilter(definition);invalidateLibraryForReplacement();applyPreparedPresentation(next);commitActiveDocument(next,definition,selection,{importSource});refreshTags();updateDocumentHeader({forceSelection:true});markFormulaPending();render();
   }
 
   function captureLibraryWorkingState(){
@@ -273,33 +288,81 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
   async function beginLibrarySession(){
     if(librarySession)return true;
     if(state.isRendering)throw new Error('Wait for the current render to finish before opening the library.');
-    librarySession={originalWorkingDocument:captureLibraryWorkingState(),candidateEntry:null,candidateDefinition:null,candidatePrepared:null,candidateRendered:false,requestId:0};thumbnailService.open();return true;
+    librarySession={originalWorkingDocument:captureLibraryWorkingState(),candidateEntry:null,candidateDefinition:null,candidatePrepared:null,candidateRendered:false,requestId:0,packageController:null,rollback:null,stopping:null,downloads:new Map()};thumbnailService.open();return true;
   }
   async function previewLibraryEntry(entry){
     if(entry.source==='online')return false;
+    return previewLibraryCandidate(entry);
+  }
+  // A superseded render rolls back to its last completed candidate before another
+  // request can present anything. The original session snapshot is never replaced.
+  function stopLibraryCandidate(session){
+    if(session.stopping)return session.stopping;
+    if(!session.rollback)return Promise.resolve();
+    const rollback=session.rollback;
+    session.stopping=(async()=>{
+      if(state.isRendering)await cancelRender({silent:true});
+      if(librarySession===session&&session.rollback===rollback){Object.assign(session,rollback.candidate);session.rollback=null;restoreLibraryWorkingState(rollback.working);}
+    })().finally(()=>{session.stopping=null;});
+    return session.stopping;
+  }
+  async function previewLibraryCandidate(entry,onPhase=()=>{}){
     const session=librarySession;if(!session)throw new Error('The Filter Library session is no longer open.');
-    const requestId=++session.requestId,definition=resolveCatalogDefinition(entry);if(!definition)throw new Error('This filter was deleted in another tab.');
-    const prepared=prepareFilter(definition),previousWorkingState=captureLibraryWorkingState(),previousCandidate={entry:session.candidateEntry,definition:session.candidateDefinition,prepared:session.candidatePrepared,rendered:session.candidateRendered};
-    if(state.isRendering)await cancelRender({silent:true});
-    if(librarySession!==session||requestId!==session.requestId)return false;
+    const requestId=++session.requestId,isCurrent=()=>librarySession===session&&requestId===session.requestId;
+    session.packageController?.abort();session.packageController=null;
+    const stopped=stopLibraryCandidate(session);
+    let definition,prepared;
+    try{
+      if(entry.source==='online'){
+        const controller=new AbortController();session.packageController=controller;onPhase('loading');
+        const resolved=await onlineLibrary.fetchPackage(entry,controller.signal);if(!isCurrent())return false;
+        definition=resolved.document;
+      }else definition=resolveCatalogDefinition(entry);
+      if(!definition)throw new Error('This filter was deleted in another tab.');
+      prepared=prepareFilter(definition);
+      await stopped;if(!isCurrent())return false;
+    }catch(error){await stopped;if(!isCurrent())return false;throw error;}
+    finally{if(isCurrent())session.packageController=null;}
+    const rollback={working:captureLibraryWorkingState(),candidate:{candidateEntry:session.candidateEntry,candidateDefinition:session.candidateDefinition,candidatePrepared:session.candidatePrepared,candidateRendered:session.candidateRendered}};
+    session.rollback=rollback;onPhase('rendering');
     applyPreparedPresentation(prepared);session.candidateEntry=entry;session.candidateDefinition=definition;session.candidatePrepared=prepared;session.candidateRendered=false;markFormulaPending();updateDocumentHeader({forceSelection:true});
     const rendered=await render();
-    if(librarySession!==session||requestId!==session.requestId)return false;
-    if(!rendered){session.candidateEntry=previousCandidate.entry;session.candidateDefinition=previousCandidate.definition;session.candidatePrepared=previousCandidate.prepared;session.candidateRendered=previousCandidate.rendered;restoreLibraryWorkingState(previousWorkingState);throw new Error('The candidate could not be rendered. Your previous preview was restored.');}
-    session.candidateRendered=true;updateDocumentHeader({forceSelection:true});return true;
+    if(!isCurrent())return false;
+    if(!rendered){Object.assign(session,rollback.candidate);session.rollback=null;restoreLibraryWorkingState(rollback.working);throw new Error('The candidate could not be rendered. Your previous preview was restored.');}
+    session.rollback=null;session.candidateRendered=true;updateDocumentHeader({forceSelection:true});return true;
+  }
+  function abortLibraryPackages(session){session.packageController?.abort();for(const controller of session.downloads.values())controller.abort();session.downloads.clear();}
+  function invalidateLibraryForReplacement(){
+    const session=librarySession;if(!session)return;
+    session.requestId++;abortLibraryPackages(session);librarySession=null;
+    state.renderId++;state.rendererManager?.cancelActive().catch(error=>console.warn('Candidate cancellation failed',error));setUILocked(false);
+    thumbnailService.close().catch(error=>console.warn('Thumbnail cancellation failed',error));
+    restoreLibraryWorkingState(session.originalWorkingDocument);browser?.invalidateSession();
+  }
+  async function downloadLibraryPackage(entry){
+    const session=librarySession;if(!session||session.downloads.has(entry.key))return false;
+    const controller=new AbortController();session.downloads.set(entry.key,controller);
+    try{
+      const result=await onlineLibrary.fetchPackage(entry,controller.signal);
+      if(librarySession!==session||controller.signal.aborted)return false;
+      return downloadBlob(new Blob([result.bytes],{type:'image/png'}),onlinePackageFilename(result.document.id));
+    }catch(error){if(librarySession!==session||controller.signal.aborted)return false;throw error;}
+    finally{session.downloads.delete(entry.key);}
   }
   async function cancelLibrarySession(){
-    const session=librarySession;if(!session)return true;session.requestId++;
+    const session=librarySession;if(!session)return true;const requestId=++session.requestId;abortLibraryPackages(session);
+    await stopLibraryCandidate(session);
     await thumbnailService.close();
     if(state.isRendering)await cancelRender({silent:true});
-    if(librarySession!==session)return false;librarySession=null;restoreLibraryWorkingState(session.originalWorkingDocument);return true;
+    if(librarySession!==session||requestId!==session.requestId)return false;librarySession=null;restoreLibraryWorkingState(session.originalWorkingDocument);return true;
   }
   async function applyLibraryCandidate(){
     const session=librarySession;if(!session?.candidateEntry||!session.candidatePrepared||!session.candidateRendered)throw new Error('Choose a successfully rendered candidate first.');
     if(session.candidateEntry.source==='custom'){
       const current=resolveCatalogDefinition(session.candidateEntry);if(!current)throw new Error('This filter was deleted in another tab.');if(JSON.stringify(current)!==JSON.stringify(session.candidateDefinition))throw new Error('This filter changed in another tab. Preview the updated filter before applying it.');
     }
-    session.requestId++;await thumbnailService.close();librarySession=null;commitActiveDocument(session.candidatePrepared,session.candidateDefinition,session.candidateEntry.key);refreshTags();updateDocumentHeader({forceSelection:true});toast(`${session.candidatePrepared.name} applied`);return true;
+    const requestId=++session.requestId;abortLibraryPackages(session);await thumbnailService.close();if(librarySession!==session||requestId!==session.requestId)return false;librarySession=null;
+    const online=session.candidateEntry.source==='online';commitActiveDocument(session.candidatePrepared,session.candidateDefinition,online?null:session.candidateEntry.key,{importSource:online?'online':null});refreshTags();updateDocumentHeader({forceSelection:true});toast(`${session.candidatePrepared.name} applied`);return true;
   }
 
   function compileAll({cache=true}={}){const key=currentProgramKey();if(cache&&state.lastProgram&&state.lastProgramKey===key){controlsController.updateControlUsage(state.lastProgram);updateRendererDiagnostics(state.lastProgram);return state.lastProgram}const astList=[];let ok=true;el.formulas.forEach(field=>{const box=field.closest('.formula'),icon=$('.formula-state',box),errorElement=$('.formula-error',box);try{astList.push(new Parser(field.value).parse());field.classList.remove('invalid');field.setAttribute('aria-invalid','false');icon.textContent=field.classList.contains('edited')?'•':'✓';icon.classList.remove('bad');icon.classList.toggle('pending',field.classList.contains('edited'));errorElement.textContent='';errorElement.classList.remove('show');}catch(error){ok=false;astList.push(null);field.classList.add('invalid');field.setAttribute('aria-invalid','true');icon.textContent='!';icon.classList.remove('pending');icon.classList.add('bad');errorElement.textContent=`${error.message} at character ${(error.pos??0)+1}`;errorElement.classList.add('show');}});if(!ok){controlsController.updateControlUsage(null);clearRendererDiagnostics('GPU diagnostics unavailable','Fix formula errors to inspect renderer eligibility.');return null;}try{const program=compileFilterProgram(astList,{legacyMath:state.legacyMath});if(cache){state.lastProgram=program;state.lastProgramKey=key}controlsController.updateControlUsage(program);updateRendererDiagnostics(program);return program;}catch(error){console.error('IR compilation failed',error);setStatus(`Compiler error: ${error.message}`,'error');controlsController.updateControlUsage(null);clearRendererDiagnostics('GPU diagnostics unavailable',error.message);return null;}}
@@ -349,7 +412,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
     }
   }
 
-  function initImage(data,width,height){state.renderId++;$('#openImageBtn').classList.remove('primary');state.lastSuccessfulRenderSignature=null;if(state.isRendering)setUILocked(false);initializeImagePreview(data,width,height,{state,canvasView,canvas:el.canvas});el.imageInfo.textContent=`${width} × ${height} px`;thumbnailService.setSource(state.source,width,height).catch(error=>console.warn('Thumbnail source initialization failed',error));initializeRendererSource().catch(error=>{console.error('Renderer initialization failed',error);setStatus('Preview unavailable · see Technical diagnostics in Author','error');});render();}
+  function initImage(data,width,height){state.renderId++;invalidateLibraryForReplacement();$('#openImageBtn').classList.remove('primary');state.lastSuccessfulRenderSignature=null;if(state.isRendering)setUILocked(false);initializeImagePreview(data,width,height,{state,canvasView,canvas:el.canvas});el.imageInfo.textContent=`${width} × ${height} px`;thumbnailService.setSource(state.source,width,height).catch(error=>console.warn('Thumbnail source initialization failed',error));initializeRendererSource().catch(error=>{console.error('Renderer initialization failed',error);setStatus('Preview unavailable · see Technical diagnostics in Author','error');});render();}
   function demoImage(){const width=960,height=640,canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const context=canvas.getContext('2d'),background=context.createLinearGradient(0,0,width,height);background.addColorStop(0,'#08050d');background.addColorStop(.48,'#6c47b1');background.addColorStop(1,'#c429a3');context.fillStyle=background;context.fillRect(0,0,width,height);for(let i=0;i<18;i++){context.globalAlpha=.09;context.fillStyle=i%2?'#fff':'#07111f';context.beginPath();context.arc(90+i*58,90+(i%4)*130,60+(i%3)*35,0,Math.PI*2);context.fill();}context.globalAlpha=1;context.fillStyle='rgba(6,16,5,.82)';context.roundRect(84,94,792,452,36);context.fill();context.fillStyle='#f6efc4';context.font='700 62px system-ui';context.fillText('FILTER',132,245);context.fillStyle='#e1ec1a';context.fillText('FABJS',132,316);context.font='24px system-ui';context.fillStyle='#cdddb7';context.fillText('Open an image or experiment with this demo.',136,370);const gradient=context.createLinearGradient(136,0,790,0);gradient.addColorStop(0,'#e45a87');gradient.addColorStop(.5,'#9fd36a');gradient.addColorStop(1,'#38a9d4');context.fillStyle=gradient;context.fillRect(136,412,654,18);return context.getImageData(0,0,width,height);}
   async function loadImageFile(file,{successMessage='Image loaded',requestId=null}={}){if(!file||!String(file.type||'').startsWith('image/')){toast('Choose a valid image file');return false;}const loadId=requestId??++state.imageLoadId;let bitmap=null;setStatus('Loading image…','busy');try{bitmap=await createImageBitmap(file);if(loadId!==state.imageLoadId)return false;const maximum=1800,scale=Math.min(1,maximum/Math.max(bitmap.width,bitmap.height)),width=Math.max(1,Math.round(bitmap.width*scale)),height=Math.max(1,Math.round(bitmap.height*scale)),canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const context=canvas.getContext('2d',{willReadFrequently:true});if(!context)throw new Error('Canvas image loading is unavailable');context.drawImage(bitmap,0,0,width,height);const pixels=context.getImageData(0,0,width,height).data;if(loadId!==state.imageLoadId)return false;initImage(pixels,width,height);toast(scale<1?`${successMessage} · resized to 1800 px`:successMessage);return true;}catch(error){if(loadId!==state.imageLoadId)return false;setStatus('Could not load image','error');toast(error.message||'Could not load image');return false;}finally{bitmap?.close?.();}}
   async function openImageFile(file){
@@ -362,7 +425,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
   async function copyImageToClipboard(){if(state.isRendering)return;const ClipboardItemCtor=globalThis.ClipboardItem;if(!navigator.clipboard?.write||!ClipboardItemCtor){toast('Image copy is unavailable in this browser');return;}setStatus('Encoding RGBA PNG…','busy');try{const expected=alphaStats(state.filtered),blob=await canvasBlob(renderedImageCanvas(state.filtered,state.width,state.height),'image/png');await verifyPngAlpha(blob,expected);setStatus('Writing image to clipboard…','busy');await writePngClipboard(blob);if(expected.hasAlpha){setStatus(`Ready · PNG alpha ${expected.min}–${expected.max}`);toast('RGBA PNG copied · alpha preserved');}else{setStatus('Ready · copied image is opaque');toast('PNG copied · output has no transparent pixels');}}catch(error){console.error('Clipboard copy failed',error);setStatus('Clipboard copy unavailable','error');toast(error?.name==='NotAllowedError'?'Clipboard permission was blocked by the browser':`Copy failed: ${error.message||'clipboard unavailable'}`);}}
   async function pasteImageFromClipboard(){if(state.isRendering)return;if(!navigator.clipboard?.read){toast('Clipboard reading is unavailable. Press Ctrl/⌘+V instead.');return;}setStatus('Reading clipboard…','busy');try{const items=await navigator.clipboard.read();for(const item of items){const types=Array.from(item.types||[]),type=['web image/png','image/png',...types.filter(value=>String(value).startsWith('image/'))].find(value=>types.includes(value));if(!type)continue;const raw=await item.getType(type),mime=String(type).replace(/^web\s+/,'');const blob=String(raw.type||'').startsWith('image/')?raw:new Blob([raw],{type:mime});await loadImageFile(blob,{successMessage:'Image pasted from clipboard'});return;}setStatus('Ready');toast('Clipboard does not contain an image');}catch(error){console.error('Clipboard paste failed',error);setStatus('Clipboard paste unavailable','error');toast(error?.name==='NotAllowedError'?'Clipboard permission was blocked. Press Ctrl/⌘+V instead.':`Paste failed: ${error.message||'clipboard unavailable'}`);}}
 
-  function triggerDownload(href,name,revoke=false){try{const anchor=document.createElement('a');anchor.href=href;anchor.download=name;anchor.rel='noopener';anchor.style.display='none';document.body.appendChild(anchor);anchor.click();setTimeout(()=>{anchor.remove();if(revoke)URL.revokeObjectURL(href);},10000);toast(`Download started: ${name}`);return true;}catch(error){console.error('Download failed',error);toast(`Download failed: ${error.message||'browser blocked the file'}`);return false;}}
+  function triggerDownload(href,name,revoke=false){try{const anchor=document.createElement('a');anchor.href=href;anchor.download=name;anchor.rel='noopener';anchor.style.display='none';document.body.appendChild(anchor);anchor.click();setTimeout(()=>{anchor.remove();if(revoke)URL.revokeObjectURL(href);},10000);toast(`Download started: ${name}`);return true;}catch(error){if(revoke)URL.revokeObjectURL(href);console.error('Download failed',error);toast(`Download failed: ${error.message||'browser blocked the file'}`);return false;}}
   function downloadBlob(blob,name){if(!(blob instanceof Blob)||!blob.size){toast('Nothing was generated to download');return false;}return triggerDownload(URL.createObjectURL(blob),name,true);}
   async function exportPNG(){if(!state.filtered||!state.width||!state.height){toast('Load and render an image before exporting');return;}const filter=validatedCurrentFilter();if(!filter)return;if(state.lastSuccessfulRenderSignature!==filterRenderSignature(filter)){setStatus('Render the current filter changes before exporting.','error');toast('Render the current filter changes before exporting.');return;}setStatus('Encoding PNG…','busy');try{const canvas=renderedImageCanvas(state.filtered,state.width,state.height),name=slug($('#filterName').value||'filtered-image')+'.png',encoded=await canvasBlob(canvas,'image/png'),envelope=createFilterFabPngEnvelope(filter,'2.8.7'),blob=await embedFilterFabMetadata(encoded,envelope);if(downloadBlob(blob,name))setStatus('Ready');}catch(error){console.error('PNG export failed',error);setStatus('PNG export failed','error');toast(`PNG export failed: ${error.message}`);}}
   function exportFilter(){const filter=validatedCurrentFilter();if(!filter)return;if(!activeDocument.id)activeDocument.id=createCustomPresetId();filter.id=activeDocument.id;const base=slug(filter.name);try{downloadBlob(new Blob([JSON.stringify(filter,null,2)+'\n'],{type:'application/json;charset=utf-8'}),base+'.json');}catch(error){console.error('Filter export failed',error);toast(`Filter export failed: ${error.message}`);}}
@@ -425,7 +488,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
     el.renderBtn.onclick=()=>render({focusInvalid:true});
     const resetFilter=()=>applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');$('#resetBtn').onclick=resetFilter;$('#exploreResetBtn').onclick=resetFilter;
     el.activeFavorite.onclick=()=>{if(!activeDocument.key)return;try{const current=preference(activeDocument.key);writeEntryPreference(localStorage,activeDocument.key,{favorite:!current.favorite});catalogCache=null;browser?.refresh();updateDocumentHeader();}catch(error){organizationError(error);}};
-    browser=createFilterBrowser({launcher:el.searchFilters,getEntries:()=>[...catalog(),...onlineLibrary.getEntries()],getOnlineState:onlineLibrary.getState,loadOnline:onlineLibrary.load,resolveOnlinePreviewUrl:onlineLibrary.resolvePreview,begin:beginLibrarySession,preview:previewLibraryEntry,apply:applyLibraryCandidate,cancel:cancelLibrarySession,toggleFavorite:entry=>{writeEntryPreference(localStorage,entry.key,{favorite:!entry.favorite});catalogCache=null;onlineLibrary.invalidate();if(entry.key===activeDocument.key)updateDocumentHeader();},requestThumbnail:requestLibraryThumbnail,clearThumbnailRequests:()=>thumbnailService.clearRequests(),onError:organizationError});
+    browser=createFilterBrowser({launcher:el.searchFilters,getEntries:()=>[...catalog(),...onlineLibrary.getEntries()],getOnlineState:onlineLibrary.getState,loadOnline:onlineLibrary.load,resolveOnlinePreviewUrl:onlineLibrary.resolvePreview,begin:beginLibrarySession,preview:previewLibraryEntry,previewOnline:previewLibraryCandidate,downloadOnline:downloadLibraryPackage,apply:applyLibraryCandidate,cancel:cancelLibrarySession,toggleFavorite:entry=>{writeEntryPreference(localStorage,entry.key,{favorite:!entry.favorite});catalogCache=null;onlineLibrary.invalidate();if(entry.key===activeDocument.key)updateDocumentHeader();},requestThumbnail:requestLibraryThumbnail,clearThumbnailRequests:()=>thumbnailService.clearRequests(),onError:organizationError});
     populatePresets();
     el.preset.onchange=async()=>{
       const key=el.preset.value;
@@ -478,7 +541,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
       if(activeDocument.key?.startsWith('custom:')){try{const record=findCustomPresetById(library().presets,activeDocument.id);if(!record){activeDocument.key=null;activeDocument.id=undefined;activeDocument.imported=false;activeDocument.importSource=null;toast('Saved filter deleted in another tab. Save as new to keep this draft.');}else if(JSON.stringify(record)!==activeDocument.recordBaseline)toast('Saved filter changed in another tab. Update will require review.');}catch(error){organizationError(error);}}
       catalogCache=null;onlineLibrary.invalidate();refreshTags();populatePresets();
     }});
-    window.addEventListener('beforeunload',()=>{onlineLibrary.dispose();thumbnailService.dispose();state.rendererManager?.dispose();});
+    window.addEventListener('beforeunload',()=>{if(librarySession)abortLibraryPackages(librarySession);onlineLibrary.dispose();thumbnailService.dispose();state.rendererManager?.dispose();});
   }
 
   window.FilterFabJS=Object.freeze({version:'2.8.7',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getThumbnailDiagnostics:()=>thumbnailService.diagnostics(),getRendererPreference:()=>state.rendererPreference,getWorkspaceMode:()=>state.workspaceMode,getLibraryPreviewState:()=>({open:Boolean(librarySession),candidateKey:librarySession?.candidateEntry?.key||null,candidateRendered:Boolean(librarySession?.candidateRendered),activeKey:activeDocument.key,activeId:activeDocument.id,imported:activeDocument.imported,importSource:activeDocument.importSource,baseline:activeDocument.baseline,recordBaseline:activeDocument.recordBaseline})});
