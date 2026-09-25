@@ -15,7 +15,7 @@ Use four RGBA expressions to transform an image, expose creative parameters as c
 - **Browser-native image processing** — load an image, apply or author filters, and export the result without a desktop install.
 - **Custom procedural filters** — write separate R, G, B, and Alpha expressions with live validation and preview rendering.
 - **WebGPU acceleration** — compatible filters compile to WGSL, with automatic CPU fallback when required.
-- **Filter Factory compatibility** — import historic Adobe Filter Factory / Filter Foundry \`.afs\` filters through the legacy compatibility path.
+- **Filter Factory compatibility** — import historic Adobe Filter Factory / Filter Foundry `.afs` filters through the legacy compatibility path.
 - **52 built-in filters** — searchable by name, description, author, tags, and favorites.
 - **Online Filter Library** — browse additional filters, preview them on your current image, then apply, save, or download them.
 - **Artist-first controls** — filters can expose up to ten sliders, number fields, toggles, or seed controls with custom ranges and labels.
@@ -29,12 +29,12 @@ Use four RGBA expressions to transform an image, expose creative parameters as c
 
 A Filter FabJS filter contains four mathematical expressions that define the output red, green, blue, and alpha channels.
 
-\`\`\`text
+```text
 R: 255-r
 G: 255-g
 B: 255-b
 A: a
-\`\`\`
+```
 
 Expressions can reference source pixels, image coordinates, custom controls, gradients, noise fields, fractals, masks, sampling functions, and other image-processing operations.
 
@@ -79,44 +79,44 @@ Requirements:
 
 Start the development server:
 
-\`\`\`bash
+```bash
 npm run dev
-\`\`\`
+```
 
 Then open:
 
-\`\`\`text
+```text
 http://localhost:8080
-\`\`\`
+```
 
-WebGPU and Clipboard APIs normally require HTTPS or \`localhost\`, so opening \`index.html\` directly is not the supported development workflow.
+WebGPU and Clipboard APIs normally require HTTPS or `localhost`, so opening `index.html` directly is not the supported development workflow.
 
 ## Verify and build
 
 Run the complete verification pipeline:
 
-\`\`\`bash
+```bash
 npm run verify
-\`\`\`
+```
 
 Or run individual stages:
 
-\`\`\`bash
+```bash
 npm run check
 npm test
 npm run build
-\`\`\`
+```
 
 Build output:
 
-- \`dist/site/\` — deployable static site
-- \`dist/filter-fabjs-v2.9.0.html\` — standalone single-file build
+- `dist/site/` — deployable static site
+- `dist/filter-fabjs-v2.9.0.html` — standalone single-file build
 
 The project currently has no npm package dependencies.
 
 ## Documentation
 
-Technical and authoring documentation lives under \`docs/\` rather than in this README.
+Technical and authoring documentation lives under `docs/` rather than in this README.
 
 - **[Architecture](docs/ARCHITECTURE.md)** — renderer, compiler, IR, and application structure
 - **[Project Status](docs/PROJECT_STATUS.md)** — current implementation state and known boundaries
