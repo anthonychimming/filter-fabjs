@@ -21,12 +21,13 @@ export function chooseFilterAction(title,choices,{name,detail=''}={}){
   });
 }
 
-export function createFilterBrowser({launcher,getEntries,begin,preview,apply,cancel,toggleFavorite,requestThumbnail=null,clearThumbnailRequests=()=>{},onError}){
+export function createFilterBrowser({launcher,getEntries,begin,preview,previewOnline=null,downloadOnline=null,apply,cancel,toggleFavorite,requestThumbnail=null,clearThumbnailRequests=()=>{},getOnlineState=()=>({status:'idle'}),loadOnline=()=>{},resolveOnlinePreviewUrl,onError}){
   const dialog=browserNode('dialog',null,'filter-browser');dialog.id='filterLibraryDialog';dialog.setAttribute('aria-labelledby','filterBrowserTitle');
-  dialog.innerHTML='<div class="modal-head library-head"><div><strong id="filterBrowserTitle">Filter Library</strong><small>Preview treatments on your image, then apply one when it feels right.</small></div><button type="button" data-close aria-label="Cancel and close Filter Library">×</button></div><div class="browser-tools"><label class="library-search"><span>Search</span><input type="search" placeholder="Name, description, author or tag" data-search></label><button data-clear hidden>Clear search</button><div class="filter-actions"><label>Source<select data-source><option value="all">All</option><option value="builtin">Built-in</option><option value="custom">My Filters</option></select></label><label><input type="checkbox" data-favorites> Favorites only</label><label>Sort<select data-sort><option value="az">A–Z</option><option value="relevance">Relevance</option></select></label></div><details><summary>Tags</summary><label>Find tags<input type="search" data-tag-search></label><div data-choices class="tag-choices"></div><small>Match all selected tags. Up to 50 suggestions; type to narrow.</small></details><div data-selected class="chips"></div><div class="filter-actions browser-count-row"><span data-count role="status" aria-live="polite"></span><button data-reset>Reset view</button></div><p data-error role="alert"></p></div><ul class="filter-results" aria-label="Filter results"></ul><div class="browser-pages" data-pages><button data-prev>Previous</button><span data-page></span><button data-next>Next</button></div><div class="library-actions"><span data-preview-status role="status" aria-live="polite">Choose a filter to preview it on the canvas.</span><div><button type="button" data-cancel>Cancel</button><button type="button" class="primary" data-apply disabled>Apply Filter</button></div></div>';
+  dialog.innerHTML='<div class="modal-head library-head"><div><strong id="filterBrowserTitle">Filter Library</strong><small>Preview treatments on your image, then apply one when it feels right.</small></div><button type="button" data-close aria-label="Cancel and close Filter Library">×</button></div><div class="browser-tools"><label class="library-search"><span>Search</span><input type="search" placeholder="Name, description, author or tag" data-search></label><button data-clear hidden>Clear search</button><div class="filter-actions"><label>Source<select data-source><option value="local">All local</option><option value="builtin">Built-in</option><option value="custom">My Filters</option><option value="online">Online</option></select></label><label><input type="checkbox" data-favorites> Favorites only</label><label>Sort<select data-sort><option value="az">A–Z</option><option value="relevance">Relevance</option></select></label></div><details><summary>Tags</summary><label>Find tags<input type="search" data-tag-search></label><div data-choices class="tag-choices"></div><small>Match all selected tags. Up to 50 suggestions; type to narrow.</small></details><div data-selected class="chips"></div><div class="filter-actions browser-count-row"><span data-count role="status" aria-live="polite"></span><button data-reset>Reset view</button></div><div data-online-notice hidden><span data-online-message role="status" aria-live="polite"></span><button type="button" data-online-retry>Retry</button></div><p data-error role="alert"></p></div><ul class="filter-results" aria-label="Filter results"></ul><div class="browser-pages" data-pages><button data-prev>Previous</button><span data-page></span><button data-next>Next</button></div><div class="library-actions"><span data-preview-status role="status" aria-live="polite">Choose a filter to preview it on the canvas.</span><div><button type="button" data-cancel>Cancel</button><button type="button" class="primary" data-apply disabled>Apply Filter</button></div></div>';
   document.body.append(dialog);launcher.setAttribute('aria-controls',dialog.id);
   const find=selector=>dialog.querySelector(selector),query=find('[data-search]'),source=find('[data-source]'),favorites=find('[data-favorites]'),sort=find('[data-sort]'),selected=new Set();
-  let page=0,composing=false,countTimer,selectedKey=null,previewing=false,sessionOpen=false,actionId=0,thumbnailObserver=null,thumbnailGeneration=0,thumbnailId=0;
+  let page=0,composing=false,countTimer,selectedKey=null,previewing=false,sessionOpen=false,actionId=0,thumbnailObserver=null,thumbnailGeneration=0,thumbnailId=0,pendingKey=null,pendingPhase=null,previewErrorKey=null,sessionEpoch=0,sessionEnding=false;
+  const downloads=new Set();
 
   function disconnectThumbnailWork(){thumbnailGeneration++;thumbnailObserver?.disconnect();thumbnailObserver=null;clearThumbnailRequests();}
   function updateThumbnail(row,entry,result,generation){
@@ -40,57 +41,85 @@ export function createFilterBrowser({launcher,getEntries,begin,preview,apply,can
     row.dataset.thumbnailReady='false';label.textContent=state==='failed'?'Preview unavailable':state==='idle'?'Preview':'Previewing…';
     if(state==='failed'){description.textContent=`Preview unavailable for ${entry.name}. The filter can still be selected.`;button.setAttribute('aria-describedby',description.id);}else{description.textContent='';button.removeAttribute('aria-describedby');}
   }
+  function enqueueSample(row){
+    if(row.dataset.sampleRequested)return;row.dataset.sampleRequested='true';
+    const generation=thumbnailGeneration,thumb=row.querySelector('.filter-thumbnail'),image=row.querySelector('img'),label=row.querySelector('.filter-thumbnail-state'),description=row.querySelector('.thumbnail-accessibility');
+    const complete=state=>{if(generation!==thumbnailGeneration||!dialog.open||!row.isConnected)return;thumb.dataset.thumbnailState=state;label.textContent=state==='ready'?'':'Sample unavailable';description.textContent=state==='ready'?'Standardized Online sample; the canvas preview uses your current image.':'Sample unavailable; you can still preview this filter on the canvas.';};
+    image.onload=()=>complete('ready');image.onerror=()=>complete('failed');thumb.dataset.thumbnailState='loading';label.textContent='Loading sample…';
+    try{image.src=resolveOnlinePreviewUrl(row.thumbnailEntry);}catch{complete('failed');}
+  }
   function enqueueThumbnail(row,priority=0){
-    if(!requestThumbnail||!row?.isConnected)return;const requested=Number(row.dataset.thumbnailPriority??-1);if(requested>=priority)return;row.dataset.thumbnailPriority=String(priority);const entry=row.thumbnailEntry,generation=thumbnailGeneration,callback=result=>updateThumbnail(row,entry,result,generation);
+    if(!row?.isConnected||!dialog.open)return;
+    if(row.thumbnailEntry.source==='online'){enqueueSample(row);return;}
+    if(!requestThumbnail)return;const requested=Number(row.dataset.thumbnailPriority??-1);if(requested>=priority)return;row.dataset.thumbnailPriority=String(priority);const entry=row.thumbnailEntry,generation=thumbnailGeneration,callback=result=>updateThumbnail(row,entry,result,generation);
     try{requestThumbnail(entry,callback,priority);}catch(error){updateThumbnail(row,entry,{state:'failed',error},generation);}
   }
   function observeThumbnails(list){
-    disconnectThumbnailWork();const rows=[...list.querySelectorAll('.filter-card')];if(!requestThumbnail||!rows.length)return;
+    disconnectThumbnailWork();const rows=[...list.querySelectorAll('.filter-card')];if(!rows.length)return;
     if(typeof IntersectionObserver==='function'){
-      thumbnailObserver=new IntersectionObserver(entries=>{for(const observation of entries)if(observation.isIntersecting){thumbnailObserver?.unobserve(observation.target);enqueueThumbnail(observation.target,20);}}, {root:list,rootMargin:THUMBNAIL_ROOT_MARGIN,threshold:0.01});rows.forEach(row=>thumbnailObserver.observe(row));
+      const generation=thumbnailGeneration;
+      thumbnailObserver=new IntersectionObserver(entries=>{if(generation!==thumbnailGeneration||!dialog.open)return;for(const observation of entries)if(observation.isIntersecting){thumbnailObserver?.unobserve(observation.target);enqueueThumbnail(observation.target,20);}}, {root:list,rootMargin:THUMBNAIL_ROOT_MARGIN,threshold:0.01});rows.forEach(row=>thumbnailObserver.observe(row));
     }else rows.slice(0,THUMBNAIL_FALLBACK_COUNT).forEach(row=>enqueueThumbnail(row,10));
   }
 
   function syncActions(){find('[data-apply]').disabled=previewing||!selectedKey;find('[data-preview-status]').dataset.state=previewing?'busy':selectedKey?'ready':'idle';}
   async function cancelAndClose(){
-    const id=++actionId;previewing=true;syncActions();find('[data-error]').textContent='';
+    if(sessionEnding)return;sessionEnding=true;
+    const id=++actionId;sessionEpoch++;downloads.clear();previewing=true;syncActions();find('[data-error]').textContent='';
     try{await cancel();if(id!==actionId)return;sessionOpen=false;dialog.close('cancel');}
-    catch(error){previewing=false;syncActions();find('[data-error]').textContent=`Could not restore the working filter: ${error.message}`;onError(error);}
+    catch(error){sessionEnding=false;previewing=false;syncActions();find('[data-error]').textContent=`Could not restore the working filter: ${error.message}`;onError(error);}
   }
   async function applyAndClose(){
-    if(previewing||!selectedKey)return;
-    const id=++actionId;previewing=true;syncActions();find('[data-error]').textContent='';find('[data-preview-status]').textContent='Applying selected filter…';
-    try{if(!await apply()||id!==actionId){previewing=false;syncActions();return;}sessionOpen=false;dialog.close('apply');}
-    catch(error){previewing=false;syncActions();find('[data-error]').textContent=`Could not apply filter: ${error.message}`;onError(error);}
+    if(previewing||!selectedKey||sessionEnding)return;sessionEnding=true;
+    const id=++actionId;sessionEpoch++;downloads.clear();previewing=true;syncActions();find('[data-error]').textContent='';find('[data-preview-status]').textContent='Applying selected filter…';
+    try{if(!await apply()||id!==actionId){sessionEnding=false;previewing=false;syncActions();return;}sessionOpen=false;dialog.close('apply');}
+    catch(error){sessionEnding=false;previewing=false;syncActions();find('[data-error]').textContent=`Could not apply filter: ${error.message}`;onError(error);}
   }
   find('[data-close]').onclick=cancelAndClose;find('[data-cancel]').onclick=cancelAndClose;find('[data-apply]').onclick=applyAndClose;
   dialog.addEventListener('cancel',event=>{event.preventDefault();cancelAndClose();});
-  dialog.addEventListener('close',()=>{disconnectThumbnailWork();if(sessionOpen){Promise.resolve(cancel()).catch(onError);sessionOpen=false;}if(!launcher.disabled)launcher.focus();});
+  dialog.addEventListener('close',()=>{actionId++;sessionEpoch++;downloads.clear();disconnectThumbnailWork();if(sessionOpen){Promise.resolve(cancel()).catch(onError);sessionOpen=false;}if(!launcher.disabled)launcher.focus();});
 
-  function reset(){query.value='';source.value='all';favorites.checked=false;sort.value='az';selected.clear();find('[data-tag-search]').value='';page=0;refresh();}
+  function reset(){query.value='';source.value='local';favorites.checked=false;sort.value='az';selected.clear();find('[data-tag-search]').value='';page=0;refresh();}
   function createResult(entry){
+    const online=entry.source==='online';
     const row=browserNode('li',null,'filter-card');row.dataset.entryKey=entry.key;row.dataset.selected=String(entry.key===selectedKey);
     const cardTop=browserNode('div',null,'filter-card-main');
-    const previewButton=browserButton('',async()=>{
-      const previousKey=selectedKey,id=++actionId;selectedKey=entry.key;previewing=true;find('[data-error]').textContent='';find('[data-preview-status]').textContent=`Previewing ${entry.name}…`;refresh();syncActions();
+    const previewButton=online&&!previewOnline?browserNode('div'):browserButton('',async()=>{
+      if(sessionEnding)return;
+      const id=++actionId;pendingKey=entry.key;pendingPhase=online?'loading':'rendering';previewErrorKey=null;previewing=true;find('[data-error]').textContent='';find('[data-preview-status]').textContent=`Previewing ${entry.name}…`;refresh();syncActions();
       enqueueThumbnail(dialog.querySelector(`[data-entry-key="${CSS.escape(entry.key)}"]`),100);
       try{
-        const accepted=await preview(entry);if(id!==actionId)return;
-        if(!accepted){selectedKey=previousKey;previewing=false;refresh();syncActions();return;}
+        const accepted=await (online?previewOnline(entry,phase=>{if(id!==actionId)return;pendingPhase=phase;find('[data-preview-status]').textContent=phase==='loading'?`Loading preview for ${entry.name}…`:`Previewing ${entry.name}…`;refresh();}):preview(entry));if(id!==actionId)return;
+        if(!accepted){pendingKey=null;previewing=false;refresh();syncActions();return;}
+        selectedKey=entry.key;pendingKey=null;
         previewing=false;find('[data-preview-status]').textContent=`Previewing ${entry.name}. Apply it or keep browsing.`;refresh();syncActions();
-      }catch(error){if(id!==actionId)return;selectedKey=previousKey;previewing=false;refresh();syncActions();find('[data-error]').textContent=`Could not preview this filter. Your previous preview was kept.`;}
+      }catch(error){if(id!==actionId)return;pendingKey=null;previewErrorKey=entry.key;previewing=false;find('[data-preview-status]').textContent=selectedKey?'Your previous preview is still on the canvas.':'Choose a filter to preview it on the canvas.';refresh();syncActions();find('[data-error]').textContent=`Could not preview this filter. Your previous preview was kept.`;}
     });
-    previewButton.className='filter-card-preview';previewButton.setAttribute('aria-label',`Preview ${entry.name}`);previewButton.setAttribute('aria-pressed',String(entry.key===selectedKey));previewButton.dataset.entryKey=entry.key;previewButton.dataset.entryAction='preview';
-    const thumb=browserNode('span',null,'filter-thumbnail');thumb.dataset.thumbnailState='idle';thumb.setAttribute('aria-hidden','true');const thumbnailCanvas=browserNode('canvas',null,'filter-thumbnail-image'),thumbnailState=browserNode('span','Preview','filter-thumbnail-state'),thumbnailDescription=browserNode('span',null,'visually-hidden thumbnail-accessibility');thumbnailCanvas.width=1;thumbnailCanvas.height=1;thumbnailDescription.id=`filterThumbnailStatus${++thumbnailId}`;thumb.append(thumbnailCanvas,thumbnailState);previewButton.append(thumb,thumbnailDescription);
+    previewButton.className='filter-card-preview';
+    if(!online||previewOnline){previewButton.setAttribute('aria-label',`Preview ${entry.name}`);previewButton.setAttribute('aria-pressed',String(entry.key===selectedKey));previewButton.dataset.entryKey=entry.key;previewButton.dataset.entryAction='preview';}
+    const thumb=browserNode('span',null,'filter-thumbnail');thumb.dataset.thumbnailState='idle';thumb.setAttribute('aria-hidden','true');const thumbnailCanvas=browserNode(online?'img':'canvas',null,'filter-thumbnail-image'),thumbnailState=browserNode('span',online?'Sample':'Preview','filter-thumbnail-state'),thumbnailDescription=browserNode('span',null,'visually-hidden thumbnail-accessibility');
+    if(online){thumbnailCanvas.alt='';thumbnailCanvas.decoding='async';thumbnailCanvas.loading='lazy';thumbnailCanvas.referrerPolicy='no-referrer';thumbnailDescription.textContent='Standardized Online sample; the canvas preview uses your current image.';thumb.append(browserNode('span','Sample','filter-sample-badge'));}else{thumbnailCanvas.width=1;thumbnailCanvas.height=1;}
+    thumbnailDescription.id=`filterThumbnailStatus${++thumbnailId}`;thumb.append(thumbnailCanvas,thumbnailState);previewButton.append(thumb,thumbnailDescription);
     const copy=browserNode('span',null,'filter-card-copy'),heading=browserNode('span',entry.name,'filter-card-name'),meta=browserNode('span',null,'result-meta');
-    const sourceLabel=entry.source==='builtin'?'Built-in':'My Filter',authorLabel=entry.author||(entry.source==='builtin'?'Filter FabJS':'Author not specified');
-    meta.append(browserNode('span',sourceLabel,'source-badge'),document.createTextNode(` · ${authorLabel}${entry.document.benchmark?' · Benchmark':''}${entry.unavailable?' · Unavailable':''}`));
-    if(entry.key===selectedKey)copy.append(browserNode('span','✓ Selected preview','filter-selection-label'));copy.append(heading,meta,browserNode('span',entry.description||'No description provided.','filter-excerpt'));previewButton.append(copy);
+    const sourceLabel=online?'Online':entry.source==='builtin'?'Built-in':'My Filter',authorLabel=entry.author||(entry.source==='builtin'?'Filter FabJS':'Author not specified');
+    meta.append(browserNode('span',sourceLabel,'source-badge'),document.createTextNode(` · ${authorLabel}${entry.document?.benchmark?' · Benchmark':''}${entry.unavailable?' · Unavailable':''}`));
+    if(entry.key===pendingKey)copy.append(browserNode('span',pendingPhase==='loading'?'Loading preview…':'Previewing…','filter-selection-label'));
+    else if(entry.key===selectedKey)copy.append(browserNode('span',online?'✓ Previewing on canvas':'✓ Selected preview','filter-selection-label'));
+    if(entry.key===previewErrorKey)copy.append(browserNode('span','Preview unavailable','filter-package-error'));copy.append(heading,meta,browserNode('span',entry.description||'No description provided.','filter-excerpt'));previewButton.append(copy);
     const star=browserButton(entry.favorite?'★':'☆',()=>{try{toggleFavorite(entry);find('[data-error]').textContent='';refresh();}catch(error){find('[data-error]').textContent=`Couldn’t save favorites in this browser. ${error.message}`;onError(error);}});star.className='filter-card-favorite';star.setAttribute('aria-pressed',String(entry.favorite));star.setAttribute('aria-label',`${entry.favorite?'Remove':'Add'} ${entry.name} ${entry.favorite?'from':'to'} favorites`);star.dataset.entryKey=entry.key;star.dataset.entryAction='favorite';
-    cardTop.append(previewButton,star);row.append(cardTop);
+    const actions=browserNode('div',null,'filter-card-actions');actions.append(star);
+    if(online&&downloadOnline){
+      const download=browserButton(downloads.has(entry.key)?'…':'↓',async()=>{
+        if(sessionEnding||downloads.has(entry.key))return;const epoch=sessionEpoch;downloads.add(entry.key);refresh();
+        try{await downloadOnline(entry);}catch(error){if(epoch===sessionEpoch)find('[data-error]').textContent='Could not download this filter. The package was unavailable or invalid.';}
+        finally{if(epoch===sessionEpoch){downloads.delete(entry.key);refresh();}}
+      });
+      download.className='filter-card-download';download.disabled=downloads.has(entry.key);download.setAttribute('aria-label',`Download PNG for ${entry.name}`);download.setAttribute('aria-busy',String(download.disabled));download.dataset.entryKey=entry.key;download.dataset.entryAction='download';actions.append(download);
+    }
+    cardTop.append(previewButton,actions);row.append(cardTop);
     const tags=browserNode('div',null,'result-tags');
     for(const tag of entry.tags){
-      const button=browserButton(tag,()=>{query.value='';source.value='all';favorites.checked=false;sort.value='az';selected.clear();selected.add(tagKey(tag));find('[data-tag-search]').value='';page=0;refresh();find('[data-selected] button')?.focus();});
+      const button=browserButton(tag,()=>{query.value='';source.value=online?'online':'local';favorites.checked=false;sort.value='az';selected.clear();selected.add(tagKey(tag));find('[data-tag-search]').value='';page=0;refresh();find('[data-selected] button')?.focus();});
       button.setAttribute('aria-label',`Show all filters tagged ${tag}`);tags.append(button);
     }
     row.append(tags);row.thumbnailEntry=entry;return row;
@@ -99,16 +128,29 @@ export function createFilterBrowser({launcher,getEntries,begin,preview,apply,can
     if(!dialog.open)return;
     const active=document.activeElement,focusKey=active?.dataset?.entryKey,focusAction=active?.dataset?.entryAction,oldButtons=[...dialog.querySelectorAll('[data-entry-action="favorite"]')],oldIndex=oldButtons.indexOf(active);
     let entries;try{entries=getEntries();}catch(error){find('[data-error]').textContent=error.message;entries=[];}
-    const {results,choices}=searchCatalog(entries,{query:query.value,source:source.value,favorites:favorites.checked,tags:[...selected],sort:sort.value});
+    const online=source.value==='online',onlineState=online?getOnlineState():{},onlineStatus=onlineState.status,waiting=online&&onlineStatus!=='ready';
+    const notice=find('[data-online-notice]'),message=find('[data-online-message]'),saved=onlineState.provenance==='saved'?'saved':'previous';
+    notice.hidden=!online||(!onlineState.refreshing&&!onlineState.refreshWarning);
+    const noticeText=notice.hidden?'':onlineState.refreshWarning?`Could not refresh Online Library — showing ${saved} catalogue.`:`Showing ${saved} catalogue · Checking for updates…`;
+    if(message.textContent!==noticeText)message.textContent=noticeText;
+    find('[data-online-retry]').hidden=!onlineState.refreshWarning;
+    const {results,choices}=searchCatalog(waiting?[]:entries,{query:query.value,source:source.value,favorites:favorites.checked,tags:[...selected],sort:sort.value});
     sort.options[1].disabled=!query.value.trim();find('[data-clear]').hidden=!query.value;
     page=Math.min(page,Math.max(0,Math.ceil(results.length/PAGE_SIZE)-1));
-    clearTimeout(countTimer);countTimer=setTimeout(()=>find('[data-count]').textContent=`${results.length} filters`,150);
+    clearTimeout(countTimer);if(waiting)find('[data-count]').textContent=onlineStatus==='error'?'Online Library unavailable':'Loading Online filters…';else countTimer=setTimeout(()=>{const count=`${results.length} filters`;if(find('[data-count]').textContent!==count)find('[data-count]').textContent=count;},150);
     const selectedBox=find('[data-selected]');selectedBox.replaceChildren();for(const key of selected)selectedBox.append(browserButton(`${choices.find(item=>item[0]===key)?.[1]||key} ×`,()=>{selected.delete(key);page=0;refresh();find('[data-reset]').focus();}));
     const choiceBox=find('[data-choices]');choiceBox.replaceChildren();for(const [key,label] of choices.filter(item=>searchText(item[1]).includes(searchText(find('[data-tag-search]').value))).slice(0,50)){
       const wrapper=browserNode('label'),check=browserNode('input');check.type='checkbox';check.checked=selected.has(key);check.onchange=()=>{if(check.checked)selected.add(key);else selected.delete(key);page=0;refresh();[...choiceBox.querySelectorAll('input')].find(node=>node.value===key)?.focus();};check.value=key;wrapper.append(check,document.createTextNode(label));choiceBox.append(wrapper);
     }
     const list=find('.filter-results');list.replaceChildren();for(const entry of results.slice(page*PAGE_SIZE,page*PAGE_SIZE+PAGE_SIZE))list.append(createResult(entry));
-    if(!results.length){const empty=browserNode('li',null,'filter-library-empty');empty.append(browserNode('p',favorites.checked&&!entries.some(entry=>entry.favorite)?'No favorites yet. Star a filter to keep it here.':source.value==='custom'&&!entries.some(entry=>entry.source==='custom')?'Saved filters appear here. Import a filter, then save it to keep it.':'No filters match this search.'),browserButton('Show all filters',reset));list.append(empty);}
+    if(!results.length){const empty=browserNode('li',null,'filter-library-empty');
+      if(online){
+        const message=onlineStatus==='error'?'Could not reach the Online Library. Your Built-in and My Filters are still available.':waiting?'Loading Online filters…':entries.some(entry=>entry.source==='online')?'No Online filters match this search.':'No Online filters are currently available.';
+        empty.append(browserNode('p',message));if(onlineStatus==='error')empty.append(browserButton('Retry',()=>{loadOnline({retry:true});refresh();}));
+      }else empty.append(browserNode('p',favorites.checked&&!entries.some(entry=>entry.favorite)?'No favorites yet. Star a filter to keep it here.':source.value==='custom'&&!entries.some(entry=>entry.source==='custom')?'Saved filters appear here. Import a filter, then save it to keep it.':'No filters match this search.'),browserButton('Show all filters',reset));
+      list.append(empty);
+    }
+    list.setAttribute('aria-busy',String(waiting&&onlineStatus!=='error'));
     const pageCount=Math.max(1,Math.ceil(results.length/PAGE_SIZE)),pages=find('[data-pages]');pages.hidden=results.length<=PAGE_SIZE;find('[data-page]').textContent=`Page ${page+1} of ${pageCount}`;find('[data-prev]').disabled=page===0;find('[data-next]').disabled=(page+1)*PAGE_SIZE>=results.length;
     syncActions();
     observeThumbnails(list);const selectedRow=selectedKey?list.querySelector(`[data-entry-key="${CSS.escape(selectedKey)}"]`):null;if(selectedRow)enqueueThumbnail(selectedRow,100);
@@ -117,8 +159,10 @@ export function createFilterBrowser({launcher,getEntries,begin,preview,apply,can
   find('.filter-results').addEventListener('focusin',event=>enqueueThumbnail(event.target.closest('.filter-card'),80));
   query.oncompositionstart=()=>composing=true;query.oncompositionend=()=>{composing=false;page=0;refresh();};query.oninput=()=>{if(!composing){page=0;refresh();}};
   for(const field of [source,favorites,sort])field.onchange=()=>{page=0;refresh();};
+  source.onchange=()=>{page=0;if(source.value==='online')loadOnline();refresh();};
+  find('[data-online-retry]').onclick=()=>{loadOnline({retry:true});refresh();};
   find('[data-tag-search]').oninput=refresh;find('[data-clear]').onclick=()=>{query.value='';page=0;refresh();query.focus();};find('[data-reset]').onclick=reset;
   find('[data-prev]').onclick=()=>{page--;refresh();};find('[data-next]').onclick=()=>{page++;refresh();};
-  launcher.onclick=async()=>{try{await begin();sessionOpen=true;selectedKey=null;previewing=false;find('[data-error]').textContent='';find('[data-preview-status]').textContent='Choose a filter to preview it on the canvas.';dialog.showModal();refresh();query.focus();}catch(error){onError(error);}};
-  return{refresh,dialog,showError:message=>{find('[data-error]').textContent=message;}};
+  launcher.onclick=async()=>{try{await begin();sessionEnding=false;sessionEpoch++;sessionOpen=true;selectedKey=null;pendingKey=null;previewErrorKey=null;previewing=false;find('[data-error]').textContent='';find('[data-preview-status]').textContent='Choose a filter to preview it on the canvas.';dialog.showModal();if(source.value==='online')loadOnline();refresh();query.focus();}catch(error){onError(error);}};
+  return{invalidateSession:()=>{actionId++;sessionEpoch++;downloads.clear();sessionOpen=false;selectedKey=null;pendingKey=null;previewing=false;if(dialog.open)dialog.close('replaced');},refresh,refreshOnline:()=>{if(source.value==='online')refresh();},dialog,showError:message=>{find('[data-error]').textContent=message;}};
 }

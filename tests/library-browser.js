@@ -90,7 +90,7 @@ async function run(url){
     const tagButton=browser.dialog.querySelector('.result-tags button');assert(tagButton?.textContent==='Retro','result tags are separate labeled buttons');
     // Set an incompatible favorite restriction without refreshing to verify that a tag click clears it.
     favorites.checked=true;tagButton.focus();tagButton.click();
-    assert(search.value===''&&source.value==='all'&&!favorites.checked,'tag browsing clears other restrictions');
+    assert(search.value===''&&source.value==='local'&&!favorites.checked,'tag browsing clears other restrictions');
     assert(browser.dialog.querySelector('[data-selected]').textContent.includes('Retro'),'clicked tag becomes the visible selection');
     assert(document.activeElement===browser.dialog.querySelector('[data-selected] button'),'tag browsing restores focus to the selected-tag control');
     assert(browser.dialog.querySelector('[data-page]').textContent==='Page 1 of 20','tag browsing includes all 1000 matching filters from page one');
@@ -110,7 +110,7 @@ async function run(url){
   }catch(error){output.textContent+=`FAIL ${error.stack}\n`;}
   finally{for(const key of Object.keys(localStorage).filter(key=>key==='ffw-custom-presets'||key.startsWith('ffw-entry-v1:')))localStorage.removeItem(key);for(const [key,value] of backup)localStorage.setItem(key,value);}
 }
-document.querySelector('#run').onclick=()=>run('../index.html');document.querySelector('#standalone').onclick=()=>run('../dist/filter-fabjs-v2.8.6.html');
+document.querySelector('#run').onclick=()=>run('../index.html');document.querySelector('#standalone').onclick=()=>run('../dist/filter-fabjs-v2.9.0.html');
 
 async function inspectLayout(width,height){
   const frame=document.createElement('iframe');frame.style.width=`${width}px`;frame.style.height=`${height}px`;frame.src='../index.html';document.querySelector('#fixture').replaceChildren(frame);await new Promise(resolve=>frame.onload=resolve);

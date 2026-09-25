@@ -1,6 +1,6 @@
 {
   "name": "filter-fabjs",
-  "version": "2.8.7",
+  "version": "2.9.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,7 +8,10 @@
     "dev": "node scripts/dev-server.mjs",
     "build": "node scripts/build.mjs",
     "check": "node scripts/check.mjs",
-    "test": "node tests/fractal-smoke.mjs && node tests/core-smoke.mjs && node tests/control-definitions-smoke.mjs && node tests/app-workflows-smoke.mjs && node tests/png-metadata-smoke.mjs && node tests/wgsl-compiler-smoke.mjs && node tests/wgsl-conditional-smoke.mjs && node tests/wgsl-sharing-smoke.mjs && node tests/cpu-renderer-smoke.mjs && node tests/webgpu-renderer-smoke.mjs && node tests/renderer-manager-smoke.mjs && node tests/analytic-shapes-smoke.mjs && node tests/canvas-view-smoke.mjs && node tests/thumbnail-service-smoke.mjs && node tests/ui-wiring-smoke.mjs && node tests/theme-smoke.mjs && node tests/filter-catalog-smoke.mjs",
-    "verify": "npm run check && npm test && npm run build && node tests/build-output-smoke.mjs"
+    "test": "node tests/fractal-smoke.mjs && node tests/core-smoke.mjs && node tests/control-definitions-smoke.mjs && node tests/app-workflows-smoke.mjs && node tests/png-metadata-smoke.mjs && node tests/wgsl-compiler-smoke.mjs && node tests/wgsl-conditional-smoke.mjs && node tests/wgsl-sharing-smoke.mjs && node tests/cpu-renderer-smoke.mjs && node tests/webgpu-renderer-smoke.mjs && node tests/renderer-manager-smoke.mjs && node tests/analytic-shapes-smoke.mjs && node tests/canvas-view-smoke.mjs && node tests/thumbnail-service-smoke.mjs && node tests/ui-wiring-smoke.mjs && node tests/theme-smoke.mjs && node tests/filter-catalog-smoke.mjs && node tests/online-library-manifest-smoke.mjs && node tests/online-library-client-smoke.mjs && node tests/online-library-ui-smoke.mjs && node tests/online-library-package-smoke.mjs && node tests/online-package-ui-smoke.mjs && node tests/online-library-cache-smoke.mjs && node tests/online-package-cache-smoke.mjs && node tests/online-cache-ui-smoke.mjs && npm run library:test",
+    "verify": "npm run check && npm test && npm run build && node tests/build-output-smoke.mjs",
+    "library:validate": "node tools/online-library/publish-library.mjs validate",
+    "library:build": "node tools/online-library/publish-library.mjs build",
+    "library:test": "node tests/online-library-publish-smoke.mjs"
   }
 }

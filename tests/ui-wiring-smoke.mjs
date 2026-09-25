@@ -68,7 +68,7 @@ assert.match(app, /rendererManager\.renderWithFallback\(/, 'the renderer manager
 assert.match(app, /rendererManager\.diagnose\(program,state\.rendererPreference\)/, 'the UI inspector must consume manager-owned renderer diagnostics');
 assert.doesNotMatch(app, /rendererManager\.get\('cpu'\)|rendererManager\.active\s*=/, 'the app must not bypass manager-owned fallback state');
 assert.match(app, /function prepareFilter\(input\)/, 'filter definitions must be normalized before application state changes');
-assert.match(app, /function applyFilter\(definition,selection,\{importSource=selection\?null:'file'\}=\{\}\)\{[\s\S]*?const next=prepareFilter\(definition\);applyPreparedPresentation\(next\);commitActiveDocument/, 'filter application must finish validation and compilation before mutating UI state');
+assert.match(app, /function applyFilter\(definition,selection,\{importSource=selection\?null:'file'\}=\{\}\)\{[\s\S]*?const next=prepareFilter\(definition\);invalidateLibraryForReplacement\(\);applyPreparedPresentation\(next\);commitActiveDocument/, 'filter application must finish validation and compilation before mutating UI state');
 assert.match(app, /function applyPreparedPresentation\(next\)\{[\s\S]*?state\.legacyMath=next\.legacyMath/, 'validated filters must have a presentation-only application path for temporary previews');
 assert.match(app, /function exportFilter\(\)\{const filter=validatedCurrentFilter\(\);if\(!filter\)return;/, 'filter export must stop when native-format validation fails');
 assert.doesNotMatch(app, /custom:\$\{index\}|customList\(\)\[Number\(id\)\]|index=Number\(id\)/, 'custom preset identity must not depend on array indexes');
@@ -77,7 +77,7 @@ assert.match(app, /state\.lastProgram=next\.program;state\.lastProgramKey=curren
 assert.match(app, /originalWorkingDocument:captureLibraryWorkingState\(\)/, 'opening the library must capture the complete working presentation and document state');
 assert.match(app, /function previewLibraryEntry\(entry\)[\s\S]*?applyPreparedPresentation\(prepared\)[\s\S]*?session\.candidateRendered=true/, 'candidate previews must render through temporary presentation state');
 assert.match(app, /function cancelLibrarySession\(\)[\s\S]*?librarySession=null;restoreLibraryWorkingState\(session\.originalWorkingDocument\)/, 'Cancel and Escape must restore the opening snapshot');
-assert.match(app, /function applyLibraryCandidate\(\)[\s\S]*?commitActiveDocument\(session\.candidatePrepared,session\.candidateDefinition,session\.candidateEntry\.key\)/, 'Apply Filter must promote the rendered candidate into normal identity state');
+assert.match(app, /function applyLibraryCandidate\(\)[\s\S]*?commitActiveDocument\(session\.candidatePrepared,session\.candidateDefinition,online\?null:session\.candidateEntry\.key,\{importSource:online\?'online':null\}\)/, 'Apply Filter must promote the rendered candidate into normal identity state');
 assert.match(app, /cancelRender\(\{silent:true\}\)/, 'rapid preview replacement must use the renderer cancellation generation without cancellation toasts');
 assert.match(app, /getLibraryPreviewState:/, 'library preview identity must be available through a read-only diagnostic snapshot');
 assert.match(app, /new FilterThumbnailService\(\{rendererManager:new RendererManager/, 'thumbnail rendering must own a renderer manager separate from the main canvas manager');

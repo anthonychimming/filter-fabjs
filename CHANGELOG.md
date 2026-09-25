@@ -1,5 +1,28 @@
 # Changelog
 
+## 2.9.0
+
+### Added
+
+- Online Filter Library alongside Built-in and My Filters in the same browser, with search, tags, favorites and pagination. The static catalogue is delivered from the separate `filter-fabjs-library` GitHub Pages repository.
+- Five initial Online filters: Chromatic Neon Contour, CRT Display, Levels / Midtone, Turbulent Displace and Lens Distortion.
+- Standardized Sample images for browsing. Selecting an Online filter previews it on your current image; Apply keeps it as an imported, unsaved filter. Save creates an independent My Filter, and Download PNG returns the portable package. Favorites do not install filters.
+
+### Improved
+
+- Last-known-good catalogue metadata remains available while refreshing, with clear errors and Retry. Validated packages are reused during the page session; saved catalogue metadata does not guarantee offline packages or images.
+- CPU fallback, native JSON, portable PNG workflows and historic Filter Factory `.afs` import remain supported. The existing single-pass architecture is unchanged.
+
+### Fixed
+
+- WebGPU signed-zero and axis-angle compatibility.
+- Exact centered-angle handling at image centers.
+- Exact Angular-gradient axis and diagonal seams.
+
+### Known limitations
+
+Mandelbrot rendering has a pre-existing CPU/WebGPU numerical difference: coordinate precision and rounding can produce sparse pixel differences, sometimes large near sensitive fractal boundaries, plus occasional one-byte shading differences. The reference hardware suite remains 84/85, with Mandelbrot field the sole failure. Use CPU rendering when matching CPU output exactly is required.
+
 ## 2.8.7
 
 - Bundled Inter Variable for UI text and JetBrains Mono Variable for formulas, code, identifiers, diagnostics, and seed inputs, with SIL OFL licenses and provenance. Ordinary control values use UI typography with tabular numerals.

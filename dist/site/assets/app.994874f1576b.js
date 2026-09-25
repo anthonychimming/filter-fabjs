@@ -5105,12 +5105,165 @@ const WEBGPU_PARAMS_HEADER_BYTES=16;
 const WEBGPU_PARAMS_BYTES=WEBGPU_PARAMS_HEADER_BYTES+WEBGPU_CONTROL_SLOT_COUNT*4;
 
 
+/* src/gpu/angle-sign.js */
+/* GPU-local sign provenance for angle arguments. No physical -0 is required. */
+
+// These CPU operations produce +0 when their result is zero (absolute values,
+// nonnegative masks/samples, clamping against +0, or cancellation of magnitudes).
+const POSITIVE_ZERO_CALLS=new Set('src src0 src1 srcWrap srcMirror srcLinear rad rad0 rad1 map abs sub dif sqr sqrt cos c2m radius step smoothstep fract bias gain hash2 valueNoise perlin worleyF1 worleyF2 fbm turbulence ridged periodicNoise mandelbrot julia wrap mirror repeat mirrorRepeat linearGrad radialGrad angularGrad checker brick line circle ring box triangle grid sierpinski sdfLine sdfCircle sdfBox sdfFill sdfOutline multiply screen overlay softLight difference'.split(' '));
+const and=(a,b)=>a==='false'||b==='false'?'false':a==='true'?b:b==='true'?a:`(${a} && ${b})`;
+const or=(a,b)=>a==='true'||b==='true'?'true':a==='false'?b:b==='false'?a:`(${a} || ${b})`;
+const not=a=>a==='true'?'false':a==='false'?'true':`(!${a})`;
+const xor=(a,b)=>a===b?'false':a==='false'?b:b==='false'?a:a==='true'?not(b):b==='true'?not(a):`(${a} != ${b})`;
+
+class AngleSignLowering{
+  constructor(compiler,channel){this.compiler=compiler;this.channel=channel}
+  constant(k){return{v:this.compiler.number(k),n:String(k<0||Object.is(k,-0)),k}}
+  bind(expression,type='f32'){
+    const name=`ff_sign_${this.compiler.nextTemporary++}`;
+    this.compiler.statements.push(`let ${name}:${type} = ${expression};`);return name;
+  }
+  pair(expression,zeroNegative='false',known){
+    const v=this.bind(expression);
+    if(known!==undefined&&Number.isFinite(known))return{v,n:String(known<0||Object.is(known,-0)),k:known};
+    const n=or(`(${v} < 0.0)`,and(`(${v} == 0.0)`,zeroNegative));
+    return{v,n:this.bind(n,'bool')};
+  }
+  zero(a){return a.k!==undefined?String(a.k===0):`(${a.v} == 0.0)`}
+  unary(a){return this.pair(`(-${a.v})`,not(a.n),a.k===undefined?undefined:-a.k)}
+  binary(op,a,b){
+    let nz,k;
+    switch(op){
+      case'+':nz=and(and(this.zero(a),this.zero(b)),and(a.n,b.n));if(a.k!==undefined&&b.k!==undefined)k=a.k+b.k;break;
+      case'-':nz=and(and(this.zero(a),this.zero(b)),and(a.n,not(b.n)));if(a.k!==undefined&&b.k!==undefined)k=a.k-b.k;break;
+      case'*':nz=xor(a.n,b.n);if(a.k!==undefined&&b.k!==undefined)k=a.k*b.k;break;
+      case'/':nz=and(not(this.zero(b)),xor(a.n,b.n));if(a.k!==undefined&&b.k!==undefined)k=b.k===0?0:a.k/b.k;break;
+      case'%':nz=and(not(this.zero(b)),a.n);if(a.k!==undefined&&b.k!==undefined)k=b.k===0?0:a.k%b.k;break;
+      default:throw new Error(`Missing angle sign rule for ${op}`);
+    }
+    const expression=op==='/'?`ff_div(${a.v}, ${b.v})`:op==='%'?`ff_rem(${a.v}, ${b.v})`:`(${a.v} ${op} ${b.v})`;
+    return this.pair(expression,nz,k);
+  }
+  minmax(op,a,b){
+    const known=a.k!==undefined&&b.k!==undefined?Math[op](a.k,b.k):undefined;
+    return this.pair(`${op}(${a.v}, ${b.v})`,op==='min'?or(a.n,b.n):and(a.n,b.n),known);
+  }
+  clamp(a,lo,hi){return this.minmax('max',lo,this.minmax('min',hi,a))}
+  choose(condition,yes,no){
+    // Both payload and sign stay in the selected scope, including expensive work.
+    const c=this.compiler,name=`ff_sign_branch_${c.nextTemporary++}`;
+    const y=c.captureStatements(yes),n=c.captureStatements(no);
+    c.statements.push(`var ${name}:f32;\nvar ${name}_negative:bool;\nif (${condition}) {\n${y.statements}\n${name} = ${y.expression.v};\n${name}_negative = ${y.expression.n};\n} else {\n${n.statements}\n${name} = ${n.expression.v};\n${name}_negative = ${n.expression.n};\n}`);
+    return{v:name,n:`${name}_negative`};
+  }
+  angle(node){
+    const x=this.lower(node.args[0]),y=this.lower(node.args[1]);
+    this.compiler.usesSemanticAngle=true;
+    // atan2's result has Y's sign, including the zero result on the positive axis.
+    return{v:`(ff_angle(${y.v}, ${x.v}, ${y.n}, ${x.n}) * 1024.0 / FF_TAU)`,n:y.n};
+  }
+  lower(node,centeredInput=true){
+    const c=this.compiler,ch=this.channel;
+    switch(node.op){
+      case'const':return this.constant(Number(node.value));
+      case'var':{
+        if(centeredInput&&(node.name==='cx'||node.name==='cy')){
+          // Only angle arithmetic receives the CPU's exact centered +0. Keep
+          // the original f32 value elsewhere, including neighbors and edges.
+          // Integer equality cannot introduce a center in an even dimension.
+          const x=node.name==='cx',coordinate=x?'px':'py',size=x?'width':'height';
+          const v=this.bind(`select(${c.variable(node.name,ch)}, 0.0, 2u*${coordinate} == params.${size}-1u)`);
+          return{v,n:`(${v} < 0.0)`};
+        }
+        // d is the only variable whose CPU definition can yield -0. Its sign
+        // comes from -(height/2-y); coordinate/chroma cancellations yield +0.
+        const nz=/^d[01]?$/.test(node.name)?'(dy >= 0.0)':'false';
+        return{v:c.variable(node.name,ch),n:or(`(${c.variable(node.name,ch)} < 0.0)`,and(`(${c.variable(node.name,ch)} == 0.0)`,nz))};
+      }
+      case'unary':return node.operator==='+'?this.lower(node.input,centeredInput):node.operator==='-'?this.unary(this.lower(node.input,centeredInput)):this.pair(c.value(node,ch));
+      case'binary':return ['+','-','*','/','%'].includes(node.operator)?this.binary(node.operator,this.lower(node.left,centeredInput),this.lower(node.right,centeredInput)):this.pair(c.value(node,ch));
+      case'select':return this.choose(c.bool(node.condition,ch),()=>this.lower(node.whenTrue,centeredInput),()=>this.lower(node.whenFalse,centeredInput));
+      case'call':return this.call(node);
+      default:throw new Error(`Missing angle sign rule for ${node.op}`);
+    }
+  }
+  call(node){
+    const c=this.compiler,ch=this.channel,name=node.fn;
+    if(name==='angle'||name==='c2d'){
+      const result=this.angle(node);return{v:this.bind(result.v),n:result.n};
+    }
+    if(POSITIVE_ZERO_CALLS.has(name))return this.pair(c.value(node,ch));
+    // Other calls are semantic boundaries: do not alter their coordinate
+    // inputs. An explicit nested angle establishes its own local correction.
+    const a=node.args.map(arg=>this.lower(arg,false)),A=i=>a[i];
+    const original=()=>c.call(name,a.map(arg=>arg.v),ch);
+    const bin=(op,x,y)=>this.binary(op,x,y),K=n=>this.constant(n);
+    const interpolate=(x,y,t)=>bin('+',x,bin('*',bin('-',y,x),t));
+    let sign;
+    switch(name){
+      case'ctl':
+        // Read runtime control-buffer bits before floating arithmetic. Invalid
+        // indices return semantic +0 regardless of constant coalescing.
+        return this.pair(original(),`ff_control_negative(${A(0).v})`);
+      case'val':{
+        const control=this.pair(c.call('ctl',[A(0).v],ch),`ff_control_negative(${A(0).v})`);
+        sign=bin('+',bin('/',bin('*',control,bin('-',A(2),A(1))),K(255)),A(1)).n;break;
+      }
+      case'min':case'sdfUnion':sign=or(A(0).n,A(1).n);break;
+      case'max':case'sdfIntersect':sign=and(A(0).n,A(1).n);break;
+      case'sdfSubtract':sign=and(A(0).n,not(A(1).n));break;
+      case'add':sign=or(bin('+',A(0),A(1)).n,A(2).n);break;
+      case'clamp':sign=and(A(1).n,or(A(2).n,A(0).n));break;
+      case'floor':case'ceil':case'round':case'sign':sign=A(0).n;break;
+      case'sin':case'tan':sign=and(this.zero(A(0)),A(0).n);break;
+      case'r2x':case'r2y':{
+        const trig=this.pair(`(${name==='r2x'?'cos':'sin'}(${A(0).v} * FF_TAU / 1024.0))`,name==='r2y'?and(this.zero(A(0)),A(0).n):'false');
+        sign=xor(trig.n,A(1).n);break;
+      }
+      case'cnv':case'cnv0':case'cnv1':sign=and(not(this.zero(A(9))),A(9).n);break;
+      case'mix':sign=and(not(this.zero(A(3))),bin('+',bin('/',bin('*',A(0),A(2)),A(3)),bin('/',bin('*',A(1),bin('-',A(3),A(2))),A(3))).n);break;
+      case'scl':sign=and(`(${A(2).v} != ${A(1).v})`,bin('+',A(3),bin('/',bin('*',bin('-',A(4),A(3)),bin('-',A(0),A(1))),bin('-',A(2),A(1)))).n);break;
+      case'lerp':{
+        const t=this.pair(`clamp(select(${A(2).v}, ${A(2).v}/255.0, abs(${A(2).v})>1.0),0.0,1.0)`);
+        sign=interpolate(A(0),A(1),t).n;break;
+      }
+      case'gradient3':case'gradient4':{
+        const t=this.clamp(A(0),K(0),K(1));
+        if(name==='gradient3')sign=this.choose(`(${t.v} <= 0.5)`,()=>bin('+',A(1),bin('*',bin('*',bin('-',A(2),A(1)),t),K(2))),()=>interpolate(A(2),A(3),bin('-',bin('*',t,K(2)),K(1)))).n;
+        else sign=this.choose(`(${t.v} <= 1.0/3.0)`,()=>bin('+',A(1),bin('*',bin('*',bin('-',A(2),A(1)),t),K(3))),()=>this.choose(`(${t.v} <= 2.0/3.0)`,()=>interpolate(A(2),A(3),bin('-',bin('*',t,K(3)),K(1))),()=>interpolate(A(3),A(4),bin('-',bin('*',t,K(3)),K(2))))).n;
+        break;
+      }
+      case'sdfSmoothUnion':{
+        const k=this.pair(`abs(${A(2).v})`);
+        sign=this.choose(this.zero(k),()=>this.minmax('min',A(0),A(1)),()=>{
+          const h=this.clamp(bin('+',K(0.5),bin('/',bin('*',K(0.5),bin('-',A(1),A(0))),k)),K(0),K(1));
+          return bin('-',interpolate(A(1),A(0),h),bin('*',bin('*',k,h),bin('-',K(1),h)));
+        }).n;break;
+      }
+      // Fail closed if a future function is added without a reviewed sign rule.
+      default:throw new Error(`Missing angle zero-sign rule for ${name}()`);
+    }
+    return this.pair(original(),sign);
+  }
+}
+
+const SEMANTIC_ANGLE_WGSL=`
+fn ff_control_negative(index:f32)->bool{let i=i32(trunc(index));if(i<0||i>=${CONTROL_COUNT}){return false;}return (bitcast<u32>(params.controls[u32(i)])&0x80000000u)!=0u;}
+fn ff_angle(y:f32,x:f32,yNegative:bool,xNegative:bool)->f32{
+  if(y==0.0){if(xNegative){return select(FF_PI,-FF_PI,yNegative);}return 0.0;}
+  if(x==0.0){return select(FF_PI*0.5,-FF_PI*0.5,yNegative);}
+  return atan2(y,x);
+}
+`;
+
+
 /* src/gpu/wgsl-compiler.js */
 /**
  * Filter FabJS
  * Modular source extracted from v2.0.7; modular architecture v2.1.0.
  * Licensed GPL-2.0-or-later. See LICENSE and README.md.
  */
+
 
 
 
@@ -5266,7 +5419,7 @@ class WGSLCompiler{
         return`(${a} ${node.operator} ${b})`;
       }
       case'select':return this.selectValue(node,channel);
-      case'call':return this.call(node.fn,node.args.map(arg=>this.value(arg,channel)),channel);
+      case'call':if(node.fn==='angle'||node.fn==='c2d')return new AngleSignLowering(this,channel).angle(node).v;return this.call(node.fn,node.args.map(arg=>this.value(arg,channel)),channel);
     }
     throw new WGSLCompileError(`Unsupported IR operation ${node.op}`,[node.op]);
   }
@@ -5307,7 +5460,7 @@ class WGSLCompiler{
       case'gradient3':return`ff_gradient3(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)})`;case'gradient4':return`ff_gradient4(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
       case'linearGrad':return`ff_linear_grad(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)}, ${A(5)})`;
       case'radialGrad':return`ff_radial_grad(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
-      case'angularGrad':return`ff_angular_grad(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
+      case'angularGrad':this.usesAngularGrad=true;return`ff_angular_grad(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
       case'checker':return`ff_checker(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)})`;
       case'brick':return`ff_brick(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)}, ${A(5)})`;
       case'line':return`ff_line(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)}, ${A(5)}, ${A(6)}, ${A(7)})`;
@@ -5341,6 +5494,7 @@ fn ff_num(v:bool)->f32{return select(0.0,1.0,v);}
 fn ff_negative_zero()->f32{return bitcast<f32>(0x80000000u);}
 fn ff_round(v:f32)->f32{let rounded=floor(v+0.5);if(rounded==0.0&&(bitcast<u32>(v)&0x80000000u)!=0u){return ff_negative_zero();}return rounded;}
 fn ff_atan2(y:f32,x:f32)->f32{if(y==0.0&&x==0.0){let yNegative=(bitcast<u32>(y)&0x80000000u)!=0u;let xNegative=(bitcast<u32>(x)&0x80000000u)!=0u;if(xNegative){return select(FF_PI,-FF_PI,yNegative);}return select(0.0,ff_negative_zero(),yNegative);}return atan2(y,x);}
+${this.usesSemanticAngle?SEMANTIC_ANGLE_WGSL:''}
 fn ff_clamp(v:f32,lo:f32,hi:f32)->f32{return max(lo,min(hi,v));}
 fn ff_normalized_coordinate(v:f32,size:f32)->f32{if(size<=1.0){return 0.5;}return v/(size-1.0);}
 fn ff_div(a:f32,b:f32)->f32{if(b==0.0){return 0.0;}return a/b;}
@@ -5386,7 +5540,16 @@ fn ff_mandelbrot(cx:f32,cy:f32,iterations:f32)->f32{return ff_fractal_escape(0.0
 fn ff_julia(x:f32,y:f32,cx:f32,cy:f32,iterations:f32)->f32{return ff_fractal_escape(x,y,cx,cy,iterations);}
 fn ff_linear_grad(x:f32,y:f32,x0:f32,y0:f32,x1:f32,y1:f32)->f32{let dx=x1-x0;let dy=y1-y0;let den=dx*dx+dy*dy;if(den==0.0){return 0.0;}return clamp(((x-x0)*dx+(y-y0)*dy)/den,0.0,1.0);}
 fn ff_radial_grad(x:f32,y:f32,cx:f32,cy:f32,r:f32)->f32{return clamp(1.0-length(vec2<f32>(x-cx,y-cy))/max(0.000001,abs(r)),0.0,1.0);}
-fn ff_angular_grad(x:f32,y:f32,cx:f32,cy:f32,offset0:f32)->f32{let offset=select(offset0/1024.0,offset0,abs(offset0)<=1.0);return ff_wrap(ff_atan2(y-cy,x-cx)/FF_TAU+offset,1.0);}
+${this.usesAngularGrad?String.raw`// Exact rays use binary turn fractions before the wrap discontinuity.
+// Keep the existing origin and non-exact atan2 paths; never snap nearby rays.
+fn ff_angular_turn(y:f32,x:f32)->f32{
+  if(x==0.0&&y==0.0){return ff_atan2(y,x)/FF_TAU;}
+  if(y==0.0){return select(0.0,0.5,x<0.0);}
+  if(x==0.0){return select(0.25,-0.25,y<0.0);}
+  if(abs(x)==abs(y)){let magnitude=select(0.125,0.375,x<0.0);return select(magnitude,-magnitude,y<0.0);}
+  return ff_atan2(y,x)/FF_TAU;
+}
+`:''}fn ff_angular_grad(x:f32,y:f32,cx:f32,cy:f32,offset0:f32)->f32{let offset=select(offset0/1024.0,offset0,abs(offset0)<=1.0);return ff_wrap(${this.usesAngularGrad?'ff_angular_turn(y-cy,x-cx)':'ff_atan2(y-cy,x-cx)/FF_TAU'}+offset,1.0);}
 fn ff_checker(x:f32,y:f32,width0:f32,height0:f32)->f32{let width=max(1.0,abs(width0));let height=max(1.0,abs(height0));let parity=(i32(floor(x/width))+i32(floor(y/height)))&1;return select(0.0,1.0,parity!=0);}
 fn ff_brick(x:f32,y:f32,width0:f32,height0:f32,mortar0:f32,offset0:f32)->f32{let width=max(1.0,abs(width0));let height=max(1.0,abs(height0));let mortar=clamp(abs(mortar0),0.0,min(width,height)*0.5);let row=i32(floor(y/height));let stagger=select(0.0,1.0,(row&1)!=0);let offset=select(offset0,offset0*width,abs(offset0)<=1.0);let localX=ff_wrap(x+offset*stagger,width);let localY=ff_wrap(y,height);return select(0.0,1.0,localX>=mortar&&localX<=width-mortar&&localY>=mortar&&localY<=height-mortar);}
 fn ff_shape_mask(distance:f32,feather0:f32)->f32{let feather=max(0.0,abs(feather0));if(distance<=0.0){return 1.0;}if(feather==0.0){return 0.0;}return 1.0-ff_smoothstep(0.0,feather,distance);}
@@ -6104,6 +6267,283 @@ async function extractFilterFabMetadata(pngBlobOrFile){
   return validateFilterFabPngEnvelope(value);
 }
 
+// Publishing inspection reuses this module's bounded chunk parser; no pixel decoding.
+async function readPngDimensions(pngBlobOrFile){
+  const chunks=parseChunks(await blobBytes(pngBlobOrFile)),header=chunks[0];
+  if(header?.type!=='IHDR'||header.data.length!==13||chunks.filter(item=>item.type==='IHDR').length!==1)fail('PNG requires one leading 13-byte IHDR');
+  if(crc32([header.typeBytes,header.data])!==header.crc)fail('PNG IHDR CRC check failed','crc');
+  const width=readU32(header.data,0),height=readU32(header.data,4);
+  if(!width||!height)fail('PNG dimensions must be positive');
+  return{width,height};
+}
+
+
+/* src/io/filter-library-manifest.js */
+// Metadata validation only; transport and portable filter documents are separate boundaries.
+
+const ONLINE_LIBRARY_MAX_ENTRIES=1000;
+const ONLINE_LIBRARY_MAX_ASSET_PATH_LENGTH=2048;
+const ONLINE_LIBRARY_MAX_TIMESTAMP_LENGTH=120;
+
+function object(value,label){
+  if(!value||typeof value!=='object'||Array.isArray(value))throw new Error(`Online library ${label} must be an object`);
+}
+function positiveInteger(value,label){
+  if(!Number.isSafeInteger(value)||value<1)throw new Error(`Online library ${label} must be a positive safe integer`);
+  return value;
+}
+function metadataText(value,label,limit,required=false){
+  if(value===undefined&&!required)return '';
+  if(typeof value!=='string')throw new Error(`Online library filter ${label} must be a string`);
+  const result=value.trim();
+  if(result.length>limit||(required&&!result))throw new Error(`Online library filter ${label} must contain ${required?'1':'0'}–${limit} characters`);
+  return result;
+}
+function assetPath(value,label,extension){
+  const fail=()=>{throw new Error(`Online library ${label} path must be a relative ${label==='package'?'PNG':'PNG or WebP'} asset`);};
+  if(typeof value!=='string'||value.length>ONLINE_LIBRARY_MAX_ASSET_PATH_LENGTH||/\p{Cc}/u.test(value))fail();
+  const path=value.trim();
+  // Check encoded traversal/separators too, without rewriting the supplied path.
+  let decoded;try{decoded=decodeURIComponent(path);}catch{fail();}
+  for(const candidate of [path,decoded]){
+    if(!candidate||candidate.startsWith('/')||/[\\?#\p{Cc}]/u.test(candidate)||/^[A-Za-z][A-Za-z0-9+.-]*:/.test(candidate)||candidate.split('/').some(segment=>segment==='.'||segment==='..'))fail();
+  }
+  if(!extension.test(path))fail();
+  return path;
+}
+function publicationDate(value){
+  if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value))throw new Error('Online library publishedAt must be a real YYYY-MM-DD date');
+  const date=new Date(`${value}T00:00:00Z`);
+  if(!Number.isFinite(date.getTime())||date.toISOString().slice(0,10)!==value)throw new Error('Online library publishedAt must be a real YYYY-MM-DD date');
+  return value;
+}
+function filterMetadata(value){
+  object(value,'filter');
+  if(value.id===undefined)throw new Error('Online library filter id is required');
+  const id=validatePortableId(value.id),revision=positiveInteger(value.revision,'filter revision');
+  if(value.documentType!=='filter')throw new Error('Unsupported online library document type');
+  if(value.filterFormat!==2)throw new Error('Unsupported online library filter format');
+  object(value.preview,'preview');object(value.package,'package');
+  for(const dimension of ['width','height'])if(!Number.isInteger(value.preview[dimension])||value.preview[dimension]<1||value.preview[dimension]>2048)throw new Error(`Online library preview ${dimension} must be an integer from 1 to 2048`);
+  return{
+    id,revision,name:metadataText(value.name,'name',120,true),
+    author:metadataText(value.author,'author',120),description:metadataText(value.description,'description',2000),
+    tags:normalizeTags(value.tags),documentType:'filter',filterFormat:2,
+    ...(value.publishedAt===undefined?{}:{publishedAt:publicationDate(value.publishedAt)}),
+    preview:{url:assetPath(value.preview.url,'preview',/\.(png|webp)$/i),width:value.preview.width,height:value.preview.height},
+    package:{url:assetPath(value.package.url,'package',/\.png$/i)}
+  };
+}
+
+/** Validate an already-parsed manifest and return a fresh, known-fields-only projection. */
+function validateOnlineLibraryManifest(value){
+  object(value,'manifest');
+  if(value.schema!=='filter-fab-js/library')throw new Error('Online library schema is invalid');
+  if(value.schemaVersion!==1)throw new Error('Unsupported online library schema version');
+  const libraryVersion=positiveInteger(value.libraryVersion,'libraryVersion');
+  if(!Array.isArray(value.filters)||value.filters.length>ONLINE_LIBRARY_MAX_ENTRIES)throw new Error(`Online library filters must be an array of at most ${ONLINE_LIBRARY_MAX_ENTRIES} entries`);
+  if(value.generatedAt!==undefined&&(typeof value.generatedAt!=='string'||!value.generatedAt.trim()||value.generatedAt.length>ONLINE_LIBRARY_MAX_TIMESTAMP_LENGTH||!Number.isFinite(Date.parse(value.generatedAt))))throw new Error('Online library generatedAt must be a valid timestamp of at most 120 characters');
+  const filters=[],ids=new Set();
+  for(const valueFilter of value.filters){
+    const filter=filterMetadata(valueFilter);
+    if(ids.has(filter.id))throw new Error(`Online library contains duplicate filter ID "${filter.id}"`);
+    ids.add(filter.id);filters.push(filter);
+  }
+  return{schema:'filter-fab-js/library',schemaVersion:1,libraryVersion,...(value.generatedAt===undefined?{}:{generatedAt:value.generatedAt}),filters};
+}
+
+
+/* src/io/filter-library-cache.js */
+
+const ONLINE_LIBRARY_CACHE_KEY='ffw-online-library-cache-v1';
+const ONLINE_LIBRARY_PERSISTED_MANIFEST_MAX_BYTES=2*1024*1024;
+
+function onlineCacheStorage(storage){return typeof storage==='function'?storage():storage;}
+function onlineCacheFits(text){return text.length<=ONLINE_LIBRARY_PERSISTED_MANIFEST_MAX_BYTES&&new TextEncoder().encode(text).byteLength<=ONLINE_LIBRARY_PERSISTED_MANIFEST_MAX_BYTES;}
+
+// Storage access is lazy and best-effort; browser-local data is untrusted.
+function readOnlineLibraryCache({storage,manifestUrl}){
+  try{
+    const raw=onlineCacheStorage(storage)?.getItem(ONLINE_LIBRARY_CACHE_KEY);
+    if(typeof raw!=='string'||!onlineCacheFits(raw))return null;
+    const record=JSON.parse(raw);
+    if(record?.cacheSchema!==1||record.manifestUrl!==manifestUrl)return null;
+    return validateOnlineLibraryManifest(record.manifest);
+  }catch{return null;}
+}
+
+function writeOnlineLibraryCache({storage,manifestUrl,manifest,now=()=>new Date().toISOString()}){
+  try{
+    const normalized=validateOnlineLibraryManifest(manifest),target=onlineCacheStorage(storage);
+    if(!target)return false;
+    // Another tab may have stored a newer valid catalogue since our hydration.
+    const previous=readOnlineLibraryCache({storage:target,manifestUrl});
+    if(previous&&previous.libraryVersion>normalized.libraryVersion)return false;
+    const raw=JSON.stringify({cacheSchema:1,manifestUrl,storedAt:now(),manifest:normalized});
+    if(!onlineCacheFits(raw))return false;
+    target.setItem(ONLINE_LIBRARY_CACHE_KEY,raw);return true;
+  }catch{return false;}
+}
+
+
+/* src/io/filter-library-client.js */
+
+const DEFAULT_ONLINE_LIBRARY_MANIFEST_URL='https://anthonychimming.github.io/filter-fabjs-library/catalogue.json';
+const ONLINE_LIBRARY_MANIFEST_MAX_BYTES=8*1024*1024;
+const ONLINE_LIBRARY_TIMEOUT_MS=12000;
+
+function onlineManifestUrl(value){
+  const url=new URL(value);
+  const loopback=['localhost','127.0.0.1','[::1]'].includes(url.hostname);
+  if((url.protocol!=='https:'&&!(url.protocol==='http:'&&loopback))||url.username||url.password||url.hash)throw new Error('Online library manifest requires HTTPS (or localhost for testing)');
+  return url;
+}
+
+// relativePath must come from the Stage 1 validator; also fail closed on origin escape.
+function resolveOnlineLibraryAssetUrl(manifestUrl,relativePath){
+  const base=onlineManifestUrl(manifestUrl);
+  if(typeof relativePath!=='string'||!relativePath||relativePath!==relativePath.trim()||/^[A-Za-z][A-Za-z0-9+.-]*:|^[\/\\]|[\\?#\p{Cc}]/u.test(relativePath))throw new Error('Online library asset must be a relative path');
+  const url=new URL(relativePath,base);
+  if(url.origin!==base.origin)throw new Error('Online library asset must remain on the manifest origin');
+  return url.href;
+}
+
+async function fetchOnlineLibraryManifest(manifestUrl,{fetchImpl=globalThis.fetch,signal,timeoutMs=ONLINE_LIBRARY_TIMEOUT_MS}={}){
+  const url=onlineManifestUrl(manifestUrl).href;
+  if(!Number.isFinite(timeoutMs)||timeoutMs<=0)throw new Error('Online library timeout must be positive and finite');
+  const controller=new AbortController(),abort=()=>controller.abort(signal.reason);
+  if(signal?.aborted)abort();else signal?.addEventListener('abort',abort,{once:true});
+  const timer=setTimeout(()=>controller.abort(new Error('Online library request timed out')),timeoutMs);
+  let rejectAbort;
+  const aborted=new Promise((_,reject)=>{rejectAbort=()=>reject(controller.signal.reason);if(controller.signal.aborted)rejectAbort();else controller.signal.addEventListener('abort',rejectAbort,{once:true});});
+  try{
+    return await Promise.race([aborted,(async()=>{
+      controller.signal.throwIfAborted();
+      const response=await fetchImpl(url,{method:'GET',credentials:'omit',cache:'no-store',redirect:'error',signal:controller.signal});
+      if(!response.ok)throw new Error(`Online library HTTP ${response.status}`);
+      if(Number(response.headers.get('Content-Length'))>ONLINE_LIBRARY_MANIFEST_MAX_BYTES)throw new Error('Online library manifest exceeds 8 MiB');
+      const bytes=new Uint8Array(await response.arrayBuffer());controller.signal.throwIfAborted();
+      if(bytes.byteLength>ONLINE_LIBRARY_MANIFEST_MAX_BYTES)throw new Error('Online library manifest exceeds 8 MiB');
+      if(!bytes.byteLength)throw new Error('Online library manifest is empty');
+      let text;try{text=new TextDecoder('utf-8',{fatal:true}).decode(bytes);}catch{throw new Error('Online library manifest is not valid UTF-8');}
+      let value;try{value=JSON.parse(text);}catch{throw new Error('Online library manifest is not valid JSON');}
+      return{manifest:validateOnlineLibraryManifest(value),manifestUrl:url};
+    })()]);
+  }finally{clearTimeout(timer);signal?.removeEventListener('abort',abort);controller.signal.removeEventListener('abort',rejectAbort);}
+}
+
+
+/* src/io/filter-library-package.js */
+
+
+
+
+const ONLINE_LIBRARY_PACKAGE_MAX_BYTES=8*1024*1024;
+const ONLINE_LIBRARY_PACKAGE_TIMEOUT_MS=18000;
+
+function onlinePackageFilename(id){
+  if(!validatePortableId(id))throw new Error('Online package requires a portable id');
+  return `filterfab-${id}.png`;
+}
+
+async function readOnlinePackageBytes(response,signal){
+  // Stop oversized bodies while receiving them, even without Content-Length.
+  if(!response.body?.getReader){
+    const bytes=new Uint8Array(await response.arrayBuffer());signal.throwIfAborted();
+    if(bytes.byteLength>ONLINE_LIBRARY_PACKAGE_MAX_BYTES)throw new Error('Online package exceeds 8 MiB');
+    return bytes;
+  }
+  const reader=response.body.getReader(),parts=[];
+  let length=0,complete=false;
+  const abort=()=>{reader.cancel().catch(()=>{});};signal.addEventListener('abort',abort,{once:true});
+  try{
+    while(true){
+      signal.throwIfAborted();const {done,value}=await reader.read();signal.throwIfAborted();
+      if(done){complete=true;break;}
+      length+=value.byteLength;if(length>ONLINE_LIBRARY_PACKAGE_MAX_BYTES)throw new Error('Online package exceeds 8 MiB');
+      parts.push(value);
+    }
+    const bytes=new Uint8Array(length);let offset=0;for(const part of parts){bytes.set(part,offset);offset+=part.byteLength;}return bytes;
+  }finally{signal.removeEventListener('abort',abort);if(!complete)reader.cancel().catch(()=>{});reader.releaseLock();}
+}
+
+function assertOnlinePackageIdentity(entry,document){
+  for(const [field,expected] of [['id',entry.remote.id],['name',entry.name],['author',entry.author],['description',entry.description]]){
+    if(document[field]!==expected)throw new Error(`Online package ${field} does not match the catalogue`);
+  }
+  const canonicalTags=tags=>JSON.stringify(normalizeTags(tags).map(tagKey).sort());
+  if(canonicalTags(document.tags)!==canonicalTags(entry.tags))throw new Error('Online package tags do not match the catalogue');
+}
+
+// Network trust path; the session cache only stores successful results of this function.
+async function fetchOnlineFilterPackage(entry,{fetchImpl=globalThis.fetch,signal,manifestUrl,timeoutMs=ONLINE_LIBRARY_PACKAGE_TIMEOUT_MS}={}){
+  if(entry?.source!=='online'||entry.document!==null||entry.remote?.documentType!=='filter'||entry.remote?.filterFormat!==2)throw new Error('Expected an Online filter entry');
+  const packageUrl=resolveOnlineLibraryAssetUrl(manifestUrl,entry.remote.package.url);
+  if(!Number.isFinite(timeoutMs)||timeoutMs<=0)throw new Error('Online package timeout must be positive and finite');
+  const controller=new AbortController(),abort=()=>controller.abort(signal.reason);
+  if(signal?.aborted)abort();else signal?.addEventListener('abort',abort,{once:true});
+  const timer=setTimeout(()=>controller.abort(new Error('Online package request timed out')),timeoutMs);
+  let rejectAbort;
+  const aborted=new Promise((_,reject)=>{rejectAbort=()=>reject(controller.signal.reason);if(controller.signal.aborted)rejectAbort();else controller.signal.addEventListener('abort',rejectAbort,{once:true});});
+  try{
+    return await Promise.race([aborted,(async()=>{
+      controller.signal.throwIfAborted();
+      const response=await fetchImpl(packageUrl,{method:'GET',credentials:'omit',cache:'no-store',redirect:'error',signal:controller.signal});
+      controller.signal.throwIfAborted();
+      if(!response.ok)throw new Error(`Online package HTTP ${response.status}`);
+      if(response.url&&new URL(response.url).origin!==new URL(packageUrl).origin)throw new Error('Online package response escaped the manifest origin');
+      if(Number(response.headers.get('Content-Length'))>ONLINE_LIBRARY_PACKAGE_MAX_BYTES)throw new Error('Online package exceeds 8 MiB');
+      const bytes=await readOnlinePackageBytes(response,controller.signal);controller.signal.throwIfAborted();
+      if(!bytes.byteLength)throw new Error('Online package is empty');
+      const envelope=await extractFilterFabMetadata(new Blob([bytes],{type:'image/png'}));controller.signal.throwIfAborted();
+      if(!envelope)throw new Error('Online package has no FilterFabJS metadata');
+      const document=validateNativeFilter(envelope.document);
+      assertOnlinePackageIdentity(entry,document);
+      controller.signal.throwIfAborted();
+      return{entryKey:entry.key,revision:entry.remote.revision,packageUrl,bytes,document};
+    })()]);
+  }finally{clearTimeout(timer);signal?.removeEventListener('abort',abort);controller.signal.removeEventListener('abort',rejectAbort);controller.abort();}
+}
+
+const ONLINE_PACKAGE_CACHE_MAX_ENTRIES=12;
+const ONLINE_PACKAGE_CACHE_MAX_BYTES=32*1024*1024;
+
+function createOnlinePackageCache({manifestUrl,fetchImpl=globalThis.fetch,maxEntries=ONLINE_PACKAGE_CACHE_MAX_ENTRIES,maxBytes=ONLINE_PACKAGE_CACHE_MAX_BYTES}={}){
+  if(!Number.isSafeInteger(maxEntries)||maxEntries<1||!Number.isSafeInteger(maxBytes)||maxBytes<1)throw new Error('Package cache bounds must be positive safe integers');
+  const records=new Map();let byteLength=0,generation=0;
+  const keyFor=entry=>JSON.stringify([manifestUrl,entry.key,entry.remote.revision,resolveOnlineLibraryAssetUrl(manifestUrl,entry.remote.package.url)]);
+  const remove=key=>{const record=records.get(key);if(record){byteLength-=record.size;records.delete(key);}};
+  const copy=record=>({entryKey:record.entryKey,revision:record.revision,packageUrl:record.packageUrl,bytes:record.bytes.slice(),document:JSON.parse(record.documentJson)});
+  return{
+    async resolve(entry,{signal}={}){
+      signal?.throwIfAborted();const key=keyFor(entry),epoch=generation;
+      let record=records.get(key);
+      if(record){
+        // Same-version catalogue metadata is authoritative too; never reuse a mismatch.
+        try{assertOnlinePackageIdentity(entry,JSON.parse(record.documentJson));}catch{remove(key);record=null;}
+      }
+      if(record){records.delete(key);records.set(key,record);await Promise.resolve();signal?.throwIfAborted();return copy(record);}
+      const resolved=await fetchOnlineFilterPackage(entry,{manifestUrl,fetchImpl,signal});signal?.throwIfAborted();
+      const documentJson=JSON.stringify(resolved.document),bytes=resolved.bytes.slice(),size=bytes.byteLength+new TextEncoder().encode(documentJson).byteLength;
+      record={entryKey:resolved.entryKey,revision:resolved.revision,packageUrl:resolved.packageUrl,bytes,documentJson,size};
+      if(epoch===generation&&size<=maxBytes){
+        remove(key);records.set(key,record);byteLength+=size;
+        while(records.size>maxEntries||byteLength>maxBytes)remove(records.keys().next().value);
+      }
+      return copy(record);
+    },
+    prune(entries){
+      generation++;const current=new Map(entries.map(entry=>[keyFor(entry),entry]));
+      for(const [key,record] of records){
+        const entry=current.get(key);if(!entry){remove(key);continue;}
+        try{assertOnlinePackageIdentity(entry,JSON.parse(record.documentJson));}catch{remove(key);}
+      }
+    },
+    clear(){generation++;records.clear();byteLength=0;},
+    diagnostics:()=>({entries:records.size,bytes:byteLength})
+  };
+}
+
 
 /* src/app/filter-catalog.js */
 
@@ -6126,9 +6566,16 @@ function catalogEntry(document,source,preference){
   const name=String(document.name||'Unavailable filter'),description=String(document.description||''),author=String(document.author||'');
   return{key:`${source}:${document.id}`,source,name,description,author,tags,favorite:preference.favorite,document,unavailable,index:[name,description,author,...tags].map(searchText)};
 }
+// metadata is one normalized filter from validateOnlineLibraryManifest().
+function onlineCatalogEntry(metadata,preference){
+  const {id,revision,name,description,author,documentType,filterFormat}=metadata,tags=[...metadata.tags];
+  return{key:`online:${id}`,source:'online',name,description,author,tags,favorite:preference.favorite,document:null,unavailable:false,
+    remote:{id,revision,documentType,filterFormat,...(metadata.publishedAt===undefined?{}:{publishedAt:metadata.publishedAt}),preview:{...metadata.preview},package:{...metadata.package}},
+    index:[name,description,author,...tags].map(searchText)};
+}
 function searchCatalog(entries,{query='',source='all',favorites=false,tags=[],sort='az'}={}){
   const text=searchText(query),terms=text.split(' ').filter(Boolean);
-  const scoped=entries.filter(entry=>(source==='all'||entry.source===source)&&(!favorites||entry.favorite));
+  const scoped=entries.filter(entry=>(source==='all'||(source==='local'?entry.source==='builtin'||entry.source==='custom':entry.source===source))&&(!favorites||entry.favorite));
   const choices=new Map();for(const entry of scoped)for(const tag of entry.tags)if(!choices.has(tagKey(tag)))choices.set(tagKey(tag),tag);
   const rank=entry=>entry.index[0]===text?0:entry.index[0].startsWith(text)?1:terms.every(term=>entry.index[0].includes(term))?2:3;
   const results=scoped.filter(entry=>tags.every(tag=>entry.tags.some(label=>tagKey(label)===tag))&&terms.every(term=>entry.index.some(field=>field.includes(term))));
@@ -6176,12 +6623,13 @@ function chooseFilterAction(title,choices,{name,detail=''}={}){
   });
 }
 
-function createFilterBrowser({launcher,getEntries,begin,preview,apply,cancel,toggleFavorite,requestThumbnail=null,clearThumbnailRequests=()=>{},onError}){
+function createFilterBrowser({launcher,getEntries,begin,preview,previewOnline=null,downloadOnline=null,apply,cancel,toggleFavorite,requestThumbnail=null,clearThumbnailRequests=()=>{},getOnlineState=()=>({status:'idle'}),loadOnline=()=>{},resolveOnlinePreviewUrl,onError}){
   const dialog=browserNode('dialog',null,'filter-browser');dialog.id='filterLibraryDialog';dialog.setAttribute('aria-labelledby','filterBrowserTitle');
-  dialog.innerHTML='<div class="modal-head library-head"><div><strong id="filterBrowserTitle">Filter Library</strong><small>Preview treatments on your image, then apply one when it feels right.</small></div><button type="button" data-close aria-label="Cancel and close Filter Library">×</button></div><div class="browser-tools"><label class="library-search"><span>Search</span><input type="search" placeholder="Name, description, author or tag" data-search></label><button data-clear hidden>Clear search</button><div class="filter-actions"><label>Source<select data-source><option value="all">All</option><option value="builtin">Built-in</option><option value="custom">My Filters</option></select></label><label><input type="checkbox" data-favorites> Favorites only</label><label>Sort<select data-sort><option value="az">A–Z</option><option value="relevance">Relevance</option></select></label></div><details><summary>Tags</summary><label>Find tags<input type="search" data-tag-search></label><div data-choices class="tag-choices"></div><small>Match all selected tags. Up to 50 suggestions; type to narrow.</small></details><div data-selected class="chips"></div><div class="filter-actions browser-count-row"><span data-count role="status" aria-live="polite"></span><button data-reset>Reset view</button></div><p data-error role="alert"></p></div><ul class="filter-results" aria-label="Filter results"></ul><div class="browser-pages" data-pages><button data-prev>Previous</button><span data-page></span><button data-next>Next</button></div><div class="library-actions"><span data-preview-status role="status" aria-live="polite">Choose a filter to preview it on the canvas.</span><div><button type="button" data-cancel>Cancel</button><button type="button" class="primary" data-apply disabled>Apply Filter</button></div></div>';
+  dialog.innerHTML='<div class="modal-head library-head"><div><strong id="filterBrowserTitle">Filter Library</strong><small>Preview treatments on your image, then apply one when it feels right.</small></div><button type="button" data-close aria-label="Cancel and close Filter Library">×</button></div><div class="browser-tools"><label class="library-search"><span>Search</span><input type="search" placeholder="Name, description, author or tag" data-search></label><button data-clear hidden>Clear search</button><div class="filter-actions"><label>Source<select data-source><option value="local">All local</option><option value="builtin">Built-in</option><option value="custom">My Filters</option><option value="online">Online</option></select></label><label><input type="checkbox" data-favorites> Favorites only</label><label>Sort<select data-sort><option value="az">A–Z</option><option value="relevance">Relevance</option></select></label></div><details><summary>Tags</summary><label>Find tags<input type="search" data-tag-search></label><div data-choices class="tag-choices"></div><small>Match all selected tags. Up to 50 suggestions; type to narrow.</small></details><div data-selected class="chips"></div><div class="filter-actions browser-count-row"><span data-count role="status" aria-live="polite"></span><button data-reset>Reset view</button></div><div data-online-notice hidden><span data-online-message role="status" aria-live="polite"></span><button type="button" data-online-retry>Retry</button></div><p data-error role="alert"></p></div><ul class="filter-results" aria-label="Filter results"></ul><div class="browser-pages" data-pages><button data-prev>Previous</button><span data-page></span><button data-next>Next</button></div><div class="library-actions"><span data-preview-status role="status" aria-live="polite">Choose a filter to preview it on the canvas.</span><div><button type="button" data-cancel>Cancel</button><button type="button" class="primary" data-apply disabled>Apply Filter</button></div></div>';
   document.body.append(dialog);launcher.setAttribute('aria-controls',dialog.id);
   const find=selector=>dialog.querySelector(selector),query=find('[data-search]'),source=find('[data-source]'),favorites=find('[data-favorites]'),sort=find('[data-sort]'),selected=new Set();
-  let page=0,composing=false,countTimer,selectedKey=null,previewing=false,sessionOpen=false,actionId=0,thumbnailObserver=null,thumbnailGeneration=0,thumbnailId=0;
+  let page=0,composing=false,countTimer,selectedKey=null,previewing=false,sessionOpen=false,actionId=0,thumbnailObserver=null,thumbnailGeneration=0,thumbnailId=0,pendingKey=null,pendingPhase=null,previewErrorKey=null,sessionEpoch=0,sessionEnding=false;
+  const downloads=new Set();
 
   function disconnectThumbnailWork(){thumbnailGeneration++;thumbnailObserver?.disconnect();thumbnailObserver=null;clearThumbnailRequests();}
   function updateThumbnail(row,entry,result,generation){
@@ -6195,57 +6643,85 @@ function createFilterBrowser({launcher,getEntries,begin,preview,apply,cancel,tog
     row.dataset.thumbnailReady='false';label.textContent=state==='failed'?'Preview unavailable':state==='idle'?'Preview':'Previewing…';
     if(state==='failed'){description.textContent=`Preview unavailable for ${entry.name}. The filter can still be selected.`;button.setAttribute('aria-describedby',description.id);}else{description.textContent='';button.removeAttribute('aria-describedby');}
   }
+  function enqueueSample(row){
+    if(row.dataset.sampleRequested)return;row.dataset.sampleRequested='true';
+    const generation=thumbnailGeneration,thumb=row.querySelector('.filter-thumbnail'),image=row.querySelector('img'),label=row.querySelector('.filter-thumbnail-state'),description=row.querySelector('.thumbnail-accessibility');
+    const complete=state=>{if(generation!==thumbnailGeneration||!dialog.open||!row.isConnected)return;thumb.dataset.thumbnailState=state;label.textContent=state==='ready'?'':'Sample unavailable';description.textContent=state==='ready'?'Standardized Online sample; the canvas preview uses your current image.':'Sample unavailable; you can still preview this filter on the canvas.';};
+    image.onload=()=>complete('ready');image.onerror=()=>complete('failed');thumb.dataset.thumbnailState='loading';label.textContent='Loading sample…';
+    try{image.src=resolveOnlinePreviewUrl(row.thumbnailEntry);}catch{complete('failed');}
+  }
   function enqueueThumbnail(row,priority=0){
-    if(!requestThumbnail||!row?.isConnected)return;const requested=Number(row.dataset.thumbnailPriority??-1);if(requested>=priority)return;row.dataset.thumbnailPriority=String(priority);const entry=row.thumbnailEntry,generation=thumbnailGeneration,callback=result=>updateThumbnail(row,entry,result,generation);
+    if(!row?.isConnected||!dialog.open)return;
+    if(row.thumbnailEntry.source==='online'){enqueueSample(row);return;}
+    if(!requestThumbnail)return;const requested=Number(row.dataset.thumbnailPriority??-1);if(requested>=priority)return;row.dataset.thumbnailPriority=String(priority);const entry=row.thumbnailEntry,generation=thumbnailGeneration,callback=result=>updateThumbnail(row,entry,result,generation);
     try{requestThumbnail(entry,callback,priority);}catch(error){updateThumbnail(row,entry,{state:'failed',error},generation);}
   }
   function observeThumbnails(list){
-    disconnectThumbnailWork();const rows=[...list.querySelectorAll('.filter-card')];if(!requestThumbnail||!rows.length)return;
+    disconnectThumbnailWork();const rows=[...list.querySelectorAll('.filter-card')];if(!rows.length)return;
     if(typeof IntersectionObserver==='function'){
-      thumbnailObserver=new IntersectionObserver(entries=>{for(const observation of entries)if(observation.isIntersecting){thumbnailObserver?.unobserve(observation.target);enqueueThumbnail(observation.target,20);}}, {root:list,rootMargin:THUMBNAIL_ROOT_MARGIN,threshold:0.01});rows.forEach(row=>thumbnailObserver.observe(row));
+      const generation=thumbnailGeneration;
+      thumbnailObserver=new IntersectionObserver(entries=>{if(generation!==thumbnailGeneration||!dialog.open)return;for(const observation of entries)if(observation.isIntersecting){thumbnailObserver?.unobserve(observation.target);enqueueThumbnail(observation.target,20);}}, {root:list,rootMargin:THUMBNAIL_ROOT_MARGIN,threshold:0.01});rows.forEach(row=>thumbnailObserver.observe(row));
     }else rows.slice(0,THUMBNAIL_FALLBACK_COUNT).forEach(row=>enqueueThumbnail(row,10));
   }
 
   function syncActions(){find('[data-apply]').disabled=previewing||!selectedKey;find('[data-preview-status]').dataset.state=previewing?'busy':selectedKey?'ready':'idle';}
   async function cancelAndClose(){
-    const id=++actionId;previewing=true;syncActions();find('[data-error]').textContent='';
+    if(sessionEnding)return;sessionEnding=true;
+    const id=++actionId;sessionEpoch++;downloads.clear();previewing=true;syncActions();find('[data-error]').textContent='';
     try{await cancel();if(id!==actionId)return;sessionOpen=false;dialog.close('cancel');}
-    catch(error){previewing=false;syncActions();find('[data-error]').textContent=`Could not restore the working filter: ${error.message}`;onError(error);}
+    catch(error){sessionEnding=false;previewing=false;syncActions();find('[data-error]').textContent=`Could not restore the working filter: ${error.message}`;onError(error);}
   }
   async function applyAndClose(){
-    if(previewing||!selectedKey)return;
-    const id=++actionId;previewing=true;syncActions();find('[data-error]').textContent='';find('[data-preview-status]').textContent='Applying selected filter…';
-    try{if(!await apply()||id!==actionId){previewing=false;syncActions();return;}sessionOpen=false;dialog.close('apply');}
-    catch(error){previewing=false;syncActions();find('[data-error]').textContent=`Could not apply filter: ${error.message}`;onError(error);}
+    if(previewing||!selectedKey||sessionEnding)return;sessionEnding=true;
+    const id=++actionId;sessionEpoch++;downloads.clear();previewing=true;syncActions();find('[data-error]').textContent='';find('[data-preview-status]').textContent='Applying selected filter…';
+    try{if(!await apply()||id!==actionId){sessionEnding=false;previewing=false;syncActions();return;}sessionOpen=false;dialog.close('apply');}
+    catch(error){sessionEnding=false;previewing=false;syncActions();find('[data-error]').textContent=`Could not apply filter: ${error.message}`;onError(error);}
   }
   find('[data-close]').onclick=cancelAndClose;find('[data-cancel]').onclick=cancelAndClose;find('[data-apply]').onclick=applyAndClose;
   dialog.addEventListener('cancel',event=>{event.preventDefault();cancelAndClose();});
-  dialog.addEventListener('close',()=>{disconnectThumbnailWork();if(sessionOpen){Promise.resolve(cancel()).catch(onError);sessionOpen=false;}if(!launcher.disabled)launcher.focus();});
+  dialog.addEventListener('close',()=>{actionId++;sessionEpoch++;downloads.clear();disconnectThumbnailWork();if(sessionOpen){Promise.resolve(cancel()).catch(onError);sessionOpen=false;}if(!launcher.disabled)launcher.focus();});
 
-  function reset(){query.value='';source.value='all';favorites.checked=false;sort.value='az';selected.clear();find('[data-tag-search]').value='';page=0;refresh();}
+  function reset(){query.value='';source.value='local';favorites.checked=false;sort.value='az';selected.clear();find('[data-tag-search]').value='';page=0;refresh();}
   function createResult(entry){
+    const online=entry.source==='online';
     const row=browserNode('li',null,'filter-card');row.dataset.entryKey=entry.key;row.dataset.selected=String(entry.key===selectedKey);
     const cardTop=browserNode('div',null,'filter-card-main');
-    const previewButton=browserButton('',async()=>{
-      const previousKey=selectedKey,id=++actionId;selectedKey=entry.key;previewing=true;find('[data-error]').textContent='';find('[data-preview-status]').textContent=`Previewing ${entry.name}…`;refresh();syncActions();
+    const previewButton=online&&!previewOnline?browserNode('div'):browserButton('',async()=>{
+      if(sessionEnding)return;
+      const id=++actionId;pendingKey=entry.key;pendingPhase=online?'loading':'rendering';previewErrorKey=null;previewing=true;find('[data-error]').textContent='';find('[data-preview-status]').textContent=`Previewing ${entry.name}…`;refresh();syncActions();
       enqueueThumbnail(dialog.querySelector(`[data-entry-key="${CSS.escape(entry.key)}"]`),100);
       try{
-        const accepted=await preview(entry);if(id!==actionId)return;
-        if(!accepted){selectedKey=previousKey;previewing=false;refresh();syncActions();return;}
+        const accepted=await (online?previewOnline(entry,phase=>{if(id!==actionId)return;pendingPhase=phase;find('[data-preview-status]').textContent=phase==='loading'?`Loading preview for ${entry.name}…`:`Previewing ${entry.name}…`;refresh();}):preview(entry));if(id!==actionId)return;
+        if(!accepted){pendingKey=null;previewing=false;refresh();syncActions();return;}
+        selectedKey=entry.key;pendingKey=null;
         previewing=false;find('[data-preview-status]').textContent=`Previewing ${entry.name}. Apply it or keep browsing.`;refresh();syncActions();
-      }catch(error){if(id!==actionId)return;selectedKey=previousKey;previewing=false;refresh();syncActions();find('[data-error]').textContent=`Could not preview this filter. Your previous preview was kept.`;}
+      }catch(error){if(id!==actionId)return;pendingKey=null;previewErrorKey=entry.key;previewing=false;find('[data-preview-status]').textContent=selectedKey?'Your previous preview is still on the canvas.':'Choose a filter to preview it on the canvas.';refresh();syncActions();find('[data-error]').textContent=`Could not preview this filter. Your previous preview was kept.`;}
     });
-    previewButton.className='filter-card-preview';previewButton.setAttribute('aria-label',`Preview ${entry.name}`);previewButton.setAttribute('aria-pressed',String(entry.key===selectedKey));previewButton.dataset.entryKey=entry.key;previewButton.dataset.entryAction='preview';
-    const thumb=browserNode('span',null,'filter-thumbnail');thumb.dataset.thumbnailState='idle';thumb.setAttribute('aria-hidden','true');const thumbnailCanvas=browserNode('canvas',null,'filter-thumbnail-image'),thumbnailState=browserNode('span','Preview','filter-thumbnail-state'),thumbnailDescription=browserNode('span',null,'visually-hidden thumbnail-accessibility');thumbnailCanvas.width=1;thumbnailCanvas.height=1;thumbnailDescription.id=`filterThumbnailStatus${++thumbnailId}`;thumb.append(thumbnailCanvas,thumbnailState);previewButton.append(thumb,thumbnailDescription);
+    previewButton.className='filter-card-preview';
+    if(!online||previewOnline){previewButton.setAttribute('aria-label',`Preview ${entry.name}`);previewButton.setAttribute('aria-pressed',String(entry.key===selectedKey));previewButton.dataset.entryKey=entry.key;previewButton.dataset.entryAction='preview';}
+    const thumb=browserNode('span',null,'filter-thumbnail');thumb.dataset.thumbnailState='idle';thumb.setAttribute('aria-hidden','true');const thumbnailCanvas=browserNode(online?'img':'canvas',null,'filter-thumbnail-image'),thumbnailState=browserNode('span',online?'Sample':'Preview','filter-thumbnail-state'),thumbnailDescription=browserNode('span',null,'visually-hidden thumbnail-accessibility');
+    if(online){thumbnailCanvas.alt='';thumbnailCanvas.decoding='async';thumbnailCanvas.loading='lazy';thumbnailCanvas.referrerPolicy='no-referrer';thumbnailDescription.textContent='Standardized Online sample; the canvas preview uses your current image.';thumb.append(browserNode('span','Sample','filter-sample-badge'));}else{thumbnailCanvas.width=1;thumbnailCanvas.height=1;}
+    thumbnailDescription.id=`filterThumbnailStatus${++thumbnailId}`;thumb.append(thumbnailCanvas,thumbnailState);previewButton.append(thumb,thumbnailDescription);
     const copy=browserNode('span',null,'filter-card-copy'),heading=browserNode('span',entry.name,'filter-card-name'),meta=browserNode('span',null,'result-meta');
-    const sourceLabel=entry.source==='builtin'?'Built-in':'My Filter',authorLabel=entry.author||(entry.source==='builtin'?'Filter FabJS':'Author not specified');
-    meta.append(browserNode('span',sourceLabel,'source-badge'),document.createTextNode(` · ${authorLabel}${entry.document.benchmark?' · Benchmark':''}${entry.unavailable?' · Unavailable':''}`));
-    if(entry.key===selectedKey)copy.append(browserNode('span','✓ Selected preview','filter-selection-label'));copy.append(heading,meta,browserNode('span',entry.description||'No description provided.','filter-excerpt'));previewButton.append(copy);
+    const sourceLabel=online?'Online':entry.source==='builtin'?'Built-in':'My Filter',authorLabel=entry.author||(entry.source==='builtin'?'Filter FabJS':'Author not specified');
+    meta.append(browserNode('span',sourceLabel,'source-badge'),document.createTextNode(` · ${authorLabel}${entry.document?.benchmark?' · Benchmark':''}${entry.unavailable?' · Unavailable':''}`));
+    if(entry.key===pendingKey)copy.append(browserNode('span',pendingPhase==='loading'?'Loading preview…':'Previewing…','filter-selection-label'));
+    else if(entry.key===selectedKey)copy.append(browserNode('span',online?'✓ Previewing on canvas':'✓ Selected preview','filter-selection-label'));
+    if(entry.key===previewErrorKey)copy.append(browserNode('span','Preview unavailable','filter-package-error'));copy.append(heading,meta,browserNode('span',entry.description||'No description provided.','filter-excerpt'));previewButton.append(copy);
     const star=browserButton(entry.favorite?'★':'☆',()=>{try{toggleFavorite(entry);find('[data-error]').textContent='';refresh();}catch(error){find('[data-error]').textContent=`Couldn’t save favorites in this browser. ${error.message}`;onError(error);}});star.className='filter-card-favorite';star.setAttribute('aria-pressed',String(entry.favorite));star.setAttribute('aria-label',`${entry.favorite?'Remove':'Add'} ${entry.name} ${entry.favorite?'from':'to'} favorites`);star.dataset.entryKey=entry.key;star.dataset.entryAction='favorite';
-    cardTop.append(previewButton,star);row.append(cardTop);
+    const actions=browserNode('div',null,'filter-card-actions');actions.append(star);
+    if(online&&downloadOnline){
+      const download=browserButton(downloads.has(entry.key)?'…':'↓',async()=>{
+        if(sessionEnding||downloads.has(entry.key))return;const epoch=sessionEpoch;downloads.add(entry.key);refresh();
+        try{await downloadOnline(entry);}catch(error){if(epoch===sessionEpoch)find('[data-error]').textContent='Could not download this filter. The package was unavailable or invalid.';}
+        finally{if(epoch===sessionEpoch){downloads.delete(entry.key);refresh();}}
+      });
+      download.className='filter-card-download';download.disabled=downloads.has(entry.key);download.setAttribute('aria-label',`Download PNG for ${entry.name}`);download.setAttribute('aria-busy',String(download.disabled));download.dataset.entryKey=entry.key;download.dataset.entryAction='download';actions.append(download);
+    }
+    cardTop.append(previewButton,actions);row.append(cardTop);
     const tags=browserNode('div',null,'result-tags');
     for(const tag of entry.tags){
-      const button=browserButton(tag,()=>{query.value='';source.value='all';favorites.checked=false;sort.value='az';selected.clear();selected.add(tagKey(tag));find('[data-tag-search]').value='';page=0;refresh();find('[data-selected] button')?.focus();});
+      const button=browserButton(tag,()=>{query.value='';source.value=online?'online':'local';favorites.checked=false;sort.value='az';selected.clear();selected.add(tagKey(tag));find('[data-tag-search]').value='';page=0;refresh();find('[data-selected] button')?.focus();});
       button.setAttribute('aria-label',`Show all filters tagged ${tag}`);tags.append(button);
     }
     row.append(tags);row.thumbnailEntry=entry;return row;
@@ -6254,16 +6730,29 @@ function createFilterBrowser({launcher,getEntries,begin,preview,apply,cancel,tog
     if(!dialog.open)return;
     const active=document.activeElement,focusKey=active?.dataset?.entryKey,focusAction=active?.dataset?.entryAction,oldButtons=[...dialog.querySelectorAll('[data-entry-action="favorite"]')],oldIndex=oldButtons.indexOf(active);
     let entries;try{entries=getEntries();}catch(error){find('[data-error]').textContent=error.message;entries=[];}
-    const {results,choices}=searchCatalog(entries,{query:query.value,source:source.value,favorites:favorites.checked,tags:[...selected],sort:sort.value});
+    const online=source.value==='online',onlineState=online?getOnlineState():{},onlineStatus=onlineState.status,waiting=online&&onlineStatus!=='ready';
+    const notice=find('[data-online-notice]'),message=find('[data-online-message]'),saved=onlineState.provenance==='saved'?'saved':'previous';
+    notice.hidden=!online||(!onlineState.refreshing&&!onlineState.refreshWarning);
+    const noticeText=notice.hidden?'':onlineState.refreshWarning?`Could not refresh Online Library — showing ${saved} catalogue.`:`Showing ${saved} catalogue · Checking for updates…`;
+    if(message.textContent!==noticeText)message.textContent=noticeText;
+    find('[data-online-retry]').hidden=!onlineState.refreshWarning;
+    const {results,choices}=searchCatalog(waiting?[]:entries,{query:query.value,source:source.value,favorites:favorites.checked,tags:[...selected],sort:sort.value});
     sort.options[1].disabled=!query.value.trim();find('[data-clear]').hidden=!query.value;
     page=Math.min(page,Math.max(0,Math.ceil(results.length/PAGE_SIZE)-1));
-    clearTimeout(countTimer);countTimer=setTimeout(()=>find('[data-count]').textContent=`${results.length} filters`,150);
+    clearTimeout(countTimer);if(waiting)find('[data-count]').textContent=onlineStatus==='error'?'Online Library unavailable':'Loading Online filters…';else countTimer=setTimeout(()=>{const count=`${results.length} filters`;if(find('[data-count]').textContent!==count)find('[data-count]').textContent=count;},150);
     const selectedBox=find('[data-selected]');selectedBox.replaceChildren();for(const key of selected)selectedBox.append(browserButton(`${choices.find(item=>item[0]===key)?.[1]||key} ×`,()=>{selected.delete(key);page=0;refresh();find('[data-reset]').focus();}));
     const choiceBox=find('[data-choices]');choiceBox.replaceChildren();for(const [key,label] of choices.filter(item=>searchText(item[1]).includes(searchText(find('[data-tag-search]').value))).slice(0,50)){
       const wrapper=browserNode('label'),check=browserNode('input');check.type='checkbox';check.checked=selected.has(key);check.onchange=()=>{if(check.checked)selected.add(key);else selected.delete(key);page=0;refresh();[...choiceBox.querySelectorAll('input')].find(node=>node.value===key)?.focus();};check.value=key;wrapper.append(check,document.createTextNode(label));choiceBox.append(wrapper);
     }
     const list=find('.filter-results');list.replaceChildren();for(const entry of results.slice(page*PAGE_SIZE,page*PAGE_SIZE+PAGE_SIZE))list.append(createResult(entry));
-    if(!results.length){const empty=browserNode('li',null,'filter-library-empty');empty.append(browserNode('p',favorites.checked&&!entries.some(entry=>entry.favorite)?'No favorites yet. Star a filter to keep it here.':source.value==='custom'&&!entries.some(entry=>entry.source==='custom')?'Saved filters appear here. Import a filter, then save it to keep it.':'No filters match this search.'),browserButton('Show all filters',reset));list.append(empty);}
+    if(!results.length){const empty=browserNode('li',null,'filter-library-empty');
+      if(online){
+        const message=onlineStatus==='error'?'Could not reach the Online Library. Your Built-in and My Filters are still available.':waiting?'Loading Online filters…':entries.some(entry=>entry.source==='online')?'No Online filters match this search.':'No Online filters are currently available.';
+        empty.append(browserNode('p',message));if(onlineStatus==='error')empty.append(browserButton('Retry',()=>{loadOnline({retry:true});refresh();}));
+      }else empty.append(browserNode('p',favorites.checked&&!entries.some(entry=>entry.favorite)?'No favorites yet. Star a filter to keep it here.':source.value==='custom'&&!entries.some(entry=>entry.source==='custom')?'Saved filters appear here. Import a filter, then save it to keep it.':'No filters match this search.'),browserButton('Show all filters',reset));
+      list.append(empty);
+    }
+    list.setAttribute('aria-busy',String(waiting&&onlineStatus!=='error'));
     const pageCount=Math.max(1,Math.ceil(results.length/PAGE_SIZE)),pages=find('[data-pages]');pages.hidden=results.length<=PAGE_SIZE;find('[data-page]').textContent=`Page ${page+1} of ${pageCount}`;find('[data-prev]').disabled=page===0;find('[data-next]').disabled=(page+1)*PAGE_SIZE>=results.length;
     syncActions();
     observeThumbnails(list);const selectedRow=selectedKey?list.querySelector(`[data-entry-key="${CSS.escape(selectedKey)}"]`):null;if(selectedRow)enqueueThumbnail(selectedRow,100);
@@ -6272,10 +6761,12 @@ function createFilterBrowser({launcher,getEntries,begin,preview,apply,cancel,tog
   find('.filter-results').addEventListener('focusin',event=>enqueueThumbnail(event.target.closest('.filter-card'),80));
   query.oncompositionstart=()=>composing=true;query.oncompositionend=()=>{composing=false;page=0;refresh();};query.oninput=()=>{if(!composing){page=0;refresh();}};
   for(const field of [source,favorites,sort])field.onchange=()=>{page=0;refresh();};
+  source.onchange=()=>{page=0;if(source.value==='online')loadOnline();refresh();};
+  find('[data-online-retry]').onclick=()=>{loadOnline({retry:true});refresh();};
   find('[data-tag-search]').oninput=refresh;find('[data-clear]').onclick=()=>{query.value='';page=0;refresh();query.focus();};find('[data-reset]').onclick=reset;
   find('[data-prev]').onclick=()=>{page--;refresh();};find('[data-next]').onclick=()=>{page++;refresh();};
-  launcher.onclick=async()=>{try{await begin();sessionOpen=true;selectedKey=null;previewing=false;find('[data-error]').textContent='';find('[data-preview-status]').textContent='Choose a filter to preview it on the canvas.';dialog.showModal();refresh();query.focus();}catch(error){onError(error);}};
-  return{refresh,dialog,showError:message=>{find('[data-error]').textContent=message;}};
+  launcher.onclick=async()=>{try{await begin();sessionEnding=false;sessionEpoch++;sessionOpen=true;selectedKey=null;pendingKey=null;previewErrorKey=null;previewing=false;find('[data-error]').textContent='';find('[data-preview-status]').textContent='Choose a filter to preview it on the canvas.';dialog.showModal();if(source.value==='online')loadOnline();refresh();query.focus();}catch(error){onError(error);}};
+  return{invalidateSession:()=>{actionId++;sessionEpoch++;downloads.clear();sessionOpen=false;selectedKey=null;pendingKey=null;previewing=false;if(dialog.open)dialog.close('replaced');},refresh,refreshOnline:()=>{if(source.value==='online')refresh();},dialog,showError:message=>{find('[data-error]').textContent=message;}};
 }
 
 
@@ -6442,6 +6933,9 @@ function createControlsController({state,el,scheduleRender,applyInteractionLocks
 
 
 
+
+
+
 async function importLatestFilterFile(file,{state,cancelRender,applyFilter,beforeApply=async()=>true}){
   if(!file)return null;
   const loadId=++state.filterLoadId;
@@ -6509,11 +7003,45 @@ function upsertCustomPreset(list,filter,name,idFactory=createCustomPresetId){
   const next=[...list],index=next.findIndex(item=>item.name.toLowerCase()===name.toLowerCase()),used=new Set(next.map(item=>item.id)),id=index>=0?next[index].id:allocateCustomPresetId(used,idFactory),preset={...filter,name,id};if(index>=0)next[index]=preset;else next.push(preset);return{list:next,preset};
 }
 
-function initFilterFabApp(){
+// Catalogue hydration is lazy; package reuse has a separate page-session lifetime.
+function createOnlineLibrarySession({manifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL,fetchImpl=globalThis.fetch,storage,preference,onChange=()=>{},timeoutMs}={}){
+  let status='idle',manifest=null,error=null,promise=null,requestId=0,controller=null,entries=null,hydrated=false,provenance=null,refreshing=false,refreshWarning=null;
+  const packages=createOnlinePackageCache({manifestUrl,fetchImpl});
+  const getState=()=>({status,error,provenance,refreshing,refreshWarning});
+  const getEntries=()=>entries??(entries=(manifest?.filters||[]).map(metadata=>onlineCatalogEntry(metadata,preference(`online:${metadata.id}`))));
+  function load({retry=false}={}){
+    if(promise)return promise;
+    if(!retry&&(status==='ready'||status==='error'))return Promise.resolve();
+    if(!hydrated){
+      hydrated=true;const saved=readOnlineLibraryCache({storage,manifestUrl});
+      if(saved){manifest=saved;entries=null;status='ready';provenance='saved';}
+    }
+    const id=++requestId;controller=new AbortController();status=manifest?'ready':'loading';refreshing=Boolean(manifest);error=null;refreshWarning=null;
+    promise=fetchOnlineLibraryManifest(manifestUrl,{fetchImpl,signal:controller.signal,...(timeoutMs===undefined?{}:{timeoutMs})}).then(result=>{
+      if(id!==requestId)return;
+      if(manifest&&result.manifest.libraryVersion<manifest.libraryVersion){console.warn('Ignored older Online catalogue libraryVersion');throw new Error('Online catalogue libraryVersion is older than the retained catalogue');}
+      manifest=result.manifest;entries=null;status='ready';provenance='network';
+      packages.prune(getEntries());writeOnlineLibraryCache({storage,manifestUrl,manifest});
+    }).catch(failure=>{
+      if(id!==requestId)return;
+      if(manifest){status='ready';refreshWarning=failure;}else{error=failure;status='error';}
+    }).finally(()=>{
+      if(id!==requestId)return;promise=null;controller=null;refreshing=false;onChange();
+    });
+    onChange();return promise;
+  }
+  return{getState,load,getEntries,
+    invalidate:()=>{entries=null;},resolvePreview:entry=>resolveOnlineLibraryAssetUrl(manifestUrl,entry.remote.preview.url),
+    fetchPackage:(entry,signal)=>packages.resolve(entry,{signal}),
+    dispose:()=>{requestId++;controller?.abort();controller=null;promise=null;manifest=null;entries=null;status='idle';error=null;hydrated=false;provenance=null;refreshing=false;refreshWarning=null;packages.clear();}};
+}
+
+function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL,onlineFetchImpl=globalThis.fetch,onlineStorage=()=>globalThis.localStorage}={}){
   const {el,ctx}=getDom();
   const state={source:null,filtered:null,width:0,height:0,view:'filtered',workspaceMode:'explore',split:50,zoom:'fit',zoomLevel:1,controls:defaultControlValues(),labels:defaultControlLabels(),controlUIs:defaultControlUIs(),renderId:0,imageLoadId:0,filterLoadId:0,rendererManager:null,rendererPreference:storageGet('ffw-renderer','auto'),lastProgram:null,lastProgramKey:null,lastSuccessfulRenderSignature:null,lastWGSL:null,lastGpuAnalysis:null,lastRendererDiagnostics:null,isRendering:false,usedControls:Array(CONTROL_COUNT).fill(false),legacyMath:false,hasPendingFormulaChanges:false,focusSnapshot:null};
   const canvasView=createCanvasView({state,el,ctx});
   let controlsController,browser,catalogCache=null,librarySession=null;
+  const onlineLibrary=createOnlineLibrarySession({manifestUrl:onlineManifestUrl,fetchImpl:onlineFetchImpl,storage:onlineStorage,preference,onChange:()=>browser?.refreshOnline()});
   const activeDocument={key:null,id:undefined,tags:[],baseline:null,recordBaseline:null,imported:false,importSource:null};
 
   const rendererFactories={
@@ -6544,7 +7072,7 @@ function initFilterFabApp(){
   function setProgress(pct,row,total){const safePct=clamp(Number.isFinite(Number(pct))?Number(pct):0,0,100),safeTotal=Math.max(0,Math.trunc(Number(total)||0)),safeRow=clamp(Math.trunc(Number(row)||0),0,safeTotal||0);el.progressFill.style.width=`${safePct}%`;el.progressFill.parentElement?.setAttribute('aria-valuenow',String(Math.round(safePct)));el.progressPercent.textContent=`${Math.round(safePct)}%`;el.progressRows.textContent=safeTotal?`${safeRow} / ${safeTotal} rows`:'Preparing…';}
   function setUILocked(locked,pct=0,row=0,total=0){const wasRendering=state.isRendering,nextRendering=Boolean(locked);if(nextRendering&&!wasRendering)state.focusSnapshot=captureFocus();state.isRendering=nextRendering;document.body.classList.toggle('ui-locked',state.isRendering);document.body.setAttribute('aria-busy',String(state.isRendering));applyInteractionLocks();el.renderOverlay.classList.toggle('show',state.isRendering);el.renderOverlay.setAttribute('aria-hidden',String(!state.isRendering));if(state.isRendering)setProgress(pct,row,total);else if(wasRendering){const snapshot=state.focusSnapshot;state.focusSnapshot=null;restoreFocus(snapshot);}syncRendererSummary();}
   function initializeRendererSource(){if(!state.source||!state.width||!state.height)return Promise.resolve();return state.rendererManager.setSource(state.source,state.width,state.height);}
-  async function cancelRender({silent=false}={}){if(!state.isRendering)return false;state.renderId++;try{await state.rendererManager?.cancelActive();}catch(error){console.error('Renderer cancellation failed',error);}setUILocked(false);setProgress(0,0,state.height||0);if(!silent){setStatus('Render cancelled');el.renderInfo.textContent=`${state.rendererManager?.active?.label||'Renderer'} · cancelled`;toast('Rendering cancelled');}return true;}
+  async function cancelRender({silent=false}={}){if(!state.isRendering)return false;const cancelledId=++state.renderId;try{await state.rendererManager?.cancelActive();}catch(error){console.error('Renderer cancellation failed',error);}if(cancelledId!==state.renderId)return true;setUILocked(false);setProgress(0,0,state.height||0);if(!silent){setStatus('Render cancelled');el.renderInfo.textContent=`${state.rendererManager?.active?.label||'Renderer'} · cancelled`;toast('Rendering cancelled');}return true;}
 
   function currentProgramKey(){return JSON.stringify([state.legacyMath,...el.formulas.map(field=>field.value)])}
   function compileCurrentProgram(){const key=currentProgramKey();if(state.lastProgram&&state.lastProgramKey===key)return state.lastProgram;const astList=el.formulas.map(field=>new Parser(field.value).parse());return compileFilterProgram(astList,{legacyMath:state.legacyMath});}
@@ -6559,10 +7087,10 @@ function initFilterFabApp(){
   function catalog(){if(catalogCache)return catalogCache;return catalogCache=[...presets.map(item=>catalogEntry(item,'builtin',preference(`builtin:${item.id}`))),...customList().map(item=>catalogEntry(item,'custom',preference(`custom:${item.id}`)))];}
   function effectiveTags(){return activeDocument.key?.startsWith('builtin:')?[...new Map([...activeDocument.tags,...preference(activeDocument.key).tags].map(tag=>[tagKey(tag),tag])).values()]:activeDocument.tags;}
   function documentSnapshot(){return portableContent({...currentFilter(),tags:activeDocument.tags});}
-  function importedStatus(){return activeDocument.importSource==='png'?'Imported from PNG · Not saved':'Imported · not saved';}
+  function importedStatus(){return activeDocument.importSource==='online'?'Imported from Online · Not saved':activeDocument.importSource==='png'?'Imported from PNG · Not saved':'Imported · not saved';}
   function isDirty(){return activeDocument.imported||!activeDocument.key||documentSnapshot()!==activeDocument.baseline;}
   function updateActiveFilterSummary(status){
-    const previewEntry=librarySession?.candidateEntry,name=$('#filterName').value.trim()||'Untitled Filter',key=previewEntry?.key||activeDocument.key,source=previewEntry?(previewEntry.source==='builtin'?'Built-in preview':'My Filter preview'):key?.startsWith('builtin:')?'Built-in':key?.startsWith('custom:')?'My Filter':'Unsaved',description=el.description.value.trim();
+    const previewEntry=librarySession?.candidateEntry,name=$('#filterName').value.trim()||'Untitled Filter',key=previewEntry?.key||activeDocument.key,source=previewEntry?(previewEntry.source==='online'?'Online preview':previewEntry.source==='builtin'?'Built-in preview':'My Filter preview'):key?.startsWith('builtin:')?'Built-in':key?.startsWith('custom:')?'My Filter':'Unsaved',description=el.description.value.trim();
     el.activeFilterName.textContent=name;el.activeFilterSource.textContent=source;el.activeFilterStatus.textContent=status;el.activeFilterDescription.textContent=description||'No description provided.';
     if(!key||previewEntry){el.activeFavorite.hidden=Boolean(previewEntry)||!key;el.activeFavorite.setAttribute('aria-pressed','false');return;}
     const favorite=preference(key).favorite;el.activeFavorite.hidden=false;el.activeFavorite.setAttribute('aria-pressed',String(favorite));el.activeFavorite.textContent=favorite?'★ Favorited':'☆ Favorite';el.activeFavorite.setAttribute('aria-label',`${favorite?'Remove':'Add'} ${name} ${favorite?'from':'to'} favorites`);
@@ -6632,6 +7160,7 @@ function initFilterFabApp(){
     return{tags,id,legacyMath,formulas:normalizedFormulas,controls,labels,controlUIs,name,description,author,program};
   }
   function requestLibraryThumbnail(entry,callback,priority=0){
+    if(entry.source==='online')return;
     try{
       const definition=resolveCatalogDefinition(entry);if(!definition)throw new Error('This filter was deleted in another tab.');const prepared=prepareFilter(definition),signature=filterRenderSignature({mathMode:prepared.legacyMath?'legacy':'float',formulas:prepared.formulas,controls:prepared.controls});
       return thumbnailService.request({entryKey:entry.key,signature,program:prepared.program,controls:prepared.controls,legacyMath:prepared.legacyMath},callback,{priority});
@@ -6644,7 +7173,7 @@ function initFilterFabApp(){
     activeDocument.key=selection||null;activeDocument.id=selection?.startsWith('builtin:')?undefined:next.id;activeDocument.tags=[...next.tags];activeDocument.imported=!selection;activeDocument.importSource=selection?null:importSource;activeDocument.recordBaseline=selection?.startsWith('custom:')?JSON.stringify(definition):null;activeDocument.baseline=documentSnapshot();
   }
   function applyFilter(definition,selection,{importSource=selection?null:'file'}={}){
-    const next=prepareFilter(definition);applyPreparedPresentation(next);commitActiveDocument(next,definition,selection,{importSource});refreshTags();updateDocumentHeader({forceSelection:true});markFormulaPending();render();
+    const next=prepareFilter(definition);invalidateLibraryForReplacement();applyPreparedPresentation(next);commitActiveDocument(next,definition,selection,{importSource});refreshTags();updateDocumentHeader({forceSelection:true});markFormulaPending();render();
   }
 
   function captureLibraryWorkingState(){
@@ -6669,32 +7198,81 @@ function initFilterFabApp(){
   async function beginLibrarySession(){
     if(librarySession)return true;
     if(state.isRendering)throw new Error('Wait for the current render to finish before opening the library.');
-    librarySession={originalWorkingDocument:captureLibraryWorkingState(),candidateEntry:null,candidateDefinition:null,candidatePrepared:null,candidateRendered:false,requestId:0};thumbnailService.open();return true;
+    librarySession={originalWorkingDocument:captureLibraryWorkingState(),candidateEntry:null,candidateDefinition:null,candidatePrepared:null,candidateRendered:false,requestId:0,packageController:null,rollback:null,stopping:null,downloads:new Map()};thumbnailService.open();return true;
   }
   async function previewLibraryEntry(entry){
+    if(entry.source==='online')return false;
+    return previewLibraryCandidate(entry);
+  }
+  // A superseded render rolls back to its last completed candidate before another
+  // request can present anything. The original session snapshot is never replaced.
+  function stopLibraryCandidate(session){
+    if(session.stopping)return session.stopping;
+    if(!session.rollback)return Promise.resolve();
+    const rollback=session.rollback;
+    session.stopping=(async()=>{
+      if(state.isRendering)await cancelRender({silent:true});
+      if(librarySession===session&&session.rollback===rollback){Object.assign(session,rollback.candidate);session.rollback=null;restoreLibraryWorkingState(rollback.working);}
+    })().finally(()=>{session.stopping=null;});
+    return session.stopping;
+  }
+  async function previewLibraryCandidate(entry,onPhase=()=>{}){
     const session=librarySession;if(!session)throw new Error('The Filter Library session is no longer open.');
-    const requestId=++session.requestId,definition=resolveCatalogDefinition(entry);if(!definition)throw new Error('This filter was deleted in another tab.');
-    const prepared=prepareFilter(definition),previousWorkingState=captureLibraryWorkingState(),previousCandidate={entry:session.candidateEntry,definition:session.candidateDefinition,prepared:session.candidatePrepared,rendered:session.candidateRendered};
-    if(state.isRendering)await cancelRender({silent:true});
-    if(librarySession!==session||requestId!==session.requestId)return false;
+    const requestId=++session.requestId,isCurrent=()=>librarySession===session&&requestId===session.requestId;
+    session.packageController?.abort();session.packageController=null;
+    const stopped=stopLibraryCandidate(session);
+    let definition,prepared;
+    try{
+      if(entry.source==='online'){
+        const controller=new AbortController();session.packageController=controller;onPhase('loading');
+        const resolved=await onlineLibrary.fetchPackage(entry,controller.signal);if(!isCurrent())return false;
+        definition=resolved.document;
+      }else definition=resolveCatalogDefinition(entry);
+      if(!definition)throw new Error('This filter was deleted in another tab.');
+      prepared=prepareFilter(definition);
+      await stopped;if(!isCurrent())return false;
+    }catch(error){await stopped;if(!isCurrent())return false;throw error;}
+    finally{if(isCurrent())session.packageController=null;}
+    const rollback={working:captureLibraryWorkingState(),candidate:{candidateEntry:session.candidateEntry,candidateDefinition:session.candidateDefinition,candidatePrepared:session.candidatePrepared,candidateRendered:session.candidateRendered}};
+    session.rollback=rollback;onPhase('rendering');
     applyPreparedPresentation(prepared);session.candidateEntry=entry;session.candidateDefinition=definition;session.candidatePrepared=prepared;session.candidateRendered=false;markFormulaPending();updateDocumentHeader({forceSelection:true});
     const rendered=await render();
-    if(librarySession!==session||requestId!==session.requestId)return false;
-    if(!rendered){session.candidateEntry=previousCandidate.entry;session.candidateDefinition=previousCandidate.definition;session.candidatePrepared=previousCandidate.prepared;session.candidateRendered=previousCandidate.rendered;restoreLibraryWorkingState(previousWorkingState);throw new Error('The candidate could not be rendered. Your previous preview was restored.');}
-    session.candidateRendered=true;updateDocumentHeader({forceSelection:true});return true;
+    if(!isCurrent())return false;
+    if(!rendered){Object.assign(session,rollback.candidate);session.rollback=null;restoreLibraryWorkingState(rollback.working);throw new Error('The candidate could not be rendered. Your previous preview was restored.');}
+    session.rollback=null;session.candidateRendered=true;updateDocumentHeader({forceSelection:true});return true;
+  }
+  function abortLibraryPackages(session){session.packageController?.abort();for(const controller of session.downloads.values())controller.abort();session.downloads.clear();}
+  function invalidateLibraryForReplacement(){
+    const session=librarySession;if(!session)return;
+    session.requestId++;abortLibraryPackages(session);librarySession=null;
+    state.renderId++;state.rendererManager?.cancelActive().catch(error=>console.warn('Candidate cancellation failed',error));setUILocked(false);
+    thumbnailService.close().catch(error=>console.warn('Thumbnail cancellation failed',error));
+    restoreLibraryWorkingState(session.originalWorkingDocument);browser?.invalidateSession();
+  }
+  async function downloadLibraryPackage(entry){
+    const session=librarySession;if(!session||session.downloads.has(entry.key))return false;
+    const controller=new AbortController();session.downloads.set(entry.key,controller);
+    try{
+      const result=await onlineLibrary.fetchPackage(entry,controller.signal);
+      if(librarySession!==session||controller.signal.aborted)return false;
+      return downloadBlob(new Blob([result.bytes],{type:'image/png'}),onlinePackageFilename(result.document.id));
+    }catch(error){if(librarySession!==session||controller.signal.aborted)return false;throw error;}
+    finally{session.downloads.delete(entry.key);}
   }
   async function cancelLibrarySession(){
-    const session=librarySession;if(!session)return true;session.requestId++;
+    const session=librarySession;if(!session)return true;const requestId=++session.requestId;abortLibraryPackages(session);
+    await stopLibraryCandidate(session);
     await thumbnailService.close();
     if(state.isRendering)await cancelRender({silent:true});
-    if(librarySession!==session)return false;librarySession=null;restoreLibraryWorkingState(session.originalWorkingDocument);return true;
+    if(librarySession!==session||requestId!==session.requestId)return false;librarySession=null;restoreLibraryWorkingState(session.originalWorkingDocument);return true;
   }
   async function applyLibraryCandidate(){
     const session=librarySession;if(!session?.candidateEntry||!session.candidatePrepared||!session.candidateRendered)throw new Error('Choose a successfully rendered candidate first.');
     if(session.candidateEntry.source==='custom'){
       const current=resolveCatalogDefinition(session.candidateEntry);if(!current)throw new Error('This filter was deleted in another tab.');if(JSON.stringify(current)!==JSON.stringify(session.candidateDefinition))throw new Error('This filter changed in another tab. Preview the updated filter before applying it.');
     }
-    session.requestId++;await thumbnailService.close();librarySession=null;commitActiveDocument(session.candidatePrepared,session.candidateDefinition,session.candidateEntry.key);refreshTags();updateDocumentHeader({forceSelection:true});toast(`${session.candidatePrepared.name} applied`);return true;
+    const requestId=++session.requestId;abortLibraryPackages(session);await thumbnailService.close();if(librarySession!==session||requestId!==session.requestId)return false;librarySession=null;
+    const online=session.candidateEntry.source==='online';commitActiveDocument(session.candidatePrepared,session.candidateDefinition,online?null:session.candidateEntry.key,{importSource:online?'online':null});refreshTags();updateDocumentHeader({forceSelection:true});toast(`${session.candidatePrepared.name} applied`);return true;
   }
 
   function compileAll({cache=true}={}){const key=currentProgramKey();if(cache&&state.lastProgram&&state.lastProgramKey===key){controlsController.updateControlUsage(state.lastProgram);updateRendererDiagnostics(state.lastProgram);return state.lastProgram}const astList=[];let ok=true;el.formulas.forEach(field=>{const box=field.closest('.formula'),icon=$('.formula-state',box),errorElement=$('.formula-error',box);try{astList.push(new Parser(field.value).parse());field.classList.remove('invalid');field.setAttribute('aria-invalid','false');icon.textContent=field.classList.contains('edited')?'•':'✓';icon.classList.remove('bad');icon.classList.toggle('pending',field.classList.contains('edited'));errorElement.textContent='';errorElement.classList.remove('show');}catch(error){ok=false;astList.push(null);field.classList.add('invalid');field.setAttribute('aria-invalid','true');icon.textContent='!';icon.classList.remove('pending');icon.classList.add('bad');errorElement.textContent=`${error.message} at character ${(error.pos??0)+1}`;errorElement.classList.add('show');}});if(!ok){controlsController.updateControlUsage(null);clearRendererDiagnostics('GPU diagnostics unavailable','Fix formula errors to inspect renderer eligibility.');return null;}try{const program=compileFilterProgram(astList,{legacyMath:state.legacyMath});if(cache){state.lastProgram=program;state.lastProgramKey=key}controlsController.updateControlUsage(program);updateRendererDiagnostics(program);return program;}catch(error){console.error('IR compilation failed',error);setStatus(`Compiler error: ${error.message}`,'error');controlsController.updateControlUsage(null);clearRendererDiagnostics('GPU diagnostics unavailable',error.message);return null;}}
@@ -6744,7 +7322,7 @@ function initFilterFabApp(){
     }
   }
 
-  function initImage(data,width,height){state.renderId++;$('#openImageBtn').classList.remove('primary');state.lastSuccessfulRenderSignature=null;if(state.isRendering)setUILocked(false);initializeImagePreview(data,width,height,{state,canvasView,canvas:el.canvas});el.imageInfo.textContent=`${width} × ${height} px`;thumbnailService.setSource(state.source,width,height).catch(error=>console.warn('Thumbnail source initialization failed',error));initializeRendererSource().catch(error=>{console.error('Renderer initialization failed',error);setStatus('Preview unavailable · see Technical diagnostics in Author','error');});render();}
+  function initImage(data,width,height){state.renderId++;invalidateLibraryForReplacement();$('#openImageBtn').classList.remove('primary');state.lastSuccessfulRenderSignature=null;if(state.isRendering)setUILocked(false);initializeImagePreview(data,width,height,{state,canvasView,canvas:el.canvas});el.imageInfo.textContent=`${width} × ${height} px`;thumbnailService.setSource(state.source,width,height).catch(error=>console.warn('Thumbnail source initialization failed',error));initializeRendererSource().catch(error=>{console.error('Renderer initialization failed',error);setStatus('Preview unavailable · see Technical diagnostics in Author','error');});render();}
   function demoImage(){const width=960,height=640,canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const context=canvas.getContext('2d'),background=context.createLinearGradient(0,0,width,height);background.addColorStop(0,'#08050d');background.addColorStop(.48,'#6c47b1');background.addColorStop(1,'#c429a3');context.fillStyle=background;context.fillRect(0,0,width,height);for(let i=0;i<18;i++){context.globalAlpha=.09;context.fillStyle=i%2?'#fff':'#07111f';context.beginPath();context.arc(90+i*58,90+(i%4)*130,60+(i%3)*35,0,Math.PI*2);context.fill();}context.globalAlpha=1;context.fillStyle='rgba(6,16,5,.82)';context.roundRect(84,94,792,452,36);context.fill();context.fillStyle='#f6efc4';context.font='700 62px system-ui';context.fillText('FILTER',132,245);context.fillStyle='#e1ec1a';context.fillText('FABJS',132,316);context.font='24px system-ui';context.fillStyle='#cdddb7';context.fillText('Open an image or experiment with this demo.',136,370);const gradient=context.createLinearGradient(136,0,790,0);gradient.addColorStop(0,'#e45a87');gradient.addColorStop(.5,'#9fd36a');gradient.addColorStop(1,'#38a9d4');context.fillStyle=gradient;context.fillRect(136,412,654,18);return context.getImageData(0,0,width,height);}
   async function loadImageFile(file,{successMessage='Image loaded',requestId=null}={}){if(!file||!String(file.type||'').startsWith('image/')){toast('Choose a valid image file');return false;}const loadId=requestId??++state.imageLoadId;let bitmap=null;setStatus('Loading image…','busy');try{bitmap=await createImageBitmap(file);if(loadId!==state.imageLoadId)return false;const maximum=1800,scale=Math.min(1,maximum/Math.max(bitmap.width,bitmap.height)),width=Math.max(1,Math.round(bitmap.width*scale)),height=Math.max(1,Math.round(bitmap.height*scale)),canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const context=canvas.getContext('2d',{willReadFrequently:true});if(!context)throw new Error('Canvas image loading is unavailable');context.drawImage(bitmap,0,0,width,height);const pixels=context.getImageData(0,0,width,height).data;if(loadId!==state.imageLoadId)return false;initImage(pixels,width,height);toast(scale<1?`${successMessage} · resized to 1800 px`:successMessage);return true;}catch(error){if(loadId!==state.imageLoadId)return false;setStatus('Could not load image','error');toast(error.message||'Could not load image');return false;}finally{bitmap?.close?.();}}
   async function openImageFile(file){
@@ -6757,9 +7335,9 @@ function initFilterFabApp(){
   async function copyImageToClipboard(){if(state.isRendering)return;const ClipboardItemCtor=globalThis.ClipboardItem;if(!navigator.clipboard?.write||!ClipboardItemCtor){toast('Image copy is unavailable in this browser');return;}setStatus('Encoding RGBA PNG…','busy');try{const expected=alphaStats(state.filtered),blob=await canvasBlob(renderedImageCanvas(state.filtered,state.width,state.height),'image/png');await verifyPngAlpha(blob,expected);setStatus('Writing image to clipboard…','busy');await writePngClipboard(blob);if(expected.hasAlpha){setStatus(`Ready · PNG alpha ${expected.min}–${expected.max}`);toast('RGBA PNG copied · alpha preserved');}else{setStatus('Ready · copied image is opaque');toast('PNG copied · output has no transparent pixels');}}catch(error){console.error('Clipboard copy failed',error);setStatus('Clipboard copy unavailable','error');toast(error?.name==='NotAllowedError'?'Clipboard permission was blocked by the browser':`Copy failed: ${error.message||'clipboard unavailable'}`);}}
   async function pasteImageFromClipboard(){if(state.isRendering)return;if(!navigator.clipboard?.read){toast('Clipboard reading is unavailable. Press Ctrl/⌘+V instead.');return;}setStatus('Reading clipboard…','busy');try{const items=await navigator.clipboard.read();for(const item of items){const types=Array.from(item.types||[]),type=['web image/png','image/png',...types.filter(value=>String(value).startsWith('image/'))].find(value=>types.includes(value));if(!type)continue;const raw=await item.getType(type),mime=String(type).replace(/^web\s+/,'');const blob=String(raw.type||'').startsWith('image/')?raw:new Blob([raw],{type:mime});await loadImageFile(blob,{successMessage:'Image pasted from clipboard'});return;}setStatus('Ready');toast('Clipboard does not contain an image');}catch(error){console.error('Clipboard paste failed',error);setStatus('Clipboard paste unavailable','error');toast(error?.name==='NotAllowedError'?'Clipboard permission was blocked. Press Ctrl/⌘+V instead.':`Paste failed: ${error.message||'clipboard unavailable'}`);}}
 
-  function triggerDownload(href,name,revoke=false){try{const anchor=document.createElement('a');anchor.href=href;anchor.download=name;anchor.rel='noopener';anchor.style.display='none';document.body.appendChild(anchor);anchor.click();setTimeout(()=>{anchor.remove();if(revoke)URL.revokeObjectURL(href);},10000);toast(`Download started: ${name}`);return true;}catch(error){console.error('Download failed',error);toast(`Download failed: ${error.message||'browser blocked the file'}`);return false;}}
+  function triggerDownload(href,name,revoke=false){try{const anchor=document.createElement('a');anchor.href=href;anchor.download=name;anchor.rel='noopener';anchor.style.display='none';document.body.appendChild(anchor);anchor.click();setTimeout(()=>{anchor.remove();if(revoke)URL.revokeObjectURL(href);},10000);toast(`Download started: ${name}`);return true;}catch(error){if(revoke)URL.revokeObjectURL(href);console.error('Download failed',error);toast(`Download failed: ${error.message||'browser blocked the file'}`);return false;}}
   function downloadBlob(blob,name){if(!(blob instanceof Blob)||!blob.size){toast('Nothing was generated to download');return false;}return triggerDownload(URL.createObjectURL(blob),name,true);}
-  async function exportPNG(){if(!state.filtered||!state.width||!state.height){toast('Load and render an image before exporting');return;}const filter=validatedCurrentFilter();if(!filter)return;if(state.lastSuccessfulRenderSignature!==filterRenderSignature(filter)){setStatus('Render the current filter changes before exporting.','error');toast('Render the current filter changes before exporting.');return;}setStatus('Encoding PNG…','busy');try{const canvas=renderedImageCanvas(state.filtered,state.width,state.height),name=slug($('#filterName').value||'filtered-image')+'.png',encoded=await canvasBlob(canvas,'image/png'),envelope=createFilterFabPngEnvelope(filter,'2.8.7'),blob=await embedFilterFabMetadata(encoded,envelope);if(downloadBlob(blob,name))setStatus('Ready');}catch(error){console.error('PNG export failed',error);setStatus('PNG export failed','error');toast(`PNG export failed: ${error.message}`);}}
+  async function exportPNG(){if(!state.filtered||!state.width||!state.height){toast('Load and render an image before exporting');return;}const filter=validatedCurrentFilter();if(!filter)return;if(state.lastSuccessfulRenderSignature!==filterRenderSignature(filter)){setStatus('Render the current filter changes before exporting.','error');toast('Render the current filter changes before exporting.');return;}setStatus('Encoding PNG…','busy');try{const canvas=renderedImageCanvas(state.filtered,state.width,state.height),name=slug($('#filterName').value||'filtered-image')+'.png',encoded=await canvasBlob(canvas,'image/png'),envelope=createFilterFabPngEnvelope(filter,'2.9.0'),blob=await embedFilterFabMetadata(encoded,envelope);if(downloadBlob(blob,name))setStatus('Ready');}catch(error){console.error('PNG export failed',error);setStatus('PNG export failed','error');toast(`PNG export failed: ${error.message}`);}}
   function exportFilter(){const filter=validatedCurrentFilter();if(!filter)return;if(!activeDocument.id)activeDocument.id=createCustomPresetId();filter.id=activeDocument.id;const base=slug(filter.name);try{downloadBlob(new Blob([JSON.stringify(filter,null,2)+'\n'],{type:'application/json;charset=utf-8'}),base+'.json');}catch(error){console.error('Filter export failed',error);toast(`Filter export failed: ${error.message}`);}}
   async function deletePreset(){
     if(!activeDocument.key?.startsWith('custom:'))return;
@@ -6820,7 +7398,7 @@ function initFilterFabApp(){
     el.renderBtn.onclick=()=>render({focusInvalid:true});
     const resetFilter=()=>applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');$('#resetBtn').onclick=resetFilter;$('#exploreResetBtn').onclick=resetFilter;
     el.activeFavorite.onclick=()=>{if(!activeDocument.key)return;try{const current=preference(activeDocument.key);writeEntryPreference(localStorage,activeDocument.key,{favorite:!current.favorite});catalogCache=null;browser?.refresh();updateDocumentHeader();}catch(error){organizationError(error);}};
-    browser=createFilterBrowser({launcher:el.searchFilters,getEntries:catalog,begin:beginLibrarySession,preview:previewLibraryEntry,apply:applyLibraryCandidate,cancel:cancelLibrarySession,toggleFavorite:entry=>{writeEntryPreference(localStorage,entry.key,{favorite:!entry.favorite});catalogCache=null;if(entry.key===activeDocument.key)updateDocumentHeader();},requestThumbnail:requestLibraryThumbnail,clearThumbnailRequests:()=>thumbnailService.clearRequests(),onError:organizationError});
+    browser=createFilterBrowser({launcher:el.searchFilters,getEntries:()=>[...catalog(),...onlineLibrary.getEntries()],getOnlineState:onlineLibrary.getState,loadOnline:onlineLibrary.load,resolveOnlinePreviewUrl:onlineLibrary.resolvePreview,begin:beginLibrarySession,preview:previewLibraryEntry,previewOnline:previewLibraryCandidate,downloadOnline:downloadLibraryPackage,apply:applyLibraryCandidate,cancel:cancelLibrarySession,toggleFavorite:entry=>{writeEntryPreference(localStorage,entry.key,{favorite:!entry.favorite});catalogCache=null;onlineLibrary.invalidate();if(entry.key===activeDocument.key)updateDocumentHeader();},requestThumbnail:requestLibraryThumbnail,clearThumbnailRequests:()=>thumbnailService.clearRequests(),onError:organizationError});
     populatePresets();
     el.preset.onchange=async()=>{
       const key=el.preset.value;
@@ -6871,12 +7449,12 @@ function initFilterFabApp(){
     $('#closeHelp').onclick=()=>$('#helpDialog').close();
     window.addEventListener('storage',event=>{if(event.key===null||event.key==='ffw-custom-presets'||event.key.startsWith(PREFERENCE_PREFIX)){
       if(activeDocument.key?.startsWith('custom:')){try{const record=findCustomPresetById(library().presets,activeDocument.id);if(!record){activeDocument.key=null;activeDocument.id=undefined;activeDocument.imported=false;activeDocument.importSource=null;toast('Saved filter deleted in another tab. Save as new to keep this draft.');}else if(JSON.stringify(record)!==activeDocument.recordBaseline)toast('Saved filter changed in another tab. Update will require review.');}catch(error){organizationError(error);}}
-      catalogCache=null;refreshTags();populatePresets();
+      catalogCache=null;onlineLibrary.invalidate();refreshTags();populatePresets();
     }});
-    window.addEventListener('beforeunload',()=>{thumbnailService.dispose();state.rendererManager?.dispose();});
+    window.addEventListener('beforeunload',()=>{if(librarySession)abortLibraryPackages(librarySession);onlineLibrary.dispose();thumbnailService.dispose();state.rendererManager?.dispose();});
   }
 
-  window.FilterFabJS=Object.freeze({version:'2.8.7',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getThumbnailDiagnostics:()=>thumbnailService.diagnostics(),getRendererPreference:()=>state.rendererPreference,getWorkspaceMode:()=>state.workspaceMode,getLibraryPreviewState:()=>({open:Boolean(librarySession),candidateKey:librarySession?.candidateEntry?.key||null,candidateRendered:Boolean(librarySession?.candidateRendered),activeKey:activeDocument.key,activeId:activeDocument.id,imported:activeDocument.imported,importSource:activeDocument.importSource,baseline:activeDocument.baseline,recordBaseline:activeDocument.recordBaseline})});
+  window.FilterFabJS=Object.freeze({version:'2.9.0',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getThumbnailDiagnostics:()=>thumbnailService.diagnostics(),getRendererPreference:()=>state.rendererPreference,getWorkspaceMode:()=>state.workspaceMode,getLibraryPreviewState:()=>({open:Boolean(librarySession),candidateKey:librarySession?.candidateEntry?.key||null,candidateRendered:Boolean(librarySession?.candidateRendered),activeKey:activeDocument.key,activeId:activeDocument.id,imported:activeDocument.imported,importSource:activeDocument.importSource,baseline:activeDocument.baseline,recordBaseline:activeDocument.recordBaseline})});
   controlsController.buildSliders();wire();const demo=demoImage();initImage(demo.data,demo.width,demo.height);applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');
   return{state,render,applyFilter,loadImageFile,openImageFile};
 }
