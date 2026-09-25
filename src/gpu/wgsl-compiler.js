@@ -8,6 +8,7 @@ import { CONTROL_COUNT, CONTROL_PAIR_COUNT } from '../core/controls.js';
 import { MAX_FRACTAL_ITERATIONS } from '../core/formula-language.js';
 import { IR_VERSION, IRType, programCacheKey } from '../core/ir.js';
 import { WEBGPU_CONTROL_SLOT_COUNT } from './params-layout.js';
+import { AngleSignLowering, SEMANTIC_ANGLE_WGSL } from './angle-sign.js';
 
 export class WGSLCompileError extends Error{constructor(message,blockers=[]){super(message);this.name='WGSLCompileError';this.blockers=blockers}}
 const WEBGPU_FUNCTIONS=new Set('src src0 src1 srcWrap srcMirror srcLinear rad rad0 rad1 cnv cnv0 cnv1 ctl val map min max abs add sub dif mix scl sqr sqrt sin cos tan r2x r2y c2d c2m radius angle clamp lerp step smoothstep floor ceil round fract sign bias gain hash2 valueNoise perlin worleyF1 worleyF2 fbm turbulence ridged periodicNoise mandelbrot julia wrap mirror repeat mirrorRepeat gradient3 gradient4 linearGrad radialGrad angularGrad checker brick line circle ring box triangle grid sierpinski sdfLine sdfCircle sdfBox sdfUnion sdfIntersect sdfSubtract sdfSmoothUnion sdfFill sdfOutline multiply screen overlay softLight difference'.split(' '));
@@ -159,7 +160,7 @@ export class WGSLCompiler{
         return`(${a} ${node.operator} ${b})`;
       }
       case'select':return this.selectValue(node,channel);
-      case'call':return this.call(node.fn,node.args.map(arg=>this.value(arg,channel)),channel);
+      case'call':if(node.fn==='angle'||node.fn==='c2d')return new AngleSignLowering(this,channel).angle(node).v;return this.call(node.fn,node.args.map(arg=>this.value(arg,channel)),channel);
     }
     throw new WGSLCompileError(`Unsupported IR operation ${node.op}`,[node.op]);
   }
@@ -234,6 +235,7 @@ fn ff_num(v:bool)->f32{return select(0.0,1.0,v);}
 fn ff_negative_zero()->f32{return bitcast<f32>(0x80000000u);}
 fn ff_round(v:f32)->f32{let rounded=floor(v+0.5);if(rounded==0.0&&(bitcast<u32>(v)&0x80000000u)!=0u){return ff_negative_zero();}return rounded;}
 fn ff_atan2(y:f32,x:f32)->f32{if(y==0.0&&x==0.0){let yNegative=(bitcast<u32>(y)&0x80000000u)!=0u;let xNegative=(bitcast<u32>(x)&0x80000000u)!=0u;if(xNegative){return select(FF_PI,-FF_PI,yNegative);}return select(0.0,ff_negative_zero(),yNegative);}return atan2(y,x);}
+${this.usesSemanticAngle?SEMANTIC_ANGLE_WGSL:''}
 fn ff_clamp(v:f32,lo:f32,hi:f32)->f32{return max(lo,min(hi,v));}
 fn ff_normalized_coordinate(v:f32,size:f32)->f32{if(size<=1.0){return 0.5;}return v/(size-1.0);}
 fn ff_div(a:f32,b:f32)->f32{if(b==0.0){return 0.0;}return a/b;}

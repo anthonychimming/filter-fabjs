@@ -54,6 +54,7 @@ for(const output of [deployedJavaScript,standaloneHtml]){
 // Exercise the compiler from each generated artifact, stopping before DOM init.
 const conditionalProgram=compileFilterProgram(Array(4).fill('x?mandelbrot(0,0,512):julia(0,0,0,0,512)').map(f=>new Parser(f).parse()));
 const sharedProgram=compileFilterProgram(['mandelbrot(cx,cy,512)*255','mandelbrot(cx,cy,512)*128','mandelbrot(cx,cy,512)*64','a'].map(f=>new Parser(f).parse()));
+const signedAngleProgram=compileFilterProgram(['c2d(-0,0)','angle(1,x?-0:0)','angle(angle(1,-0),0)','255'].map(f=>new Parser(f).parse()));
 for(const script of [deployedJavaScript,standaloneHtml.match(/<script>([\s\S]*?)<\/script>/)?.[1]]){
   assert.ok(script,'build must contain executable JavaScript');
   const init=script.lastIndexOf('initFilterFabApp();');
@@ -61,6 +62,7 @@ for(const script of [deployedJavaScript,standaloneHtml.match(/<script>([\s\S]*?)
   const context=vm.createContext({TextEncoder,TextDecoder});
   vm.runInContext(script.slice(0,init)+'globalThis.BuiltCompiler=WGSLCompiler;\n})();',context);
   assert.equal(context.BuiltCompiler.compile(conditionalProgram).code,WGSLCompiler.compile(conditionalProgram).code,'built compilers must emit the same scoped conditional WGSL as source');
+  assert.equal(context.BuiltCompiler.compile(signedAngleProgram).code,WGSLCompiler.compile(signedAngleProgram).code,'both artifacts must include semantic angle lowering and preserve nested zero signs');
   const sharedCode=context.BuiltCompiler.compile(sharedProgram).code;
   assert.equal(sharedCode,WGSLCompiler.compile(sharedProgram).code,'both generated artifacts must retain source field sharing');
   assert.equal((sharedCode.split('fn main(')[1].match(/ff_mandelbrot\(/g)||[]).length,1,'built output must compute the shared fractal once');

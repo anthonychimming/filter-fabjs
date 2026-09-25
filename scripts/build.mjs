@@ -16,6 +16,7 @@ const order = [
   'src/presets/builtins.js',
   'src/renderers/cpu-worker-source.js',
   'src/gpu/params-layout.js',
+  'src/gpu/angle-sign.js',
   'src/gpu/wgsl-compiler.js',
   'src/renderers/renderer-backend.js',
   'src/renderers/ir-numeric-bounds.js',
