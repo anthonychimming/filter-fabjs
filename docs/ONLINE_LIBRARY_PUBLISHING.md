@@ -1,9 +1,9 @@
 # Online Library publishing (Stage 5)
 
-Filter FabJS remains v2.8.7, native JSON v2 and Typed IR v1. No policy in this
-repository requires an automatic version bump for publishing infrastructure. A
-later public release decision should coordinate package.json, README/version docs
-and the normal generated build; this task does not prepare a new app release.
+Filter FabJS v2.9.0 retains native JSON v2 and Typed IR v1. Application releases
+and catalogue revisions are separate: publishing library content does not
+automatically change the app version. App release preparation coordinates
+package.json, interface/version documentation and the normal generated build.
 
 The separate `anthonychimming/filter-fabjs-library` repository owns publication
 content, reference-image approval, its registry, workflows and maintainer guide.
@@ -82,10 +82,10 @@ builds first, then its separate github-pages job receives contents-read,
 pages-write and id-token-write. Main branch protection should require validation
 and forbid history rewriting. Manual rebuild assumes already-validated history.
 
-No approved reference or production packages were provided. The initial registry
-is empty (valid Stage 1); test-generated PNGs are confined to temporary test folders.
-Approve project-owned/licensed 512×512 reference artwork and review production
-filters before claiming the full production Preview/Apply/Download round trip.
+The published launch catalogue has `libraryVersion: 2` and five revision-1 entries:
+`chromatic-neon-contour`, `crt-display`, `levels-midtone`, `turbulent-displace`
+and `lens-distortion`. They use standardized 512×512 Sample images and portable
+PNG packages. Test-generated PNGs remain confined to temporary test folders.
 
 Final release QA: open the Pages landing/catalogue and real PNG URL; verify a missing
 PNG yields 404; test Online Samples/search/tags/favorites, Preview/Cancel/Apply as

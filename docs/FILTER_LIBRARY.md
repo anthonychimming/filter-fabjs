@@ -1,6 +1,6 @@
-# Filter Library — v2.8.7
+# Filter Library — v2.9.0
 
-Phase 3 adds visible selection cues, touch targets, and focus improvements. Current testing notes and action semantics are in [UI Phase 3](UI_PHASE_3.md); the Phase 2/2.1 measurements below describe the earlier thumbnail release.
+v2.9.0 brings Built-in, My Filters and Online into the same Filter Library, with search, tags, favorites and pagination. All local remains the default; Online is selected explicitly. Local interaction history is recorded in [UI Phase 3](UI_PHASE_3.md); the dated validation records below describe earlier development checkpoints.
 
 The Explore workspace opens a canvas-visible **Filter Library**. On desktop it docks as a right-side drawer with no backdrop blur over the artwork; on narrow screens it becomes a bottom sheet so part of the canvas remains visible.
 
@@ -26,7 +26,7 @@ Candidate preview does not write local storage and does not update the persisten
 
 If validation fails, the working presentation is not changed. If rendering fails, the preceding candidate or opening presentation is restored and the error is announced inside the library.
 
-**Apply Filter** is enabled only after a candidate renders successfully. Applying promotes the already rendered presentation into the normal built-in or custom identity and baseline without an unnecessary second render. A custom record that was deleted or changed in another tab must be previewed again before it can be applied.
+**Apply Filter** is enabled only after a candidate renders successfully. For a local candidate, applying promotes the already rendered presentation into the normal built-in or custom identity and baseline without an unnecessary second render. Online Apply instead creates an imported, unsaved filter, as described below. A custom record that was deleted or changed in another tab must be previewed again before it can be applied.
 
 **Cancel**, the close button, and **Escape** share the same restoration path. Active preview work is cancelled silently, the exact opening state and pixel buffer are restored without rerendering, the library closes, and focus returns to the launcher. This preserves dirty built-in, dirty custom, imported, pending-formula, and invalid-formula work.
 
@@ -36,7 +36,7 @@ Search matches stored names, descriptions, authors, and tags, never formula sour
 
 Source, Favorites only, text, and selected tags combine with AND. Selected tags match all. Tag choices come from the source/favorite scope before text and tag restrictions. Reset view clears all criteria; Clear search clears only text. Clicking a card tag clears the other restrictions and browses that exact normalized tag from page one.
 
-Each card contains a real source-based thumbnail, filter name, Built-in/My Filter source badge, author, concise description, tags, and a separate favorite control. Cards appear immediately with a neutral checkerboard placeholder. Visible and near-visible cards move through queued/rendering to ready; a failed thumbnail shows **Preview unavailable** without removing or disabling the filter. Actual thumbnail canvases are decorative and do not add keyboard stops.
+Each local card contains a real source-based thumbnail, filter name, Built-in/My Filter source badge, author, concise description, tags, and a separate favorite control. Cards appear immediately with a neutral checkerboard placeholder. Visible and near-visible cards move through queued/rendering to ready; a failed thumbnail shows **Preview unavailable** without removing or disabling the filter. Actual thumbnail canvases are decorative and do not add keyboard stops.
 
 One downsized immutable source is prepared for each loaded image with a maximum dimension of 160 pixels and no upscaling. A dedicated `RendererManager` executes the same validated typed-IR programs as the main renderer, using normal WebGPU analysis and CPU fallback without publishing its diagnostics to the ordinary renderer UI. Thumbnail concurrency is one. Starting an authoritative main-canvas render suspends and cancels active thumbnail work; current requested work resumes afterward.
 
@@ -66,13 +66,13 @@ The launcher exposes dialog semantics and the generated library is labelled by *
 
 Desktop uses a full-height right drawer. At 920 CSS pixels or narrower the library uses a viewport-bounded bottom sheet; short-height layouts make tools and results independently reachable. Pagination is removed from layout when hidden. No physical touch or screen-reader speech claim is made without dedicated testing.
 
-## Online Library — Stage 4 development checkpoint
+## Online Filter Library
 
 Source now offers **All local** (default), **Built-in**, **My Filters**, and **Online**. Opening local sources never requests Online data. Selecting Online loads a bounded static manifest; loading, an empty catalogue, no search matches, and a failed request with Retry are distinct. Successful metadata is saved as a bounded last-known-good catalogue; first Online use on a later page immediately shows validated saved cards while refreshing. There is no periodic polling. Reset view returns to All local. Card tags browse All local for local cards and remain Online for Online cards.
 
-Online entries are metadata-only (`document: null`). They reuse metadata search, match-all tags, favorites, sorting and pagination. Online cards show lazy static **Sample** images from standardized reference artwork, with **Sample unavailable** on image failure. They do not render against the current source image. Selecting an Online card explicitly loads its package and previews it on your current source image. Favorites never fetch packages or install filters. Browsing alone cannot enable Apply; a previously rendered candidate remains available for Apply or Cancel. Author's preset dropdown and local thumbnail workflows stay local-only.
+Online entries are metadata-only (`document: null`). They reuse metadata search, match-all tags, favorites, sorting and pagination. Online cards show lazy static **Sample** images from standardized reference artwork, with **Sample unavailable** on image failure. These Sample images do not render against the current source image. Selecting an Online card explicitly loads its package and previews it on your current source image. Favorites never fetch packages or install filters. Browsing alone cannot enable Apply; a previously rendered candidate remains available for Apply or Cancel. Author's preset dropdown and local thumbnail workflows stay local-only.
 
-The future static endpoint is configured once in `io/filter-library-client.js`. Transport uses HTTPS, omitted credentials, an 8 MiB response bound, a 12-second timeout, cancellation and Stage 1 validation. This remains a development checkpoint: production availability depends on the future publishing repository. Stage 4 caches catalogue metadata and validated packages in memory as described below; publishing and CI are deferred to Stage 5.
+The production static catalogue is delivered by the separate `filter-fabjs-library` GitHub Pages repository at `https://anthonychimming.github.io/filter-fabjs-library/catalogue.json`. Its launch state is `libraryVersion: 2`, with five entries: **Chromatic Neon Contour**, **CRT Display**, **Levels / Midtone**, **Turbulent Displace** and **Lens Distortion**. Transport uses HTTPS, omitted credentials, an 8 MiB response bound, a 12-second timeout, cancellation and manifest validation. Catalogue metadata is persisted as last-known-good data; validated packages are cached only in memory for the page session, as described below.
 
 For controlled manual testing, run `npm run dev` and open `http://localhost:8080/tests/online-library-browser.html`. The test-only app initializer injects a local URL/fetch implementation. Its first request fails; Retry serves three entries, two static PNG samples and one intentional broken-image path. **Run Stage 2 browser checks** verifies failure isolation, search/favorites, unchanged canvas/program/diagnostics, local candidate coexistence and Cancel restoration. Reload the fixture before rerunning; the check restores its test favorite preference. The fixture also remains usable interactively. Existing local workflow checks remain at `tests/library-browser.html`, for both modular and standalone builds.
 
@@ -97,8 +97,8 @@ Run `npm run dev` and open `http://localhost:8080/tests/online-package-browser.h
 - Responsive browser checks passed at 1,366 × 768, 1,024 × 768, 768 × 1,024, 318 × 798, and 638 × 358 CSS pixels. These cover the desktop drawer, portrait bottom sheet, narrow mobile, and 200%-zoom-equivalent layouts. A keyboard pass opened the library with Enter, reached search, restrictions, the first preview and its separate favorite action with Tab, skipped the decorative thumbnail canvas, and restored launcher focus with Escape.
 - WebGPU and forced-CPU rendering were exercised in the browser; both produced real lazy card thumbnails. Coarse-pointer emulation, physical touch, and screen-reader speech were not tested.
 - The same fixture retains the bounded 1,000-entry performance projection. One generated-standalone run in local Chromium 152 observed a 30.4 ms opening and 12.8 ms p95 query-plus-layout time; timings are local observations, not cross-device guarantees.
-- The v2.8.7 catalog contains 52 built-ins, all attributed to Anthony Chimming and all compiling as WebGPU-compatible in the automated suite.
-- The release build is `dist/filter-fabjs-v2.8.7.html`. Direct `file://` behavior can vary by browser security policy, so localhost remains the supported test path.
+- At the v2.8.7 checkpoint, the catalog contained 52 built-ins, all attributed to Anthony Chimming and all compiling as WebGPU-compatible in the automated suite.
+- The current release-preparation build is `dist/filter-fabjs-v2.9.0.html`. Direct `file://` behavior can vary by browser security policy, so localhost remains the supported test path.
 
 Run the complete verification workflow with:
 
@@ -142,4 +142,4 @@ Stage 4 validation: prerequisite and final `npm run verify` passed, including al
 
 ## Online publishing (Stage 5)
 
-The separate `filter-fabjs-library` repository supplies the static feed. The main app owns the Node publisher and reuses its native, PNG and Online validators. See [Online Library publishing](ONLINE_LIBRARY_PUBLISHING.md) for registry/revision rules, immutable historical PNGs, deterministic builds, validator pinning, deployment gates and release QA. The centralized production URL remains `https://anthonychimming.github.io/filter-fabjs-library/catalogue.json`. Production content awaits approved reference artwork and packages; test fixtures are never publication seeds.
+The separate `filter-fabjs-library` repository supplies the static feed. The main app owns the Node publisher and reuses its native, PNG and Online validators. See [Online Library publishing](ONLINE_LIBRARY_PUBLISHING.md) for registry/revision rules, immutable historical PNGs, deterministic builds, validator pinning, deployment gates and release QA. The centralized production URL remains `https://anthonychimming.github.io/filter-fabjs-library/catalogue.json`. The production launch catalogue contains five published filters with standardized 512×512 Sample images and portable PNG packages; test fixtures are never publication seeds.

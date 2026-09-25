@@ -22,7 +22,7 @@ window.packageFixtureFetch=async(url,options)=>{
   if(failure===id)return new Response('failure',{status:503});
   return new Response(packages.get(id)||'invalid PNG');
 };
-const standalone=new URLSearchParams(location.search).has('standalone'),html=await(await fetch(new URL(standalone?'dist/filter-fabjs-v2.8.7.html':'index.html',root))).text();
+const standalone=new URLSearchParams(location.search).has('standalone'),html=await(await fetch(new URL(standalone?'dist/filter-fabjs-v2.9.0.html':'index.html',root))).text();
 const options=`{${savedMode?'onlineStorage:parent.packageFixtureStorage,':manual?'':'onlineStorage:null,'}onlineManifestUrl:${JSON.stringify(new URL('tests/fixtures/online-library/catalogue.json',root).href)},onlineFetchImpl:(...args)=>parent.packageFixtureFetch(...args)}`;
 frame.srcdoc=html.replace('<head>',`<head><base href="${root.href}">`).replace(standalone?'initFilterFabApp();':'<script type="module" src="./src/main.js"></script>',standalone?`window.fixtureApp=initFilterFabApp(${options});`:`<script type="module">import {initFilterFabApp} from './src/app/filter-fab-app.js';window.fixtureApp=initFilterFabApp(${options});</script>`);
 const until=async(test,label='condition')=>{const end=Date.now()+15000;while(!test()){if(Date.now()>end)throw new Error(`Timed out: ${label}`);await new Promise(resolve=>setTimeout(resolve,20));}};

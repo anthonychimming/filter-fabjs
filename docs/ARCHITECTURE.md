@@ -1,6 +1,6 @@
 # Architecture
 
-Filter FabJS v2.8.7 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
+Filter FabJS v2.9.0 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
 
 ```text
 Formula text
@@ -78,9 +78,9 @@ searchCatalog()
 
 `onlineCatalogEntry(metadata, preference)` consumes one normalized manifest entry. Its stable key is `online:<id>` and source is `online`; it projects name, description, author, curated tags, search index, favorite state, `unavailable: false`, and revision/type/format/date/asset descriptors under `remote`. Unresolved remote entries have `document: null` until a later package-resolution stage. Favorites reuse `ffw-entry-v1:online:<id>`; preference tags never augment curated Online tags. `searchCatalog()` retains default `source: 'all'` (every supplied entry), adds `local` (Built-in + Custom only), and supports `online` alongside existing individual source scopes.
 
-Manifest validation is independent of network transport, PNG parsing, and rendering; remote catalog metadata does not enter the compiler or renderer. Stage 1 makes no network request and does not connect Online entries to the UI, candidate preview, or thumbnail service. Local Built-in/My Filters behavior and the visible source selector are unchanged. Fetching with response-size limits, URL resolution, and package resolution remain future work.
+Manifest validation is independent of network transport, PNG parsing, and rendering; remote catalog metadata does not enter the compiler or renderer. The manifest validator itself makes no network request. The transport, UI and package layers below connect validated entries to Online browsing and candidate preview while preserving local Built-in/My Filters behavior.
 
-### Online browsing (Stage 2 development checkpoint)
+### Online browsing
 
 `io/filter-library-client.js` adds static GET transport → bounded bytes → strict UTF-8/JSON decoding → Stage 1 validation → metadata-only catalog entries → Filter Library search/tags/favorites → lazy static Sample images. The single default endpoint is `https://anthonychimming.github.io/filter-fabjs-library/catalogue.json`. Requests omit credentials, disallow redirects, use `cache: 'no-store'`, reject declared or received bodies above 8 MiB, and support caller cancellation plus a 12-second timeout. The client accepts HTTPS, with HTTP loopback allowed for test fixtures. Asset paths resolve against the validated manifest URL and must retain its origin; this catalogue client does not fetch packages.
 
@@ -88,9 +88,9 @@ The app owns `createOnlineLibrarySession()`: idle/loading/ready/error state, one
 
 The visible source options are now All local (default), Built-in, My Filters, and Online. Only first entering Online in a page session or explicit Retry requests a manifest; startup and local sources do not. Loading, empty catalog, no search matches, and error are distinct browser states. Online cards use decorative static `<img>` samples, a Sample badge, separate favorites, and existing 50-entry pagination. Stage 3 adds the explicit package actions described below. The existing 180-pixel observation margin (first eight fallback) assigns image URLs lazily; UI generations isolate late callbacks. Online entries retain `document: null` and never enter local definition resolution or thumbnail rendering. Browsing alone never prepares or previews a filter. An existing local candidate remains intact when browsing Online. Local Apply/Cancel/Close/Escape restoration is unchanged.
 
-Stage 2 supersedes Stage 1's UI/transport deferral above, but is not a finished Online Library release. Stage 3 adds package loading, PNG metadata extraction, current-image preview, Apply and Download PNG below; Stage 4 adds the cache layers described below. Renderer/compiler/PNG codec contracts are unchanged. Controlled Node tests and `tests/online-library-browser.html` exercise local fixtures without the production endpoint.
+Package loading, PNG metadata extraction, current-image preview, Apply and Download PNG are described below, followed by the cache layers. Renderer/compiler/PNG codec contracts are unchanged. Controlled Node tests and `tests/online-library-browser.html` exercise local fixtures without the production endpoint.
 
-### Online package use (Stage 3 development checkpoint)
+### Online package use
 
 `io/filter-library-package.js` implements Online CatalogEntry → the Stage 2 same-origin asset resolver → bounded package GET → existing `extractFilterFabMetadata()` → existing `validateNativeFilter()` → catalogue identity checks. The package limit is 8 MiB (declared length and received bytes, stopping streamed responses at the limit); empty bodies fail. Requests omit credentials, disallow redirects, check any reported final response origin, use `cache: 'no-store'`, and support caller abort plus an 18-second timeout. HTTPS and loopback-only HTTP follow the existing resolver. MIME and filename are not trusted as format validation.
 
@@ -102,7 +102,7 @@ Only an explicit Online Preview action resolves and prepares the package, then j
 
 Online Apply commits `key: null`, the portable package `id`, `imported: true`, `importSource: 'online'`, and `recordBaseline: null`, with a baseline of the applied native document. It is unsaved, does not write My Filters, and keeps provenance outside native v2. Existing Author Save can create an independent My Filter. Download validates separately, then passes a Blob of the exact original bytes to the existing download helper as `filterfab-<validated id>.png`; it never uses canvas re-encoding, candidate selection, or installation. The existing helper revokes object URLs after initiation. Sample images remain static; a successful Online candidate is labelled **✓ Previewing on canvas**.
 
-Controlled coverage lives in `online-library-package-smoke.mjs`, `online-package-ui-smoke.mjs`, and `online-package-browser.html` (also `?standalone=1` after a build). Stage 2 discovery/local regression coverage remains in `online-library-browser.html`. Neither suite requires the public endpoint. Stage 4 adds persistent catalogue metadata and session package reuse below. Persistent packages, offline installation and update checks remain unimplemented. The publishing repository, GitHub Pages and CI remain Stage 5 work. No formula, native format, typed IR, compiler, renderer, or Phase 4 engine changes are involved.
+Controlled coverage lives in `online-library-package-smoke.mjs`, `online-package-ui-smoke.mjs`, and `online-package-browser.html` (also `?standalone=1` after a build). Stage 2 discovery/local regression coverage remains in `online-library-browser.html`. Neither suite requires the public endpoint. Stage 4 adds persistent catalogue metadata and session package reuse below. Persistent packages, offline installation and update checks remain unimplemented. The separate publishing repository now serves the production launch catalogue through GitHub Pages, with five filters at libraryVersion 2. No formula, native format, typed IR, compiler, renderer, or Phase 4 engine changes are involved.
 
 ## Stage A fractal refinement (2.8.5)
 
@@ -147,9 +147,9 @@ Successful refresh rebuilds only metadata projections, preserving search/tags/so
 
 Preview and Download reuse completed results; Download preserves the original PNG bytes. Concurrent single-flight is deliberately deferred: each unresolved Preview/Download retains its own abort controller, avoiding shared-request cancellation ownership changes. Cache hits still cross the existing request/session generation guards. Apply remains an unsaved imported Online document, and all existing candidate snapshot/restoration/source-baseline rules remain in force.
 
-`online-library-cache-smoke.mjs`, `online-package-cache-smoke.mjs` and `online-cache-ui-smoke.mjs` cover storage, version, LRU, aliasing and refresh state. The package browser fixture covers network/cache races, cache reuse and exact cancellation; `?saved=1&cpu=1` covers immediate saved-card preview, refresh failure/Retry, removal of the candidate's card and exact Cancel restoration. Automated fixtures inject isolated storage; manual mode uses real localStorage and the same production cache paths. Stage 5 publishing/GitHub Pages/CI, persistent packages, offline shell, polling, updates and community sources are absent. Renderer/compiler/native v2/Typed IR contracts are unchanged.
+`online-library-cache-smoke.mjs`, `online-package-cache-smoke.mjs` and `online-cache-ui-smoke.mjs` cover storage, version, LRU, aliasing and refresh state. The package browser fixture covers network/cache races, cache reuse and exact cancellation; `?saved=1&cpu=1` covers immediate saved-card preview, refresh failure/Retry, removal of the candidate's card and exact Cancel restoration. Automated fixtures inject isolated storage; manual mode uses real localStorage and the same production cache paths. Publishing/GitHub Pages/CI are documented below; persistent packages, an offline shell, polling, automatic updates and community sources remain absent. Renderer/compiler/native v2/Typed IR contracts are unchanged.
 
 
 ## Online publishing (Stage 5)
 
-The separate `filter-fabjs-library` repository supplies the static feed. The main app owns the Node publisher and reuses its native, PNG and Online validators. See [Online Library publishing](ONLINE_LIBRARY_PUBLISHING.md) for registry/revision rules, immutable historical PNGs, deterministic builds, validator pinning, deployment gates and release QA. The centralized production URL remains `https://anthonychimming.github.io/filter-fabjs-library/catalogue.json`. Production content awaits approved reference artwork and packages; test fixtures are never publication seeds.
+The separate `filter-fabjs-library` repository supplies the static feed. The main app owns the Node publisher and reuses its native, PNG and Online validators. See [Online Library publishing](ONLINE_LIBRARY_PUBLISHING.md) for registry/revision rules, immutable historical PNGs, deterministic builds, validator pinning, deployment gates and release QA. The centralized production URL remains `https://anthonychimming.github.io/filter-fabjs-library/catalogue.json`. The launch catalogue has libraryVersion 2 and five production filters with standardized Sample images and portable PNG packages; test fixtures are never publication seeds.

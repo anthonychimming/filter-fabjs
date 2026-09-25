@@ -1,6 +1,6 @@
 # Filter FabJS Formula Reference
 
-**Applies to Filter FabJS v2.8.7 · native filter format v2 · typed IR v1**
+**Applies to Filter FabJS v2.9.0 · native filter format v2 · typed IR v1**
 
 This is the compact, implementation-oriented reference for writing Filter FabJS formulas. For worked explanations and tutorials, see the [Filter FabJS Programming Guide (PDF)](Filter_FabJS_Programming_Guide_v2.4.7.pdf). For analytic mask details, see [ANALYTIC_SHAPES.md](ANALYTIC_SHAPES.md).
 
@@ -242,6 +242,8 @@ mandelbrot(cx*X/min(X,Y)*1.5-0.5,cy*Y/min(X,Y)*1.5,128)
 
 
 Since v2.8.5, requested iterations above 256 may execute up to 512; requests at or below 256 retain their previous f32-aligned behavior. Counts truncate after conversion to f32 and clamp to `1..512`. This is bounded single-pass computation, not arbitrary-precision or deep-zoom rendering. Native filter format v2 and typed IR v1 are unchanged.
+
+Mandelbrot rendering has a pre-existing CPU/WebGPU numerical difference: coordinate precision and rounding can produce sparse pixel differences, sometimes large near sensitive fractal boundaries, plus occasional one-byte shading differences. The reference hardware suite remains 84/85, with Mandelbrot field the sole failure. Use CPU rendering when matching CPU output exactly is required.
 
 Escape values are normalized by the requested limit, so increasing iterations can recolor already-escaping regions. For a custom palette with a fixed escape-count scale, use an expression such as `sqrt(clamp(mandelbrot(cx,cy,512)*512/128,0,1))`; bounded points still need intentional palette treatment.
 

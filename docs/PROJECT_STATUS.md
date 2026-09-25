@@ -4,7 +4,7 @@ This document describes the implementation currently present in the public repos
 
 ## Release
 
-- Application version: **2.8.7**
+- Application version: **2.9.0** (release preparation; not yet published)
 - Native filter format: **version 2**
 - Typed IR: **version 1**
 - Development layout: native ES modules
@@ -37,7 +37,7 @@ The current formula engine includes:
 - Nearest, wrapped, mirrored, and bilinear image sampling.
 - Numeric shaping and coordinate helpers.
 - Procedural noise functions.
-- Deterministic Mandelbrot and Julia escape-time fields with a shared 256-iteration ceiling.
+- Deterministic Mandelbrot and Julia escape-time fields with a shared 512-iteration ceiling.
 - Gradients and patterns.
 - Anti-aliased analytic line, circle, ring, rotated-box, triangle, and grid masks.
 - Signed-distance circle, stroked-line, and rotated-box primitives with boolean and smooth-union composition plus fill/outline mask conversion.
@@ -54,6 +54,10 @@ Sixteen formula-heavy built-ins preserve their exported formula programs even th
 Sequential random-state functions (`rnd()` and `rst()`), shared cell operations (`get()` and `put()`), bitwise/shift/comma expressions, direct `pow()` formulas, and legacy integer compatibility remain CPU-only by design.
 
 Compatibility is analyzed from typed IR before a render is dispatched.
+
+v2.9.0 corrects WebGPU signed-zero/axis angles, exact centered angles and Angular-gradient axis/diagonal seams. The reference broad suite passes 84/85, with those three fixtures at max 0 / mean 0. The five launch Online filters have exact CPU/WebGPU parity in the reference regression. Compatibility analysis is not a promise of universal byte equality.
+
+Mandelbrot rendering has a pre-existing CPU/WebGPU numerical difference: coordinate precision and rounding can produce sparse pixel differences, sometimes large near sensitive fractal boundaries, plus occasional one-byte shading differences. The reference hardware suite remains 84/85, with Mandelbrot field the sole failure. Use CPU rendering when matching CPU output exactly is required.
 
 ## File and image workflows
 
@@ -114,15 +118,17 @@ For hardware parity, run `npm run dev` and open `http://localhost:8080/tests/web
 - CPU and GPU floating-point implementations may have small numerical differences.
 - Historic Filter Factory behavior is not guaranteed to be bit-exact for every edge case.
 - Clipboard interoperability depends on the browser and receiving application.
-- Display ranges are linear; logarithmic curves, enums, colour controls, grouping, conditional visibility, and control reordering are not part of v2.8.7.
+- Display ranges are linear; logarithmic curves, enums, colour controls, grouping, conditional visibility, and control reordering are not part of v2.9.0.
 
 ## Explore and Author workspace
 
 The inspector opens in Explore, where the active filter summary, Open Filter Library action, used runtime controls, Reset to Pass Through, and a compact renderer state are visually primary. Filters with no referenced controls show an explanatory empty state instead of disabled slots. Author contains the filter dropdown, labelled metadata fields, tags, Save Filter/Update Filter, Delete Filter, and Reset to Pass Through actions, formula editing, control-schema editing, full renderer selection and diagnostics, and the formula reference. Workspace mode is session-local UI state and does not participate in filter persistence, dirty comparison, rendering, or typed IR.
 
-## Filter Library and organization (2.8.5c)
+## Filter Library and organization (2.9.0)
 
-Open Filter Library presents visual cards in a canvas-visible desktop drawer and a narrow-screen bottom sheet. Text search, source/favorite/tag restrictions, A–Z/relevance order, and bounded 50-entry paging remain available; pagination is omitted when one page is sufficient. Visible and near-visible cards progressively replace neutral placeholders with real source-based filter thumbnails. The isolated thumbnail renderer uses one 160-pixel-class source, concurrency one, main-render suspension, generation guards, and a render-semantic 48-entry LRU; thumbnail failures remain local to their cards. Card selection separately validates and renders the authoritative main-canvas candidate while leaving the saved/imported identity, dirty baselines, and browser storage unchanged. Apply Filter commits the selected candidate. Cancel, Close, or Escape cancels stale rendering and restores the exact opening editor/pixel snapshot. The compact filter dropdown remains available in Author as an intentional direct-switch mechanism and retains its existing immediate replacement semantics.
+The unified browser offers All local (default), Built-in, My Filters and Online. Online uses the separate published catalogue, initially five filters at libraryVersion 2. Online cards show standardized Samples; selecting one previews against the current image. Apply creates an imported unsaved filter, Save creates an independent My Filter, and Download PNG returns the portable package. Favorites never install filters. Last-known-good catalogue metadata survives reload, validated packages are reused in the page session, and failed requests offer Retry without discarding good metadata. See [Filter Library](FILTER_LIBRARY.md) for cache boundaries and error handling.
+
+Open Filter Library presents visual cards in a canvas-visible desktop drawer and a narrow-screen bottom sheet. Text search, source/favorite/tag restrictions, A–Z/relevance order, and bounded 50-entry paging remain available; pagination is omitted when one page is sufficient. Visible and near-visible local cards progressively replace neutral placeholders with real source-based filter thumbnails. The isolated thumbnail renderer uses one 160-pixel-class source, concurrency one, main-render suspension, generation guards, and a render-semantic 48-entry LRU; thumbnail failures remain local to their cards. Card selection separately validates and renders the authoritative main-canvas candidate while leaving the saved/imported identity, dirty baselines, and browser storage unchanged. Apply Filter commits the selected candidate. Cancel, Close, or Escape cancels stale rendering and restores the exact opening editor/pixel snapshot. The compact filter dropdown remains available in Author as an intentional direct-switch mechanism and retains its existing immediate replacement semantics.
 
 All 52 built-ins carry curated tags and identify Anthony Chimming as author. Custom tags are portable; favorites and built-in personal additions persist locally by stable namespaced ID and remain separate actions that do not preview a card. Import and reset continue to replace the current draft immediately without an unsaved-changes warning. Deleting a custom filter immediately rebuilds both the dropdown and library catalog. ID-based save/copy decisions, explicit imported drafts, source-baseline conflict checks, and failure feedback remain in place. See [FILTER_LIBRARY.md](FILTER_LIBRARY.md) for the validation record and remaining limitations.
 
@@ -132,4 +138,4 @@ Expensive GPU ternaries now emit scoped `if/else`, including nested branch and l
 
 ## Stage C field sharing (2.8.5c)
 
-The compiler now shares eligible deterministic, channel-independent expensive call subtrees required unconditionally in multiple output channels. It preserves Stage B guards, CPU budgeting, fallback, IR v1, native formats, and the single-pass renderer. All 18 Stage C browser fixtures match CPU and unshared GPU output; full-suite hardware status remains 82/86 with the same four baseline discrepancies documented in Stage B. Paired heavy-region GPU measurements show a benefit on the tested backend; timings remain observational. See [Stage C report](FRACTAL_STAGE_C.md).
+The compiler now shares eligible deterministic, channel-independent expensive call subtrees required unconditionally in multiple output channels. It preserves Stage B guards, CPU budgeting, fallback, IR v1, native formats, and the single-pass renderer. All 18 Stage C browser fixtures match CPU and unshared GPU output; the historical Stage C full-suite hardware result was 82/86 with the four baseline discrepancies documented in Stage B. The current v2.9.0 reference gate is 84/85 as recorded above. Paired heavy-region GPU measurements show a benefit on the tested backend; timings remain observational. See [Stage C report](FRACTAL_STAGE_C.md).
