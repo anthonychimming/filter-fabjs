@@ -54,19 +54,27 @@ export class AngleSignLowering{
     // atan2's result has Y's sign, including the zero result on the positive axis.
     return{v:`(ff_angle(${y.v}, ${x.v}, ${y.n}, ${x.n}) * 1024.0 / FF_TAU)`,n:y.n};
   }
-  lower(node){
+  lower(node,centeredInput=true){
     const c=this.compiler,ch=this.channel;
     switch(node.op){
       case'const':return this.constant(Number(node.value));
       case'var':{
+        if(centeredInput&&(node.name==='cx'||node.name==='cy')){
+          // Only angle arithmetic receives the CPU's exact centered +0. Keep
+          // the original f32 value elsewhere, including neighbors and edges.
+          // Integer equality cannot introduce a center in an even dimension.
+          const x=node.name==='cx',coordinate=x?'px':'py',size=x?'width':'height';
+          const v=this.bind(`select(${c.variable(node.name,ch)}, 0.0, 2u*${coordinate} == params.${size}-1u)`);
+          return{v,n:`(${v} < 0.0)`};
+        }
         // d is the only variable whose CPU definition can yield -0. Its sign
         // comes from -(height/2-y); coordinate/chroma cancellations yield +0.
         const nz=/^d[01]?$/.test(node.name)?'(dy >= 0.0)':'false';
         return{v:c.variable(node.name,ch),n:or(`(${c.variable(node.name,ch)} < 0.0)`,and(`(${c.variable(node.name,ch)} == 0.0)`,nz))};
       }
-      case'unary':return node.operator==='+'?this.lower(node.input):node.operator==='-'?this.unary(this.lower(node.input)):this.pair(c.value(node,ch));
-      case'binary':return ['+','-','*','/','%'].includes(node.operator)?this.binary(node.operator,this.lower(node.left),this.lower(node.right)):this.pair(c.value(node,ch));
-      case'select':return this.choose(c.bool(node.condition,ch),()=>this.lower(node.whenTrue),()=>this.lower(node.whenFalse));
+      case'unary':return node.operator==='+'?this.lower(node.input,centeredInput):node.operator==='-'?this.unary(this.lower(node.input,centeredInput)):this.pair(c.value(node,ch));
+      case'binary':return ['+','-','*','/','%'].includes(node.operator)?this.binary(node.operator,this.lower(node.left,centeredInput),this.lower(node.right,centeredInput)):this.pair(c.value(node,ch));
+      case'select':return this.choose(c.bool(node.condition,ch),()=>this.lower(node.whenTrue,centeredInput),()=>this.lower(node.whenFalse,centeredInput));
       case'call':return this.call(node);
       default:throw new Error(`Missing angle sign rule for ${node.op}`);
     }
@@ -77,7 +85,9 @@ export class AngleSignLowering{
       const result=this.angle(node);return{v:this.bind(result.v),n:result.n};
     }
     if(POSITIVE_ZERO_CALLS.has(name))return this.pair(c.value(node,ch));
-    const a=node.args.map(arg=>this.lower(arg)),A=i=>a[i];
+    // Other calls are semantic boundaries: do not alter their coordinate
+    // inputs. An explicit nested angle establishes its own local correction.
+    const a=node.args.map(arg=>this.lower(arg,false)),A=i=>a[i];
     const original=()=>c.call(name,a.map(arg=>arg.v),ch);
     const bin=(op,x,y)=>this.binary(op,x,y),K=n=>this.constant(n);
     const interpolate=(x,y,t)=>bin('+',x,bin('*',bin('-',y,x),t));

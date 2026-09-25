@@ -29,8 +29,10 @@ Only angle arguments and their dependencies receive companion sign expressions.
 
 `ff_angle` handles zero Y and zero X with the supplied signs and retains native
 `atan2` for ordinary nonzero inputs. The direction variable and `angularGrad`
-retain their existing helper. This does not repair centered-coordinate rounding,
-gradient seams, general f32 underflow/precision differences, or fractal parity.
+retain their existing helper. For angle arguments, exact centered coordinates
+are handled by the [scoped centered-angle correction](centered-angle.md).
+This does not repair gradient seams, general f32 underflow/precision differences,
+or fractal parity.
 No buffers, textures, dispatches, loops, renderer layouts, or CPU semantics change.
 
 Run `node tests/signed-zero-angle-smoke.mjs` for raw CPU and codegen regression
