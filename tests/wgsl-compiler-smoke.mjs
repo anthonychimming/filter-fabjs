@@ -7,6 +7,7 @@ import { WGSLCompiler } from '../src/gpu/wgsl-compiler.js';
 import { WEBGPU_CONTROL_SLOT_COUNT } from '../src/gpu/params-layout.js';
 import './signed-zero-angle-smoke.mjs';
 import './centered-angle-smoke.mjs';
+import './angular-gradient-smoke.mjs';
 
 const programFor = (formula, options = {}) => compileFilterProgram(
   [formula, formula, formula, formula].map(source => new Parser(source).parse()),
@@ -171,7 +172,7 @@ const angleCode = WGSLCompiler.compile(programFor('c2d(0,0)+d')).code;
 assert.ok(angleCode.includes('fn ff_atan2(y:f32,x:f32)'), 'generated WGSL must guard signed-zero atan2 inputs');
 assert.ok(angleCode.includes('ff_angle(0.0, 0.0, false, false)'), 'c2d() must pass semantic signs to the axis-aware helper');
 assert.ok(angleCode.includes('let direction=ff_atan2(-dy,-dx)'), 'the direction variable must use the guarded atan2 helper');
-assert.ok(angleCode.includes('ff_wrap(ff_atan2(y-cy,x-cx)/FF_TAU+offset,1.0)'), 'angular gradients must use the guarded atan2 helper');
+assert.ok(WGSLCompiler.compile(programFor('angularGrad(x,y,X/2,Y/2,128)')).code.includes('ff_wrap(ff_angular_turn(y-cy,x-cx)+offset,1.0)'), 'angular gradients must use their exact-direction turn helper');
 
 const phase35aCode=WGSLCompiler.compile(programFor('ctl(9)+map(4,c)+nx+ny+cx+cy')).code;
 assert.ok(phase35aCode.includes(`controls:array<f32,${WEBGPU_CONTROL_SLOT_COUNT}>`),'WebGPU parameters must reserve aligned headroom beyond the ten public controls');

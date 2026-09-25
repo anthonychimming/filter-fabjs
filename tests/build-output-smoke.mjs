@@ -56,6 +56,7 @@ const conditionalProgram=compileFilterProgram(Array(4).fill('x?mandelbrot(0,0,51
 const sharedProgram=compileFilterProgram(['mandelbrot(cx,cy,512)*255','mandelbrot(cx,cy,512)*128','mandelbrot(cx,cy,512)*64','a'].map(f=>new Parser(f).parse()));
 const signedAngleProgram=compileFilterProgram(['c2d(-0,0)','angle(1,x?-0:0)','angle(angle(1,-0),0)','255'].map(f=>new Parser(f).parse()));
 const centeredAngleProgram=compileFilterProgram(['angle(cx,cy)','c2d(cx+0,cy*1)','angle(x?cx:1,cy)','mandelbrot(cx,cy,96)'].map(f=>new Parser(f).parse()));
+const angularGradientProgram=compileFilterProgram(['angularGrad(x,y,X/2,Y/2,128)*255','angularGrad(x,y,ctl(0),ctl(1),512)*255','angle(cx,cy)','255'].map(f=>new Parser(f).parse()));
 for(const script of [deployedJavaScript,standaloneHtml.match(/<script>([\s\S]*?)<\/script>/)?.[1]]){
   assert.ok(script,'build must contain executable JavaScript');
   const init=script.lastIndexOf('initFilterFabApp();');
@@ -65,6 +66,7 @@ for(const script of [deployedJavaScript,standaloneHtml.match(/<script>([\s\S]*?)
   assert.equal(context.BuiltCompiler.compile(conditionalProgram).code,WGSLCompiler.compile(conditionalProgram).code,'built compilers must emit the same scoped conditional WGSL as source');
   assert.equal(context.BuiltCompiler.compile(signedAngleProgram).code,WGSLCompiler.compile(signedAngleProgram).code,'both artifacts must include semantic angle lowering and preserve nested zero signs');
   assert.equal(context.BuiltCompiler.compile(centeredAngleProgram).code,WGSLCompiler.compile(centeredAngleProgram).code,'both artifacts must preserve angle-local exact centers without changing fractal coordinates');
+  assert.equal(context.BuiltCompiler.compile(angularGradientProgram).code,WGSLCompiler.compile(angularGradientProgram).code,'both artifacts must preserve exact angular-gradient rays');
   const sharedCode=context.BuiltCompiler.compile(sharedProgram).code;
   assert.equal(sharedCode,WGSLCompiler.compile(sharedProgram).code,'both generated artifacts must retain source field sharing');
   assert.equal((sharedCode.split('fn main(')[1].match(/ff_mandelbrot\(/g)||[]).length,1,'built output must compute the shared fractal once');
