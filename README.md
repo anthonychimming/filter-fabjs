@@ -6,6 +6,8 @@
 
 **[▶ Launch Filter FabJS](https://anthonychimming.github.io/filter-fabjs/)**
 
+![Filter FabJS v2.9.1 interface showing a split Original/Filtered preview with the Iridescent Shift filter](docs/assets/filter-fabjs-v2.9.1.webp)
+
 Filter FabJS is an open-source procedural image filter editor inspired by Adobe Filter Factory and the open-source Filter Foundry project. It lets you build, edit, preview, organize, and share custom image effects without installing a desktop application.
 
 Use four RGBA expressions to transform an image, expose creative parameters as controls, and combine sampling, gradients, procedural noise, fractals, masks, convolution, blending, and coordinate transforms. Compatible filters run through WebGPU, while unsupported or historic Filter Factory formulas automatically fall back to the CPU renderer.
