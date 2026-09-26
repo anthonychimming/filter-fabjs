@@ -98,7 +98,7 @@ Run `npm run dev` and open `http://localhost:8080/tests/online-package-browser.h
 - WebGPU and forced-CPU rendering were exercised in the browser; both produced real lazy card thumbnails. Coarse-pointer emulation, physical touch, and screen-reader speech were not tested.
 - The same fixture retains the bounded 1,000-entry performance projection. One generated-standalone run in local Chromium 152 observed a 30.4 ms opening and 12.8 ms p95 query-plus-layout time; timings are local observations, not cross-device guarantees.
 - At the v2.8.7 checkpoint, the catalog contained 52 built-ins, all attributed to Anthony Chimming and all compiling as WebGPU-compatible in the automated suite.
-- The current release-preparation build is `dist/filter-fabjs-v2.9.0.html`. Direct `file://` behavior can vary by browser security policy, so localhost remains the supported test path.
+- The current build is `dist/filter-fabjs-v2.9.1.html`. Direct `file://` behavior can vary by browser security policy, so localhost remains the supported test path.
 
 Run the complete verification workflow with:
 

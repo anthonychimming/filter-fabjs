@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.9.1
+
+- Replaced the Split preview toolbar slider with an image-aligned draggable divider, accessible keyboard controls, and a larger touch target.
+- Centered the divider arrows with vector geometry across screen sizes.
+- Matched Filter Library Download and Favorite button widths on desktop and touch layouts.
+
 ## 2.9.0
 
 ### Added

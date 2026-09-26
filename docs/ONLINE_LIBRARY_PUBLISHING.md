@@ -1,6 +1,6 @@
 # Online Library publishing (Stage 5)
 
-Filter FabJS v2.9.0 retains native JSON v2 and Typed IR v1. Application releases
+Filter FabJS v2.9.1 retains native JSON v2 and Typed IR v1. Application releases
 and catalogue revisions are separate: publishing library content does not
 automatically change the app version. App release preparation coordinates
 package.json, interface/version documentation and the normal generated build.

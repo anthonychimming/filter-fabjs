@@ -2,7 +2,7 @@ const frame=document.querySelector('#app'),output=document.querySelector('#resul
 let requests=0,failNext=true;
 window.fixtureFetch=async(url,options)=>{requests++;if(failNext){failNext=false;return new Response('Fixture unavailable',{status:503});}return fetch(url,options);};
 const standalone=new URLSearchParams(location.search).has('standalone');
-const html=await(await fetch(new URL(standalone?'dist/filter-fabjs-v2.9.0.html':'index.html',root))).text();
+const html=await(await fetch(new URL(standalone?'dist/filter-fabjs-v2.9.1.html':'index.html',root))).text();
 const options=`{onlineStorage:null,onlineManifestUrl:${JSON.stringify(manifestUrl)},onlineFetchImpl:(...args)=>parent.fixtureFetch(...args)}`;
 frame.srcdoc=html.replace('<head>',`<head><base href="${root.href}">`).replace(standalone?'initFilterFabApp();':'<script type="module" src="./src/main.js"></script>',standalone?`initFilterFabApp(${options});`:`<script type="module">import {initFilterFabApp} from './src/app/filter-fab-app.js';initFilterFabApp(${options});</script>`);
 const until=async test=>{const end=Date.now()+15000;while(!test()){if(Date.now()>end)throw new Error('Fixture timed out');await new Promise(resolve=>setTimeout(resolve,30));}};

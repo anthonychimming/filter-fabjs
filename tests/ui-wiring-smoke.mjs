@@ -95,7 +95,6 @@ assert.match(app, /state\.lastProgramKey===key\)\{controlsController\.updateCont
 assert.doesNotMatch(app, /!state\.hasPendingFormulaChanges&&state\.lastProgram&&state\.lastProgramKey===key/, 'an exact prepared-program key must be reusable while its immediate render is pending');
 assert.doesNotMatch(app, /WGSLCompiler\.analyze/, 'renderer compatibility analysis must not be repeated in the app layer');
 assert.match(app, /getRendererDiagnostics:\(\)=>state\.lastRendererDiagnostics/, 'the diagnostic snapshot must be available through the read-only browser API');
-assert.match(app, /el\.split\.oninput=\(\)=>\{state\.split=Number\(el\.split\.value\);canvasView\.requestDraw\(\);\}/, 'split-preview input must coalesce redraws through animation frames');
 assert.match(controls, /input\.oninput=\(\)=>\{updateCanonical\(index,input\.value\)/, 'range input must map displayed values back to canonical state continuously');
 assert.match(controls, /input\.onchange=\(\)=>scheduleRender\(\)/, 'range control must render only after the edit is committed');
 assert.match(html, /id="controlEditorLabel"[^>]+maxlength="80"/, 'control labels must stay within the serialized metadata limit');
@@ -161,3 +160,14 @@ assert.match(css,/@media\(prefers-reduced-motion:reduce\)\{\.filter-thumbnail-im
 assert.match(css,/\.filter-browser\{box-sizing:border-box;overflow:hidden\}/, 'the library drawer must not create a second outer scrollbar');
 assert.match(css,/\.workspace\{grid-template-columns:minmax\(360px,1fr\) clamp\(320px,28vw,430px\)\}/,'desktop workspace must use a flexible inspector width');
 assert.match(css,/\.mode-panel\[hidden\]\{display:none\}/,'hidden mode panels must be removed from layout and tab order');
+
+assert.doesNotMatch(html, /splitRange|splitControl/, 'toolbar split slider must be removed');
+assert.match(html, /id="splitDivider" role="slider" tabindex="0"/, 'divider must be a keyboard-accessible slider');
+assert.match(css, /width:52px;height:52px/, 'handle needs a generous touch target');
+assert.match(css, /width:28px;[^}]*touch-action:none/, 'full divider must support touch dragging');
+
+// Geometric chevrons avoid font-baseline drift across platforms and display scales.
+assert.match(html, /class="split-handle"><svg viewBox="0 0 24 24"[^>]*aria-hidden="true"[^>]*focusable="false"/, 'split arrows must use decorative vector geometry');
+assert.match(html, /d="M9 7 4 12 9 17M15 7 20 12 15 17"/, 'chevrons must be symmetric about the icon center');
+assert.match(css, /\.split-handle\{display:grid;place-items:center;/, 'icon must be centered inside the circle');
+assert.match(css, /\.split-handle svg\{display:block;width:24px;height:24px;/, 'icon must have a stable size without an inline text baseline');
