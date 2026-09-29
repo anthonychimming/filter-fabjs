@@ -176,3 +176,18 @@ body[data-workspace-mode=explore] #renderInfo{display:none}
 .split-divider:hover::before,.split-divider:focus-visible::before,.split-divider[data-dragging]::before{background:#fff}
 .split-divider:focus-visible .split-handle{outline:3px solid var(--accent);outline-offset:3px}
 @media(prefers-reduced-motion:reduce){.split-handle{transition:none}}
+.control-lock{width:24px;height:30px;padding:3px;border-color:transparent;background:transparent;color:var(--muted)}
+.adjust-section,.snapshots-section{overflow:visible}
+.control-lock svg{display:block;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round}
+.control-lock[aria-pressed=true]{color:var(--accent);background:var(--panel3);border-color:var(--line2)}
+.explore-actions{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:10px}
+.explore-actions button,.explore-menu button{font-size:12px;min-height:30px;padding:5px 8px}
+.explore-menu{position:relative;display:inline-flex}
+.explore-menu-items{position:absolute;left:0;top:100%;z-index:12;min-width:170px;padding:5px;background:var(--panel2);border:1px solid var(--line2);border-radius:var(--radius-control);box-shadow:var(--shadow)}
+.explore-menu.align-end .explore-menu-items{left:auto;right:0}
+.explore-menu-items{overflow-y:auto}
+.explore-menu-items.opens-above{top:auto;bottom:100%}
+.explore-menu-items button{display:block;text-align:left;width:100%;border:0;background:transparent}
+.snapshot-slots{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.snapshot-status{font-size:12px;color:var(--muted);margin:7px 0 0;min-height:18px}
+.snapshots-section .explore-actions>.explore-menu:last-child{margin-left:auto}

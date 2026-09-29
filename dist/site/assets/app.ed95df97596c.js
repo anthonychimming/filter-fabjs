@@ -6870,7 +6870,7 @@ const AUTHORING_PRESETS=Object.freeze({
 function append(parent,tag,className='',text=''){const node=document.createElement(tag);if(className)node.className=className;if(text)node.textContent=text;parent.appendChild(node);return node}
 function numericEditorUI(entry){return{widget:entry.ui.widget,displayMin:Number(entry.ui.displayMin),displayMax:Number(entry.ui.displayMax),step:Number(entry.ui.step),format:entry.ui.format,unit:entry.ui.unit}}
 
-function createControlsController({state,el,scheduleRender,applyInteractionLocks,compileCurrentProgram}){
+function createControlsController({state,el,scheduleRender,applyInteractionLocks,compileCurrentProgram,onManualChange=()=>{},onSchemaChange=()=>{}}){
   const grid=$('#sliderGrid'),dialog=$('#editControlsDialog'),editorList=$('#controlEditorList'),editorError=$('#controlEditorError'),mappingPanel=$('#controlMappingFeedback'),preview=$('#controlEditorPreview');
   const fields={label:$('#controlEditorLabel'),widget:$('#controlEditorWidget'),displayMin:$('#controlEditorMin'),displayMax:$('#controlEditorMax'),step:$('#controlEditorStep'),format:$('#controlEditorFormat'),unit:$('#controlEditorUnit')};
   let draft=null,selectedIndex=0;
@@ -6878,11 +6878,13 @@ function createControlsController({state,el,scheduleRender,applyInteractionLocks
   function controlName(index){return String(state.labels[index]||`Control ${index+1}`)}
   function accessibleName(index){return `${controlName(index)}, control ${index}`}
   function displayValue(index){return rawToDisplay(state.controls[index],state.controlUIs[index])}
-  function updateCanonical(index,value){state.controls[index]=displayToRaw(value,state.controlUIs[index])}
+  function updateCanonical(index,value){state.controls[index]=displayToRaw(value,state.controlUIs[index]);onManualChange()}
   function addReadout(row,index,ui,value){const readout=append(row,'output','control-readout');readout.textContent=formatControlValue(value,ui);if(ui.unit)append(readout,'span','control-unit',` ${ui.unit}`);readout.setAttribute('aria-live','off');readout.setAttribute('aria-label',`${accessibleName(index)} value`);return readout}
   function buildRuntimeControl(definition){
     const index=definition.index,ui=normalizeControlUI(state.controlUIs[index]),value=displayValue(index),row=append(grid,'div','slider-row');row.dataset.controlIndex=String(index);
-    append(row,'span','slider-index',String(index));
+    const lock=append(row,'button','control-lock');lock.type='button';
+    const refreshLock=()=>{const locked=Boolean(state.explore?.locks[index]);lock.setAttribute('aria-pressed',String(locked));lock.title=`${locked?'Unlock':'Lock'} ${controlName(index)}`;lock.setAttribute('aria-label',lock.title);lock.innerHTML=locked?'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V6a4 4 0 0 1 8 0v4"/></svg>':'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V6a4 4 0 0 1 8 0"/></svg>';};
+    refreshLock();lock.onclick=()=>{state.explore.locks[index]=!state.explore.locks[index];refreshLock();applyInteractionLocks();};
     append(row,'span','control-label',controlName(index));
     const widget=append(row,'div',`control-widget control-widget-${ui.widget}`),name=accessibleName(index);let readout;
     if(ui.widget==='slider'){
@@ -6896,7 +6898,7 @@ function createControlsController({state,el,scheduleRender,applyInteractionLocks
       }
     }else{
       const input=append(widget,'input','toggle-input');input.type='checkbox';input.setAttribute('role','switch');input.checked=normalizeToggleRaw(state.controls[index])===255;input.setAttribute('aria-label',name);input.setAttribute('aria-checked',String(input.checked));readout=addReadout(row,index,ui,input.checked?1:0);readout.textContent=input.checked?'On':'Off';
-      input.onchange=()=>{state.controls[index]=input.checked?255:0;input.setAttribute('aria-checked',String(input.checked));readout.textContent=input.checked?'On':'Off';scheduleRender();};
+      input.onchange=()=>{state.controls[index]=input.checked?255:0;onManualChange();input.setAttribute('aria-checked',String(input.checked));readout.textContent=input.checked?'On':'Off';scheduleRender();};
     }
     const usage=append(row,'span','control-usage-status visually-hidden',state.usedControls[index]?'Used':'Unused');usage.setAttribute('aria-live','off');
   }
@@ -6940,7 +6942,8 @@ function createControlsController({state,el,scheduleRender,applyInteractionLocks
     captureEditorFields();try{
       const labels=[],uis=[];draft.forEach((entry,index)=>{const label=String(entry.label).trim();if(label.length>80)throw new Error(`Control ${index} label exceeds 80 characters`);labels.push(label||`Control ${index+1}`);uis.push(validateControlUI(numericEditorUI(entry)));});
       let valuesChanged=false;const values=state.controls.map((raw,index)=>{if(uis[index].widget!=='toggle')return raw;const normalized=normalizeToggleRaw(raw);if(normalized!==raw)valuesChanged=true;return normalized;});
-      state.labels=labels;state.controlUIs=uis;state.controls=values;draft=null;dialog.close('done');syncSliders();if(valuesChanged)scheduleRender();
+      const schemaChanged=JSON.stringify(uis)!==JSON.stringify(state.controlUIs);
+      state.labels=labels;state.controlUIs=uis;state.controls=values;if(schemaChanged)onSchemaChange();draft=null;dialog.close('done');syncSliders();if(valuesChanged)scheduleRender();
     }catch(error){editorError.textContent=error.message;}
   }
   Object.values(fields).forEach(field=>field.addEventListener('input',()=>{captureEditorFields();editorError.textContent='';updateEditorFieldState();renderEditorList();renderMappingFeedback();renderPreview();}));
@@ -6951,12 +6954,137 @@ function createControlsController({state,el,scheduleRender,applyInteractionLocks
 }
 
 
+/* src/app/explore-state.js */
+
+const MUTATION_FACTORS=Object.freeze({Low:.08,Medium:.18,High:.35,Chaos:.70});
+const controlStatesEqual=(a,b)=>Boolean(a&&b&&a.length===b.length&&a.every((v,i)=>Math.abs(v-b[i])<=1e-10));
+function createExploreSession(controls){
+  return {defaults:[...controls],locks:{},strength:'Medium',undo:null,snapshots:{A:null,B:null,C:null,D:null},active:null};
+}
+function exploreValues(controls,uis,used,session,mutate=false,random=Math.random){
+  const factor=MUTATION_FACTORS[session.strength];
+  return controls.map((raw,i)=>{
+    if(!used[i]||session.locks[i])return raw;
+    const ui=normalizeControlUI(uis[i]);
+    if(ui.widget==='toggle')return mutate?(random()<factor?255-normalizeToggleRaw(raw):raw):(random()<.5?0:255);
+    if(ui.widget==='seed'){
+      let next=displayToRaw(randomSeedDisplay(ui,random),ui);
+      if(mutate&&next===raw){
+        for(const value of [rawToDisplay(raw,ui)+Math.max(1,ui.step),rawToDisplay(raw,ui)-Math.max(1,ui.step),ui.displayMin,ui.displayMax]){
+          next=displayToRaw(value,ui);if(next!==raw)break;
+        }
+      }
+      return next;
+    }
+    const span=ui.displayMax-ui.displayMin;
+    return displayToRaw(mutate?rawToDisplay(raw,ui)+(random()*2-1)*span*factor:ui.displayMin+random()*span,ui);
+  });
+}
+function commitExploreValues(state,next,{undo=true}={}){
+  state.explore.undo=undo?[...state.controls]:null;
+  state.controls=[...next];
+}
+function saveExploreSnapshot(state,slot){state.explore.snapshots[slot]=[...state.controls];state.explore.active=slot;}
+
+
+/* src/ui/explore.js */
+
+function exploreMenuPlacement(anchor,menu,bounds){
+  const below=Math.max(0,bounds.bottom-anchor.bottom),above=Math.max(0,anchor.top-bounds.top);
+  const upwards=menu.height>below&&above>below;
+  return {upwards,maxHeight:upwards?above:below,shiftX:Math.min(0,bounds.right-menu.right)+Math.max(0,bounds.left-menu.left)};
+}
+
+// Session state belongs to the app; this view never writes the filter document.
+function createExploreController({state,root,resetButton,syncControls,scheduleRender,onChange,resetPassThrough,toast}){
+  const buttons={},slots={},saveButtons={},menus=[];
+  function button(parent,text,action){const node=document.createElement('button');node.type='button';node.textContent=text;node.onclick=()=>{if(state.isRendering)return;const owner=menus.find(item=>item.panel===parent);closeMenus();owner?.trigger.focus();action();refresh();};parent.append(node);return node;}
+  function closeMenus(){menus.forEach(({panel,trigger})=>{panel.hidden=true;trigger.setAttribute('aria-expanded','false');});}
+  function positionMenu(panel,trigger){
+    const view=document.defaultView,bounds={top:4,left:4,right:view.innerWidth-4,bottom:view.innerHeight-4};
+    // Overflow ancestors can clip a menu even when the viewport has space.
+    for(let parent=trigger.parentElement;parent;parent=parent.parentElement){
+      const style=view.getComputedStyle(parent),rect=parent.getBoundingClientRect();
+      if(/auto|scroll|hidden|clip/.test(style.overflowY)){bounds.top=Math.max(bounds.top,rect.top+4);bounds.bottom=Math.min(bounds.bottom,rect.bottom-4);}
+      if(/auto|scroll|hidden|clip/.test(style.overflowX)){bounds.left=Math.max(bounds.left,rect.left+4);bounds.right=Math.min(bounds.right,rect.right-4);}
+    }
+    panel.classList.toggle('opens-above',false);panel.style.maxHeight='';panel.style.transform='';
+    const placement=exploreMenuPlacement(trigger.getBoundingClientRect(),panel.getBoundingClientRect(),bounds);
+    panel.classList.toggle('opens-above',placement.upwards);panel.style.maxHeight=`${placement.maxHeight}px`;panel.style.transform=`translateX(${placement.shiftX}px)`;
+  }
+  function menu(parent,label,alignEnd=false){
+    const wrap=document.createElement('span');wrap.className=`explore-menu${alignEnd?' align-end':''}`;parent.append(wrap);
+    const panel=document.createElement('div');panel.className='explore-menu-items';panel.hidden=true;
+    const trigger=button(wrap,label,()=>{panel.hidden=!panel.hidden;trigger.setAttribute('aria-expanded',String(!panel.hidden));});
+    // Toggle without the action button's automatic close.
+    trigger.onclick=()=>{if(state.isRendering)return;const open=panel.hidden;closeMenus();panel.hidden=!open;trigger.setAttribute('aria-expanded',String(open));if(open)positionMenu(panel,trigger);};
+    trigger.setAttribute('aria-expanded','false');wrap.append(panel);menus.push({panel,trigger});return panel;
+  }
+  function commit(next,undo=true){commitExploreValues(state,next,{undo});syncControls();onChange();refresh();scheduleRender();}
+  function reset({preserveDefaults=false}={}){const defaults=preserveDefaults?state.explore.defaults:state.controls;state.explore=createExploreSession(defaults);refresh();}
+  function manual(){state.explore.undo=null;refresh();}
+  function mutate(){commit(exploreValues(state.controls,state.controlUIs,state.usedControls,state.explore,true));}
+  resetButton.textContent='Reset';resetButton.title='Reset to authored defaults';resetButton.onclick=()=>{if(!state.isRendering)commit(state.explore.defaults);};
+  const resetMenu=menu(resetButton.parentElement,'▾',true);resetMenu.previousElementSibling?.setAttribute('aria-label','Reset options');
+  button(resetMenu,'Reset to defaults',()=>commit(state.explore.defaults));
+  button(resetMenu,'Reset to pass-through',resetPassThrough).title='Load Pass Through; clears this filter’s Explore session';
+  const actions=document.createElement('div');actions.className='explore-actions';root.append(actions);
+  buttons.random=button(actions,'Randomize',()=>commit(exploreValues(state.controls,state.controlUIs,state.usedControls,state.explore)));
+  const strengths=menu(actions,'Mutate · Medium ▾',true);buttons.mutate=strengths.previousElementSibling;
+  for(const strength of Object.keys(MUTATION_FACTORS))button(strengths,strength,()=>{state.explore.strength=strength;mutate();});
+  const locks=menu(actions,'Locks ▾');
+  for(const action of ['Lock all','Unlock all','Invert locks'])button(locks,action,()=>{state.usedControls.forEach((used,i)=>{if(used)state.explore.locks[i]=action==='Lock all'||(action==='Invert locks'&&!state.explore.locks[i]);});syncControls();});
+  buttons.undo=button(actions,'Undo',()=>{if(state.explore.undo)commit(state.explore.undo,false);});
+  const section=document.createElement('section');section.className='section snapshots-section';root.closest('.adjust-section').after(section);
+  const heading=document.createElement('div');heading.className='section-head';heading.textContent='Snapshots';section.append(heading);
+  const body=document.createElement('div');body.className='section-body';section.append(body);
+  const row=document.createElement('div');row.className='snapshot-slots';body.append(row);
+  for(const slot of ['A','B','C','D'])slots[slot]=button(row,slot,()=>{const saved=state.explore.snapshots[slot];if(!saved){toast(`Snapshot ${slot} is empty. Use Save current.`);return;}state.explore.active=slot;commit(saved);});
+  const status=document.createElement('p');status.className='snapshot-status';status.setAttribute('role','status');body.append(status);
+  const toolbar=document.createElement('div');toolbar.className='explore-actions';body.append(toolbar);
+  const saves=menu(toolbar,'Save current ▾');
+  for(const slot of Object.keys(slots))saveButtons[slot]=button(saves,`Save to ${slot}`,()=>saveExploreSnapshot(state,slot));
+  buttons.update=button(toolbar,'Update',()=>saveExploreSnapshot(state,state.explore.active));
+  const more=menu(toolbar,'•••',true);more.previousElementSibling.setAttribute('aria-label','Snapshot management');
+  buttons.clear=button(more,'Clear active snapshot',()=>{state.explore.snapshots[state.explore.active]=null;state.explore.active=null;});
+  buttons.clearAll=button(more,'Clear all snapshots',()=>{for(const slot of Object.keys(slots))state.explore.snapshots[slot]=null;state.explore.active=null;});
+  function refresh(){
+    const session=state.explore;if(!session)return;
+    section.hidden=!state.usedControls.some(Boolean);
+    if(section.hidden)closeMenus();
+    const active=session.active,modified=active&&!controlStatesEqual(state.controls,session.snapshots[active]),busy=state.isRendering;
+    buttons.mutate.textContent=`Mutate · ${session.strength} ▾`;
+    buttons.random.disabled=buttons.mutate.disabled=busy||!state.usedControls.some((used,i)=>used&&!session.locks[i]);
+    buttons.undo.disabled=busy||!session.undo;buttons.clear.disabled=busy||!active;
+    buttons.clearAll.disabled=busy||!Object.values(session.snapshots).some(Boolean);
+    buttons.update.hidden=!modified;buttons.update.textContent=`Update ${active||''}`;
+    status.textContent=active?`${active}${modified?' · modified':' · active'}`:'No active snapshot';
+    for(const [slot,node] of Object.entries(slots)){
+      const saved=session.snapshots[slot],selected=active===slot;
+      node.textContent=`${slot} ${saved?'●':'○'}${selected&&modified?' *':''}`;
+      node.classList.toggle('active',selected);node.setAttribute('aria-pressed',String(selected));
+      node.setAttribute('aria-label',`Snapshot ${slot}, ${selected?`active${modified?', modified':''}`:saved?'saved':'empty'}`);
+      saveButtons[slot].textContent=`${saved?'Replace':'Save to'} ${slot}`;
+    }
+    if(busy)closeMenus();
+  }
+  document.addEventListener('click',event=>{if(!event.target.closest('.explore-menu'))closeMenus();});
+  const reposition=event=>menus.forEach(({panel,trigger})=>{if(!panel.hidden&&event.target!==panel)positionMenu(panel,trigger);});
+  document.addEventListener('scroll',reposition,true);document.defaultView.addEventListener('resize',reposition);
+  document.addEventListener('keydown',event=>{if(event.key==='Escape'){const open=menus.find(item=>!item.panel.hidden);if(open){closeMenus();open.trigger.focus();event.preventDefault();}}});
+  refresh();return {refresh,reset,manual};
+}
+
+
 /* src/app/filter-fab-app.js */
 /**
  * Filter FabJS
  * Modular source extracted from v2.0.7; modular architecture v2.1.0.
  * Licensed GPL-2.0-or-later. See LICENSE and README.md.
  */
+
+
+
 
 
 
@@ -7083,6 +7211,8 @@ function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL
   const {el,ctx}=getDom();
   const state={source:null,filtered:null,width:0,height:0,view:'filtered',workspaceMode:'explore',split:50,zoom:'fit',zoomLevel:1,controls:defaultControlValues(),labels:defaultControlLabels(),controlUIs:defaultControlUIs(),renderId:0,imageLoadId:0,filterLoadId:0,rendererManager:null,rendererPreference:storageGet('ffw-renderer','auto'),lastProgram:null,lastProgramKey:null,lastSuccessfulRenderSignature:null,lastWGSL:null,lastGpuAnalysis:null,lastRendererDiagnostics:null,isRendering:false,usedControls:Array(CONTROL_COUNT).fill(false),legacyMath:false,hasPendingFormulaChanges:false,focusSnapshot:null};
   const canvasView=createCanvasView({state,el,ctx});
+  let exploreController;
+  state.explore=createExploreSession(state.controls);
   let controlsController,browser,catalogCache=null,librarySession=null;
   const onlineLibrary=createOnlineLibrarySession({manifestUrl:onlineManifestUrl,fetchImpl:onlineFetchImpl,storage:onlineStorage,preference,onChange:()=>browser?.refreshOnline()});
   const activeDocument={key:null,id:undefined,tags:[],baseline:null,recordBaseline:null,imported:false,importSource:null};
@@ -7098,7 +7228,7 @@ function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL
   function toast(text){el.toast.textContent=text;el.toast.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.toast.classList.remove('show'),1800);}
   const interactiveNodes=()=>Array.from(document.querySelectorAll('button,input,select,textarea'));
   function updatePresetDeleteState(){const custom=activeDocument.key?.startsWith('custom:');el.deletePreset.disabled=state.isRendering||!custom;el.deletePreset.title=custom?'Delete current saved filter':'Load a saved custom filter to delete';}
-  function applyInteractionLocks(){interactiveNodes().forEach(node=>{if(librarySession&&node.closest('.filter-browser'))return;node.disabled=state.isRendering;});$$('.slider-row',$('#sliderGrid')).forEach(row=>{const index=Number(row.dataset.controlIndex),unused=!state.usedControls[index];row.classList.toggle('control-unused',unused);row.setAttribute('aria-disabled',String(state.isRendering||unused));row.title=unused?'Unused — not referenced by any channel formula':'';$$('button,input,select',row).forEach(node=>{node.disabled=state.isRendering||unused;});});updatePresetDeleteState();}
+  function applyInteractionLocks(){interactiveNodes().forEach(node=>{if(librarySession&&node.closest('.filter-browser'))return;node.disabled=state.isRendering;});$$('.slider-row',$('#sliderGrid')).forEach(row=>{const index=Number(row.dataset.controlIndex),unused=!state.usedControls[index];row.classList.toggle('control-unused',unused);row.setAttribute('aria-disabled',String(state.isRendering||unused));row.title=unused?'Unused — not referenced by any channel formula':'';$$('button,input,select',row).forEach(node=>{node.disabled=state.isRendering||unused;});});updatePresetDeleteState();exploreController?.refresh();}
   function captureFocus(){const node=document.activeElement;if(!(node instanceof Element)||node===document.body||!node.matches('button,input,select,textarea'))return null;const snapshot={node};if(typeof node.selectionStart==='number'){snapshot.start=node.selectionStart;snapshot.end=node.selectionEnd;snapshot.direction=node.selectionDirection;}return snapshot;}
   function restoreFocus(snapshot){if(!snapshot?.node?.isConnected||snapshot.node.disabled)return;requestAnimationFrame(()=>{if(!snapshot.node.isConnected||snapshot.node.disabled)return;snapshot.node.focus({preventScroll:true});if(typeof snapshot.start==='number'&&typeof snapshot.node.setSelectionRange==='function')snapshot.node.setSelectionRange(snapshot.start,snapshot.end,snapshot.direction||'none');});}
   function setFormulaEditStatus(kind,text){el.renderBtn.classList.toggle('primary',kind==='pending');el.formulaEditStatus.dataset.state=kind;if(el.formulaEditStatus.textContent!==text)el.formulaEditStatus.textContent=text;}
@@ -7121,7 +7251,7 @@ function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL
   function compileCurrentProgram(){const key=currentProgramKey();if(state.lastProgram&&state.lastProgramKey===key)return state.lastProgram;const astList=el.formulas.map(field=>new Parser(field.value).parse());return compileFilterProgram(astList,{legacyMath:state.legacyMath});}
   const scheduleRender=debounce(()=>{if(!state.hasPendingFormulaChanges)render();},110);
   const scheduleFormulaValidation=debounce(validatePendingFormulas,220);
-  controlsController=createControlsController({state,el,scheduleRender,applyInteractionLocks,compileCurrentProgram});
+  controlsController=createControlsController({state,el,scheduleRender,applyInteractionLocks,compileCurrentProgram,onManualChange:()=>exploreController?.manual(),onSchemaChange:()=>exploreController?.reset()});
 
   function library(){return readLibrary(localStorage,normalizeCustomPresetList);}
   function organizationError(error){browser?.showError(error.message||'Browser storage is unavailable');setStatus(error.message||'Browser storage is unavailable','error');toast(error.message||'Browser storage is unavailable');}
@@ -7213,6 +7343,7 @@ function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL
     state.legacyMath=next.legacyMath;el.formulas.forEach((field,index)=>field.value=next.formulas[index]);state.controls=[...next.controls];state.labels=[...next.labels];state.controlUIs=next.controlUIs.map(cloneControlUI);state.lastProgram=next.program;state.lastProgramKey=currentProgramKey();$('#filterName').value=next.name;el.description.value=next.description;$('#filterAuthor').value=next.author;controlsController.updateControlUsage(next.program);controlsController.syncSliders();
   }
   function commitActiveDocument(next,definition,selection,{importSource=selection?null:'file'}={}){
+    exploreController?.reset();controlsController.syncSliders();
     activeDocument.key=selection||null;activeDocument.id=selection?.startsWith('builtin:')?undefined:next.id;activeDocument.tags=[...next.tags];activeDocument.imported=!selection;activeDocument.importSource=selection?null:importSource;activeDocument.recordBaseline=selection?.startsWith('custom:')?JSON.stringify(definition):null;activeDocument.baseline=documentSnapshot();
   }
   function applyFilter(definition,selection,{importSource=selection?null:'file'}={}){
@@ -7380,7 +7511,7 @@ function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL
 
   function triggerDownload(href,name,revoke=false){try{const anchor=document.createElement('a');anchor.href=href;anchor.download=name;anchor.rel='noopener';anchor.style.display='none';document.body.appendChild(anchor);anchor.click();setTimeout(()=>{anchor.remove();if(revoke)URL.revokeObjectURL(href);},10000);toast(`Download started: ${name}`);return true;}catch(error){if(revoke)URL.revokeObjectURL(href);console.error('Download failed',error);toast(`Download failed: ${error.message||'browser blocked the file'}`);return false;}}
   function downloadBlob(blob,name){if(!(blob instanceof Blob)||!blob.size){toast('Nothing was generated to download');return false;}return triggerDownload(URL.createObjectURL(blob),name,true);}
-  async function exportPNG(){if(!state.filtered||!state.width||!state.height){toast('Load and render an image before exporting');return;}const filter=validatedCurrentFilter();if(!filter)return;if(state.lastSuccessfulRenderSignature!==filterRenderSignature(filter)){setStatus('Render the current filter changes before exporting.','error');toast('Render the current filter changes before exporting.');return;}setStatus('Encoding PNG…','busy');try{const canvas=renderedImageCanvas(state.filtered,state.width,state.height),name=slug($('#filterName').value||'filtered-image')+'.png',encoded=await canvasBlob(canvas,'image/png'),envelope=createFilterFabPngEnvelope(filter,'2.9.1'),blob=await embedFilterFabMetadata(encoded,envelope);if(downloadBlob(blob,name))setStatus('Ready');}catch(error){console.error('PNG export failed',error);setStatus('PNG export failed','error');toast(`PNG export failed: ${error.message}`);}}
+  async function exportPNG(){if(!state.filtered||!state.width||!state.height){toast('Load and render an image before exporting');return;}const filter=validatedCurrentFilter();if(!filter)return;if(state.lastSuccessfulRenderSignature!==filterRenderSignature(filter)){setStatus('Render the current filter changes before exporting.','error');toast('Render the current filter changes before exporting.');return;}setStatus('Encoding PNG…','busy');try{const canvas=renderedImageCanvas(state.filtered,state.width,state.height),name=slug($('#filterName').value||'filtered-image')+'.png',encoded=await canvasBlob(canvas,'image/png'),envelope=createFilterFabPngEnvelope(filter,'2.9.2'),blob=await embedFilterFabMetadata(encoded,envelope);if(downloadBlob(blob,name))setStatus('Ready');}catch(error){console.error('PNG export failed',error);setStatus('PNG export failed','error');toast(`PNG export failed: ${error.message}`);}}
   function exportFilter(){const filter=validatedCurrentFilter();if(!filter)return;if(!activeDocument.id)activeDocument.id=createCustomPresetId();filter.id=activeDocument.id;const base=slug(filter.name);try{downloadBlob(new Blob([JSON.stringify(filter,null,2)+'\n'],{type:'application/json;charset=utf-8'}),base+'.json');}catch(error){console.error('Filter export failed',error);toast(`Filter export failed: ${error.message}`);}}
   async function deletePreset(){
     if(!activeDocument.key?.startsWith('custom:'))return;
@@ -7420,7 +7551,7 @@ function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL
       const record=writeLibraryRecord(localStorage,normalizeCustomPresetList,filter,{targetId,expected});adoptSaved(record);toast('Filter saved in this browser');return true;
     }catch(error){organizationError(error);await chooseFilterAction('Could not save filter',[['cancel','Keep editing']],{detail:error.message});return false;}
   }
-  function adoptSaved(record){activeDocument.key=`custom:${record.id}`;activeDocument.id=record.id;activeDocument.tags=normalizeTags(record.tags);activeDocument.imported=false;activeDocument.importSource=null;activeDocument.recordBaseline=JSON.stringify(record);$('#filterName').value=record.name;activeDocument.baseline=documentSnapshot();refreshTags();populatePresets();}
+  function adoptSaved(record){if(activeDocument.key!==`custom:${record.id}`||!controlStatesEqual(state.controls,state.explore.defaults)){exploreController.reset();controlsController.syncSliders();}activeDocument.key=`custom:${record.id}`;activeDocument.id=record.id;activeDocument.tags=normalizeTags(record.tags);activeDocument.imported=false;activeDocument.importSource=null;activeDocument.recordBaseline=JSON.stringify(record);$('#filterName').value=record.name;activeDocument.baseline=documentSnapshot();refreshTags();populatePresets();}
 
   function wire(){
     const modeButtons=$$('#workspaceMode [role="tab"]'),modePanels=$$('[data-mode-panel]');
@@ -7439,7 +7570,7 @@ function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL
     $('#savePresetBtn').onclick=savePreset;
     el.deletePreset.onclick=deletePreset;
     el.renderBtn.onclick=()=>render({focusInvalid:true});
-    const resetFilter=()=>applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');$('#resetBtn').onclick=resetFilter;$('#exploreResetBtn').onclick=resetFilter;
+    const resetFilter=()=>applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');$('#resetBtn').onclick=resetFilter;exploreController=createExploreController({state,root:$('#sliderGrid').parentElement,resetButton:$('#exploreResetBtn'),syncControls:()=>controlsController.syncSliders(),scheduleRender,onChange:updateDocumentHeader,resetPassThrough:resetFilter,toast});
     el.activeFavorite.onclick=()=>{if(!activeDocument.key)return;try{const current=preference(activeDocument.key);writeEntryPreference(localStorage,activeDocument.key,{favorite:!current.favorite});catalogCache=null;browser?.refresh();updateDocumentHeader();}catch(error){organizationError(error);}};
     browser=createFilterBrowser({launcher:el.searchFilters,getEntries:()=>[...catalog(),...onlineLibrary.getEntries()],getOnlineState:onlineLibrary.getState,loadOnline:onlineLibrary.load,resolveOnlinePreviewUrl:onlineLibrary.resolvePreview,begin:beginLibrarySession,preview:previewLibraryEntry,previewOnline:previewLibraryCandidate,downloadOnline:downloadLibraryPackage,apply:applyLibraryCandidate,cancel:cancelLibrarySession,toggleFavorite:entry=>{writeEntryPreference(localStorage,entry.key,{favorite:!entry.favorite});catalogCache=null;onlineLibrary.invalidate();if(entry.key===activeDocument.key)updateDocumentHeader();},requestThumbnail:requestLibraryThumbnail,clearThumbnailRequests:()=>thumbnailService.clearRequests(),onError:organizationError});
     populatePresets();
@@ -7466,6 +7597,7 @@ function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL
         icon.classList.add('pending');
         errorElement.textContent='';
         errorElement.classList.remove('show');
+        exploreController.reset({preserveDefaults:true});controlsController.syncSliders();
         markFormulaPending(field);
         scheduleFormulaValidation();
       };
@@ -7496,7 +7628,7 @@ function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL
     window.addEventListener('beforeunload',()=>{if(librarySession)abortLibraryPackages(librarySession);onlineLibrary.dispose();thumbnailService.dispose();state.rendererManager?.dispose();});
   }
 
-  window.FilterFabJS=Object.freeze({version:'2.9.1',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getThumbnailDiagnostics:()=>thumbnailService.diagnostics(),getRendererPreference:()=>state.rendererPreference,getWorkspaceMode:()=>state.workspaceMode,getLibraryPreviewState:()=>({open:Boolean(librarySession),candidateKey:librarySession?.candidateEntry?.key||null,candidateRendered:Boolean(librarySession?.candidateRendered),activeKey:activeDocument.key,activeId:activeDocument.id,imported:activeDocument.imported,importSource:activeDocument.importSource,baseline:activeDocument.baseline,recordBaseline:activeDocument.recordBaseline})});
+  window.FilterFabJS=Object.freeze({version:'2.9.2',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getThumbnailDiagnostics:()=>thumbnailService.diagnostics(),getRendererPreference:()=>state.rendererPreference,getWorkspaceMode:()=>state.workspaceMode,getLibraryPreviewState:()=>({open:Boolean(librarySession),candidateKey:librarySession?.candidateEntry?.key||null,candidateRendered:Boolean(librarySession?.candidateRendered),activeKey:activeDocument.key,activeId:activeDocument.id,imported:activeDocument.imported,importSource:activeDocument.importSource,baseline:activeDocument.baseline,recordBaseline:activeDocument.recordBaseline})});
   controlsController.buildSliders();wire();const demo=demoImage();initImage(demo.data,demo.width,demo.height);applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');
   return{state,render,applyFilter,loadImageFile,openImageFile};
 }

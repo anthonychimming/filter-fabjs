@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.9.2
+
+- Position Explore dropdowns below their buttons by default, flipping above to avoid viewport or scroll-panel clipping.
+
+- Add Explore parameter locks, Randomize, and a combined Mutate strength menu with Low, Medium, High, and Chaos.
+- Add Reset to authored defaults, one-step control Undo, and four session-only control snapshots with explicit save, recall, update, and clear actions.
+- Hide Snapshots for filters without active controls; preserve Author indices and existing Pass Through filter replacement behavior.
+- Preserve formula, renderer, and file-format semantics; add Explore regression coverage and bundle the feature in both release outputs.
+
 ## 2.9.1
 
 - Replaced the Split preview toolbar slider with an image-aligned draggable divider, accessible keyboard controls, and a larger touch target.

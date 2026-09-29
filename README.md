@@ -2,7 +2,7 @@
 
 **Create custom image filters directly in your browser with mathematical expressions, real-time previews, WebGPU acceleration, and Filter Factory compatibility.**
 
-**Current release: v2.9.1**
+**Current release: v2.9.2**
 
 **[▶ Launch Filter FabJS](https://anthonychimming.github.io/filter-fabjs/)**
 
@@ -24,6 +24,7 @@ Use four RGBA expressions to transform an image, expose creative parameters as c
 - **Filter-aware PNG export** — exported PNGs can carry the active Filter FabJS definition as embedded metadata while remaining ordinary PNG images.
 - **Local filter library** — save custom filters, organize them with tags and favorites, and search them alongside built-ins.
 - **Explore and Author workspaces** — use Explore for fast visual adjustment and Author for formulas, metadata, control definitions, and renderer diagnostics.
+- **Explore sessions** — lock parameters, randomize or mutate, reset to authored defaults, undo one bulk action, and compare four control-only snapshots. See [Explore controls](docs/explore-panel.md) for lifecycle and reset behavior.
 
 ## How it works
 
@@ -114,7 +115,7 @@ npm run build
 Build output:
 
 - `dist/site/` — deployable static site
-- `dist/filter-fabjs-v2.9.1.html` — standalone single-file build
+- `dist/filter-fabjs-v2.9.2.html` — standalone single-file build
 
 The project currently has no npm package dependencies.
 

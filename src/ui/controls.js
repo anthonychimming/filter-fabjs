@@ -29,7 +29,7 @@ const AUTHORING_PRESETS=Object.freeze({
 function append(parent,tag,className='',text=''){const node=document.createElement(tag);if(className)node.className=className;if(text)node.textContent=text;parent.appendChild(node);return node}
 function numericEditorUI(entry){return{widget:entry.ui.widget,displayMin:Number(entry.ui.displayMin),displayMax:Number(entry.ui.displayMax),step:Number(entry.ui.step),format:entry.ui.format,unit:entry.ui.unit}}
 
-export function createControlsController({state,el,scheduleRender,applyInteractionLocks,compileCurrentProgram}){
+export function createControlsController({state,el,scheduleRender,applyInteractionLocks,compileCurrentProgram,onManualChange=()=>{},onSchemaChange=()=>{}}){
   const grid=$('#sliderGrid'),dialog=$('#editControlsDialog'),editorList=$('#controlEditorList'),editorError=$('#controlEditorError'),mappingPanel=$('#controlMappingFeedback'),preview=$('#controlEditorPreview');
   const fields={label:$('#controlEditorLabel'),widget:$('#controlEditorWidget'),displayMin:$('#controlEditorMin'),displayMax:$('#controlEditorMax'),step:$('#controlEditorStep'),format:$('#controlEditorFormat'),unit:$('#controlEditorUnit')};
   let draft=null,selectedIndex=0;
@@ -37,11 +37,13 @@ export function createControlsController({state,el,scheduleRender,applyInteracti
   function controlName(index){return String(state.labels[index]||`Control ${index+1}`)}
   function accessibleName(index){return `${controlName(index)}, control ${index}`}
   function displayValue(index){return rawToDisplay(state.controls[index],state.controlUIs[index])}
-  function updateCanonical(index,value){state.controls[index]=displayToRaw(value,state.controlUIs[index])}
+  function updateCanonical(index,value){state.controls[index]=displayToRaw(value,state.controlUIs[index]);onManualChange()}
   function addReadout(row,index,ui,value){const readout=append(row,'output','control-readout');readout.textContent=formatControlValue(value,ui);if(ui.unit)append(readout,'span','control-unit',` ${ui.unit}`);readout.setAttribute('aria-live','off');readout.setAttribute('aria-label',`${accessibleName(index)} value`);return readout}
   function buildRuntimeControl(definition){
     const index=definition.index,ui=normalizeControlUI(state.controlUIs[index]),value=displayValue(index),row=append(grid,'div','slider-row');row.dataset.controlIndex=String(index);
-    append(row,'span','slider-index',String(index));
+    const lock=append(row,'button','control-lock');lock.type='button';
+    const refreshLock=()=>{const locked=Boolean(state.explore?.locks[index]);lock.setAttribute('aria-pressed',String(locked));lock.title=`${locked?'Unlock':'Lock'} ${controlName(index)}`;lock.setAttribute('aria-label',lock.title);lock.innerHTML=locked?'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V6a4 4 0 0 1 8 0v4"/></svg>':'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V6a4 4 0 0 1 8 0"/></svg>';};
+    refreshLock();lock.onclick=()=>{state.explore.locks[index]=!state.explore.locks[index];refreshLock();applyInteractionLocks();};
     append(row,'span','control-label',controlName(index));
     const widget=append(row,'div',`control-widget control-widget-${ui.widget}`),name=accessibleName(index);let readout;
     if(ui.widget==='slider'){
@@ -55,7 +57,7 @@ export function createControlsController({state,el,scheduleRender,applyInteracti
       }
     }else{
       const input=append(widget,'input','toggle-input');input.type='checkbox';input.setAttribute('role','switch');input.checked=normalizeToggleRaw(state.controls[index])===255;input.setAttribute('aria-label',name);input.setAttribute('aria-checked',String(input.checked));readout=addReadout(row,index,ui,input.checked?1:0);readout.textContent=input.checked?'On':'Off';
-      input.onchange=()=>{state.controls[index]=input.checked?255:0;input.setAttribute('aria-checked',String(input.checked));readout.textContent=input.checked?'On':'Off';scheduleRender();};
+      input.onchange=()=>{state.controls[index]=input.checked?255:0;onManualChange();input.setAttribute('aria-checked',String(input.checked));readout.textContent=input.checked?'On':'Off';scheduleRender();};
     }
     const usage=append(row,'span','control-usage-status visually-hidden',state.usedControls[index]?'Used':'Unused');usage.setAttribute('aria-live','off');
   }
@@ -99,7 +101,8 @@ export function createControlsController({state,el,scheduleRender,applyInteracti
     captureEditorFields();try{
       const labels=[],uis=[];draft.forEach((entry,index)=>{const label=String(entry.label).trim();if(label.length>80)throw new Error(`Control ${index} label exceeds 80 characters`);labels.push(label||`Control ${index+1}`);uis.push(validateControlUI(numericEditorUI(entry)));});
       let valuesChanged=false;const values=state.controls.map((raw,index)=>{if(uis[index].widget!=='toggle')return raw;const normalized=normalizeToggleRaw(raw);if(normalized!==raw)valuesChanged=true;return normalized;});
-      state.labels=labels;state.controlUIs=uis;state.controls=values;draft=null;dialog.close('done');syncSliders();if(valuesChanged)scheduleRender();
+      const schemaChanged=JSON.stringify(uis)!==JSON.stringify(state.controlUIs);
+      state.labels=labels;state.controlUIs=uis;state.controls=values;if(schemaChanged)onSchemaChange();draft=null;dialog.close('done');syncSliders();if(valuesChanged)scheduleRender();
     }catch(error){editorError.textContent=error.message;}
   }
   Object.values(fields).forEach(field=>field.addEventListener('input',()=>{captureEditorFields();editorError.textContent='';updateEditorFieldState();renderEditorList();renderMappingFeedback();renderPreview();}));

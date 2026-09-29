@@ -9,7 +9,7 @@ const css = fs.readFileSync('styles/app.css', 'utf8');
 
 assert.match(html, /id="renderBtn"[\s\S]*?<span>Update Preview<\/span>/, 'formula editor must expose an explicit Update Preview action');
 assert.match(html, /id="formulaEditStatus"/, 'formula editor must expose preview state');
-assert.match(html,/id="exploreResetBtn"[^>]*>Reset to Pass Through</,'Explore reset must describe replacing the active filter');
+assert.match(html,/id="exploreResetBtn"[^>]*>Reset</,'Explore reset must restore defaults');
 assert.match(html,/id="resetBtn"[^>]*>Reset to Pass Through</,'Author reset must describe the same replacement');
 assert.match(app,/const resetFilter=\(\)=>applyFilter\(presets.find\(preset=>preset.id==='pass'\),'builtin:pass'\)/,'reset copy must preserve its actual Pass Through behavior');
 assert.match(app,/textContent=activeDocument.key\?\.startsWith\('custom:'\)\?'Update Filter':'Save Filter'/,'save label must follow saved custom identity');

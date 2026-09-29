@@ -47,6 +47,8 @@ for (const filename of ['OFL-Inter.txt', 'OFL-JetBrainsMono.txt', 'README.md']) 
 const palette = css => Object.fromEntries([...css.matchAll(/--([\w-]+)\s*:\s*(#[0-9a-f]{6})\b/gi)].map(([, name, color]) => [name, color]));
 for (const css of [deployedCss, standaloneCss]) assert.deepEqual(palette(css), palette(fs.readFileSync('styles/app.css', 'utf8')), 'built palette must match source');
 for(const output of [deployedJavaScript,standaloneHtml]){
+  assert.match(output,/function createExploreSession\(/,'both builds must include Explore state');
+  assert.match(output,/function createExploreController\(/,'both builds must include Explore UI');
   assert.match(output,/MAX_FRACTAL_ITERATIONS=512/,'both builds must carry the shared 512 ceiling');
   assert.match(output,/function numericBounds\(/,'both builds must include numeric budgeting support');
   assert.match(output,/Math\.max\(costs\.get\(node\.whenTrue\),costs\.get\(node\.whenFalse\)\)/,'both builds must budget ternaries lazily');
