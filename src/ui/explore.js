@@ -47,7 +47,7 @@ export function createExploreController({state,root,resetButton,syncControls,sch
   for(const action of ['Lock all','Unlock all','Invert locks'])button(locks,action,()=>{state.usedControls.forEach((used,i)=>{if(used)state.explore.locks[i]=action==='Lock all'||(action==='Invert locks'&&!state.explore.locks[i]);});syncControls();});
   buttons.undo=button(actions,'Undo',()=>{if(state.explore.undo)commit(state.explore.undo,false);});
   const section=document.createElement('section');section.className='section snapshots-section';root.closest('.adjust-section').after(section);
-  const heading=document.createElement('div');heading.className='section-head';heading.textContent='Snapshots';section.append(heading);
+  const heading=document.createElement('div');heading.className='section-head';const title=document.createElement('strong');title.textContent='Snapshots';heading.append(title);section.append(heading);
   const body=document.createElement('div');body.className='section-body';section.append(body);
   const row=document.createElement('div');row.className='snapshot-slots';body.append(row);
   for(const slot of ['A','B','C','D'])slots[slot]=button(row,slot,()=>{const saved=state.explore.snapshots[slot];if(!saved){toast(`Snapshot ${slot} is empty. Use Save current.`);return;}state.explore.active=slot;commit(saved);});

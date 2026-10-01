@@ -55,6 +55,7 @@ try{
   const action=(text,expected=0)=>{const before=renders;const node=find(text);assert.ok(node,text);node.click();assert.equal(renders-before,expected,`${text} render count`);};
   view.reset();const defaults=[...state.controls];
   const snapshotsSection=doc.body.querySelector('.snapshots-section');
+  assert.equal(snapshotsSection.querySelector('.section-head').querySelector('strong')?.textContent,'Snapshots','Snapshots must use the shared section heading typography');
   assert.equal(snapshotsSection.hidden,false,'filters with active controls show snapshots');
   const usedControls=[...state.usedControls],beforeVisibilityRenders=renders;
   state.usedControls.fill(false);view.refresh();

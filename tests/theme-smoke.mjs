@@ -5,6 +5,25 @@ import { createHash } from 'node:crypto';
 const css = fs.readFileSync('styles/app.css', 'utf8');
 const html = fs.readFileSync('index.html', 'utf8');
 
+const lockButton = css.match(/\.control-lock\{([^}]+)\}/)?.[1] || '';
+assert.match(lockButton, /width:30px;height:30px;/, 'lock buttons must have equal width and height for balanced icon spacing');
+for (const [, columns] of css.matchAll(/\.slider-row\{[^}]*grid-template-columns:([^;}]+)/g)) {
+  assert.match(columns, /^30px /, 'every responsive control row must reserve the full lock button width');
+}
+assert.match(lockButton, /padding:0(?:;|$)/, 'lock button padding must leave room for the icon within its borders');
+assert.match(lockButton, /display:grid(?:;|$)/, 'lock buttons must use explicit icon layout');
+assert.match(lockButton, /place-items:center(?:;|$)/, 'lock icons must be centered on both axes');
+const regenerateButton = css.match(/\.seed-randomize\{([^}]+)\}/)?.[1] || '';
+assert.match(regenerateButton, /width:var\(--control-height-sm\)(?:;|$)/, 'regenerate buttons must retain the standard 30px width');
+assert.match(regenerateButton, /flex-shrink:0(?:;|$)/, 'the seed input must not shrink the regenerate button');
+assert.match(css, /\.toggle-input\{[^}]*appearance:none/, 'toggle controls must replace native checkbox styling');
+assert.match(css, /\.toggle-input::before\{[^}]*width:32px;height:20px[^}]*border-radius:999px/, 'switches must have a pill-shaped track');
+assert.match(css, /\.toggle-input:checked::after\{transform:translateX\(12px\)/, 'the switch thumb must move to indicate the on state');
+assert.match(css, /\.toggle-input:checked::before\{background:var\(--accent\)/, 'on switches must use the accent color');
+assert.match(css, /input\[type=range\]\{[^}]*margin:0/, 'slider tracks must align with the control column without browser-default margins');
+assert.match(css, /\.toggle-input::before\{[^}]*box-sizing:border-box;left:0;/, 'switch tracks must stay inside and flush with the control column, including touch layouts');
+assert.match(css, /\.toggle-input::after\{[^}]*left:3px;/, 'switch thumbs must remain positioned relative to the track');
+
 const root = css.match(/:root\s*\{([^}]+)\}/)?.[1] || '';
 const properties = Object.fromEntries([...root.matchAll(/--([\w-]+)\s*:\s*([^;}]+)/g)].map(([, name, value]) => [name, value.trim()]));
 const tokens = Object.fromEntries(Object.entries(properties).filter(([, value]) => /^#[0-9a-f]{6}$/i.test(value)));
