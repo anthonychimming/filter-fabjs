@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { CONTROL_COUNT, DEFAULT_CONTROL_UI } from '../src/core/controls.js';
 import { FORMULA_LIMITS, MAX_FRACTAL_ITERATIONS, Parser } from '../src/core/formula-language.js';
 import { compileFilterProgram, IRType } from '../src/core/ir.js';
@@ -23,20 +24,11 @@ for (const preset of presets) {
   else cpuFallback += 1;
 }
 
-assert.equal(presets.length, 52, 'v2.8.6 must expose the expanded built-in catalog size');
+assert.equal(presets.length, 48, 'pass-three catalog must remove eight presets and add four');
 assert.equal(gpuCompatible, presets.length, 'every native built-in must compile for WebGPU after Phase 3.5');
 assert.equal(cpuFallback, 0, 'native built-ins must not require CPU fallback');
 assert.equal(gpuCompatible + cpuFallback, presets.length);
-const warpedSdfPreset=presets.find(preset=>preset.id==='warpedsdfbloom');
-assert.equal(warpedSdfPreset?.name,'Warped SDF Bloom','Phase 3.5C must include the domain-warped SDF reference preset');
-const warpedSdfPresetProgram=compileFilterProgram(warpedSdfPreset.f.map(formula=>new Parser(formula).parse()));
-for(const name of ['sdfCircle','sdfBox','sdfSmoothUnion','sdfSubtract','sdfFill','sdfOutline','valueNoise'])assert.ok(warpedSdfPresetProgram.metadata.functions.includes(name),`the Phase 3.5C reference preset must use ${name}()`);
-assert.equal(WGSLCompiler.analyze(warpedSdfPresetProgram).compatible,true,'the domain-warped SDF reference preset must remain GPU-compatible');
-const benchmarkPresets=presets.filter(preset=>preset.benchmark);
-assert.deepEqual(benchmarkPresets.map(preset=>preset.id),['layerednoisebenchmark','warpedsdfbloom'],'the retained benchmark workloads must remain grouped');
-for(const preset of benchmarkPresets){const program=compileFilterProgram(preset.f.map(formula=>new Parser(formula).parse()));assert.equal(program.metadata.deterministic,true,`${preset.name} benchmark must be deterministic`);assert.equal(program.metadata.stateful,false,`${preset.name} benchmark must remain stateless`);assert.equal(WGSLCompiler.analyze(program).compatible,true,`${preset.name} benchmark must remain GPU-compatible`);}
-const layeredNoiseProgram=compileFilterProgram(benchmarkPresets.find(preset=>preset.id==='layerednoisebenchmark').f.map(formula=>new Parser(formula).parse()));
-for(const name of ['fbm','turbulence','ridged'])assert.ok(layeredNoiseProgram.metadata.functions.includes(name),`the layered-noise benchmark must exercise ${name}()`);
+assert.deepEqual(presets.filter(preset=>preset.benchmark),[],'retired benchmark presets must be absent');
 const native=detectFilterFormat(JSON.stringify({ format: 'filter-fab-js', version: 2, formulas: ['r','g','b','a'] }), 'test.json');
 assert.equal(native.kind, 'native');
 assert.equal(native.data.mathMode, 'float', 'version 2 files without mathMode must normalize to float mode');
@@ -132,6 +124,16 @@ assert.ok(sierpinskiProgram.metadata.functions.includes('sierpinski'), 'Sierpiń
 assert.doesNotThrow(()=>WGSLCompiler.compile(sierpinskiProgram), 'Sierpiński fractal preset must generate valid WGSL source');
 
 const removedBuiltins=new Map([
+  ['photoshop-vibrance','Photoshop Style Vibrance'],
+  ['photoshop-exposure','Photoshop Style Exposure'],
+  ['digitalglitch','Digital Block Glitch'],
+  ['layerednoisebenchmark','Layered Noise Benchmark'],
+  ['warpedsdfbloom','Warped SDF Bloom'],
+  ['differenceclouds','Difference Clouds'],
+  ['teallimemodularweave','Teal Lime Modular Weave'],
+  ['complementary-split-toning','Complementary Split Toning'],
+  ['fractal-displacement','Julia Fractal Displacement'],
+  ['red-black-diagonal-plaid','Red-Black Diagonal Plaid'],
   ['analyticshapesampler','Analytic Shape Sampler'],
   ['cellular','Cellular Edges'],
   ['channelglitch','Channel Split Glitch'],
@@ -146,12 +148,10 @@ const removedBuiltins=new Map([
 ]);
 const contributedBuiltins=new Map([
   ['c64multicolorbitmap','C64 Multicolor Bitmap'],
-  ['differenceclouds','Difference Clouds'],
   ['linearprismecho','Linear Prism Echo'],
   ['lomochromepurplexr','LomoChrome Purple XR'],
   ['popprintquad','Pop Print Quad'],
   ['spectraltearglitch','Spectral Tear Glitch'],
-  ['teallimemodularweave','Teal Lime Modular Weave'],
   ['vhstrackingglitch','VHS Tracking Glitch']
 ]);
 const pass2Builtins=new Map([
@@ -164,10 +164,8 @@ const pass2Builtins=new Map([
   ['chromatic-glass','Chromatic Glass'],
   ['cinematic-split-grade','Cinematic Split Grade'],
   ['circular-halftone-photo','Circular Halftone Photo'],
-  ['complementary-split-toning','Complementary Split Toning'],
   ['duotone-gradient-map','Duotone Gradient Map'],
   ['fractal-contours','Fractal Contour Designer'],
-  ['fractal-displacement','Julia Fractal Displacement'],
   ['gradient-map-studio','Gradient Map Studio'],
   ['halftone-print','Halftone Print'],
   ['instant-print-frame','Instant Print Frame'],
@@ -175,12 +173,10 @@ const pass2Builtins=new Map([
   ['juno','Juno'],
   ['mandelbrotjuliaatlas','Mandelbrot / Julia Atlas'],
   ['radial-aura','Radial Aura'],
-  ['red-black-diagonal-plaid','Red-Black Diagonal Plaid'],
   ['selective-color-isolate','Selective Color Isolate'],
   ['futuristic-sci-fi-glitch-photo','Signal Rupture'],
   ['touchingrandomcapsules','Touching Random Capsules']
 ]);
-assert.equal(presets.length,52,'v2.8.6 must expose 20 retained, eight contributed, and 24 pass-two built-in filters');
 assert.equal(new Set(presets.map(preset=>preset.id)).size,presets.length,'remaining built-in IDs must stay unique');
 assert.equal(new Set(presets.map(preset=>preset.name)).size,presets.length,'remaining built-in names must stay unique');
 for(const [id,name] of contributedBuiltins){
@@ -198,6 +194,16 @@ for(const [id,name] of pass2Builtins){
 for(const [id,name] of removedBuiltins){
   assert.equal(presets.some(preset=>preset.id===id),false,`${name} legacy ID must be absent`);
   assert.equal(presets.some(preset=>preset.name===name),false,`${name} must be absent from the built-in catalog`);
+}
+
+const pass3Expected=fs.readdirSync(new URL('./fixtures/pass3-builtins/',import.meta.url)).map(file=>JSON.parse(fs.readFileSync(new URL('./fixtures/pass3-builtins/'+file,import.meta.url),'utf8')));
+for(const expected of pass3Expected){
+  const actual=presets.find(p=>p.id===expected.id);
+  assert.ok(actual,expected.id+' must be included');
+  for(const key of ['name','controls','f','description','tags'])assert.deepEqual(actual[key],expected[key],expected.id+' must preserve exported '+key);
+  const validated=validateNativeFilter({format:'filter-fab-js',version:2,...actual,formulas:actual.f});
+  assert.equal(validated.mathMode,'float');
+  assert.doesNotThrow(()=>WGSLCompiler.compile(compileFilterProgram(getValidatedFormulaAsts(validated))));
 }
 
 console.log(`Core smoke: ${presets.length} presets, ${gpuCompatible} GPU-compatible, ${cpuFallback} CPU fallback.`);

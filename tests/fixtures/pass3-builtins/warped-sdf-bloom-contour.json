@@ -1,0 +1,139 @@
+{
+  "id": "warped-sdf-bloom-contour",
+  "name": "Warped SDF Contour Vortex",
+  "controls": [
+    {
+      "label": "Warp Strength",
+      "value": 157.25,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 60,
+        "step": 0.5,
+        "format": "number",
+        "unit": "px"
+      }
+    },
+    {
+      "label": "Contour Spacing",
+      "value": 194.02173913043478,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 14,
+        "displayMax": 60,
+        "step": 1,
+        "format": "number",
+        "unit": "px"
+      }
+    },
+    {
+      "label": "Spiral Arms",
+      "value": 153,
+      "ui": {
+        "widget": "number",
+        "displayMin": -5,
+        "displayMax": 5,
+        "step": 1,
+        "format": "integer",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Warp Scale",
+      "value": 247.15384615384616,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 20,
+        "displayMax": 150,
+        "step": 1,
+        "format": "number",
+        "unit": "px"
+      }
+    },
+    {
+      "label": "Band Balance",
+      "value": 10.200000000000001,
+      "ui": {
+        "widget": "slider",
+        "displayMin": -100,
+        "displayMax": 100,
+        "step": 1,
+        "format": "number",
+        "unit": "%"
+      }
+    },
+    {
+      "label": "Hue Shift",
+      "value": 144.43359375,
+      "ui": {
+        "widget": "slider",
+        "displayMin": -128,
+        "displayMax": 128,
+        "step": 1,
+        "format": "number",
+        "unit": "levels"
+      }
+    },
+    {
+      "label": "Seed",
+      "value": 15.583616723344669,
+      "ui": {
+        "widget": "seed",
+        "displayMin": 1,
+        "displayMax": 9999,
+        "step": 1,
+        "format": "integer",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Effect Mix",
+      "value": 255,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 100,
+        "step": 1,
+        "format": "number",
+        "unit": "%"
+      }
+    },
+    {
+      "label": "Control 9",
+      "value": 128,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "number",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Control 10",
+      "value": 128,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "number",
+        "unit": ""
+      }
+    }
+  ],
+  "f": [
+    "lerp(r,clamp(gradient3(smoothstep(-0.24,0.24,sin(m/val(1,14,60)*1024+d*val(2,-5,5)+((valueNoise(x,y,val(3,20,150),val(6,1,9999))-0.5)*2+(valueNoise(x+317,y-211,val(3,20,150)*0.55,val(6,1,9999))-0.5)*0.7)*val(0,0,60)/val(1,14,60)*1024)/512+val(4,-0.35,0.35)),clamp(62+val(5,-128,128)*0.55,0,255),clamp(122+val(5,-128,128)*0.30,0,255),clamp(246-val(5,-128,128)*0.12,0,255)),0,255),ctl(7))",
+    "lerp(g,clamp(gradient3(smoothstep(-0.24,0.24,sin(m/val(1,14,60)*1024+d*val(2,-5,5)+((valueNoise(x,y,val(3,20,150),val(6,1,9999))-0.5)*2+(valueNoise(x+317,y-211,val(3,20,150)*0.55,val(6,1,9999))-0.5)*0.7)*val(0,0,60)/val(1,14,60)*1024)/512+val(4,-0.35,0.35)),clamp(18-val(5,-128,128)*0.22,0,255),clamp(42+val(5,-128,128)*0.55,0,255),clamp(92+val(5,-128,128)*0.42,0,255)),0,255),ctl(7))",
+    "lerp(b,clamp(gradient3(smoothstep(-0.24,0.24,sin(m/val(1,14,60)*1024+d*val(2,-5,5)+((valueNoise(x,y,val(3,20,150),val(6,1,9999))-0.5)*2+(valueNoise(x+317,y-211,val(3,20,150)*0.55,val(6,1,9999))-0.5)*0.7)*val(0,0,60)/val(1,14,60)*1024)/512+val(4,-0.35,0.35)),clamp(138-val(5,-128,128)*0.45,0,255),clamp(128-val(5,-128,128)*0.15,0,255),clamp(88+val(5,-128,128)*0.58,0,255)),0,255),ctl(7))",
+    "a"
+  ],
+  "description": "A single-pass periodic polar-distance field with deterministic noise warping. Warp Strength and Warp Scale shape the deformation; Contour Spacing and Spiral Arms control topology; Band Balance adjusts the warm-violet proportion; Hue Shift rotates the palette impression; Seed generates repeatable variations; and Effect Mix blends the generated result with the source.",
+  "tags": [
+    "Procedural",
+    "Distortion",
+    "Pattern",
+    "Color"
+  ]
+}

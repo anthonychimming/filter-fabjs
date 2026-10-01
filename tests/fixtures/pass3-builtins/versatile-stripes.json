@@ -1,0 +1,140 @@
+{
+  "id": "versatile-stripes",
+  "name": "Versatile Stripes",
+  "controls": [
+    {
+      "label": "Stripe Width",
+      "value": 29.5,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 2,
+        "displayMax": 512,
+        "step": 1,
+        "format": "integer",
+        "unit": "px"
+      }
+    },
+    {
+      "label": "Gap Width",
+      "value": 30.380859375,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 512,
+        "step": 1,
+        "format": "integer",
+        "unit": "px"
+      }
+    },
+    {
+      "label": "Angle",
+      "value": 127.5,
+      "ui": {
+        "widget": "slider",
+        "displayMin": -180,
+        "displayMax": 180,
+        "step": 1,
+        "format": "integer",
+        "unit": "°"
+      }
+    },
+    {
+      "label": "Offset",
+      "value": 127.5,
+      "ui": {
+        "widget": "slider",
+        "displayMin": -50,
+        "displayMax": 50,
+        "step": 1,
+        "format": "integer",
+        "unit": "%"
+      }
+    },
+    {
+      "label": "Stripe Red",
+      "value": 255,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "integer",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Stripe Green",
+      "value": 235,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "integer",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Stripe Blue",
+      "value": 0,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "integer",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Background Red",
+      "value": 254,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "integer",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Background Green",
+      "value": 93,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "integer",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Background Blue",
+      "value": 124,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "integer",
+        "unit": ""
+      }
+    }
+  ],
+  "f": [
+    "ctl(7)+(ctl(4)-ctl(7))*(val(1,0,512)<=0?1:1-smoothstep(val(0,2,512)/2-0.5,val(0,2,512)/2+0.5,mirrorRepeat((((x-X/2)*cos(val(2,-180,180)*1024/360+256)+(y-Y/2)*sin(val(2,-180,180)*1024/360+256))/512-val(0,2,512)/2+(val(3,-50,50)*(val(0,2,512)+val(1,0,512))/100)),(val(0,2,512)+val(1,0,512))/2)))",
+    "ctl(8)+(ctl(5)-ctl(8))*(val(1,0,512)<=0?1:1-smoothstep(val(0,2,512)/2-0.5,val(0,2,512)/2+0.5,mirrorRepeat((((x-X/2)*cos(val(2,-180,180)*1024/360+256)+(y-Y/2)*sin(val(2,-180,180)*1024/360+256))/512-val(0,2,512)/2+(val(3,-50,50)*(val(0,2,512)+val(1,0,512))/100)),(val(0,2,512)+val(1,0,512))/2)))",
+    "ctl(9)+(ctl(6)-ctl(9))*(val(1,0,512)<=0?1:1-smoothstep(val(0,2,512)/2-0.5,val(0,2,512)/2+0.5,mirrorRepeat((((x-X/2)*cos(val(2,-180,180)*1024/360+256)+(y-Y/2)*sin(val(2,-180,180)*1024/360+256))/512-val(0,2,512)/2+(val(3,-50,50)*(val(0,2,512)+val(1,0,512))/100)),(val(0,2,512)+val(1,0,512))/2)))",
+    "a"
+  ],
+  "description": "Creates crisp repeating two-colour stripes with independent stripe and background colours. Stripe Width and Gap Width range from fine pinstripes to broad bands; Angle rotates the pattern from -180° to 180°, and Offset shifts the stripe phase in either direction. Designed for posters, packaging, textiles, retro graphics, and layout backgrounds.",
+  "tags": [
+    "Pattern",
+    "Shapes",
+    "Procedural",
+    "Print",
+    "Retro"
+  ]
+}

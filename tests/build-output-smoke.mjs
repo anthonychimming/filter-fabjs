@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { presets } from '../src/presets/builtins.js';
 import { Parser } from '../src/core/formula-language.js';
 import { compileFilterProgram } from '../src/core/ir.js';
 import { WGSLCompiler } from '../src/gpu/wgsl-compiler.js';
@@ -64,7 +65,8 @@ for(const script of [deployedJavaScript,standaloneHtml.match(/<script>([\s\S]*?)
   const init=script.lastIndexOf('initFilterFabApp();');
   assert.ok(init>=0,'build must retain its application entry point');
   const context=vm.createContext({TextEncoder,TextDecoder});
-  vm.runInContext(script.slice(0,init)+'globalThis.BuiltCompiler=WGSLCompiler;\n})();',context);
+  vm.runInContext(script.slice(0,init)+'globalThis.BuiltCompiler=WGSLCompiler;globalThis.BuiltPresets=presets;\n})();',context);
+  assert.equal(JSON.stringify(context.BuiltPresets),JSON.stringify(presets),'both builds must contain the exact updated catalog');
   assert.equal(context.BuiltCompiler.compile(conditionalProgram).code,WGSLCompiler.compile(conditionalProgram).code,'built compilers must emit the same scoped conditional WGSL as source');
   assert.equal(context.BuiltCompiler.compile(signedAngleProgram).code,WGSLCompiler.compile(signedAngleProgram).code,'both artifacts must include semantic angle lowering and preserve nested zero signs');
   assert.equal(context.BuiltCompiler.compile(centeredAngleProgram).code,WGSLCompiler.compile(centeredAngleProgram).code,'both artifacts must preserve angle-local exact centers without changing fractal coordinates');

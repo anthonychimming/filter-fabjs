@@ -14,19 +14,75 @@ for(const mutate of [false,true]){
   const next=exploreValues(state.controls,state.controlUIs,state.usedControls,state.explore,mutate,()=>.75);
   assert.equal(next[0],128);assert.equal(next[9],128);
   next.forEach(v=>assert.ok(v>=0&&v<=255));
-  assert.equal(rawToDisplay(next[1],state.controlUIs[1])/.25,Math.round(rawToDisplay(next[1],state.controlUIs[1])/.25));
-  assert.ok([0,255].includes(next[2]));assert.equal(rawToDisplay(next[3],state.controlUIs[3]),7500);
+  if(next[1]!==state.controls[1])assert.equal(rawToDisplay(next[1],state.controlUIs[1])/.25,Math.round(rawToDisplay(next[1],state.controlUIs[1])/.25));
+  assert.ok([0,255].includes(next[2]));
+  if(mutate)assert.equal(next[3],state.controls[3]);
+  else assert.equal(rawToDisplay(next[3],state.controlUIs[3]),7500);
 }
-state.explore.locks={};state.controls[0]=100;
+function sequence(values){let index=0;return()=>{assert.ok(index<values.length,'unexpected random draw');return values[index++];};}
+const numericUI={widget:'slider',displayMin:0,displayMax:1000,step:1,format:'number',unit:''};
+function mutateValues(values,uis,strength,random,used=values.map(()=>true),locks={}){
+  return exploreValues(values,uis,used,{...createExploreSession(values),strength,locks},true,random);
+}
+const deltas=[],breadths=[];
 for(const [strength,factor] of Object.entries(MUTATION_FACTORS)){
-  state.explore.strength=strength;
-  const next=exploreValues(state.controls,state.controlUIs,state.usedControls,state.explore,true,()=>.75);
-  assert.equal(next[0],displayToRaw(100+.5*255*factor));
-  assert.equal(exploreValues(state.controls,state.controlUIs,state.usedControls,state.explore,true,()=>factor-.001)[2],255);
-  assert.equal(exploreValues(state.controls,state.controlUIs,state.usedControls,state.explore,true,()=>factor)[2],0);
+  const raw=displayToRaw(500,numericUI);
+  const next=mutateValues([raw],[numericUI],strength,sequence([0,.75]));
+  assert.equal(next[0],displayToRaw(500+.5*1000*factor,numericUI));
+  deltas.push(rawToDisplay(next[0],numericUI)-500);
+  const controls=Array(4).fill(raw);
+  const broad=mutateValues(controls,Array(4).fill(numericUI),strength,sequence([.04,.75,.12,.75,.25,.75,.5,.75]));
+  breadths.push(broad.filter((value,i)=>value!==controls[i]).length);
+
+  const toggle=state.controlUIs[2],seed=state.controlUIs[3];
+  for(const rawToggle of [0,255]){
+    assert.equal(mutateValues([rawToggle],[toggle],strength,sequence([factor-.001]))[0],255-rawToggle);
+    assert.equal(mutateValues([rawToggle],[toggle],strength,sequence([factor]))[0],rawToggle);
+  }
+  const seedRaw=displayToRaw(1,seed);
+  assert.equal(mutateValues([seedRaw],[seed],strength,sequence([factor]))[0],seedRaw);
+  const rerolled=mutateValues([seedRaw],[seed],strength,sequence([factor-.001,0]))[0];
+  assert.notEqual(rerolled,seedRaw,'selected seed must differ even when the random reroll repeats');
+  assert.equal(rawToDisplay(rerolled,seed),2);
+  assert.equal(rawToDisplay(mutateValues([seedRaw],[seed],strength,sequence([0,.75]))[0],seed),7500);
 }
-state.controls[3]=0;
-assert.notEqual(exploreValues(state.controls,state.controlUIs,state.usedControls,state.explore,true,()=>0)[3],0,'seed rerolls must differ when possible');
+assert.ok(deltas.every((value,i)=>i===0||value>deltas[i-1]),'numeric amplitude increases at every strength');
+assert.deepEqual(breadths,[1,2,3,4],'deterministic participation separates every strength');
+for(const widget of ['slider','number']){
+  const ui={...numericUI,widget,displayMin:-10,displayMax:10,step:.25};
+  const raw=displayToRaw(0,ui);
+  const next=mutateValues([raw],[ui],'Low',sequence([0,.73]))[0];
+  assert.equal((rawToDisplay(next,ui)-ui.displayMin)/ui.step,Math.round((rawToDisplay(next,ui)-ui.displayMin)/ui.step));
+  for(const boundary of [ui.displayMin,ui.displayMax]){
+    const boundaryRaw=displayToRaw(boundary,ui),outward=boundary===ui.displayMin?0:.99;
+    for(const random of [sequence([.99,0,outward]),sequence([0,outward,0,outward])]){
+      const result=mutateValues([boundaryRaw],[ui],'Low',random)[0],display=rawToDisplay(result,ui);
+      assert.ok(Number.isFinite(result)&&result>=0&&result<=255);
+      assert.equal(display,boundary+(boundary===ui.displayMin?ui.step:-ui.step),'no-op fallback moves one snapped step inward');
+    }
+  }
+}
+const fallbackControls=[128,128,0,0,128,128];
+const fallbackUIs=[numericUI,{...numericUI,widget:'number'},state.controlUIs[2],state.controlUIs[3],numericUI,numericUI];
+const fallbackUsed=[true,true,true,true,true,false],fallbackLocks={4:true};
+const forced=mutateValues(fallbackControls,fallbackUIs,'Low',sequence([.99,.99,.99,.99,.75,.75]),fallbackUsed,fallbackLocks);
+assert.deepEqual(forced.filter((v,i)=>v!==fallbackControls[i]),[displayToRaw(rawToDisplay(128,numericUI)+1,numericUI)]);
+assert.equal(forced[0],128);assert.notEqual(forced[1],128,'fallback selects one eligible number');
+assert.deepEqual(forced.slice(2),fallbackControls.slice(2),'fallback preserves toggles, seeds, locks, and unused values');
+assert.deepEqual(mutateValues([0,0],[state.controlUIs[2],state.controlUIs[3]],'Low',sequence([.99,.99])),[0,0],'toggle/seed-only no-op remains probabilistic');
+assert.deepEqual(mutateValues([128],[numericUI],'Low',sequence([]),[true],{0:true}),[128],'all-locked action has no fallback');
+for(const widget of ['slider','number','toggle','seed']){
+  const ui=widget==='seed'?state.controlUIs[3]:widget==='toggle'?state.controlUIs[2]:{...numericUI,widget};
+  for(const mutate of [false,true]){
+    assert.deepEqual(exploreValues([17.25,93.5],[ui,ui],[true,false],{...createExploreSession([]),locks:{0:true}},mutate,sequence([])),[17.25,93.5],`${widget}: locks and unused values are preserved bit-for-bit`);
+  }
+}
+// A coarse step can erase a selected delta; the fallback still changes one value.
+const coarse={...numericUI,displayMax:10,step:5};
+assert.equal(mutateValues([127.5],[coarse],'Low',sequence([0,.51,0,.75]))[0],255);
+// Numeric changes must not force a seed reroll or toggle flip after their failed checks.
+assert.deepEqual(mutateValues([127.5,0,0],[numericUI,state.controlUIs[2],state.controlUIs[3]],'Low',sequence([0,.75,.99,.99])).slice(1),[0,0]);
+state.explore.locks={};state.controls[0]=100;
 assert.ok(controlStatesEqual([1],[1+1e-12]));assert.ok(!controlStatesEqual([1],[1.001]));
 
 const dom=installBrowserDom();
@@ -74,7 +130,9 @@ try{
   const strengthMenu=find('Medium').parentElement;
   assert.equal(strengthMenu.hidden,false,'the combined Mutate button opens its menu without rendering');
   assert.deepEqual(strengthMenu.children.map(node=>node.textContent),['Low','Medium','High','Chaos']);
+  const beforeMutate=[...state.controls];
   action('High',1);assert.equal(state.explore.strength,'High');assert.equal(strengthMenu.hidden,true);
+  assert.deepEqual(state.explore.undo,beforeMutate,'one Mutate saves the complete prior array');
   action('Mutate · High ▾');assert.equal(find('Mutate · High ▾').getAttribute('aria-expanded'),'true');
   action('High',1);
   const lastUndo=[...state.explore.undo];action('Undo',1);assert.deepEqual(state.controls,lastUndo);

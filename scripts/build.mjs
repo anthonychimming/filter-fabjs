@@ -13,6 +13,7 @@ const order = [
   'src/core/ir.js',
   'src/presets/contributed-builtins.js',
   'src/presets/pass2-builtins.js',
+  'src/presets/pass3-builtins.js',
   'src/presets/builtins.js',
   'src/renderers/cpu-worker-source.js',
   'src/gpu/params-layout.js',

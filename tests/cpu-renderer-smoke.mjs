@@ -54,6 +54,14 @@ const posterPreset=presets.find(preset=>preset.id==='poster'),posterControls=def
 const twoLevelPoster=await render(posterPreset.f,{controls:posterControls});
 assert.deepEqual([...twoLevelPoster],[0,0,0,255,0,0,0,128,0,0,255,255,255,0,0,255],'two-level Posterize must quantize to the full 0–255 endpoint range');
 
+for(const id of ['warped-sdf-bloom-contour','kaleidoscope-mirror','photoshop-hue-saturation-master','versatile-stripes']){
+  const preset=presets.find(p=>p.id===id);
+  const pixels=await render(preset.f,{controls:preset.controls.map(c=>c.value)});
+  assert.equal(pixels.length,16,id+' must render four RGBA pixels');
+  assert.deepEqual([...await render(preset.f,{controls:preset.controls.map(c=>c.value)})],[...pixels],id+' must render deterministically');
+  if(preset.f[3]==='a')assert.deepEqual([pixels[3],pixels[7],pixels[11],pixels[15]],[255,128,255,255],id+' must preserve source alpha');
+}
+
 const numericEdges = await render(['round(0.5)*255','pow(-2,2)','c2d(0,0)','a']);
 assert.deepEqual([...numericEdges], [255,4,0,255, 255,4,0,128, 255,4,0,255, 255,4,0,255], 'CPU fallback semantics must remain defined at GPU edge cases');
 
@@ -118,8 +126,8 @@ assert.ok(estimateCpuProgramCost(maximalProgram)>MAX_CPU_RENDER_WORK/(1800*1800)
 assert.throws(()=>assertCpuRenderBudget(maximalProgram,1800,1800),error=>error?.name==='RenderBudgetError','maximal imported programs must be rejected before full-size CPU dispatch');
 assert.doesNotThrow(()=>assertCpuRenderBudget(maximalProgram,64,64),'the CPU budget must remain image-scaled for small previews');
 const largeImageCpuLimitedBuiltins=new Set([
-  'c64multicolorbitmap','linearprismecho','spectraltearglitch','teallimemodularweave','vhstrackingglitch',
-  'radialecho','softmeshgradient','chromatic-glass','fractal-contours','fractal-displacement','halftone-print',
+  'c64multicolorbitmap','linearprismecho','spectraltearglitch','vhstrackingglitch',
+  'radialecho','softmeshgradient','chromatic-glass','fractal-contours','halftone-print',
   'instant-print-frame','iridescent-shift','mandelbrotjuliaatlas','futuristic-sci-fi-glitch-photo','touchingrandomcapsules'
 ]);
 for(const preset of presets){

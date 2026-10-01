@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Filter FabJS v2.9.2</title>
+<title>Filter FabJS v2.9.3</title>
 <!--
   Filter FabJS
   Browser-native Filter Factory / Filter Foundry-style expression editor.
@@ -71,14 +71,14 @@ color-scheme:dark;--bg:#08050d;--panel:#110a19;--panel2:#180e23;--panel3:#24142f
 code,kbd{font-family:var(--font-code)}
 code,kbd,.formula textarea,.chip,.renderer-diagnostics{font-variant-ligatures:none}
 input[type=number],#zoomLabel,.progress-meta{font-variant-numeric:tabular-nums}
-*{box-sizing:border-box}html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font:14px/1.45 var(--font-ui);overflow:hidden}button,input,select,textarea{font:inherit;color:inherit}button,select,input[type=text],input[type=number]{border:1px solid var(--line2);background:var(--panel2);border-radius:var(--radius-control)}button{padding:var(--space-2) 11px;cursor:pointer;transition:.15s ease;white-space:nowrap}button:hover{border-color:var(--line2);background:var(--surface-hover)}button:active{transform:translateY(1px)}button.primary{background:var(--accent);border-color:transparent;color:var(--accent-ink);font-weight:800;box-shadow:0 0 18px rgba(225,236,26,.12)}button.primary:hover{background:var(--accent-hover);box-shadow:0 0 22px rgba(225,236,26,.18)}button.icon{width:var(--control-height-md);height:var(--control-height-md);padding:0;display:grid;place-items:center;font-size:16px}button.ghost{background:transparent}.icon-link{width:var(--control-height-md);height:var(--control-height-md);padding:0;display:grid;place-items:center;border:1px solid var(--line2);border-radius:var(--radius-control);background:transparent;color:var(--text-strong);text-decoration:none;cursor:pointer;transition:.15s ease}.icon-link:hover{border-color:var(--accent2);background:var(--surface-hover);color:var(--heading)}.icon-link:active{transform:translateY(1px)}.icon-link svg{width:18px;height:18px;fill:currentColor}button.danger:not(:disabled){border-color:rgba(255,100,124,.45);color:#ffb4c0}button.danger:not(:disabled):hover{border-color:var(--bad);background:rgba(255,100,124,.11)}button.active{border-color:var(--accent);background:rgba(225,236,26,.10);color:var(--text-strong)}button:disabled,input:disabled,select:disabled,textarea:disabled{opacity:.55;cursor:not-allowed}select{height:var(--control-height-md);padding:0 30px 0 10px;min-width:150px}input[type=text],input[type=number]{padding:7px 9px;min-width:0}input[type=range]{accent-color:var(--accent);width:100%}
+*{box-sizing:border-box}html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font:14px/1.45 var(--font-ui);overflow:hidden}button,input,select,textarea{font:inherit;color:inherit}button,select,input[type=text],input[type=number]{border:1px solid var(--line2);background:var(--panel2);border-radius:var(--radius-control)}button{padding:var(--space-2) 11px;cursor:pointer;transition:.15s ease;white-space:nowrap}button:hover{border-color:var(--line2);background:var(--surface-hover)}button:active{transform:translateY(1px)}button.primary{background:var(--accent);border-color:transparent;color:var(--accent-ink);font-weight:800;box-shadow:0 0 18px rgba(225,236,26,.12)}button.primary:hover{background:var(--accent-hover);box-shadow:0 0 22px rgba(225,236,26,.18)}button.icon{width:var(--control-height-md);height:var(--control-height-md);padding:0;display:grid;place-items:center;font-size:16px}button.ghost{background:transparent}.icon-link{width:var(--control-height-md);height:var(--control-height-md);padding:0;display:grid;place-items:center;border:1px solid var(--line2);border-radius:var(--radius-control);background:transparent;color:var(--text-strong);text-decoration:none;cursor:pointer;transition:.15s ease}.icon-link:hover{border-color:var(--accent2);background:var(--surface-hover);color:var(--heading)}.icon-link:active{transform:translateY(1px)}.icon-link svg{width:18px;height:18px;fill:currentColor}button.danger:not(:disabled){border-color:rgba(255,100,124,.45);color:#ffb4c0}button.danger:not(:disabled):hover{border-color:var(--bad);background:rgba(255,100,124,.11)}button.active{border-color:var(--accent);background:rgba(225,236,26,.10);color:var(--text-strong)}button:disabled,input:disabled,select:disabled,textarea:disabled{opacity:.55;cursor:not-allowed}select{height:var(--control-height-md);padding:0 30px 0 10px;min-width:150px}input[type=text],input[type=number]{padding:7px 9px;min-width:0}input[type=range]{accent-color:var(--accent);width:100%;margin:0}
 .app{height:100%;display:grid;grid-template-rows:58px minmax(0,1fr) 30px}.topbar{display:flex;align-items:center;gap:10px;padding:0 14px;border-bottom:1px solid var(--line);background:rgba(17,10,25,.94);backdrop-filter:blur(14px);z-index:20}.brand{display:flex;align-items:center;gap:10px;margin-right:6px;min-width:max-content}.logo{width:30px;height:30px;border:1px solid var(--line2);border-radius:var(--radius-group);background:linear-gradient(145deg,#2d1938,#180e23);box-shadow:0 0 28px rgba(196,41,163,.28);position:relative;display:grid;place-items:center;overflow:hidden}.logo svg{width:19px;height:19px;display:block;filter:drop-shadow(0 1px 3px rgba(225,236,26,.18))}.logo path{fill:none;stroke:var(--accent);stroke-width:2.35;stroke-linecap:round;stroke-linejoin:round}.brand strong{font-size:15px;color:var(--text-strong)}.brand small{display:block;color:var(--muted);font-size:10px;margin-top:-2px}.spacer{flex:1}.toolbar-group{display:flex;align-items:center;gap:7px}.toolbar-cluster{display:flex;align-items:center;gap:7px}.toolbar-divider{width:1px;height:24px;background:var(--line2);margin:0 2px;flex:0 0 auto}.action-button{display:inline-flex;align-items:center;justify-content:center;gap:7px}.action-button svg{width:15px;height:15px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
 .workspace{min-height:0;display:grid;grid-template-columns:minmax(360px,1fr) 410px}.preview-pane{min-width:0;min-height:0;display:grid;grid-template-rows:46px minmax(0,1fr);background:#090b0f}.preview-toolbar{display:flex;align-items:center;gap:var(--space-2);padding:0 var(--space-4);border-bottom:1px solid var(--line);background:var(--panel)}.segmented{display:flex;background:var(--code-bg);border:1px solid var(--line);border-radius:var(--radius-group);padding:3px;gap:2px}.segmented button{border:0;background:transparent;padding:5px 9px;border-radius:var(--radius-inset);color:var(--muted)}.segmented button.active{background:var(--panel3);color:var(--text-strong);box-shadow:0 1px 5px rgba(0,0,0,.3)}.canvas-stage{position:relative;overflow:hidden;display:grid;place-items:center;background-color:#090b0f;background-image:linear-gradient(45deg,#10141b 25%,transparent 25%),linear-gradient(-45deg,#10141b 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#10141b 75%),linear-gradient(-45deg,transparent 75%,#10141b 75%);background-size:24px 24px;background-position:0 0,0 12px,12px -12px,-12px 0}.canvas-wrap{position:relative;box-shadow:var(--shadow);transform-origin:center;line-height:0;max-width:calc(100% - 48px);max-height:calc(100% - 48px);overflow:hidden;border-radius:2px;border:1px solid rgba(255,255,255,.08);background-color:#d4d4d4;background-image:linear-gradient(45deg,#ececec 25%,transparent 25%),linear-gradient(-45deg,#ececec 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#ececec 75%),linear-gradient(-45deg,transparent 75%,#ececec 75%);background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0}canvas{display:block;max-width:100%;max-height:100%;background:transparent}.drop-overlay{position:absolute;inset:18px;border:2px dashed rgba(225,236,26,.62);border-radius:18px;background:rgba(8,5,13,.82);display:none;place-items:center;z-index:15;backdrop-filter:blur(4px);pointer-events:none}.drop-overlay.show{display:grid}.render-overlay{position:absolute;inset:18px;background:rgba(7,7,10,.74);backdrop-filter:blur(4px);border:1px solid rgba(225,236,26,.22);border-radius:18px;display:none;place-items:center;z-index:14}.render-overlay.show{display:grid}.render-card{width:min(320px,calc(100% - 40px));padding:16px 16px 14px;border-radius:16px;background:rgba(24,14,35,.96);border:1px solid var(--line2);box-shadow:var(--shadow);text-align:center}.render-card strong{display:block;font-size:16px;margin-bottom:4px;color:var(--heading)}.render-card span{display:block;color:var(--muted);font-size:12px;margin-bottom:12px}.render-card kbd{display:inline-block;padding:1px 5px;border:1px solid var(--line2);border-bottom-color:var(--panel3);border-radius:5px;background:var(--code-bg);color:var(--code-text);font:11px var(--font-code);box-shadow:inset 0 -1px 0 rgba(255,255,255,.05)}.progress-bar{height:10px;border-radius:999px;background:var(--code-bg);border:1px solid var(--line);overflow:hidden}.progress-fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--code-text));transition:width .12s ease}.progress-meta{display:flex;justify-content:space-between;gap:10px;color:var(--text);font-size:12px;margin-top:8px}.drop-card{text-align:center;color:var(--text-strong)}.drop-card b{font-size:18px;display:block;margin-bottom:5px;color:var(--heading)}.drop-card span{color:var(--muted)}.renderer-control{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12px}.renderer-control span{color:var(--info);font-weight:650}.renderer-control select{height:30px;min-width:88px;padding-left:8px}.renderer-diagnostics{display:block;max-width:290px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--good);font:11px var(--font-code)}.renderer-diagnostics[data-state=cpu-selected]{color:var(--info)}.renderer-diagnostics[data-state=cpu-fallback],.renderer-diagnostics[data-state=pending]{color:var(--warn)}.renderer-diagnostics[data-state=error]{color:var(--bad)}
-.sidebar{min-height:0;border-left:1px solid var(--line);background:var(--panel);display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden}.sidebar-head{padding:var(--space-4);border-bottom:1px solid var(--line);display:grid;gap:9px}.preset-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:7px}.preset-row select{width:100%}.filter-meta{display:grid;grid-template-columns:1fr 1fr;gap:7px}.filter-meta input{width:100%}.sidebar-scroll{overflow:auto;padding:var(--space-4);scrollbar-color:var(--line2) transparent}.section{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel2);overflow:hidden;margin-bottom:11px}.section-head{display:flex;align-items:center;justify-content:space-between;padding:var(--space-3) var(--space-4);background:rgba(196,41,163,.035);border-bottom:1px solid var(--line)}.section-head strong{font-size:13px;color:var(--heading)}.section-head span{font-size:11px;color:var(--muted)}.section-title{display:flex;align-items:baseline;justify-content:space-between;gap:10px;width:100%}.controls-head-meta{display:flex;align-items:center;gap:var(--space-2)}.controls-head-meta button{padding:var(--space-1) 7px;font-size:11px}.section-body{padding:var(--space-3)}.ui-lock-panel{transition:opacity .15s ease,filter .15s ease}.ui-locked .ui-lock-panel{opacity:.48;filter:saturate(.78)}.ui-locked .ui-lock-panel *{pointer-events:none}.formula-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.editor-status{display:inline-flex;align-items:center;gap:7px;min-width:0;color:var(--muted);font-size:11px}.editor-status::before{content:"";width:7px;height:7px;flex:0 0 auto;border-radius:50%;background:var(--good);box-shadow:0 0 9px rgba(120,201,114,.38)}.editor-status[data-state=pending]::before{background:var(--accent2);box-shadow:0 0 9px rgba(196,41,163,.42)}.editor-status[data-state=invalid]{color:#ffb4c0}.editor-status[data-state=invalid]::before{background:var(--bad);box-shadow:0 0 9px rgba(255,100,124,.38)}.render-button{min-height:34px;display:inline-flex;align-items:center;gap:6px;padding:7px 9px}.render-button svg{width:13px;height:13px;fill:currentColor}.render-button kbd{padding:1px 5px;border:1px solid rgba(8,5,13,.3);border-radius:5px;background:rgba(8,5,13,.18);font:10px var(--font-code);color:var(--accent-ink)}.formula{position:relative;margin-bottom:9px}.formula:last-child{margin-bottom:0}.formula-label{position:absolute;left:9px;top:9px;width:24px;height:24px;border-radius:var(--radius-inset);display:grid;place-items:center;font-weight:800;font-family:var(--font-code);z-index:2;color:var(--accent-ink)}.formula[data-ch=r] .formula-label{background:var(--r)}.formula[data-ch=g] .formula-label{background:var(--g)}.formula[data-ch=b] .formula-label{background:var(--b)}.formula[data-ch=a] .formula-label{background:var(--a)}textarea{width:100%;height:54px;resize:vertical;padding:10px 34px 10px 42px;border:1px solid var(--line2);border-radius:var(--radius-group);background:var(--code-bg);color:var(--code-text);font:13px/1.5 var(--font-code);outline:none;transition:border-color .14s ease,box-shadow .14s ease}textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(225,236,26,.12)}textarea.edited:not(.invalid){border-color:rgba(196,41,163,.72);box-shadow:0 0 0 1px rgba(196,41,163,.10)}textarea.invalid{border-color:var(--bad);box-shadow:0 0 0 3px rgba(255,100,124,.09)}.formula-state{position:absolute;right:9px;top:10px;font-size:16px;color:var(--good)}.formula-state.pending{color:var(--accent2)}.formula-state.bad{color:var(--bad)}.formula-error{display:none;color:#ff9fb0;font-size:11px;margin:4px 5px 0 42px}.formula-error.show{display:block}.slider-grid{display:grid;gap:var(--space-2)}.slider-row{display:grid;grid-template-columns:26px minmax(76px,108px) minmax(0,1fr) minmax(36px,auto);align-items:center;gap:7px;transition:opacity .16s ease,filter .16s ease}.slider-row.control-unused{opacity:.30;filter:saturate(.35)}.slider-row.control-unused .slider-index{background:var(--panel);color:var(--muted)}.slider-index{width:24px;height:24px;border-radius:var(--radius-inset);background:var(--panel3);display:grid;place-items:center;color:var(--text-strong);font:700 11px var(--font-code)}.control-label-button{width:100%;padding:var(--space-1) 2px;border:0;background:transparent;text-align:left;overflow:hidden;text-overflow:ellipsis;font-size:12px}.control-label-button:hover{background:var(--surface-hover)}.control-widget{display:flex;align-items:center;gap:5px;min-width:0}.control-widget .slider-value{width:100%;height:var(--control-height-sm);text-align:right;padding:4px!important;font:12px var(--font-ui);font-variant-numeric:tabular-nums}.control-widget-seed .slider-value{font-family:var(--font-code)}
-.seed-randomize{width:var(--control-height-sm);height:var(--control-height-sm);padding:0}.toggle-input{width:32px;height:20px;accent-color:var(--accent)}.control-readout{min-width:36px;text-align:right;color:var(--text-strong);font:12px var(--font-ui);font-variant-numeric:tabular-nums;white-space:nowrap}.control-readout.unit-only{min-width:0}.control-unit{color:var(--muted)}.visually-hidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}.filter-description{border-top:1px solid var(--line);margin-top:10px;padding-top:10px}.filter-description label{display:block;margin-bottom:6px;color:var(--heading);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}.filter-description textarea{height:82px;max-height:82px;resize:none;overflow-y:auto;padding:9px 10px;color:var(--text);font:12px/1.45 var(--font-ui)}details.reference{border:1px solid var(--line);border-radius:10px;background:var(--panel)}details.reference summary{cursor:pointer;padding:9px 11px;color:var(--heading);font-weight:650}.ref-body{padding:0 11px 10px;color:var(--muted);font-size:12px}.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}.chip{padding:3px 6px;border-radius:5px;background:var(--panel3);color:var(--code-text);font:11px var(--font-code)}.statusbar{display:flex;align-items:center;gap:12px;padding:0 12px;border-top:1px solid var(--line);background:var(--panel);color:var(--muted);font-size:11px}.status-dot{width:7px;height:7px;border-radius:50%;background:var(--good);box-shadow:0 0 10px rgba(120,201,114,.5)}.status-dot.busy{background:var(--warn);box-shadow:0 0 10px rgba(236,228,157,.42)}.status-dot.pending{background:var(--accent2);box-shadow:0 0 10px rgba(196,41,163,.45)}.status-dot.error{background:var(--bad);box-shadow:0 0 10px rgba(255,100,124,.45)}.toast{position:fixed;left:50%;bottom:46px;transform:translate(-50%,20px);background:var(--panel3);border:1px solid var(--line2);color:var(--text-strong);padding:9px 13px;border-radius:var(--radius-group);opacity:0;pointer-events:none;transition:.2s;z-index:100;box-shadow:var(--shadow)}.toast.show{opacity:1;transform:translate(-50%,0)}dialog{border:1px solid var(--line2);border-radius:var(--radius-dialog);background:var(--panel2);color:var(--text);box-shadow:var(--shadow);max-width:min(700px,calc(100vw - 32px));padding:0}dialog::backdrop{background:rgba(3,1,5,.72);backdrop-filter:blur(3px)}.modal-head{display:flex;align-items:center;justify-content:space-between;padding:13px 15px;border-bottom:1px solid var(--line)}.modal-head strong{color:var(--heading)}.modal-body{padding:15px;max-height:70vh;overflow:auto}.modal-body h3{margin:14px 0 6px;font-size:14px;color:var(--heading)}.modal-body p,.modal-body li{color:var(--text)}.modal-body code{background:var(--code-bg);border:1px solid var(--line);border-radius:5px;padding:1px 4px;color:var(--code-text)}.modal-body table{border-collapse:collapse;width:100%;font-size:12px}.modal-body td{border-bottom:1px solid var(--line);padding:6px;vertical-align:top}.modal-body td:first-child{font-family:var(--font-code);color:var(--text-strong);width:34%}.control-editor-dialog{width:min(900px,calc(100vw - 32px));max-width:none}.control-editor-body{display:grid;grid-template-columns:230px minmax(0,1fr);max-height:min(72vh,680px);overflow:hidden}.control-editor-list{padding:var(--space-3);border-right:1px solid var(--line);overflow:auto}.control-editor-item{width:100%;display:grid;grid-template-columns:24px minmax(0,1fr) auto;align-items:center;gap:7px;margin-bottom:5px;padding:var(--space-2);text-align:left}.control-editor-index{font:700 11px var(--font-code);color:var(--muted)}.control-editor-name{overflow:hidden;text-overflow:ellipsis}.control-editor-used,.control-editor-unused{font-size:10px}.control-editor-used{color:var(--good)}.control-editor-unused{color:var(--warn)}.control-editor-detail{padding:14px;overflow:auto}.control-editor-heading{display:flex;align-items:end;justify-content:space-between;gap:var(--space-4);margin-bottom:var(--space-4)}.control-editor-heading label{display:grid;gap:var(--space-1);color:var(--muted);font-size:11px}.control-editor-heading select{height:32px;min-width:145px}.control-editor-fields{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3)}.control-editor-fields label{display:grid;gap:var(--space-1);color:var(--muted);font-size:11px}.control-editor-fields label:first-child{grid-column:1/-1}.control-editor-fields input,.control-editor-fields select{width:100%;height:34px}.control-mapping-feedback,.control-preview{margin-top:14px;padding:11px;border:1px solid var(--line);border-radius:var(--radius-group);background:var(--panel)}.control-mapping-feedback strong,.control-preview>strong{display:block;margin-bottom:7px;color:var(--heading);font-size:12px}.control-mapping-feedback p{margin:7px 0;font-size:12px}.control-mapping-feedback code{color:var(--code-text)}.mapping-match{color:var(--good)}.mapping-warning{color:var(--warn)}.mapping-neutral,.mapping-suggestion{color:var(--muted)}.use-mapping-button{padding:5px var(--space-2);font-size:11px}.control-preview-row{display:grid;grid-template-columns:minmax(90px,130px) minmax(0,1fr) auto;align-items:center;gap:var(--space-2)}.control-preview-label{overflow:hidden;text-overflow:ellipsis}.control-preview-value{font:12px var(--font-ui);font-variant-numeric:tabular-nums;white-space:nowrap}.control-editor-error{min-height:20px;margin:10px 0 0;color:var(--bad);font-size:12px}.control-editor-actions{display:flex;justify-content:flex-end;gap:var(--space-2);padding:var(--space-4) 15px;border-top:1px solid var(--line)}.export-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.export-option{padding:14px;text-align:left;white-space:normal}.export-option strong{display:block;margin-bottom:4px}.export-option span{display:block;color:var(--muted);font-size:12px;font-weight:400}.export-cancel{margin-top:10px;width:100%}
+.sidebar{min-height:0;border-left:1px solid var(--line);background:var(--panel);display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden}.sidebar-head{padding:var(--space-4);border-bottom:1px solid var(--line);display:grid;gap:9px}.preset-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:7px}.preset-row select{width:100%}.filter-meta{display:grid;grid-template-columns:1fr 1fr;gap:7px}.filter-meta input{width:100%}.sidebar-scroll{overflow:auto;padding:var(--space-4);scrollbar-color:var(--line2) transparent}.section{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel2);overflow:hidden;margin-bottom:11px}.section-head{display:flex;align-items:center;justify-content:space-between;padding:var(--space-3) var(--space-4);background:rgba(196,41,163,.035);border-bottom:1px solid var(--line)}.section-head strong{font-size:13px;color:var(--heading)}.section-head span{font-size:11px;color:var(--muted)}.section-title{display:flex;align-items:baseline;justify-content:space-between;gap:10px;width:100%}.controls-head-meta{display:flex;align-items:center;gap:var(--space-2)}.controls-head-meta button{padding:var(--space-1) 7px;font-size:11px}.section-body{padding:var(--space-3)}.ui-lock-panel{transition:opacity .15s ease,filter .15s ease}.ui-locked .ui-lock-panel{opacity:.48;filter:saturate(.78)}.ui-locked .ui-lock-panel *{pointer-events:none}.formula-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.editor-status{display:inline-flex;align-items:center;gap:7px;min-width:0;color:var(--muted);font-size:11px}.editor-status::before{content:"";width:7px;height:7px;flex:0 0 auto;border-radius:50%;background:var(--good);box-shadow:0 0 9px rgba(120,201,114,.38)}.editor-status[data-state=pending]::before{background:var(--accent2);box-shadow:0 0 9px rgba(196,41,163,.42)}.editor-status[data-state=invalid]{color:#ffb4c0}.editor-status[data-state=invalid]::before{background:var(--bad);box-shadow:0 0 9px rgba(255,100,124,.38)}.render-button{min-height:34px;display:inline-flex;align-items:center;gap:6px;padding:7px 9px}.render-button svg{width:13px;height:13px;fill:currentColor}.render-button kbd{padding:1px 5px;border:1px solid rgba(8,5,13,.3);border-radius:5px;background:rgba(8,5,13,.18);font:10px var(--font-code);color:var(--accent-ink)}.formula{position:relative;margin-bottom:9px}.formula:last-child{margin-bottom:0}.formula-label{position:absolute;left:9px;top:9px;width:24px;height:24px;border-radius:var(--radius-inset);display:grid;place-items:center;font-weight:800;font-family:var(--font-code);z-index:2;color:var(--accent-ink)}.formula[data-ch=r] .formula-label{background:var(--r)}.formula[data-ch=g] .formula-label{background:var(--g)}.formula[data-ch=b] .formula-label{background:var(--b)}.formula[data-ch=a] .formula-label{background:var(--a)}textarea{width:100%;height:54px;resize:vertical;padding:10px 34px 10px 42px;border:1px solid var(--line2);border-radius:var(--radius-group);background:var(--code-bg);color:var(--code-text);font:13px/1.5 var(--font-code);outline:none;transition:border-color .14s ease,box-shadow .14s ease}textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(225,236,26,.12)}textarea.edited:not(.invalid){border-color:rgba(196,41,163,.72);box-shadow:0 0 0 1px rgba(196,41,163,.10)}textarea.invalid{border-color:var(--bad);box-shadow:0 0 0 3px rgba(255,100,124,.09)}.formula-state{position:absolute;right:9px;top:10px;font-size:16px;color:var(--good)}.formula-state.pending{color:var(--accent2)}.formula-state.bad{color:var(--bad)}.formula-error{display:none;color:#ff9fb0;font-size:11px;margin:4px 5px 0 42px}.formula-error.show{display:block}.slider-grid{display:grid;gap:var(--space-2)}.slider-row{display:grid;grid-template-columns:30px minmax(76px,108px) minmax(0,1fr) minmax(36px,auto);align-items:center;gap:7px;transition:opacity .16s ease,filter .16s ease}.slider-row.control-unused{opacity:.30;filter:saturate(.35)}.slider-row.control-unused .slider-index{background:var(--panel);color:var(--muted)}.slider-index{width:24px;height:24px;border-radius:var(--radius-inset);background:var(--panel3);display:grid;place-items:center;color:var(--text-strong);font:700 11px var(--font-code)}.control-label-button{width:100%;padding:var(--space-1) 2px;border:0;background:transparent;text-align:left;overflow:hidden;text-overflow:ellipsis;font-size:12px}.control-label-button:hover{background:var(--surface-hover)}.control-widget{display:flex;align-items:center;gap:5px;min-width:0}.control-widget .slider-value{width:100%;height:var(--control-height-sm);text-align:right;padding:4px!important;font:12px var(--font-ui);font-variant-numeric:tabular-nums}.control-widget-seed .slider-value{font-family:var(--font-code)}
+.seed-randomize{width:var(--control-height-sm);height:var(--control-height-sm);flex-shrink:0;padding:0}.control-readout{min-width:36px;text-align:right;color:var(--text-strong);font:12px var(--font-ui);font-variant-numeric:tabular-nums;white-space:nowrap}.control-readout.unit-only{min-width:0}.control-unit{color:var(--muted)}.visually-hidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}.filter-description{border-top:1px solid var(--line);margin-top:10px;padding-top:10px}.filter-description label{display:block;margin-bottom:6px;color:var(--heading);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}.filter-description textarea{height:82px;max-height:82px;resize:none;overflow-y:auto;padding:9px 10px;color:var(--text);font:12px/1.45 var(--font-ui)}details.reference{border:1px solid var(--line);border-radius:10px;background:var(--panel)}details.reference summary{cursor:pointer;padding:9px 11px;color:var(--heading);font-weight:650}.ref-body{padding:0 11px 10px;color:var(--muted);font-size:12px}.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}.chip{padding:3px 6px;border-radius:5px;background:var(--panel3);color:var(--code-text);font:11px var(--font-code)}.statusbar{display:flex;align-items:center;gap:12px;padding:0 12px;border-top:1px solid var(--line);background:var(--panel);color:var(--muted);font-size:11px}.status-dot{width:7px;height:7px;border-radius:50%;background:var(--good);box-shadow:0 0 10px rgba(120,201,114,.5)}.status-dot.busy{background:var(--warn);box-shadow:0 0 10px rgba(236,228,157,.42)}.status-dot.pending{background:var(--accent2);box-shadow:0 0 10px rgba(196,41,163,.45)}.status-dot.error{background:var(--bad);box-shadow:0 0 10px rgba(255,100,124,.45)}.toast{position:fixed;left:50%;bottom:46px;transform:translate(-50%,20px);background:var(--panel3);border:1px solid var(--line2);color:var(--text-strong);padding:9px 13px;border-radius:var(--radius-group);opacity:0;pointer-events:none;transition:.2s;z-index:100;box-shadow:var(--shadow)}.toast.show{opacity:1;transform:translate(-50%,0)}dialog{border:1px solid var(--line2);border-radius:var(--radius-dialog);background:var(--panel2);color:var(--text);box-shadow:var(--shadow);max-width:min(700px,calc(100vw - 32px));padding:0}dialog::backdrop{background:rgba(3,1,5,.72);backdrop-filter:blur(3px)}.modal-head{display:flex;align-items:center;justify-content:space-between;padding:13px 15px;border-bottom:1px solid var(--line)}.modal-head strong{color:var(--heading)}.modal-body{padding:15px;max-height:70vh;overflow:auto}.modal-body h3{margin:14px 0 6px;font-size:14px;color:var(--heading)}.modal-body p,.modal-body li{color:var(--text)}.modal-body code{background:var(--code-bg);border:1px solid var(--line);border-radius:5px;padding:1px 4px;color:var(--code-text)}.modal-body table{border-collapse:collapse;width:100%;font-size:12px}.modal-body td{border-bottom:1px solid var(--line);padding:6px;vertical-align:top}.modal-body td:first-child{font-family:var(--font-code);color:var(--text-strong);width:34%}.control-editor-dialog{width:min(900px,calc(100vw - 32px));max-width:none}.control-editor-body{display:grid;grid-template-columns:230px minmax(0,1fr);max-height:min(72vh,680px);overflow:hidden}.control-editor-list{padding:var(--space-3);border-right:1px solid var(--line);overflow:auto}.control-editor-item{width:100%;display:grid;grid-template-columns:24px minmax(0,1fr) auto;align-items:center;gap:7px;margin-bottom:5px;padding:var(--space-2);text-align:left}.control-editor-index{font:700 11px var(--font-code);color:var(--muted)}.control-editor-name{overflow:hidden;text-overflow:ellipsis}.control-editor-used,.control-editor-unused{font-size:10px}.control-editor-used{color:var(--good)}.control-editor-unused{color:var(--warn)}.control-editor-detail{padding:14px;overflow:auto}.control-editor-heading{display:flex;align-items:end;justify-content:space-between;gap:var(--space-4);margin-bottom:var(--space-4)}.control-editor-heading label{display:grid;gap:var(--space-1);color:var(--muted);font-size:11px}.control-editor-heading select{height:32px;min-width:145px}.control-editor-fields{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3)}.control-editor-fields label{display:grid;gap:var(--space-1);color:var(--muted);font-size:11px}.control-editor-fields label:first-child{grid-column:1/-1}.control-editor-fields input,.control-editor-fields select{width:100%;height:34px}.control-mapping-feedback,.control-preview{margin-top:14px;padding:11px;border:1px solid var(--line);border-radius:var(--radius-group);background:var(--panel)}.control-mapping-feedback strong,.control-preview>strong{display:block;margin-bottom:7px;color:var(--heading);font-size:12px}.control-mapping-feedback p{margin:7px 0;font-size:12px}.control-mapping-feedback code{color:var(--code-text)}.mapping-match{color:var(--good)}.mapping-warning{color:var(--warn)}.mapping-neutral,.mapping-suggestion{color:var(--muted)}.use-mapping-button{padding:5px var(--space-2);font-size:11px}.control-preview-row{display:grid;grid-template-columns:minmax(90px,130px) minmax(0,1fr) auto;align-items:center;gap:var(--space-2)}.control-preview-label{overflow:hidden;text-overflow:ellipsis}.control-preview-value{font:12px var(--font-ui);font-variant-numeric:tabular-nums;white-space:nowrap}.control-editor-error{min-height:20px;margin:10px 0 0;color:var(--bad);font-size:12px}.control-editor-actions{display:flex;justify-content:flex-end;gap:var(--space-2);padding:var(--space-4) 15px;border-top:1px solid var(--line)}.export-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.export-option{padding:14px;text-align:left;white-space:normal}.export-option strong{display:block;margin-bottom:4px}.export-option span{display:block;color:var(--muted);font-size:12px;font-weight:400}.export-cancel{margin-top:10px;width:100%}
 @media(max-width:1180px) and (min-width:921px){.app{grid-template-rows:auto minmax(0,1fr) 30px}.topbar{min-height:58px;flex-wrap:wrap;padding:9px}.toolbar-group.file-actions{order:3;width:100%;flex-wrap:wrap}.toolbar-cluster{flex-wrap:wrap}.toolbar-divider{display:none}.topbar>.spacer{display:none}}
 @media(max-width:920px){html,body{overflow:auto}.app{height:auto;min-height:100%;grid-template-rows:auto auto 30px}.topbar{min-height:58px;flex-wrap:wrap;padding:9px}.brand{margin-right:auto}.workspace{grid-template-columns:1fr}.preview-pane{height:58vh;min-height:420px}.sidebar{border-left:0;border-top:1px solid var(--line)}.sidebar-scroll{overflow:visible}.toolbar-group.file-actions{order:3;width:100%;flex-wrap:wrap}.toolbar-cluster{flex-wrap:wrap}.toolbar-divider{display:none}.topbar .spacer{display:none}}
-@media(max-width:720px){.control-editor-body{grid-template-columns:1fr;max-height:72vh;overflow:auto}.control-editor-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;max-height:190px;border-right:0;border-bottom:1px solid var(--line)}.control-editor-item{margin:0}.control-editor-detail{overflow:visible}.control-editor-fields{grid-template-columns:1fr}.control-editor-fields label:first-child{grid-column:auto}.control-preview-row{grid-template-columns:1fr}.control-editor-heading{align-items:start;flex-direction:column}}@media(max-width:560px){.filter-meta{grid-template-columns:1fr}.slider-row{grid-template-columns:24px minmax(72px,96px) minmax(0,1fr) auto}.preview-toolbar{overflow-x:auto}.brand small{display:none}.section-title span,.render-button kbd{display:none}.controls-head-meta{gap:5px}.control-editor-list{grid-template-columns:1fr}}
+@media(max-width:720px){.control-editor-body{grid-template-columns:1fr;max-height:72vh;overflow:auto}.control-editor-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;max-height:190px;border-right:0;border-bottom:1px solid var(--line)}.control-editor-item{margin:0}.control-editor-detail{overflow:visible}.control-editor-fields{grid-template-columns:1fr}.control-editor-fields label:first-child{grid-column:auto}.control-preview-row{grid-template-columns:1fr}.control-editor-heading{align-items:start;flex-direction:column}}@media(max-width:560px){.filter-meta{grid-template-columns:1fr}.slider-row{grid-template-columns:30px minmax(72px,96px) minmax(0,1fr) auto}.preview-toolbar{overflow-x:auto}.brand small{display:none}.section-title span,.render-button kbd{display:none}.controls-head-meta{gap:5px}.control-editor-list{grid-template-columns:1fr}}
 
 /* Phase 2 Filter Library: a canvas-visible drawer with explicit preview/apply semantics. */
 .filter-picker-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:7px}.filter-picker-row select{width:100%;min-width:0}.browser-launcher{width:100%;height:var(--control-height-md);padding:0 9px;text-align:left;overflow:hidden;text-overflow:ellipsis}.preset-row{grid-template-columns:auto auto auto minmax(0,1fr);align-items:center}.preset-row span{font-size:11px;overflow-wrap:anywhere}.filter-tags{border-top:1px solid var(--line);padding-top:12px;margin-top:12px}.filter-tags p{font-size:12px}.filter-tags .chips button,.result-tags button{border:1px solid var(--line2);background:transparent;border-radius:var(--radius-inset)}.filter-actions{display:flex;gap:var(--space-2);align-items:center;flex-wrap:wrap}.filter-actions input{flex:1;min-width:0}.filter-tags input{width:100%}.filter-tags button{min-height:var(--control-height-md)}.filter-browser{width:min(520px,100vw);height:100dvh;max-width:none;max-height:none;margin:0 0 0 auto;border-radius:16px 0 0 16px;border-right:0}.filter-browser::backdrop{background:rgba(3,1,5,.24);backdrop-filter:none}.filter-browser[open]{display:flex;flex-direction:column}.library-head{flex:0 0 auto}.library-head>div{display:grid;gap:2px}.library-head small{color:var(--muted);font-size:11px}.library-head>[data-close]{width:38px;height:38px;padding:0;font-size:20px}.browser-tools{padding:var(--space-4) 14px;display:grid;gap:9px;flex-shrink:0;border-bottom:1px solid var(--line)}.browser-tools label{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.browser-tools .library-search{display:grid;grid-template-columns:auto minmax(0,1fr);font-weight:700;color:var(--heading)}.browser-tools input[type=search]{width:100%;min-width:0;background:var(--panel);border:1px solid var(--line2);border-radius:var(--radius-control);padding:8px;color:var(--text);min-height:var(--control-height-md)}.browser-tools select{min-width:100px}.browser-tools p{min-height:0;margin:0;color:var(--bad)}.browser-count-row{justify-content:space-between}.tag-choices{display:flex;gap:8px;flex-wrap:wrap;max-height:100px;overflow:auto}.tag-choices label{min-height:var(--control-height-md)}.filter-results{list-style:none;margin:0;padding:var(--space-3) var(--space-4);overflow:auto;min-height:80px;flex:1;display:grid;align-content:start;gap:9px}.filter-card{padding:9px;border:1px solid var(--line);border-radius:11px;background:var(--panel);overflow-wrap:anywhere;transition:border-color .15s ease,background .15s ease}.filter-card[data-selected=true]{border-color:var(--accent);background:rgba(225,236,26,.055);box-shadow:inset 3px 0 0 var(--accent)}.filter-card-main{display:grid;grid-template-columns:minmax(0,1fr) 38px;gap:7px;align-items:start}.filter-card-preview{min-width:0;min-height:78px;padding:0;display:grid;grid-template-columns:82px minmax(0,1fr);gap:var(--space-3);text-align:left;white-space:normal;border-color:transparent;background:transparent}.filter-card-preview:hover{border-color:var(--line2)}.filter-card-preview[aria-pressed=true]{color:var(--text-strong)}.filter-thumbnail{display:block;width:82px;height:74px;border-radius:var(--radius-control);border:1px solid rgba(255,255,255,.15);background:radial-gradient(circle at 72% 24%,hsla(var(--swatch-hue-2),82%,70%,.92),transparent 34%),linear-gradient(145deg,hsl(var(--swatch-hue),58%,20%),hsl(var(--swatch-hue-2),68%,48%));box-shadow:inset 0 0 22px rgba(0,0,0,.22)}.filter-card-copy{display:block;min-width:0;padding:5px 0}.filter-card-name{display:block;color:var(--heading);font-weight:750;line-height:1.25}.result-meta{display:block;color:var(--muted);margin-top:4px;font-size:11px}.source-badge{color:var(--info);font-weight:700}.filter-excerpt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:6px;color:var(--text);font-size:12px}.filter-card-favorite,.filter-card-download{width:38px;height:38px;padding:0;font-size:18px}.filter-card-favorite[aria-pressed=true]{color:var(--accent);background:var(--panel3)}.result-tags{display:flex;flex-wrap:wrap;gap:6px;margin:7px 0 0 92px}.filter-browser .result-tags button{min-height:0;font-size:11px;line-height:1.2;padding:var(--space-1) 7px;white-space:normal;overflow-wrap:anywhere}.filter-library-empty{text-align:center;padding:22px 12px;color:var(--muted)}.browser-pages{display:flex;gap:var(--space-2);align-items:center;justify-content:space-between;padding:var(--space-2) var(--space-4);border-top:1px solid var(--line)}.browser-pages[hidden]{display:none}.library-actions{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);padding:11px var(--space-4);border-top:1px solid var(--line);background:var(--panel2);flex:0 0 auto}.library-actions>span{color:var(--muted);font-size:11px;line-height:1.35}.library-actions>span[data-state=busy]{color:var(--warn)}.library-actions>span[data-state=ready]{color:var(--good)}.library-actions>div{display:flex;gap:var(--space-2)}.filter-browser button,.filter-choice button{min-height:var(--control-height-md)}.filter-choice{width:460px}.filter-choice input{width:100%;margin:6px 0 12px}.filter-choice h2{font-size:18px;overflow-wrap:anywhere}.filter-choice button{white-space:normal}.filter-choice .filter-actions{margin-top:var(--space-5)}#tagError{color:var(--bad)}
@@ -127,7 +127,7 @@ details.diagnostics .renderer-diagnostics{max-width:100%;white-space:normal;over
 .filter-thumbnail{position:relative;display:grid;place-items:center;overflow:hidden;background-color:var(--panel3);background-image:linear-gradient(45deg,rgba(255,255,255,.045) 25%,transparent 25%),linear-gradient(-45deg,rgba(255,255,255,.045) 25%,transparent 25%),linear-gradient(45deg,transparent 75%,rgba(255,255,255,.045) 75%),linear-gradient(-45deg,transparent 75%,rgba(255,255,255,.045) 75%);background-size:14px 14px;background-position:0 0,0 7px,7px -7px,-7px 0}.filter-thumbnail-image{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .14s ease}.filter-thumbnail[data-thumbnail-state=ready] .filter-thumbnail-image{opacity:1}.filter-thumbnail-state{position:relative;z-index:1;max-width:74px;padding:3px 5px;border-radius:5px;background:rgba(8,5,13,.72);color:var(--muted);font-size:9px;line-height:1.2;text-align:center}.filter-thumbnail[data-thumbnail-state=rendering] .filter-thumbnail-state,.filter-thumbnail[data-thumbnail-state=queued] .filter-thumbnail-state{color:var(--text)}.filter-thumbnail[data-thumbnail-state=failed] .filter-thumbnail-state{color:#ffb4c0}
 @media(prefers-reduced-motion:reduce){.filter-thumbnail-image{transition:none}}
 .filter-sample-badge{position:absolute;right:3px;bottom:3px;z-index:2;padding:1px 4px;border:1px solid var(--line);border-radius:var(--radius-inset);background:var(--panel2);color:var(--muted);font-size:9px;line-height:1.3}.filter-card-preview:not(button) .filter-thumbnail-state:empty{display:none}.filter-card-preview:not(button){cursor:default}.filter-card-preview:not(button):hover{border-color:transparent}
-@media(max-width:560px){.sidebar-scroll{padding:9px}.active-filter-heading{align-items:center}.favorite-button{font-size:12px}.slider-row{grid-template-columns:24px minmax(72px,96px) minmax(0,1fr) auto}.preset-row{grid-template-columns:1fr 1fr}.preset-row .primary{grid-column:1/-1}.workspace-mode button{min-height:var(--control-height-md)}}
+@media(max-width:560px){.sidebar-scroll{padding:9px}.active-filter-heading{align-items:center}.favorite-button{font-size:12px}.slider-row{grid-template-columns:30px minmax(72px,96px) minmax(0,1fr) auto}.preset-row{grid-template-columns:1fr 1fr}.preset-row .primary{grid-column:1/-1}.workspace-mode button{min-height:var(--control-height-md)}}
 
 .filter-browser{box-sizing:border-box;overflow:hidden}
 
@@ -182,7 +182,7 @@ body[data-workspace-mode=explore] #renderInfo{display:none}
   .preview-toolbar>.spacer{display:none}
   .preview-toolbar .segmented{margin-right:auto}
   .preview-pane{min-width:0;min-height:300px;height:52vh}
-  .slider-row{grid-template-columns:24px minmax(0,1fr) auto}
+  .slider-row{grid-template-columns:30px minmax(0,1fr) auto}
   .slider-row .control-widget{grid-column:2;grid-row:2}
   .slider-row .control-readout{grid-column:3;grid-row:2}
   .control-label{grid-column:2/-1}
@@ -195,6 +195,12 @@ body[data-workspace-mode=explore] #renderInfo{display:none}
   .control-editor-dialog{width:calc(100vw - 16px)}
   .control-editor-actions{position:sticky;bottom:0;background:var(--panel2)}
 }
+.toggle-input{appearance:none;-webkit-appearance:none;position:relative;display:block;flex-shrink:0;width:32px;height:20px;margin:0;padding:0;border:0;background:transparent;cursor:pointer;border-radius:999px}
+.toggle-input::before{content:"";position:absolute;box-sizing:border-box;left:0;top:50%;width:32px;height:20px;transform:translateY(-50%);border:1px solid var(--control-border);border-radius:999px;background:var(--panel3)}
+.toggle-input::after{content:"";position:absolute;left:3px;top:calc(50% - 7px);width:14px;height:14px;border-radius:50%;background:var(--text)}
+.toggle-input:checked::before{background:var(--accent);border-color:var(--accent)}
+.toggle-input:checked::after{transform:translateX(12px);background:var(--accent-ink)}
+@media(forced-colors:active){.toggle-input::before{background:Canvas;border-color:ButtonText}.toggle-input::after{background:ButtonText}.toggle-input:checked::before{background:Highlight;border-color:Highlight}.toggle-input:checked::after{background:HighlightText}}
 @media(pointer:coarse){
   button,.icon-link,button.icon,select,input[type=text],input[type=number],input[type=search],
   .workspace-mode button,.browser-launcher,.active-filter-section .browser-launcher,
@@ -230,7 +236,7 @@ body[data-workspace-mode=explore] #renderInfo{display:none}
 .split-divider:hover::before,.split-divider:focus-visible::before,.split-divider[data-dragging]::before{background:#fff}
 .split-divider:focus-visible .split-handle{outline:3px solid var(--accent);outline-offset:3px}
 @media(prefers-reduced-motion:reduce){.split-handle{transition:none}}
-.control-lock{width:24px;height:30px;padding:3px;border-color:transparent;background:transparent;color:var(--muted)}
+.control-lock{width:30px;height:30px;padding:0;display:grid;place-items:center;border-color:transparent;background:transparent;color:var(--muted)}
 .adjust-section,.snapshots-section{overflow:visible}
 .control-lock svg{display:block;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round}
 .control-lock[aria-pressed=true]{color:var(--accent);background:var(--panel3);border-color:var(--line2)}
@@ -492,7 +498,7 @@ font bytes; intentional font upgrades must update this record and the tests.
 </head>
 <body data-workspace-mode="explore">
 <div class="app">
-<header class="topbar ui-lock-panel"><div class="brand"><div class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M3.5 5.5h17L14 13.2v6.8l-4-3v-3.8z"/></svg></div><div><strong>Filter FabJS</strong><small>Procedural RGBA expression editor · v2.9.2</small></div></div><div class="toolbar-group file-actions" aria-label="File and clipboard actions"><div class="toolbar-cluster" aria-label="Image actions"><button id="openImageBtn" class="primary action-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5h5l1.5-2h9.5v15H4z"/><path d="m7 16 3.4-3.5 2.5 2.3 2.2-2.1 3.4 3.3"/><circle cx="15.7" cy="8.8" r="1.3"/></svg><span>Open image</span></button><button id="pasteImageBtn" class="action-button" title="Paste an image from the clipboard (Ctrl/⌘+V)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5.5h6"/><path d="M9.5 3.5h5a1.5 1.5 0 0 1 1.5 1.5v1H8v-1a1.5 1.5 0 0 1 1.5-1.5Z"/><path d="M16 5h3v15H5V5h3"/><path d="M12 9v7"/><path d="m9 13 3 3 3-3"/></svg><span>Paste image</span></button><button id="copyImageBtn" class="action-button" title="Copy the rendered PNG with alpha when present (Ctrl/⌘+Shift+C)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/><path d="m10.5 16 2.4-2.5 1.8 1.7 1.5-1.4 1.5 1.5"/></svg><span>Copy image</span></button><button id="exportImageBtn" class="action-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M5 19h14"/></svg><span>Export PNG</span></button></div><span class="toolbar-divider" aria-hidden="true"></span><div class="toolbar-cluster" aria-label="Filter file actions"><button id="importBtn">Import filter</button><button id="exportFilterBtn">Export filter</button></div></div><div class="spacer"></div><div class="toolbar-group"><a id="githubBtn" class="icon-link" href="https://github.com/anthonychimming" target="_blank" rel="noopener noreferrer" title="Open @anthonychimming on GitHub" aria-label="Open Anthony Chimming GitHub profile"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .7A11.3 11.3 0 0 0 8.43 22.72c.57.1.78-.25.78-.55v-2.16c-3.18.69-3.85-1.35-3.85-1.35-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.68 1.24 3.33.95.1-.74.4-1.24.73-1.53-2.54-.29-5.21-1.27-5.21-5.65 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.45.11-3.03 0 0 .96-.31 3.12 1.17A10.8 10.8 0 0 1 12 6.92c.96 0 1.92.13 2.82.38 2.16-1.48 3.12-1.17 3.12-1.17.62 1.58.23 2.74.11 3.03.74.8 1.18 1.82 1.18 3.07 0 4.39-2.68 5.35-5.23 5.64.41.36.78 1.06.78 2.14v3.16c0 .3.21.66.79.55A11.3 11.3 0 0 0 12 .7Z"/></svg></a><button id="helpBtn" class="icon ghost" title="Help" aria-label="Help">?</button></div><input id="imageInput" type="file" accept="image/*" hidden><input id="filterInput" type="file" accept=".json,.afs,application/json,text/plain" hidden></header>
+<header class="topbar ui-lock-panel"><div class="brand"><div class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M3.5 5.5h17L14 13.2v6.8l-4-3v-3.8z"/></svg></div><div><strong>Filter FabJS</strong><small>Procedural RGBA expression editor · v2.9.3</small></div></div><div class="toolbar-group file-actions" aria-label="File and clipboard actions"><div class="toolbar-cluster" aria-label="Image actions"><button id="openImageBtn" class="primary action-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5h5l1.5-2h9.5v15H4z"/><path d="m7 16 3.4-3.5 2.5 2.3 2.2-2.1 3.4 3.3"/><circle cx="15.7" cy="8.8" r="1.3"/></svg><span>Open image</span></button><button id="pasteImageBtn" class="action-button" title="Paste an image from the clipboard (Ctrl/⌘+V)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5.5h6"/><path d="M9.5 3.5h5a1.5 1.5 0 0 1 1.5 1.5v1H8v-1a1.5 1.5 0 0 1 1.5-1.5Z"/><path d="M16 5h3v15H5V5h3"/><path d="M12 9v7"/><path d="m9 13 3 3 3-3"/></svg><span>Paste image</span></button><button id="copyImageBtn" class="action-button" title="Copy the rendered PNG with alpha when present (Ctrl/⌘+Shift+C)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/><path d="m10.5 16 2.4-2.5 1.8 1.7 1.5-1.4 1.5 1.5"/></svg><span>Copy image</span></button><button id="exportImageBtn" class="action-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M5 19h14"/></svg><span>Export PNG</span></button></div><span class="toolbar-divider" aria-hidden="true"></span><div class="toolbar-cluster" aria-label="Filter file actions"><button id="importBtn">Import filter</button><button id="exportFilterBtn">Export filter</button></div></div><div class="spacer"></div><div class="toolbar-group"><a id="githubBtn" class="icon-link" href="https://github.com/anthonychimming" target="_blank" rel="noopener noreferrer" title="Open @anthonychimming on GitHub" aria-label="Open Anthony Chimming GitHub profile"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .7A11.3 11.3 0 0 0 8.43 22.72c.57.1.78-.25.78-.55v-2.16c-3.18.69-3.85-1.35-3.85-1.35-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.68 1.24 3.33.95.1-.74.4-1.24.73-1.53-2.54-.29-5.21-1.27-5.21-5.65 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.45.11-3.03 0 0 .96-.31 3.12 1.17A10.8 10.8 0 0 1 12 6.92c.96 0 1.92.13 2.82.38 2.16-1.48 3.12-1.17 3.12-1.17.62 1.58.23 2.74.11 3.03.74.8 1.18 1.82 1.18 3.07 0 4.39-2.68 5.35-5.23 5.64.41.36.78 1.06.78 2.14v3.16c0 .3.21.66.79.55A11.3 11.3 0 0 0 12 .7Z"/></svg></a><button id="helpBtn" class="icon ghost" title="Help" aria-label="Help">?</button></div><input id="imageInput" type="file" accept="image/*" hidden><input id="filterInput" type="file" accept=".json,.afs,application/json,text/plain" hidden></header>
 <main class="workspace">
 <section class="preview-pane"><div class="preview-toolbar"><div class="segmented" id="viewMode"><button data-view="filtered" class="active" aria-pressed="true">Filtered</button><button data-view="original" aria-pressed="false">Original</button><button data-view="split" aria-pressed="false">Split</button></div><div class="spacer"></div><button id="zoomOut" class="icon" title="Zoom out" aria-label="Zoom out">−</button><button id="zoomFit">Fit</button><button id="zoomIn" class="icon" title="Zoom in" aria-label="Zoom in">+</button><span id="zoomLabel" style="min-width:40px;text-align:right;color:var(--muted);font-size:12px">Fit</span></div><div class="canvas-stage" id="canvasStage"><div class="canvas-wrap" id="canvasWrap"><canvas id="displayCanvas"></canvas></div><div class="split-overlay" id="splitOverlay" hidden><div class="split-divider" id="splitDivider" role="slider" tabindex="0" aria-label="Comparison split position" aria-orientation="horizontal" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-valuetext="50% Original, 50% Filtered"><span class="split-handle-target" aria-hidden="true"><span class="split-handle"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"><path d="M9 7 4 12 9 17M15 7 20 12 15 17"/></svg></span></span></div></div><div class="drop-overlay" id="dropOverlay"><div class="drop-card"><b>Drop image here</b><span>PNG, JPEG, WebP or another browser-supported image</span></div></div><div class="render-overlay" id="renderOverlay" aria-hidden="true"><div class="render-card"><strong>Rendering filter…</strong><span>Inputs are temporarily locked while the image is processed. Press <kbd>Esc</kbd> to cancel.</span><div class="progress-bar" role="progressbar" aria-label="Render progress" aria-valuemin="0" aria-valuemax="100"><div class="progress-fill" id="progressFill"></div></div><div class="progress-meta"><span id="progressPercent">0%</span><span id="progressRows">Preparing…</span></div></div></div></div></section>
 <aside class="sidebar ui-lock-panel"><div class="sidebar-head"><div id="workspaceMode" class="workspace-mode" role="tablist" aria-label="Workspace mode"><button id="exploreModeTab" type="button" role="tab" aria-selected="true" aria-controls="explorePanel" data-workspace-mode="explore">Explore</button><button id="authorModeTab" type="button" role="tab" aria-selected="false" aria-controls="authorPanel" data-workspace-mode="author" tabindex="-1">Author</button></div></div><div class="sidebar-scroll">
@@ -1068,145 +1074,6 @@ const contributedPresetDefinitions=[
     ]
   },
   {
-    "id": "differenceclouds",
-    "name": "Difference Clouds",
-    "description": "Generates soft FBM cloud fields and applies difference blending against the source image. Cloud Scale controls structure size, Cloud Contrast adjusts the harshness of the cloud field, Seed regenerates the pattern, and Effect Mix controls blend strength.",
-    "author": "",
-    "tags": [
-      "Noise",
-      "Procedural",
-      "Texture"
-    ],
-    "controls": [
-      {
-        "label": "Cloud Scale",
-        "value": 80,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 16,
-          "displayMax": 220,
-          "step": 1,
-          "format": "number",
-          "unit": "px"
-        }
-      },
-      {
-        "label": "Cloud Contrast",
-        "value": 31.166666666666664,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0.6,
-          "displayMax": 2.4,
-          "step": 0.01,
-          "format": "number",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Seed",
-        "value": 18.440188037607523,
-        "ui": {
-          "widget": "seed",
-          "displayMin": 1,
-          "displayMax": 9999,
-          "step": 1,
-          "format": "integer",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Effect Mix",
-        "value": 255,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 100,
-          "step": 1,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Control 5",
-        "value": 128,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 255,
-          "step": 1,
-          "format": "number",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Control 6",
-        "value": 128,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 255,
-          "step": 1,
-          "format": "number",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Control 7",
-        "value": 128,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 255,
-          "step": 1,
-          "format": "number",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Control 8",
-        "value": 128,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 255,
-          "step": 1,
-          "format": "number",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Control 9",
-        "value": 128,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 255,
-          "step": 1,
-          "format": "number",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Control 10",
-        "value": 128,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 255,
-          "step": 1,
-          "format": "number",
-          "unit": ""
-        }
-      }
-    ],
-    "f": [
-      "difference(r,clamp((fbm(x,y,val(0,16,220),5,2,0.5,round(val(2,1,9999)))-0.5)*val(1,0.6,2.4)+0.5,0,1)*255,ctl(3))",
-      "difference(g,clamp((fbm(x+173,y+59,val(0,16,220),5,2,0.5,round(val(2,1,9999))+101)-0.5)*val(1,0.6,2.4)+0.5,0,1)*255,ctl(3))",
-      "difference(b,clamp((fbm(x+347,y+281,val(0,16,220),5,2,0.5,round(val(2,1,9999))+202)-0.5)*val(1,0.6,2.4)+0.5,0,1)*255,ctl(3))",
-      "a"
-    ]
-  },
-  {
     "id": "linearprismecho",
     "name": "Linear Prism Echo",
     "description": "Creates a linear prism-lens echo using the source plus three progressively faded, directional bilinear samples. Echo Spacing controls the separation, Angle rotates the echo train, Echo Fade controls attenuation, Chromatic Dispersion slightly varies the offset per RGB channel, and Effect Mix blends the result with the original.",
@@ -1762,146 +1629,6 @@ const contributedPresetDefinitions=[
       "lerp(c,clamp(lerp(srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),z),(srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),0)*299+srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),1)*587+srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),2)*114)/1000,val(6,0,1))+(srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy))))+(z-1)*val(4,0,16),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),z)-srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),z))*val(5,0,2),0,255),ctl(9))",
       "lerp(c,clamp(lerp(srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),z),(srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),0)*299+srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),1)*587+srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),2)*114)/1000,val(6,0,1))+(srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy))))+(z-1)*val(4,0,16),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),z)-srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),z))*val(5,0,2),0,255),ctl(9))",
       "lerp(c,clamp(lerp(srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),z),(srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),0)*299+srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),1)*587+srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),2)*114)/1000,val(6,0,1))+(srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy))))+(z-1)*val(4,0,16),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),z)-srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),z))*val(5,0,2),0,255),ctl(9))",
-      "a"
-    ]
-  },
-  {
-    "id": "teallimemodularweave",
-    "name": "Teal Lime Modular Weave",
-    "description": "A modular weave. Horizontal Phase and Vertical Phase wrap the pattern. Hue Shift performs a chroma rotation through the original palette. Saturation scales the chroma while preserving each swatch's luminance structure.",
-    "author": "",
-    "tags": [
-      "Pattern",
-      "Textile",
-      "Procedural",
-      "Color"
-    ],
-    "controls": [
-      {
-        "label": "Horizontal Phase",
-        "value": 127.5,
-        "ui": {
-          "widget": "slider",
-          "displayMin": -50,
-          "displayMax": 50,
-          "step": 1,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Vertical Phase",
-        "value": 127.5,
-        "ui": {
-          "widget": "slider",
-          "displayMin": -50,
-          "displayMax": 50,
-          "step": 1,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Hue Shift",
-        "value": 127.5,
-        "ui": {
-          "widget": "slider",
-          "displayMin": -180,
-          "displayMax": 180,
-          "step": 1,
-          "format": "number",
-          "unit": "deg"
-        }
-      },
-      {
-        "label": "Saturation",
-        "value": 127.5,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 200,
-          "step": 1,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Seed",
-        "value": 157.31546309261853,
-        "ui": {
-          "widget": "seed",
-          "displayMin": 1,
-          "displayMax": 9999,
-          "step": 1,
-          "format": "integer",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Control 6",
-        "value": 128,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 255,
-          "step": 1,
-          "format": "number",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Control 7",
-        "value": 128,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 255,
-          "step": 1,
-          "format": "number",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Control 8",
-        "value": 128,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 255,
-          "step": 1,
-          "format": "number",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Control 9",
-        "value": 128,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 255,
-          "step": 1,
-          "format": "number",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Control 10",
-        "value": 128,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 255,
-          "step": 1,
-          "format": "number",
-          "unit": ""
-        }
-      }
-    ],
-    "f": [
-      "clamp(gradient3((floor(wrap(ny+val(1,-0.5,0.5),1)*16)<9?(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<3?wrap(2-floor(wrap(nx+val(0,-0.5,0.5),1)*5)-(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2)+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3):wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)-2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<2?wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)+1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0),3):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==2?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3):(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==3?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0):wrap(2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3)):(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),3,val(4,1,9999))>0.5?2:0):wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3))))))/2,220.666667,193.333333,146.333333)+gradient3((floor(wrap(ny+val(1,-0.5,0.5),1)*16)<9?(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<3?wrap(2-floor(wrap(nx+val(0,-0.5,0.5),1)*5)-(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2)+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3):wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)-2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<2?wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)+1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0),3):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==2?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3):(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==3?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0):wrap(2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3)):(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),3,val(4,1,9999))>0.5?2:0):wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3))))))/2,10.088497,43.471574,55.633723)*val(3,0,200)/100*cos(gradient3((floor(wrap(ny+val(1,-0.5,0.5),1)*16)<9?(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<3?wrap(2-floor(wrap(nx+val(0,-0.5,0.5),1)*5)-(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2)+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3):wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)-2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<2?wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)+1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0),3):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==2?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3):(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==3?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0):wrap(2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3)):(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),3,val(4,1,9999))>0.5?2:0):wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3))))))/2,123.371593,183.667346,528.943533)+val(2,-512,512))/512,0,255)",
-      "clamp(gradient3((floor(wrap(ny+val(1,-0.5,0.5),1)*16)<9?(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<3?wrap(2-floor(wrap(nx+val(0,-0.5,0.5),1)*5)-(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2)+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3):wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)-2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<2?wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)+1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0),3):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==2?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3):(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==3?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0):wrap(2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3)):(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),3,val(4,1,9999))>0.5?2:0):wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3))))))/2,220.666667,193.333333,146.333333)+gradient3((floor(wrap(ny+val(1,-0.5,0.5),1)*16)<9?(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<3?wrap(2-floor(wrap(nx+val(0,-0.5,0.5),1)*5)-(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2)+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3):wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)-2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<2?wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)+1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0),3):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==2?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3):(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==3?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0):wrap(2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3)):(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),3,val(4,1,9999))>0.5?2:0):wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3))))))/2,10.088497,43.471574,55.633723)*val(3,0,200)/100*cos(gradient3((floor(wrap(ny+val(1,-0.5,0.5),1)*16)<9?(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<3?wrap(2-floor(wrap(nx+val(0,-0.5,0.5),1)*5)-(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2)+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3):wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)-2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<2?wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)+1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0),3):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==2?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3):(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==3?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0):wrap(2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3)):(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),3,val(4,1,9999))>0.5?2:0):wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3))))))/2,123.371593,183.667346,528.943533)+val(2,-512,512)-341.333333)/512,0,255)",
-      "clamp(gradient3((floor(wrap(ny+val(1,-0.5,0.5),1)*16)<9?(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<3?wrap(2-floor(wrap(nx+val(0,-0.5,0.5),1)*5)-(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2)+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3):wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)-2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<2?wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)+1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0),3):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==2?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3):(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==3?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0):wrap(2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3)):(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),3,val(4,1,9999))>0.5?2:0):wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3))))))/2,220.666667,193.333333,146.333333)+gradient3((floor(wrap(ny+val(1,-0.5,0.5),1)*16)<9?(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<3?wrap(2-floor(wrap(nx+val(0,-0.5,0.5),1)*5)-(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2)+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3):wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)-2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<2?wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)+1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0),3):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==2?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3):(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==3?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0):wrap(2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3)):(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),3,val(4,1,9999))>0.5?2:0):wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3))))))/2,10.088497,43.471574,55.633723)*val(3,0,200)/100*cos(gradient3((floor(wrap(ny+val(1,-0.5,0.5),1)*16)<9?(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<3?wrap(2-floor(wrap(nx+val(0,-0.5,0.5),1)*5)-(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2)+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3):wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)-2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<2?wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)+1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0),3):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==2?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3):(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==3?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0):wrap(2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3)):(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),3,val(4,1,9999))>0.5?2:0):wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3))))))/2,123.371593,183.667346,528.943533)+val(2,-512,512)+341.333333)/512,0,255)",
       "a"
     ]
   },
@@ -3313,146 +3040,6 @@ const pass2PresetDefinitions=[
     ]
   },
   {
-    "id": "complementary-split-toning",
-    "name": "Complementary Split Toning",
-    "description": "Applies one hue to highlights and the opposing complementary tint to shadows while keeping the tonal handoff neutral at the Balance point. Highlight Hue rotates the color pair; Shadow Strength and Highlight Strength set each side independently; Balance positions the neutral crossover; Transition Softness controls how gradually each tint fades into the midpoint; Color Intensity sets chroma amplitude; Effect Mix blends the grade with the source. Source alpha is preserved.",
-    "author": "Anthony Chimming",
-    "tags": [
-      "Color",
-      "Tone",
-      "Film",
-      "Portrait"
-    ],
-    "controls": [
-      {
-        "label": "Highlight Hue",
-        "value": 26.916666666666668,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 360,
-          "step": 1,
-          "format": "integer",
-          "unit": "°"
-        }
-      },
-      {
-        "label": "Shadow Strength",
-        "value": 114.75,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 100,
-          "step": 1,
-          "format": "integer",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Highlight Strength",
-        "value": 89.25,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 100,
-          "step": 1,
-          "format": "integer",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Balance",
-        "value": 127.5,
-        "ui": {
-          "widget": "slider",
-          "displayMin": -50,
-          "displayMax": 50,
-          "step": 1,
-          "format": "integer",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Transition Softness",
-        "value": 127.5,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 8,
-          "displayMax": 96,
-          "step": 1,
-          "format": "integer",
-          "unit": "levels"
-        }
-      },
-      {
-        "label": "Color Intensity",
-        "value": 122.39999999999999,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 100,
-          "step": 1,
-          "format": "integer",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Effect Mix",
-        "value": 255,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 100,
-          "step": 1,
-          "format": "integer",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Control 8",
-        "value": 128,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 255,
-          "step": 1,
-          "format": "number",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Control 9",
-        "value": 128,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 255,
-          "step": 1,
-          "format": "number",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Control 10",
-        "value": 128,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 255,
-          "step": 1,
-          "format": "number",
-          "unit": ""
-        }
-      }
-    ],
-    "f": [
-      "lerp(c,clamp(c+(cos(ctl(0)/255*1024)/512)*(ctl(5)/255*96)*(smoothstep(128-val(3,-50,50),128-val(3,-50,50)+val(4,8,96),i)*(ctl(2)/255)-(1-smoothstep(128-val(3,-50,50)-val(4,8,96),128-val(3,-50,50),i))*(ctl(1)/255)),0,255),ctl(6))",
-      "lerp(c,clamp(c+(cos(ctl(0)/255*1024-341.333333333)/512)*(ctl(5)/255*96)*(smoothstep(128-val(3,-50,50),128-val(3,-50,50)+val(4,8,96),i)*(ctl(2)/255)-(1-smoothstep(128-val(3,-50,50)-val(4,8,96),128-val(3,-50,50),i))*(ctl(1)/255)),0,255),ctl(6))",
-      "lerp(c,clamp(c+(cos(ctl(0)/255*1024+341.333333333)/512)*(ctl(5)/255*96)*(smoothstep(128-val(3,-50,50),128-val(3,-50,50)+val(4,8,96),i)*(ctl(2)/255)-(1-smoothstep(128-val(3,-50,50)-val(4,8,96),128-val(3,-50,50),i))*(ctl(1)/255)),0,255),ctl(6))",
-      "a"
-    ]
-  },
-  {
     "id": "duotone-gradient-map",
     "name": "Duotone Gradient Map",
     "description": "Maps source luminance between adjustable black and white points, reshapes midtones with a bias control, and applies a four-stop ramp derived from shadow and highlight RGB colours. Effect Mix blends the grade with the source.",
@@ -3732,146 +3319,6 @@ const pass2PresetDefinitions=[
       "lerp((ctl(6)<32?238:ctl(6)<96?16:ctl(6)<160?25:ctl(6)<224?16:7),(ctl(6)<32?14:ctl(6)<96?226:ctl(6)<160?255:ctl(6)<224?181:246),(1-smoothstep(val(4,4,24)/200,val(4,4,24)/200+0.015,abs(fract(bias((ctl(9)<128?mandelbrot((1.5*cx*X/(min(X,Y)*val(0,0.8,16))-0.5+val(1,-1.5,1.5)),(1.5*cy*Y/(min(X,Y)*val(0,0.8,16))+val(2,-1.5,1.5)),round(val(7,64,256))):julia((1.5*cx*X/(min(X,Y)*val(0,0.8,16))+val(1,-1.5,1.5)),(1.5*cy*Y/(min(X,Y)*val(0,0.8,16))+val(2,-1.5,1.5)),-0.8,0.156,round(val(7,64,256)))),val(5,30,75)/100)*round(val(3,8,72))+0.75+val(8,-10,10)/100)-0.5))))",
       "lerp((ctl(6)<32?224:ctl(6)<96?38:ctl(6)<160?23:ctl(6)<224?34:8),(ctl(6)<32?12:ctl(6)<96?255:ctl(6)<160?54:ctl(6)<224?153:242),(1-smoothstep(val(4,4,24)/200,val(4,4,24)/200+0.015,abs(fract(bias((ctl(9)<128?mandelbrot((1.5*cx*X/(min(X,Y)*val(0,0.8,16))-0.5+val(1,-1.5,1.5)),(1.5*cy*Y/(min(X,Y)*val(0,0.8,16))+val(2,-1.5,1.5)),round(val(7,64,256))):julia((1.5*cx*X/(min(X,Y)*val(0,0.8,16))+val(1,-1.5,1.5)),(1.5*cy*Y/(min(X,Y)*val(0,0.8,16))+val(2,-1.5,1.5)),-0.8,0.156,round(val(7,64,256)))),val(5,30,75)/100)*round(val(3,8,72))+0.75+val(8,-10,10)/100)-0.5))))",
       "a"
-    ]
-  },
-  {
-    "id": "fractal-displacement",
-    "name": "Julia Fractal Displacement",
-    "description": "Warps the complete source image, including alpha, with two related Julia escape-time fields used as hidden X/Y displacement maps. The default Julia constant is tuned for filamentary boundary structure rather than a literal fractal picture, producing sharp contour-driven folds and tearing-like bends while remaining deterministic. Strength sets displacement in pixels; Field Scale and Detail control fractal density; Angle rotates the field; Julia Real and Julia Imag change the Julia-set topology; Contour Bands increases fold frequency; Field Split decorrelates the X/Y maps; Direction Bias favors one displacement axis; Effect Mix blends back to the source.",
-    "author": "Anthony Chimming",
-    "tags": [
-      "Distortion",
-      "Fractal",
-      "Procedural",
-      "Texture"
-    ],
-    "controls": [
-      {
-        "label": "Strength",
-        "value": 59.5,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 120,
-          "step": 1,
-          "format": "integer",
-          "unit": "px"
-        }
-      },
-      {
-        "label": "Field Scale",
-        "value": 136.6071428571429,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0.6,
-          "displayMax": 2,
-          "step": 0.01,
-          "format": "number",
-          "unit": "x"
-        }
-      },
-      {
-        "label": "Detail",
-        "value": 114.3103448275862,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 24,
-          "displayMax": 256,
-          "step": 1,
-          "format": "integer",
-          "unit": "iter"
-        }
-      },
-      {
-        "label": "Angle",
-        "value": 21.958333333333332,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 360,
-          "step": 1,
-          "format": "integer",
-          "unit": "deg"
-        }
-      },
-      {
-        "label": "Julia Real",
-        "value": 39.23076923076922,
-        "ui": {
-          "widget": "slider",
-          "displayMin": -1,
-          "displayMax": 0.3,
-          "step": 0.01,
-          "format": "number",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Julia Imag",
-        "value": 160.65,
-        "ui": {
-          "widget": "slider",
-          "displayMin": -0.6,
-          "displayMax": 0.6,
-          "step": 0.01,
-          "format": "number",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Contour Bands",
-        "value": 72.85714285714285,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 1,
-          "displayMax": 8,
-          "step": 1,
-          "format": "integer",
-          "unit": "bands"
-        }
-      },
-      {
-        "label": "Field Split",
-        "value": 95.2,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 0.75,
-          "step": 0.01,
-          "format": "number",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Direction Bias",
-        "value": 127.5,
-        "ui": {
-          "widget": "slider",
-          "displayMin": -100,
-          "displayMax": 100,
-          "step": 1,
-          "format": "integer",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Effect Mix",
-        "value": 255,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 100,
-          "step": 1,
-          "format": "integer",
-          "unit": "%"
-        }
-      }
-    ],
-    "f": [
-      "lerp(c,srcLinear(x+sin((julia((r2x(val(3,0,360)*1024/360,cx*X/min(X,Y))-r2y(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2),(r2y(val(3,0,360)*1024/360,cx*X/min(X,Y))+r2x(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2),val(4,-1,0.3),val(5,-0.6,0.6),round(val(2,24,256))))*round(val(6,1,8))*1024)/512*val(0,0,120)*(1+val(8,-1,1)*0.65),y+sin((julia(((r2x(val(3,0,360)*1024/360,cx*X/min(X,Y))-r2y(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2))+val(7,0,0.75),((r2y(val(3,0,360)*1024/360,cx*X/min(X,Y))+r2x(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2))-val(7,0,0.75)*0.73,val(4,-1,0.3),val(5,-0.6,0.6),round(val(2,24,256))))*round(val(6,1,8))*1024)/512*val(0,0,120)*(1-val(8,-1,1)*0.65),z),ctl(9))",
-      "lerp(c,srcLinear(x+sin((julia((r2x(val(3,0,360)*1024/360,cx*X/min(X,Y))-r2y(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2),(r2y(val(3,0,360)*1024/360,cx*X/min(X,Y))+r2x(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2),val(4,-1,0.3),val(5,-0.6,0.6),round(val(2,24,256))))*round(val(6,1,8))*1024)/512*val(0,0,120)*(1+val(8,-1,1)*0.65),y+sin((julia(((r2x(val(3,0,360)*1024/360,cx*X/min(X,Y))-r2y(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2))+val(7,0,0.75),((r2y(val(3,0,360)*1024/360,cx*X/min(X,Y))+r2x(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2))-val(7,0,0.75)*0.73,val(4,-1,0.3),val(5,-0.6,0.6),round(val(2,24,256))))*round(val(6,1,8))*1024)/512*val(0,0,120)*(1-val(8,-1,1)*0.65),z),ctl(9))",
-      "lerp(c,srcLinear(x+sin((julia((r2x(val(3,0,360)*1024/360,cx*X/min(X,Y))-r2y(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2),(r2y(val(3,0,360)*1024/360,cx*X/min(X,Y))+r2x(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2),val(4,-1,0.3),val(5,-0.6,0.6),round(val(2,24,256))))*round(val(6,1,8))*1024)/512*val(0,0,120)*(1+val(8,-1,1)*0.65),y+sin((julia(((r2x(val(3,0,360)*1024/360,cx*X/min(X,Y))-r2y(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2))+val(7,0,0.75),((r2y(val(3,0,360)*1024/360,cx*X/min(X,Y))+r2x(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2))-val(7,0,0.75)*0.73,val(4,-1,0.3),val(5,-0.6,0.6),round(val(2,24,256))))*round(val(6,1,8))*1024)/512*val(0,0,120)*(1-val(8,-1,1)*0.65),z),ctl(9))",
-      "lerp(c,srcLinear(x+sin((julia((r2x(val(3,0,360)*1024/360,cx*X/min(X,Y))-r2y(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2),(r2y(val(3,0,360)*1024/360,cx*X/min(X,Y))+r2x(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2),val(4,-1,0.3),val(5,-0.6,0.6),round(val(2,24,256))))*round(val(6,1,8))*1024)/512*val(0,0,120)*(1+val(8,-1,1)*0.65),y+sin((julia(((r2x(val(3,0,360)*1024/360,cx*X/min(X,Y))-r2y(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2))+val(7,0,0.75),((r2y(val(3,0,360)*1024/360,cx*X/min(X,Y))+r2x(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2))-val(7,0,0.75)*0.73,val(4,-1,0.3),val(5,-0.6,0.6),round(val(2,24,256))))*round(val(6,1,8))*1024)/512*val(0,0,120)*(1-val(8,-1,1)*0.65),z),ctl(9))"
     ]
   },
   {
@@ -4855,146 +4302,6 @@ const pass2PresetDefinitions=[
     ]
   },
   {
-    "id": "red-black-diagonal-plaid",
-    "name": "Red-Black Diagonal Plaid",
-    "description": "Reconstructs the supplied red-and-black plaid: alternating solid colour and black checks with 45-degree colour/black diagonal hatching in the intervening cells. Cell Size sets the square repeat; Stripe Spacing and Black Stripe Width shape the hatch; X/Y Phase translate the complete plaid across its full two-cell repeat; Stripe Offset fine-tunes hatch registration; Hue Rotation rotates the plaid colour; Saturation ranges from grayscale through the default colour to intensified chroma; Effect Mix blends the generated pattern with the source.",
-    "author": "Anthony Chimming",
-    "tags": [
-      "Pattern",
-      "Textile",
-      "Procedural",
-      "Texture"
-    ],
-    "controls": [
-      {
-        "label": "Cell Size",
-        "value": 104.39062500000001,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 8,
-          "displayMax": 24,
-          "step": 0.01,
-          "format": "number",
-          "unit": "% short"
-        }
-      },
-      {
-        "label": "Stripe Spacing",
-        "value": 100.24687499999999,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 8,
-          "displayMax": 24,
-          "step": 0.01,
-          "format": "number",
-          "unit": "% cell"
-        }
-      },
-      {
-        "label": "Black Stripe Width",
-        "value": 170,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 35,
-          "displayMax": 65,
-          "step": 1,
-          "format": "number",
-          "unit": "% cycle"
-        }
-      },
-      {
-        "label": "X Phase",
-        "value": 77.775,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 2,
-          "step": 0.01,
-          "format": "number",
-          "unit": "cells"
-        }
-      },
-      {
-        "label": "Y Phase",
-        "value": 63.75,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 2,
-          "step": 0.01,
-          "format": "number",
-          "unit": "cells"
-        }
-      },
-      {
-        "label": "Stripe Offset",
-        "value": 46.49422673198056,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 100,
-          "step": 0.1,
-          "format": "number",
-          "unit": "% cycle"
-        }
-      },
-      {
-        "label": "Effect Mix",
-        "value": 255,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 100,
-          "step": 1,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Hue Rotation",
-        "value": 127.5,
-        "ui": {
-          "widget": "slider",
-          "displayMin": -180,
-          "displayMax": 180,
-          "step": 1,
-          "format": "integer",
-          "unit": "deg"
-        }
-      },
-      {
-        "label": "Saturation",
-        "value": 127.5,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 200,
-          "step": 1,
-          "format": "integer",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Control 10",
-        "value": 128,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 255,
-          "step": 1,
-          "format": "number",
-          "unit": ""
-        }
-      }
-    ],
-    "f": [
-      "lerp(r,clamp(211*(0.299+1.13983*((-0.14713*(sin((val(7,-180,180)*1024/360))/512)+0.615*(cos((val(7,-180,180)*1024/360))/512))*(val(8,0,200)/100))),0,255)*((1-floor(repeat(x/(min(X,Y)*val(0,8,24)/100)+val(3,0,2),2)))*(1-floor(repeat(y/(min(X,Y)*val(0,8,24)/100)+val(4,0,2),2)))+abs((1-floor(repeat(x/(min(X,Y)*val(0,8,24)/100)+val(3,0,2),2)))-(1-floor(repeat(y/(min(X,Y)*val(0,8,24)/100)+val(4,0,2),2))))*(fract((x+y+(min(X,Y)*val(0,8,24)/100)*(val(3,0,2)+val(4,0,2)))/((min(X,Y)*val(0,8,24)/100)*val(1,8,24)/100)+val(5,0,100)/100)>=val(2,35,65)/100?1:0)),ctl(6))",
-      "lerp(g,clamp(211*(0.299-0.39465*((-0.14713*(cos((val(7,-180,180)*1024/360))/512)-0.615*(sin((val(7,-180,180)*1024/360))/512))*(val(8,0,200)/100))-0.58060*((-0.14713*(sin((val(7,-180,180)*1024/360))/512)+0.615*(cos((val(7,-180,180)*1024/360))/512))*(val(8,0,200)/100))),0,255)*((1-floor(repeat(x/(min(X,Y)*val(0,8,24)/100)+val(3,0,2),2)))*(1-floor(repeat(y/(min(X,Y)*val(0,8,24)/100)+val(4,0,2),2)))+abs((1-floor(repeat(x/(min(X,Y)*val(0,8,24)/100)+val(3,0,2),2)))-(1-floor(repeat(y/(min(X,Y)*val(0,8,24)/100)+val(4,0,2),2))))*(fract((x+y+(min(X,Y)*val(0,8,24)/100)*(val(3,0,2)+val(4,0,2)))/((min(X,Y)*val(0,8,24)/100)*val(1,8,24)/100)+val(5,0,100)/100)>=val(2,35,65)/100?1:0)),ctl(6))",
-      "lerp(b,clamp(211*(0.299+2.03211*((-0.14713*(cos((val(7,-180,180)*1024/360))/512)-0.615*(sin((val(7,-180,180)*1024/360))/512))*(val(8,0,200)/100))),0,255)*((1-floor(repeat(x/(min(X,Y)*val(0,8,24)/100)+val(3,0,2),2)))*(1-floor(repeat(y/(min(X,Y)*val(0,8,24)/100)+val(4,0,2),2)))+abs((1-floor(repeat(x/(min(X,Y)*val(0,8,24)/100)+val(3,0,2),2)))-(1-floor(repeat(y/(min(X,Y)*val(0,8,24)/100)+val(4,0,2),2))))*(fract((x+y+(min(X,Y)*val(0,8,24)/100)*(val(3,0,2)+val(4,0,2)))/((min(X,Y)*val(0,8,24)/100)*val(1,8,24)/100)+val(5,0,100)/100)>=val(2,35,65)/100?1:0)),ctl(6))",
-      "a"
-    ]
-  },
-  {
     "id": "selective-color-isolate",
     "name": "Selective Color Isolate",
     "description": "Isolates a chosen colour family while converting the rest of the image to monochrome. The selector compares normalized opponent-chroma direction, so tints and shaded versions of the target colour stay selected more reliably than simple RGB chromaticity matching. Minimum Saturation suppresses neutral spill and an automatic deep-shadow gate reduces dark chroma noise. Use Target Red/Green/Blue to choose the accent colour, Tolerance and Edge Softness to shape the selection, Mono Contrast/Brightness for the background, Color Boost for the retained colour, and Effect Mix for the final strength. Best suited to distinctly coloured subjects rather than neutral grey/white isolation.",
@@ -5417,6 +4724,574 @@ const pass2PresetDefinitions=[
 ];
 
 
+/* src/presets/pass3-builtins.js */
+/**
+ * Filter FabJS pass-three built-in filters, preserved from the supplied native exports.
+ * Licensed GPL-2.0-or-later. See LICENSE and README.md.
+ */
+const pass3PresetDefinitions=[
+  {
+    "id": "warped-sdf-bloom-contour",
+    "name": "Warped SDF Contour Vortex",
+    "description": "A single-pass periodic polar-distance field with deterministic noise warping. Warp Strength and Warp Scale shape the deformation; Contour Spacing and Spiral Arms control topology; Band Balance adjusts the warm-violet proportion; Hue Shift rotates the palette impression; Seed generates repeatable variations; and Effect Mix blends the generated result with the source.",
+    "author": "Anthony Chimming",
+    "tags": [
+      "Procedural",
+      "Distortion",
+      "Pattern",
+      "Color"
+    ],
+    "controls": [
+      {
+        "label": "Warp Strength",
+        "value": 157.25,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 60,
+          "step": 0.5,
+          "format": "number",
+          "unit": "px"
+        }
+      },
+      {
+        "label": "Contour Spacing",
+        "value": 194.02173913043478,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 14,
+          "displayMax": 60,
+          "step": 1,
+          "format": "number",
+          "unit": "px"
+        }
+      },
+      {
+        "label": "Spiral Arms",
+        "value": 153,
+        "ui": {
+          "widget": "number",
+          "displayMin": -5,
+          "displayMax": 5,
+          "step": 1,
+          "format": "integer",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Warp Scale",
+        "value": 247.15384615384616,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 20,
+          "displayMax": 150,
+          "step": 1,
+          "format": "number",
+          "unit": "px"
+        }
+      },
+      {
+        "label": "Band Balance",
+        "value": 10.200000000000001,
+        "ui": {
+          "widget": "slider",
+          "displayMin": -100,
+          "displayMax": 100,
+          "step": 1,
+          "format": "number",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Hue Shift",
+        "value": 144.43359375,
+        "ui": {
+          "widget": "slider",
+          "displayMin": -128,
+          "displayMax": 128,
+          "step": 1,
+          "format": "number",
+          "unit": "levels"
+        }
+      },
+      {
+        "label": "Seed",
+        "value": 15.583616723344669,
+        "ui": {
+          "widget": "seed",
+          "displayMin": 1,
+          "displayMax": 9999,
+          "step": 1,
+          "format": "integer",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Effect Mix",
+        "value": 255,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 100,
+          "step": 1,
+          "format": "number",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Control 9",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 10",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      }
+    ],
+    "f": [
+      "lerp(r,clamp(gradient3(smoothstep(-0.24,0.24,sin(m/val(1,14,60)*1024+d*val(2,-5,5)+((valueNoise(x,y,val(3,20,150),val(6,1,9999))-0.5)*2+(valueNoise(x+317,y-211,val(3,20,150)*0.55,val(6,1,9999))-0.5)*0.7)*val(0,0,60)/val(1,14,60)*1024)/512+val(4,-0.35,0.35)),clamp(62+val(5,-128,128)*0.55,0,255),clamp(122+val(5,-128,128)*0.30,0,255),clamp(246-val(5,-128,128)*0.12,0,255)),0,255),ctl(7))",
+      "lerp(g,clamp(gradient3(smoothstep(-0.24,0.24,sin(m/val(1,14,60)*1024+d*val(2,-5,5)+((valueNoise(x,y,val(3,20,150),val(6,1,9999))-0.5)*2+(valueNoise(x+317,y-211,val(3,20,150)*0.55,val(6,1,9999))-0.5)*0.7)*val(0,0,60)/val(1,14,60)*1024)/512+val(4,-0.35,0.35)),clamp(18-val(5,-128,128)*0.22,0,255),clamp(42+val(5,-128,128)*0.55,0,255),clamp(92+val(5,-128,128)*0.42,0,255)),0,255),ctl(7))",
+      "lerp(b,clamp(gradient3(smoothstep(-0.24,0.24,sin(m/val(1,14,60)*1024+d*val(2,-5,5)+((valueNoise(x,y,val(3,20,150),val(6,1,9999))-0.5)*2+(valueNoise(x+317,y-211,val(3,20,150)*0.55,val(6,1,9999))-0.5)*0.7)*val(0,0,60)/val(1,14,60)*1024)/512+val(4,-0.35,0.35)),clamp(138-val(5,-128,128)*0.45,0,255),clamp(128-val(5,-128,128)*0.15,0,255),clamp(88+val(5,-128,128)*0.58,0,255)),0,255),ctl(7))",
+      "a"
+    ]
+  },
+  {
+    "id": "kaleidoscope-mirror",
+    "name": "Kaleidoscope Mirror",
+    "description": "Folds the source into radial mirrored sectors around the image center. Segments sets the even wedge count, Rotation turns the fold, Radius / Zoom changes radial sampling scale, Mix blends with the original, Twist spirals the sectors progressively with radius, and Radial Offset shifts which concentric source region feeds the fold. Transparency follows the same mirrored geometry.",
+    "author": "Anthony Chimming",
+    "tags": [
+      "Distortion",
+      "Pattern",
+      "Shapes"
+    ],
+    "controls": [
+      {
+        "label": "Segments",
+        "value": 51,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 4,
+          "displayMax": 24,
+          "step": 2,
+          "format": "integer",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Rotation",
+        "value": 0,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 360,
+          "step": 1,
+          "format": "number",
+          "unit": "deg"
+        }
+      },
+      {
+        "label": "Radius / Zoom",
+        "value": 63.75,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0.5,
+          "displayMax": 2.5,
+          "step": 0.05,
+          "format": "number",
+          "unit": "x"
+        }
+      },
+      {
+        "label": "Mix",
+        "value": 255,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 100,
+          "step": 1,
+          "format": "number",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Twist",
+        "value": 127.5,
+        "ui": {
+          "widget": "slider",
+          "displayMin": -180,
+          "displayMax": 180,
+          "step": 1,
+          "format": "number",
+          "unit": "deg"
+        }
+      },
+      {
+        "label": "Radial Offset",
+        "value": 127.5,
+        "ui": {
+          "widget": "slider",
+          "displayMin": -25,
+          "displayMax": 25,
+          "step": 1,
+          "format": "number",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Control 7",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 8",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 9",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 10",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      }
+    ],
+    "f": [
+      "lerp(c,rad(mirror(d+val(1,0,1024)+val(4,-512,512)*(m/M),1024/(round(val(0,4,24)/2)*2)),clamp(m/val(2,0.5,2.5)+val(5,-0.25,0.25)*min(X,Y),0,M),z),ctl(3))",
+      "lerp(c,rad(mirror(d+val(1,0,1024)+val(4,-512,512)*(m/M),1024/(round(val(0,4,24)/2)*2)),clamp(m/val(2,0.5,2.5)+val(5,-0.25,0.25)*min(X,Y),0,M),z),ctl(3))",
+      "lerp(c,rad(mirror(d+val(1,0,1024)+val(4,-512,512)*(m/M),1024/(round(val(0,4,24)/2)*2)),clamp(m/val(2,0.5,2.5)+val(5,-0.25,0.25)*min(X,Y),0,M),z),ctl(3))",
+      "lerp(c,rad(mirror(d+val(1,0,1024)+val(4,-512,512)*(m/M),1024/(round(val(0,4,24)/2)*2)),clamp(m/val(2,0.5,2.5)+val(5,-0.25,0.25)*min(X,Y),0,M),z),ctl(3))"
+    ]
+  },
+  {
+    "id": "photoshop-hue-saturation-master",
+    "name": "Photoshop-Style Hue/Saturation",
+    "description": "Photoshop-style Master Hue/Saturation adjustment. Hue rotates color from -180° to +180°. Saturation ranges from full desaturation at -100 through the source saturation at 0 to maximum saturation at +100 while achromatic pixels remain neutral. Lightness fades the adjusted RGB result toward black for negative values and toward white for positive values, matching Photoshop's Master Lightness response more closely than a simple HSL-lightness replacement. Source alpha is preserved. Per-color ranges and Colorize are intentionally not included.",
+    "author": "Anthony Chimming",
+    "tags": [
+      "Color",
+      "Tone",
+      "Utility"
+    ],
+    "controls": [
+      {
+        "label": "Hue",
+        "value": 127.5,
+        "ui": {
+          "widget": "slider",
+          "displayMin": -180,
+          "displayMax": 180,
+          "step": 1,
+          "format": "integer",
+          "unit": "°"
+        }
+      },
+      {
+        "label": "Saturation",
+        "value": 127.5,
+        "ui": {
+          "widget": "slider",
+          "displayMin": -100,
+          "displayMax": 100,
+          "step": 1,
+          "format": "integer",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Lightness",
+        "value": 127.5,
+        "ui": {
+          "widget": "slider",
+          "displayMin": -100,
+          "displayMax": 100,
+          "step": 1,
+          "format": "integer",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 4",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 5",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 6",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 7",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 8",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 9",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 10",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      }
+    ],
+    "f": [
+      "clamp((255*(((max(r,max(g,b))+min(r,min(g,b)))/510)+((max(r,max(g,b))-min(r,min(g,b)))==0?0:((max(r,max(g,b))-min(r,min(g,b)))/(255-abs(max(r,max(g,b))+min(r,min(g,b))-255)))*(1-abs(val(1,-100,100))/100)+max(val(1,-100,100),0)/100)*min(((max(r,max(g,b))+min(r,min(g,b)))/510),1-((max(r,max(g,b))+min(r,min(g,b)))/510))*(2*clamp(abs(wrap(((max(r,max(g,b))-min(r,min(g,b)))==0?0:max(r,max(g,b))==r?wrap((g-b)/(max(r,max(g,b))-min(r,min(g,b))),6):max(r,max(g,b))==g?(b-r)/(max(r,max(g,b))-min(r,min(g,b)))+2:(r-g)/(max(r,max(g,b))-min(r,min(g,b)))+4)+val(0,-180,180)/60+(z==0?0:z==1?4:2),6)-3)-1,0,1)-1)))*(1-abs(val(2,-100,100))/100)+255*max(val(2,-100,100),0)/100,0,255)",
+      "clamp((255*(((max(r,max(g,b))+min(r,min(g,b)))/510)+((max(r,max(g,b))-min(r,min(g,b)))==0?0:((max(r,max(g,b))-min(r,min(g,b)))/(255-abs(max(r,max(g,b))+min(r,min(g,b))-255)))*(1-abs(val(1,-100,100))/100)+max(val(1,-100,100),0)/100)*min(((max(r,max(g,b))+min(r,min(g,b)))/510),1-((max(r,max(g,b))+min(r,min(g,b)))/510))*(2*clamp(abs(wrap(((max(r,max(g,b))-min(r,min(g,b)))==0?0:max(r,max(g,b))==r?wrap((g-b)/(max(r,max(g,b))-min(r,min(g,b))),6):max(r,max(g,b))==g?(b-r)/(max(r,max(g,b))-min(r,min(g,b)))+2:(r-g)/(max(r,max(g,b))-min(r,min(g,b)))+4)+val(0,-180,180)/60+(z==0?0:z==1?4:2),6)-3)-1,0,1)-1)))*(1-abs(val(2,-100,100))/100)+255*max(val(2,-100,100),0)/100,0,255)",
+      "clamp((255*(((max(r,max(g,b))+min(r,min(g,b)))/510)+((max(r,max(g,b))-min(r,min(g,b)))==0?0:((max(r,max(g,b))-min(r,min(g,b)))/(255-abs(max(r,max(g,b))+min(r,min(g,b))-255)))*(1-abs(val(1,-100,100))/100)+max(val(1,-100,100),0)/100)*min(((max(r,max(g,b))+min(r,min(g,b)))/510),1-((max(r,max(g,b))+min(r,min(g,b)))/510))*(2*clamp(abs(wrap(((max(r,max(g,b))-min(r,min(g,b)))==0?0:max(r,max(g,b))==r?wrap((g-b)/(max(r,max(g,b))-min(r,min(g,b))),6):max(r,max(g,b))==g?(b-r)/(max(r,max(g,b))-min(r,min(g,b)))+2:(r-g)/(max(r,max(g,b))-min(r,min(g,b)))+4)+val(0,-180,180)/60+(z==0?0:z==1?4:2),6)-3)-1,0,1)-1)))*(1-abs(val(2,-100,100))/100)+255*max(val(2,-100,100),0)/100,0,255)",
+      "a"
+    ]
+  },
+  {
+    "id": "versatile-stripes",
+    "name": "Versatile Stripes",
+    "description": "Creates crisp repeating two-colour stripes with independent stripe and background colours. Stripe Width and Gap Width range from fine pinstripes to broad bands; Angle rotates the pattern from -180° to 180°, and Offset shifts the stripe phase in either direction. Designed for posters, packaging, textiles, retro graphics, and layout backgrounds.",
+    "author": "Anthony Chimming",
+    "tags": [
+      "Pattern",
+      "Shapes",
+      "Procedural",
+      "Print",
+      "Retro"
+    ],
+    "controls": [
+      {
+        "label": "Stripe Width",
+        "value": 29.5,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 2,
+          "displayMax": 512,
+          "step": 1,
+          "format": "integer",
+          "unit": "px"
+        }
+      },
+      {
+        "label": "Gap Width",
+        "value": 30.380859375,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 512,
+          "step": 1,
+          "format": "integer",
+          "unit": "px"
+        }
+      },
+      {
+        "label": "Angle",
+        "value": 127.5,
+        "ui": {
+          "widget": "slider",
+          "displayMin": -180,
+          "displayMax": 180,
+          "step": 1,
+          "format": "integer",
+          "unit": "°"
+        }
+      },
+      {
+        "label": "Offset",
+        "value": 127.5,
+        "ui": {
+          "widget": "slider",
+          "displayMin": -50,
+          "displayMax": 50,
+          "step": 1,
+          "format": "integer",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Stripe Red",
+        "value": 255,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "integer",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Stripe Green",
+        "value": 235,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "integer",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Stripe Blue",
+        "value": 0,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "integer",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Background Red",
+        "value": 254,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "integer",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Background Green",
+        "value": 93,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "integer",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Background Blue",
+        "value": 124,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "integer",
+          "unit": ""
+        }
+      }
+    ],
+    "f": [
+      "ctl(7)+(ctl(4)-ctl(7))*(val(1,0,512)<=0?1:1-smoothstep(val(0,2,512)/2-0.5,val(0,2,512)/2+0.5,mirrorRepeat((((x-X/2)*cos(val(2,-180,180)*1024/360+256)+(y-Y/2)*sin(val(2,-180,180)*1024/360+256))/512-val(0,2,512)/2+(val(3,-50,50)*(val(0,2,512)+val(1,0,512))/100)),(val(0,2,512)+val(1,0,512))/2)))",
+      "ctl(8)+(ctl(5)-ctl(8))*(val(1,0,512)<=0?1:1-smoothstep(val(0,2,512)/2-0.5,val(0,2,512)/2+0.5,mirrorRepeat((((x-X/2)*cos(val(2,-180,180)*1024/360+256)+(y-Y/2)*sin(val(2,-180,180)*1024/360+256))/512-val(0,2,512)/2+(val(3,-50,50)*(val(0,2,512)+val(1,0,512))/100)),(val(0,2,512)+val(1,0,512))/2)))",
+      "ctl(9)+(ctl(6)-ctl(9))*(val(1,0,512)<=0?1:1-smoothstep(val(0,2,512)/2-0.5,val(0,2,512)/2+0.5,mirrorRepeat((((x-X/2)*cos(val(2,-180,180)*1024/360+256)+(y-Y/2)*sin(val(2,-180,180)*1024/360+256))/512-val(0,2,512)/2+(val(3,-50,50)*(val(0,2,512)+val(1,0,512))/100)),(val(0,2,512)+val(1,0,512))/2)))",
+      "a"
+    ]
+  }
+];
+
+
 /* src/presets/builtins.js */
 /**
  * Filter FabJS
@@ -5425,36 +5300,16 @@ const pass2PresetDefinitions=[
  */
 
 
+
 const BUILTIN_AUTHOR='Anthony Chimming';
 
 const richControl=(label,value,widget,displayMin,displayMax,step=1,format='number',unit='')=>({label,value,ui:{widget,displayMin,displayMax,step,format,unit}});
-const unusedControl=index=>richControl(`Control ${index+1}`,128,'slider',0,255);
 const sierpinskiMask=`sierpinski(x,y,X/2,Y/2,min(X,Y)*val(1,0.5,0.96),val(0,2,9),val(2,0,2.5))`;
 const sierpinskiShade=`(0.76+linearGrad(x,y,0,Y*0.15,0,Y*0.85)*0.24)`;
 const sierpinskiFormulas=[
   `lerp(r,ctl(6)+(ctl(3)-ctl(6))*${sierpinskiMask}*${sierpinskiShade},ctl(7))`,
   `lerp(g,ctl(6)+(ctl(4)-ctl(6))*${sierpinskiMask}*${sierpinskiShade},ctl(7))`,
   `lerp(b,ctl(6)+(ctl(5)-ctl(6))*${sierpinskiMask}*${sierpinskiShade},ctl(7))`,
-  'a'
-];
-const warpedSdfScale='val(1,20,110)',warpedSdfAmount='val(0,0,30)',warpedSdfSeed='val(2,1,9999)';
-const warpedSdfX=`x+(valueNoise(x,y,${warpedSdfScale},${warpedSdfSeed})-0.5)*${warpedSdfAmount}`;
-const warpedSdfY=`y+(valueNoise(x+431,y+719,${warpedSdfScale},${warpedSdfSeed})-0.5)*${warpedSdfAmount}`;
-const warpedSdfSize='min(X,Y)*val(3,0.12,0.32)',warpedSdfSmooth='val(4,0,28)',warpedSdfCutout='min(X,Y)*val(5,0.03,0.16)';
-const warpedSdfOuter=`sdfSmoothUnion(sdfCircle(${warpedSdfX},${warpedSdfY},X/2,Y/2,${warpedSdfSize}),sdfBox(${warpedSdfX},${warpedSdfY},X/2,Y/2,${warpedSdfSize}*1.55,${warpedSdfSize}*1.05,128),${warpedSdfSmooth})`;
-const warpedSdfField=`sdfSubtract(${warpedSdfOuter},sdfCircle(${warpedSdfX},${warpedSdfY},X/2,Y/2,${warpedSdfCutout}))`;
-const warpedSdfFill=`sdfFill(${warpedSdfField},val(7,0,3))`,warpedSdfOutline=`sdfOutline(${warpedSdfField},val(6,0.5,8),val(7,0,3))`,warpedSdfHue='val(8,0,1)';
-const warpedSdfFormulas=[
-  `lerp(r,clamp(10+${warpedSdfFill}*(80+${warpedSdfHue}*130),0,255),ctl(9))`,
-  `lerp(g,clamp(12+${warpedSdfOutline}*(70+${warpedSdfHue}*130),0,255),ctl(9))`,
-  `lerp(b,clamp(22+${warpedSdfFill}*(230-${warpedSdfHue}*80),0,255),ctl(9))`,
-  'a'
-];
-const benchmarkNoiseScale='val(0,10,96)',benchmarkNoiseOctaves='val(1,2,8)',benchmarkNoiseSeed='val(2,1,9999)',benchmarkNoiseContrast='val(3,0.65,1.65)';
-const benchmarkNoiseFormulas=[
-  `lerp(r,clamp(fbm(x,y,${benchmarkNoiseScale},${benchmarkNoiseOctaves},2,0.5,${benchmarkNoiseSeed})*255*${benchmarkNoiseContrast},0,255),ctl(9))`,
-  `lerp(g,clamp(turbulence(x+37,y+71,${benchmarkNoiseScale},${benchmarkNoiseOctaves},${benchmarkNoiseSeed})*255*${benchmarkNoiseContrast},0,255),ctl(9))`,
-  `lerp(b,clamp(ridged(x-53,y+29,${benchmarkNoiseScale},${benchmarkNoiseOctaves},${benchmarkNoiseSeed})*255*${benchmarkNoiseContrast},0,255),ctl(9))`,
   'a'
 ];
 const presetDescriptions={
@@ -5464,10 +5319,8 @@ const presetDescriptions={
   analoggrain:'Adds deterministic monochrome grain to simulate a lightly textured analog image. Adjust Amount for intensity and Seed for a different grain pattern.',
   brightcontrast:'Adjusts image brightness and contrast while preserving colour relationships and alpha.',
   chromasolar:'Solarizes each colour channel around a shared threshold with adjustable channel separation.',
-  digitalglitch:'Displaces RGB channels in deterministic rectangular blocks. Block dimensions, displacement, and seed control the glitch structure.',
   fractalclouds:'Blends the image with deterministic multi-octave fractal noise. Adjust scale, seed, and mix to create cloud-like texture.',
   sierpinskifractal:'Generates a recursive triangular Sierpiński mask with adjustable depth, scale, edge softness, colours, and source mix.',
-  layerednoisebenchmark:'Exercises bounded FBM, turbulence, and ridged noise in separate colour channels for repeatable CPU/WebGPU performance and parity comparisons.',
   mosaic:'Samples the centre of repeating rectangular blocks to produce a pixelated mosaic.',
   poster:'Reduces each RGB channel to a controlled number of tonal levels while preserving alpha.',
   rgbshift:'Offsets the red, green, and blue channels independently in two dimensions for chromatic misregistration effects.',
@@ -5476,7 +5329,6 @@ const presetDescriptions={
   softfocus:'Blends four diagonal bilinear samples with the original image to produce an adjustable soft-focus glow.',
   swirl:'Rotates source sampling progressively around the image centre to create a radial swirl.',
   vignettepro:'Darkens the image progressively toward the edges with adjustable strength and radius.',
-  warpedsdfbloom:'Combines, subtracts, outlines, and noise-warps signed-distance shapes. It also serves as the SDF composition benchmark.',
   warmcool:'Applies opposing warm and cool colour shifts along a diagonal image gradient.'
 };
 
@@ -5487,10 +5339,8 @@ const presetDefinitions=[
 {id:'analoggrain',name:'Analog Grain',controls:[richControl('Amount',52,'slider',0,90,1,'number','levels'),richControl('Seed',91,'seed',1,9999,1,'integer')],f:Array(3).fill('clamp(c+(hash2(x,y,val(1,1,9999))-0.5)*val(0,0,90),0,255)').concat('a')},
 {id:'brightcontrast',name:'Brightness / Contrast',controls:[richControl('Brightness',128,'slider',-128,128,1,'number','levels'),richControl('Contrast',85,'slider',0,300,1,'number','%')],f:Array(3).fill('clamp(((c-128)*val(1,0,300))/100+128+val(0,-128,128),0,255)').concat('a')},
 {id:'chromasolar',name:'Chromatic Solarize',controls:[richControl('Threshold',128,'slider',0,255,1,'integer'),richControl('Channel Spread',64,'slider',-72,72,1,'number','levels')],f:['r>=clamp(ctl(0)+val(1,-72,72),0,255)?255-r:r','g>=ctl(0)?255-g:g','b>=clamp(ctl(0)-val(1,-72,72),0,255)?255-b:b','a']},
-{id:'digitalglitch',name:'Digital Block Glitch',controls:[richControl('Displacement',77,'slider',0,100,1,'number','px'),richControl('Block Width',64,'slider',8,96,1,'integer','px'),richControl('Block Height',45,'slider',4,48,1,'integer','px'),richControl('Seed',91,'seed',1,9999,1,'integer')],f:['srcWrap(x+(hash2(floor(x/val(1,8,96)),floor(y/val(2,4,48)),val(3,1,9999))-0.5)*val(0,0,100),y,0)','srcWrap(x+(hash2(floor(x/val(1,8,96))+11,floor(y/val(2,4,48)),val(3,1,9999))-0.5)*val(0,0,70),y,1)','srcWrap(x+(hash2(floor(x/val(1,8,96))+23,floor(y/val(2,4,48)),val(3,1,9999))-0.5)*val(0,0,100),y,2)','a']},
 {id:'fractalclouds',name:'Fractal Clouds',controls:[richControl('Scale',58,'slider',12,180,1,'integer','px'),richControl('Seed',135,'seed',1,9999,1,'integer'),richControl('Blend',190,'slider',0,100,1,'number','%')],f:Array(3).fill('lerp(c,fbm(x,y,val(0,12,180),5,2,0.5,val(1,1,9999))*255,ctl(2))').concat('a')},
 {id:'sierpinskifractal',name:'Sierpiński Fractal',controls:[richControl('Recursion Depth',174,'number',2,9,1,'integer'),richControl('Fractal Scale',208,'slider',0.5,0.96,0.01),richControl('Edge Softness',32,'slider',0,2.5,0.1,'number','px'),richControl('Foreground R',238,'number',0,255,1,'integer'),richControl('Foreground G',232,'number',0,255,1,'integer'),richControl('Foreground B',214,'number',0,255,1,'integer'),richControl('Background',8,'number',0,255,1,'integer'),richControl('Effect Mix',255,'slider',0,100,1,'number','%')],f:sierpinskiFormulas},
-{id:'layerednoisebenchmark',name:'Layered Noise Benchmark',benchmark:true,controls:[richControl('Noise Scale',92,'slider',10,96,1,'integer','px'),richControl('Octaves',192,'slider',2,8,1,'integer'),richControl('Seed',73,'seed',1,9999,1,'integer'),richControl('Contrast',150,'slider',0.65,1.65,0.01,'number','×'),unusedControl(4),unusedControl(5),unusedControl(6),unusedControl(7),unusedControl(8),richControl('Effect Mix',255,'slider',0,100,1,'number','%')],f:benchmarkNoiseFormulas},
 {id:'mosaic',name:'Mosaic',controls:[richControl('Block Width',35,'slider',2,64,1,'integer','px'),richControl('Block Height',35,'slider',2,64,1,'integer','px')],f:Array(4).fill('srcLinear(floor(x/val(0,2,64))*val(0,2,64)+val(0,2,64)/2,floor(y/val(1,2,64))*val(1,2,64)+val(1,2,64)/2,z)')},
 {id:'poster',name:'Posterize',controls:[richControl('Levels',72,'slider',2,16,1,'integer')],f:Array(3).fill('round(c*(val(0,2,16)-1)/255)*255/(val(0,2,16)-1)').concat('a')},
 {id:'rgbshift',name:'RGB Shift',controls:[richControl('Red X',136,'number',-128,127,1,'number','px'),richControl('Red Y',128,'number',-128,127,1,'number','px'),richControl('Green X',120,'number',-128,127,1,'number','px'),richControl('Green Y',128,'number',-128,127,1,'number','px'),richControl('Blue X',128,'number',-128,127,1,'number','px'),richControl('Blue Y',136,'number',-128,127,1,'number','px')],f:['srcLinear(x+ctl(0)-128,y+ctl(1)-128,0)','srcLinear(x+ctl(2)-128,y+ctl(3)-128,1)','srcLinear(x+ctl(4)-128,y+ctl(5)-128,2)','a']},
@@ -5499,16 +5349,16 @@ const presetDefinitions=[
 {id:'softfocus',name:'Soft Focus',controls:[richControl('Radius',75,'slider',1,14,0.5,'number','px'),richControl('Blend',175,'slider',0,100,1,'number','%')],f:Array(3).fill('lerp(c,(c+srcLinear(x-val(0,1,14),y-val(0,1,14),z)+srcLinear(x+val(0,1,14),y-val(0,1,14),z)+srcLinear(x-val(0,1,14),y+val(0,1,14),z)+srcLinear(x+val(0,1,14),y+val(0,1,14),z))/5,ctl(1))').concat('a')},
 {id:'swirl',name:'Swirl',controls:[richControl('Twist',165,'slider',-91.4,91.4,0.1,'number','°')],f:['rad(d+((M-m)*val(0,-260,260))/max(1,M),m,0)','rad(d+((M-m)*val(0,-260,260))/max(1,M),m,1)','rad(d+((M-m)*val(0,-260,260))/max(1,M),m,2)','a']},
 {id:'vignettepro',name:'Vignette Pro',controls:[richControl('Strength',160,'slider',0,100,1,'number','%'),richControl('Radius',105,'slider',0,100,1,'number','%')],f:Array(3).fill('clamp(c*(1-smoothstep(val(1,0,M),M,m)*val(0,0,100)/100),0,255)').concat('a')},
-{id:'warpedsdfbloom',name:'Warped SDF Bloom',benchmark:true,controls:[richControl('Warp Amount',80,'slider',0,30,0.1,'number','px'),richControl('Warp Scale',100,'slider',20,110,1,'number','px'),richControl('Seed',73,'seed',1,9999,1,'integer'),richControl('Shape Size',150,'slider',0.12,0.32,0.01),richControl('Smooth Union',100,'slider',0,28,0.5,'number','px'),richControl('Cutout Size',75,'slider',0.03,0.16,0.01),richControl('Outline Width',80,'slider',0.5,8,0.1,'number','px'),richControl('Edge Softness',48,'slider',0,3,0.1,'number','px'),richControl('Colour Shift',115,'slider',0,1,0.01),richControl('Effect Mix',255,'slider',0,100,1,'number','%')],f:warpedSdfFormulas},
 {id:'warmcool',name:'Warm–Cool Gradient',controls:[richControl('Warm Strength',120,'slider',0,100,1,'number','%'),richControl('Cool Strength',120,'slider',0,100,1,'number','%')],f:['clamp(r+linearGrad(x,y,0,0,X,Y)*val(0,0,70)-val(1,0,30),0,255)','g','clamp(b+(1-linearGrad(x,y,0,0,X,Y))*val(1,0,70)-val(0,0,30),0,255)','a']}
 ];
 
-const presetTags={"pass": ["Utility"], "invert": ["Color", "Negative"], "amberfilm": ["Retro", "Warm", "Portrait"], "analoggrain": ["Noise", "Retro"], "brightcontrast": ["Tone"], "chromasolar": ["Color", "Retro"], "digitalglitch": ["Glitch"], "fractalclouds": ["Noise", "Procedural"], "sierpinskifractal": ["Fractal", "Shapes"], "layerednoisebenchmark": ["Noise", "Procedural"], "mosaic": ["Pixelate"], "poster": ["Color", "Print"], "rgbshift": ["Color", "Distortion"], "saturation": ["Color"], "sharpen": ["Detail"], "softfocus": ["Blur", "Portrait"], "swirl": ["Distortion"], "vignettepro": ["Tone", "Portrait"], "warpedsdfbloom": ["Shapes", "Procedural"], "warmcool": ["Color", "Gradient"]};
+const presetTags={"pass": ["Utility"], "invert": ["Color", "Negative"], "amberfilm": ["Retro", "Warm", "Portrait"], "analoggrain": ["Noise", "Retro"], "brightcontrast": ["Tone"], "chromasolar": ["Color", "Retro"], "fractalclouds": ["Noise", "Procedural"], "sierpinskifractal": ["Fractal", "Shapes"], "mosaic": ["Pixelate"], "poster": ["Color", "Print"], "rgbshift": ["Color", "Distortion"], "saturation": ["Color"], "sharpen": ["Detail"], "softfocus": ["Blur", "Portrait"], "swirl": ["Distortion"], "vignettepro": ["Tone", "Portrait"], "warmcool": ["Color", "Gradient"]};
 
 const presets=[
   ...presetDefinitions.map(preset=>({...preset,tags:[...(presetTags[preset.id]||[]),...(preset.benchmark?['Benchmark']:[])],description:presetDescriptions[preset.id],author:BUILTIN_AUTHOR})),
   ...contributedPresetDefinitions.map(preset=>({...preset,author:BUILTIN_AUTHOR,tags:[...preset.tags],controls:preset.controls.map(control=>({...control,ui:{...control.ui}})),f:[...preset.f]})),
-  ...pass2PresetDefinitions.map(preset=>({...preset,author:BUILTIN_AUTHOR,tags:[...preset.tags],controls:preset.controls.map(control=>({...control,ui:{...control.ui}})),f:[...preset.f]}))
+  ...pass2PresetDefinitions.map(preset=>({...preset,author:BUILTIN_AUTHOR,tags:[...preset.tags],controls:preset.controls.map(control=>({...control,ui:{...control.ui}})),f:[...preset.f]})),
+  ...pass3PresetDefinitions.map(preset=>({...preset,tags:[...preset.tags],controls:preset.controls.map(control=>({...control,ui:{...control.ui}})),f:[...preset.f]}))
 ];
 
 
@@ -7503,13 +7353,22 @@ const controlStatesEqual=(a,b)=>Boolean(a&&b&&a.length===b.length&&a.every((v,i)
 function createExploreSession(controls){
   return {defaults:[...controls],locks:{},strength:'Medium',undo:null,snapshots:{A:null,B:null,C:null,D:null},active:null};
 }
+function forceNumericDifference(raw,ui,random){
+  const display=rawToDisplay(raw,ui),direction=random()<.5?-1:1;
+  for(const value of [display+direction*ui.step,display-direction*ui.step,ui.displayMin,ui.displayMax]){
+    const next=displayToRaw(value,ui);if(next!==raw)return next;
+  }
+  return raw;
+}
 function exploreValues(controls,uis,used,session,mutate=false,random=Math.random){
   const factor=MUTATION_FACTORS[session.strength];
-  return controls.map((raw,i)=>{
+  const numeric=[];
+  const next=controls.map((raw,i)=>{
     if(!used[i]||session.locks[i])return raw;
     const ui=normalizeControlUI(uis[i]);
     if(ui.widget==='toggle')return mutate?(random()<factor?255-normalizeToggleRaw(raw):raw):(random()<.5?0:255);
     if(ui.widget==='seed'){
+      if(mutate&&random()>=factor)return raw;
       let next=displayToRaw(randomSeedDisplay(ui,random),ui);
       if(mutate&&next===raw){
         for(const value of [rawToDisplay(raw,ui)+Math.max(1,ui.step),rawToDisplay(raw,ui)-Math.max(1,ui.step),ui.displayMin,ui.displayMax]){
@@ -7518,9 +7377,18 @@ function exploreValues(controls,uis,used,session,mutate=false,random=Math.random
       }
       return next;
     }
+    if(mutate){
+      numeric.push({index:i,ui});
+      if(random()>=factor)return raw;
+    }
     const span=ui.displayMax-ui.displayMin;
     return displayToRaw(mutate?rawToDisplay(raw,ui)+(random()*2-1)*span*factor:ui.displayMin+random()*span,ui);
   });
+  if(mutate&&numeric.length&&next.every((value,i)=>value===controls[i])){
+    const {index,ui}=numeric[Math.min(numeric.length-1,Math.floor(random()*numeric.length))];
+    next[index]=forceNumericDifference(controls[index],ui,random);
+  }
+  return next;
 }
 function commitExploreValues(state,next,{undo=true}={}){
   state.explore.undo=undo?[...state.controls]:null;
@@ -7578,7 +7446,7 @@ function createExploreController({state,root,resetButton,syncControls,scheduleRe
   for(const action of ['Lock all','Unlock all','Invert locks'])button(locks,action,()=>{state.usedControls.forEach((used,i)=>{if(used)state.explore.locks[i]=action==='Lock all'||(action==='Invert locks'&&!state.explore.locks[i]);});syncControls();});
   buttons.undo=button(actions,'Undo',()=>{if(state.explore.undo)commit(state.explore.undo,false);});
   const section=document.createElement('section');section.className='section snapshots-section';root.closest('.adjust-section').after(section);
-  const heading=document.createElement('div');heading.className='section-head';heading.textContent='Snapshots';section.append(heading);
+  const heading=document.createElement('div');heading.className='section-head';const title=document.createElement('strong');title.textContent='Snapshots';heading.append(title);section.append(heading);
   const body=document.createElement('div');body.className='section-body';section.append(body);
   const row=document.createElement('div');row.className='snapshot-slots';body.append(row);
   for(const slot of ['A','B','C','D'])slots[slot]=button(row,slot,()=>{const saved=state.explore.snapshots[slot];if(!saved){toast(`Snapshot ${slot} is empty. Use Save current.`);return;}state.explore.active=slot;commit(saved);});
@@ -8053,7 +7921,7 @@ function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL
 
   function triggerDownload(href,name,revoke=false){try{const anchor=document.createElement('a');anchor.href=href;anchor.download=name;anchor.rel='noopener';anchor.style.display='none';document.body.appendChild(anchor);anchor.click();setTimeout(()=>{anchor.remove();if(revoke)URL.revokeObjectURL(href);},10000);toast(`Download started: ${name}`);return true;}catch(error){if(revoke)URL.revokeObjectURL(href);console.error('Download failed',error);toast(`Download failed: ${error.message||'browser blocked the file'}`);return false;}}
   function downloadBlob(blob,name){if(!(blob instanceof Blob)||!blob.size){toast('Nothing was generated to download');return false;}return triggerDownload(URL.createObjectURL(blob),name,true);}
-  async function exportPNG(){if(!state.filtered||!state.width||!state.height){toast('Load and render an image before exporting');return;}const filter=validatedCurrentFilter();if(!filter)return;if(state.lastSuccessfulRenderSignature!==filterRenderSignature(filter)){setStatus('Render the current filter changes before exporting.','error');toast('Render the current filter changes before exporting.');return;}setStatus('Encoding PNG…','busy');try{const canvas=renderedImageCanvas(state.filtered,state.width,state.height),name=slug($('#filterName').value||'filtered-image')+'.png',encoded=await canvasBlob(canvas,'image/png'),envelope=createFilterFabPngEnvelope(filter,'2.9.2'),blob=await embedFilterFabMetadata(encoded,envelope);if(downloadBlob(blob,name))setStatus('Ready');}catch(error){console.error('PNG export failed',error);setStatus('PNG export failed','error');toast(`PNG export failed: ${error.message}`);}}
+  async function exportPNG(){if(!state.filtered||!state.width||!state.height){toast('Load and render an image before exporting');return;}const filter=validatedCurrentFilter();if(!filter)return;if(state.lastSuccessfulRenderSignature!==filterRenderSignature(filter)){setStatus('Render the current filter changes before exporting.','error');toast('Render the current filter changes before exporting.');return;}setStatus('Encoding PNG…','busy');try{const canvas=renderedImageCanvas(state.filtered,state.width,state.height),name=slug($('#filterName').value||'filtered-image')+'.png',encoded=await canvasBlob(canvas,'image/png'),envelope=createFilterFabPngEnvelope(filter,'2.9.3'),blob=await embedFilterFabMetadata(encoded,envelope);if(downloadBlob(blob,name))setStatus('Ready');}catch(error){console.error('PNG export failed',error);setStatus('PNG export failed','error');toast(`PNG export failed: ${error.message}`);}}
   function exportFilter(){const filter=validatedCurrentFilter();if(!filter)return;if(!activeDocument.id)activeDocument.id=createCustomPresetId();filter.id=activeDocument.id;const base=slug(filter.name);try{downloadBlob(new Blob([JSON.stringify(filter,null,2)+'\n'],{type:'application/json;charset=utf-8'}),base+'.json');}catch(error){console.error('Filter export failed',error);toast(`Filter export failed: ${error.message}`);}}
   async function deletePreset(){
     if(!activeDocument.key?.startsWith('custom:'))return;
@@ -8170,7 +8038,7 @@ function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL
     window.addEventListener('beforeunload',()=>{if(librarySession)abortLibraryPackages(librarySession);onlineLibrary.dispose();thumbnailService.dispose();state.rendererManager?.dispose();});
   }
 
-  window.FilterFabJS=Object.freeze({version:'2.9.2',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getThumbnailDiagnostics:()=>thumbnailService.diagnostics(),getRendererPreference:()=>state.rendererPreference,getWorkspaceMode:()=>state.workspaceMode,getLibraryPreviewState:()=>({open:Boolean(librarySession),candidateKey:librarySession?.candidateEntry?.key||null,candidateRendered:Boolean(librarySession?.candidateRendered),activeKey:activeDocument.key,activeId:activeDocument.id,imported:activeDocument.imported,importSource:activeDocument.importSource,baseline:activeDocument.baseline,recordBaseline:activeDocument.recordBaseline})});
+  window.FilterFabJS=Object.freeze({version:'2.9.3',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getThumbnailDiagnostics:()=>thumbnailService.diagnostics(),getRendererPreference:()=>state.rendererPreference,getWorkspaceMode:()=>state.workspaceMode,getLibraryPreviewState:()=>({open:Boolean(librarySession),candidateKey:librarySession?.candidateEntry?.key||null,candidateRendered:Boolean(librarySession?.candidateRendered),activeKey:activeDocument.key,activeId:activeDocument.id,imported:activeDocument.imported,importSource:activeDocument.importSource,baseline:activeDocument.baseline,recordBaseline:activeDocument.recordBaseline})});
   controlsController.buildSliders();wire();const demo=demoImage();initImage(demo.data,demo.width,demo.height);applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');
   return{state,render,applyFilter,loadImageFile,openImageFile};
 }

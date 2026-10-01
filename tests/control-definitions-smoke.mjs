@@ -72,7 +72,7 @@ for(const preset of presets){
   program.metadata.controlMask.forEach((used,index)=>{if(used)assert.ok(preset.controls[index]?.ui,`${preset.name} control ${index+1} must include UI metadata`)});
   preset.controls.forEach((control,index)=>assert.doesNotThrow(()=>validateControlUI(control.ui),`${preset.name} control ${index+1} must have valid UI metadata`));
 }
-for(const id of ['analoggrain','digitalglitch','fractalclouds','layerednoisebenchmark','warpedsdfbloom'])assert.ok(presets.find(preset=>preset.id===id).controls.some(control=>control.ui.widget==='seed'),`${id} must expose its deterministic seed with the seed widget`);
+for(const id of ['analoggrain','fractalclouds','warped-sdf-bloom-contour'])assert.ok(presets.find(preset=>preset.id===id).controls.some(control=>control.ui.widget==='seed'),`${id} must expose its deterministic seed with the seed widget`);
 assert.deepEqual(presets.find(preset=>preset.id==='swirl').controls[0].ui,{widget:'slider',displayMin:-91.4,displayMax:91.4,step:0.1,format:'number',unit:'°'},'remaining rotation controls must be presented in degrees');
 
 console.log('Control definition smoke tests passed.');

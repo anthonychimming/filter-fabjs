@@ -2,7 +2,7 @@
 
 **Create custom image filters directly in your browser with mathematical expressions, real-time previews, WebGPU acceleration, and Filter Factory compatibility.**
 
-**Current release: v2.9.2**
+**Current release: v2.9.3**
 
 **[▶ Launch Filter FabJS](https://anthonychimming.github.io/filter-fabjs/)**
 
@@ -18,7 +18,7 @@ Use four RGBA expressions to transform an image, expose creative parameters as c
 - **Custom procedural filters** — write separate R, G, B, and Alpha expressions with live validation and preview rendering.
 - **WebGPU acceleration** — compatible filters compile to WGSL, with automatic CPU fallback when required.
 - **Filter Factory compatibility** — import historic Adobe Filter Factory / Filter Foundry `.afs` filters through the legacy compatibility path.
-- **52 built-in filters** — searchable by name, description, author, tags, and favorites.
+- **48 built-in filters** — searchable by name, description, author, tags, and favorites.
 - **Online Filter Library** — browse additional filters, preview them on your current image, then apply, save, or download them.
 - **Artist-first controls** — filters can expose up to ten sliders, number fields, toggles, or seed controls with custom ranges and labels.
 - **Procedural graphics toolkit** — includes image sampling, transforms, gradients, palette ramps, Perlin/Worley noise, FBM, turbulence, fractals, analytic masks, signed-distance fields, convolution, and blend operations.
@@ -117,7 +117,7 @@ npm run build
 Build output:
 
 - `dist/site/` — deployable static site
-- `dist/filter-fabjs-v2.9.2.html` — standalone single-file build
+- `dist/filter-fabjs-v2.9.3.html` — standalone single-file build
 
 The project currently has no npm package dependencies.
 

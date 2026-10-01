@@ -1,0 +1,138 @@
+{
+  "id": "kaleidoscope-mirror",
+  "name": "Kaleidoscope Mirror",
+  "controls": [
+    {
+      "label": "Segments",
+      "value": 51,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 4,
+        "displayMax": 24,
+        "step": 2,
+        "format": "integer",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Rotation",
+      "value": 0,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 360,
+        "step": 1,
+        "format": "number",
+        "unit": "deg"
+      }
+    },
+    {
+      "label": "Radius / Zoom",
+      "value": 63.75,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0.5,
+        "displayMax": 2.5,
+        "step": 0.05,
+        "format": "number",
+        "unit": "x"
+      }
+    },
+    {
+      "label": "Mix",
+      "value": 255,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 100,
+        "step": 1,
+        "format": "number",
+        "unit": "%"
+      }
+    },
+    {
+      "label": "Twist",
+      "value": 127.5,
+      "ui": {
+        "widget": "slider",
+        "displayMin": -180,
+        "displayMax": 180,
+        "step": 1,
+        "format": "number",
+        "unit": "deg"
+      }
+    },
+    {
+      "label": "Radial Offset",
+      "value": 127.5,
+      "ui": {
+        "widget": "slider",
+        "displayMin": -25,
+        "displayMax": 25,
+        "step": 1,
+        "format": "number",
+        "unit": "%"
+      }
+    },
+    {
+      "label": "Control 7",
+      "value": 128,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "number",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Control 8",
+      "value": 128,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "number",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Control 9",
+      "value": 128,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "number",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Control 10",
+      "value": 128,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "number",
+        "unit": ""
+      }
+    }
+  ],
+  "f": [
+    "lerp(c,rad(mirror(d+val(1,0,1024)+val(4,-512,512)*(m/M),1024/(round(val(0,4,24)/2)*2)),clamp(m/val(2,0.5,2.5)+val(5,-0.25,0.25)*min(X,Y),0,M),z),ctl(3))",
+    "lerp(c,rad(mirror(d+val(1,0,1024)+val(4,-512,512)*(m/M),1024/(round(val(0,4,24)/2)*2)),clamp(m/val(2,0.5,2.5)+val(5,-0.25,0.25)*min(X,Y),0,M),z),ctl(3))",
+    "lerp(c,rad(mirror(d+val(1,0,1024)+val(4,-512,512)*(m/M),1024/(round(val(0,4,24)/2)*2)),clamp(m/val(2,0.5,2.5)+val(5,-0.25,0.25)*min(X,Y),0,M),z),ctl(3))",
+    "lerp(c,rad(mirror(d+val(1,0,1024)+val(4,-512,512)*(m/M),1024/(round(val(0,4,24)/2)*2)),clamp(m/val(2,0.5,2.5)+val(5,-0.25,0.25)*min(X,Y),0,M),z),ctl(3))"
+  ],
+  "description": "Folds the source into radial mirrored sectors around the image center. Segments sets the even wedge count, Rotation turns the fold, Radius / Zoom changes radial sampling scale, Mix blends with the original, Twist spirals the sectors progressively with radius, and Radial Offset shifts which concentric source region feeds the fold. Transparency follows the same mirrored geometry.",
+  "tags": [
+    "Distortion",
+    "Pattern",
+    "Shapes"
+  ]
+}

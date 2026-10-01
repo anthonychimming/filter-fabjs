@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.9.3
+
+- Update the built-in catalog to 48 filters, including pass-three definitions, with matching catalog documentation and regression coverage.
+- Make Explore Mutate strength control numeric participation as well as amplitude, and seed reroll probability. Preserve binary toggle probabilities and authored ranges/steps; when no controls change, move one eligible numeric control by a valid snapped step.
+- Add deterministic mutation coverage for strength breadth/amplitude, widget thresholds, boundaries, locks, Undo, and single-preview scheduling.
+
 ## 2.9.2
 
 - Position Explore dropdowns below their buttons by default, flipping above to avoid viewport or scroll-panel clipping.

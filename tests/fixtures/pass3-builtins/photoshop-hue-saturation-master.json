@@ -1,0 +1,138 @@
+{
+  "id": "photoshop-hue-saturation-master",
+  "name": "Photoshop-Style Hue/Saturation",
+  "controls": [
+    {
+      "label": "Hue",
+      "value": 127.5,
+      "ui": {
+        "widget": "slider",
+        "displayMin": -180,
+        "displayMax": 180,
+        "step": 1,
+        "format": "integer",
+        "unit": "°"
+      }
+    },
+    {
+      "label": "Saturation",
+      "value": 127.5,
+      "ui": {
+        "widget": "slider",
+        "displayMin": -100,
+        "displayMax": 100,
+        "step": 1,
+        "format": "integer",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Lightness",
+      "value": 127.5,
+      "ui": {
+        "widget": "slider",
+        "displayMin": -100,
+        "displayMax": 100,
+        "step": 1,
+        "format": "integer",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Control 4",
+      "value": 128,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "number",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Control 5",
+      "value": 128,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "number",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Control 6",
+      "value": 128,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "number",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Control 7",
+      "value": 128,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "number",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Control 8",
+      "value": 128,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "number",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Control 9",
+      "value": 128,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "number",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Control 10",
+      "value": 128,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "number",
+        "unit": ""
+      }
+    }
+  ],
+  "f": [
+    "clamp((255*(((max(r,max(g,b))+min(r,min(g,b)))/510)+((max(r,max(g,b))-min(r,min(g,b)))==0?0:((max(r,max(g,b))-min(r,min(g,b)))/(255-abs(max(r,max(g,b))+min(r,min(g,b))-255)))*(1-abs(val(1,-100,100))/100)+max(val(1,-100,100),0)/100)*min(((max(r,max(g,b))+min(r,min(g,b)))/510),1-((max(r,max(g,b))+min(r,min(g,b)))/510))*(2*clamp(abs(wrap(((max(r,max(g,b))-min(r,min(g,b)))==0?0:max(r,max(g,b))==r?wrap((g-b)/(max(r,max(g,b))-min(r,min(g,b))),6):max(r,max(g,b))==g?(b-r)/(max(r,max(g,b))-min(r,min(g,b)))+2:(r-g)/(max(r,max(g,b))-min(r,min(g,b)))+4)+val(0,-180,180)/60+(z==0?0:z==1?4:2),6)-3)-1,0,1)-1)))*(1-abs(val(2,-100,100))/100)+255*max(val(2,-100,100),0)/100,0,255)",
+    "clamp((255*(((max(r,max(g,b))+min(r,min(g,b)))/510)+((max(r,max(g,b))-min(r,min(g,b)))==0?0:((max(r,max(g,b))-min(r,min(g,b)))/(255-abs(max(r,max(g,b))+min(r,min(g,b))-255)))*(1-abs(val(1,-100,100))/100)+max(val(1,-100,100),0)/100)*min(((max(r,max(g,b))+min(r,min(g,b)))/510),1-((max(r,max(g,b))+min(r,min(g,b)))/510))*(2*clamp(abs(wrap(((max(r,max(g,b))-min(r,min(g,b)))==0?0:max(r,max(g,b))==r?wrap((g-b)/(max(r,max(g,b))-min(r,min(g,b))),6):max(r,max(g,b))==g?(b-r)/(max(r,max(g,b))-min(r,min(g,b)))+2:(r-g)/(max(r,max(g,b))-min(r,min(g,b)))+4)+val(0,-180,180)/60+(z==0?0:z==1?4:2),6)-3)-1,0,1)-1)))*(1-abs(val(2,-100,100))/100)+255*max(val(2,-100,100),0)/100,0,255)",
+    "clamp((255*(((max(r,max(g,b))+min(r,min(g,b)))/510)+((max(r,max(g,b))-min(r,min(g,b)))==0?0:((max(r,max(g,b))-min(r,min(g,b)))/(255-abs(max(r,max(g,b))+min(r,min(g,b))-255)))*(1-abs(val(1,-100,100))/100)+max(val(1,-100,100),0)/100)*min(((max(r,max(g,b))+min(r,min(g,b)))/510),1-((max(r,max(g,b))+min(r,min(g,b)))/510))*(2*clamp(abs(wrap(((max(r,max(g,b))-min(r,min(g,b)))==0?0:max(r,max(g,b))==r?wrap((g-b)/(max(r,max(g,b))-min(r,min(g,b))),6):max(r,max(g,b))==g?(b-r)/(max(r,max(g,b))-min(r,min(g,b)))+2:(r-g)/(max(r,max(g,b))-min(r,min(g,b)))+4)+val(0,-180,180)/60+(z==0?0:z==1?4:2),6)-3)-1,0,1)-1)))*(1-abs(val(2,-100,100))/100)+255*max(val(2,-100,100),0)/100,0,255)",
+    "a"
+  ],
+  "description": "Photoshop-style Master Hue/Saturation adjustment. Hue rotates color from -180° to +180°. Saturation ranges from full desaturation at -100 through the source saturation at 0 to maximum saturation at +100 while achromatic pixels remain neutral. Lightness fades the adjusted RGB result toward black for negative values and toward white for positive values, matching Photoshop's Master Lightness response more closely than a simple HSL-lightness replacement. Source alpha is preserved. Per-color ranges and Colorize are intentionally not included.",
+  "tags": [
+    "Color",
+    "Tone",
+    "Utility"
+  ]
+}

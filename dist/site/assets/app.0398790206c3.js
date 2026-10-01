@@ -526,145 +526,6 @@ const contributedPresetDefinitions=[
     ]
   },
   {
-    "id": "differenceclouds",
-    "name": "Difference Clouds",
-    "description": "Generates soft FBM cloud fields and applies difference blending against the source image. Cloud Scale controls structure size, Cloud Contrast adjusts the harshness of the cloud field, Seed regenerates the pattern, and Effect Mix controls blend strength.",
-    "author": "",
-    "tags": [
-      "Noise",
-      "Procedural",
-      "Texture"
-    ],
-    "controls": [
-      {
-        "label": "Cloud Scale",
-        "value": 80,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 16,
-          "displayMax": 220,
-          "step": 1,
-          "format": "number",
-          "unit": "px"
-        }
-      },
-      {
-        "label": "Cloud Contrast",
-        "value": 31.166666666666664,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0.6,
-          "displayMax": 2.4,
-          "step": 0.01,
-          "format": "number",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Seed",
-        "value": 18.440188037607523,
-        "ui": {
-          "widget": "seed",
-          "displayMin": 1,
-          "displayMax": 9999,
-          "step": 1,
-          "format": "integer",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Effect Mix",
-        "value": 255,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 100,
-          "step": 1,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Control 5",
-        "value": 128,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 255,
-          "step": 1,
-          "format": "number",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Control 6",
-        "value": 128,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 255,
-          "step": 1,
-          "format": "number",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Control 7",
-        "value": 128,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 255,
-          "step": 1,
-          "format": "number",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Control 8",
-        "value": 128,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 255,
-          "step": 1,
-          "format": "number",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Control 9",
-        "value": 128,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 255,
-          "step": 1,
-          "format": "number",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Control 10",
-        "value": 128,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 255,
-          "step": 1,
-          "format": "number",
-          "unit": ""
-        }
-      }
-    ],
-    "f": [
-      "difference(r,clamp((fbm(x,y,val(0,16,220),5,2,0.5,round(val(2,1,9999)))-0.5)*val(1,0.6,2.4)+0.5,0,1)*255,ctl(3))",
-      "difference(g,clamp((fbm(x+173,y+59,val(0,16,220),5,2,0.5,round(val(2,1,9999))+101)-0.5)*val(1,0.6,2.4)+0.5,0,1)*255,ctl(3))",
-      "difference(b,clamp((fbm(x+347,y+281,val(0,16,220),5,2,0.5,round(val(2,1,9999))+202)-0.5)*val(1,0.6,2.4)+0.5,0,1)*255,ctl(3))",
-      "a"
-    ]
-  },
-  {
     "id": "linearprismecho",
     "name": "Linear Prism Echo",
     "description": "Creates a linear prism-lens echo using the source plus three progressively faded, directional bilinear samples. Echo Spacing controls the separation, Angle rotates the echo train, Echo Fade controls attenuation, Chromatic Dispersion slightly varies the offset per RGB channel, and Effect Mix blends the result with the original.",
@@ -1220,146 +1081,6 @@ const contributedPresetDefinitions=[
       "lerp(c,clamp(lerp(srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),z),(srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),0)*299+srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),1)*587+srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),2)*114)/1000,val(6,0,1))+(srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy))))+(z-1)*val(4,0,16),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),z)-srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),z))*val(5,0,2),0,255),ctl(9))",
       "lerp(c,clamp(lerp(srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),z),(srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),0)*299+srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),1)*587+srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),2)*114)/1000,val(6,0,1))+(srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy))))+(z-1)*val(4,0,16),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),z)-srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),z))*val(5,0,2),0,255),ctl(9))",
       "lerp(c,clamp(lerp(srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),z),(srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),0)*299+srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),1)*587+srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),2)*114)/1000,val(6,0,1))+(srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy))))+(z-1)*val(4,0,16),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),z)-srcLinear(wrap(x+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),11,val(8,1,9999))-0.5)*2*val(1,0,120)*(1-smoothstep(0.35,1,abs(cy)))+(sin(y*(1024/val(3,16,320))+val(8,1,9999))/512)*val(2,0,24)*(0.35+0.65*(1-smoothstep(0.35,1,abs(cy)))),X),wrap(y+step(1-val(7,0.05,0.95),hash2(floor(y/val(0,4,80)),23,val(8,1,9999)+71))*(hash2(floor(y/val(0,4,80)),41,val(8,1,9999)+131)-0.5)*val(2,0,8)*(1-smoothstep(0.35,1,abs(cy))),Y),z))*val(5,0,2),0,255),ctl(9))",
-      "a"
-    ]
-  },
-  {
-    "id": "teallimemodularweave",
-    "name": "Teal Lime Modular Weave",
-    "description": "A modular weave. Horizontal Phase and Vertical Phase wrap the pattern. Hue Shift performs a chroma rotation through the original palette. Saturation scales the chroma while preserving each swatch's luminance structure.",
-    "author": "",
-    "tags": [
-      "Pattern",
-      "Textile",
-      "Procedural",
-      "Color"
-    ],
-    "controls": [
-      {
-        "label": "Horizontal Phase",
-        "value": 127.5,
-        "ui": {
-          "widget": "slider",
-          "displayMin": -50,
-          "displayMax": 50,
-          "step": 1,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Vertical Phase",
-        "value": 127.5,
-        "ui": {
-          "widget": "slider",
-          "displayMin": -50,
-          "displayMax": 50,
-          "step": 1,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Hue Shift",
-        "value": 127.5,
-        "ui": {
-          "widget": "slider",
-          "displayMin": -180,
-          "displayMax": 180,
-          "step": 1,
-          "format": "number",
-          "unit": "deg"
-        }
-      },
-      {
-        "label": "Saturation",
-        "value": 127.5,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 200,
-          "step": 1,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Seed",
-        "value": 157.31546309261853,
-        "ui": {
-          "widget": "seed",
-          "displayMin": 1,
-          "displayMax": 9999,
-          "step": 1,
-          "format": "integer",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Control 6",
-        "value": 128,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 255,
-          "step": 1,
-          "format": "number",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Control 7",
-        "value": 128,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 255,
-          "step": 1,
-          "format": "number",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Control 8",
-        "value": 128,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 255,
-          "step": 1,
-          "format": "number",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Control 9",
-        "value": 128,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 255,
-          "step": 1,
-          "format": "number",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Control 10",
-        "value": 128,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 255,
-          "step": 1,
-          "format": "number",
-          "unit": ""
-        }
-      }
-    ],
-    "f": [
-      "clamp(gradient3((floor(wrap(ny+val(1,-0.5,0.5),1)*16)<9?(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<3?wrap(2-floor(wrap(nx+val(0,-0.5,0.5),1)*5)-(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2)+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3):wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)-2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<2?wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)+1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0),3):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==2?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3):(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==3?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0):wrap(2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3)):(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),3,val(4,1,9999))>0.5?2:0):wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3))))))/2,220.666667,193.333333,146.333333)+gradient3((floor(wrap(ny+val(1,-0.5,0.5),1)*16)<9?(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<3?wrap(2-floor(wrap(nx+val(0,-0.5,0.5),1)*5)-(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2)+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3):wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)-2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<2?wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)+1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0),3):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==2?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3):(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==3?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0):wrap(2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3)):(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),3,val(4,1,9999))>0.5?2:0):wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3))))))/2,10.088497,43.471574,55.633723)*val(3,0,200)/100*cos(gradient3((floor(wrap(ny+val(1,-0.5,0.5),1)*16)<9?(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<3?wrap(2-floor(wrap(nx+val(0,-0.5,0.5),1)*5)-(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2)+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3):wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)-2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<2?wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)+1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0),3):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==2?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3):(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==3?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0):wrap(2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3)):(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),3,val(4,1,9999))>0.5?2:0):wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3))))))/2,123.371593,183.667346,528.943533)+val(2,-512,512))/512,0,255)",
-      "clamp(gradient3((floor(wrap(ny+val(1,-0.5,0.5),1)*16)<9?(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<3?wrap(2-floor(wrap(nx+val(0,-0.5,0.5),1)*5)-(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2)+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3):wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)-2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<2?wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)+1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0),3):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==2?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3):(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==3?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0):wrap(2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3)):(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),3,val(4,1,9999))>0.5?2:0):wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3))))))/2,220.666667,193.333333,146.333333)+gradient3((floor(wrap(ny+val(1,-0.5,0.5),1)*16)<9?(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<3?wrap(2-floor(wrap(nx+val(0,-0.5,0.5),1)*5)-(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2)+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3):wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)-2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<2?wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)+1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0),3):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==2?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3):(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==3?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0):wrap(2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3)):(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),3,val(4,1,9999))>0.5?2:0):wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3))))))/2,10.088497,43.471574,55.633723)*val(3,0,200)/100*cos(gradient3((floor(wrap(ny+val(1,-0.5,0.5),1)*16)<9?(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<3?wrap(2-floor(wrap(nx+val(0,-0.5,0.5),1)*5)-(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2)+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3):wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)-2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<2?wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)+1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0),3):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==2?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3):(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==3?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0):wrap(2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3)):(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),3,val(4,1,9999))>0.5?2:0):wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3))))))/2,123.371593,183.667346,528.943533)+val(2,-512,512)-341.333333)/512,0,255)",
-      "clamp(gradient3((floor(wrap(ny+val(1,-0.5,0.5),1)*16)<9?(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<3?wrap(2-floor(wrap(nx+val(0,-0.5,0.5),1)*5)-(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2)+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3):wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)-2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<2?wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)+1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0),3):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==2?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3):(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==3?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0):wrap(2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3)):(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),3,val(4,1,9999))>0.5?2:0):wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3))))))/2,220.666667,193.333333,146.333333)+gradient3((floor(wrap(ny+val(1,-0.5,0.5),1)*16)<9?(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<3?wrap(2-floor(wrap(nx+val(0,-0.5,0.5),1)*5)-(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2)+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3):wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)-2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<2?wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)+1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0),3):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==2?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3):(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==3?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0):wrap(2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3)):(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),3,val(4,1,9999))>0.5?2:0):wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3))))))/2,10.088497,43.471574,55.633723)*val(3,0,200)/100*cos(gradient3((floor(wrap(ny+val(1,-0.5,0.5),1)*16)<9?(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<3?wrap(2-floor(wrap(nx+val(0,-0.5,0.5),1)*5)-(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2)+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3):wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)-2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)<2?wrap(floor(wrap(nx+val(0,-0.5,0.5),1)*5)+1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0),3):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==2?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3):(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0)):(floor(wrap(nx+val(0,-0.5,0.5),1)*5)==3?(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),2,val(4,1,9999))>0.75?2:0):wrap(2+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),0,val(4,1,9999))>0.5?1:0),3)):(floor(wrap(ny+val(1,-0.5,0.5),1)*16)%2?(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),3,val(4,1,9999))>0.5?2:0):wrap(1+(hash2(floor(wrap(nx+val(0,-0.5,0.5),1)*5),1,val(4,1,9999))>0.66?1:0),3))))))/2,123.371593,183.667346,528.943533)+val(2,-512,512)+341.333333)/512,0,255)",
       "a"
     ]
   },
@@ -2771,146 +2492,6 @@ const pass2PresetDefinitions=[
     ]
   },
   {
-    "id": "complementary-split-toning",
-    "name": "Complementary Split Toning",
-    "description": "Applies one hue to highlights and the opposing complementary tint to shadows while keeping the tonal handoff neutral at the Balance point. Highlight Hue rotates the color pair; Shadow Strength and Highlight Strength set each side independently; Balance positions the neutral crossover; Transition Softness controls how gradually each tint fades into the midpoint; Color Intensity sets chroma amplitude; Effect Mix blends the grade with the source. Source alpha is preserved.",
-    "author": "Anthony Chimming",
-    "tags": [
-      "Color",
-      "Tone",
-      "Film",
-      "Portrait"
-    ],
-    "controls": [
-      {
-        "label": "Highlight Hue",
-        "value": 26.916666666666668,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 360,
-          "step": 1,
-          "format": "integer",
-          "unit": "°"
-        }
-      },
-      {
-        "label": "Shadow Strength",
-        "value": 114.75,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 100,
-          "step": 1,
-          "format": "integer",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Highlight Strength",
-        "value": 89.25,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 100,
-          "step": 1,
-          "format": "integer",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Balance",
-        "value": 127.5,
-        "ui": {
-          "widget": "slider",
-          "displayMin": -50,
-          "displayMax": 50,
-          "step": 1,
-          "format": "integer",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Transition Softness",
-        "value": 127.5,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 8,
-          "displayMax": 96,
-          "step": 1,
-          "format": "integer",
-          "unit": "levels"
-        }
-      },
-      {
-        "label": "Color Intensity",
-        "value": 122.39999999999999,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 100,
-          "step": 1,
-          "format": "integer",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Effect Mix",
-        "value": 255,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 100,
-          "step": 1,
-          "format": "integer",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Control 8",
-        "value": 128,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 255,
-          "step": 1,
-          "format": "number",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Control 9",
-        "value": 128,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 255,
-          "step": 1,
-          "format": "number",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Control 10",
-        "value": 128,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 255,
-          "step": 1,
-          "format": "number",
-          "unit": ""
-        }
-      }
-    ],
-    "f": [
-      "lerp(c,clamp(c+(cos(ctl(0)/255*1024)/512)*(ctl(5)/255*96)*(smoothstep(128-val(3,-50,50),128-val(3,-50,50)+val(4,8,96),i)*(ctl(2)/255)-(1-smoothstep(128-val(3,-50,50)-val(4,8,96),128-val(3,-50,50),i))*(ctl(1)/255)),0,255),ctl(6))",
-      "lerp(c,clamp(c+(cos(ctl(0)/255*1024-341.333333333)/512)*(ctl(5)/255*96)*(smoothstep(128-val(3,-50,50),128-val(3,-50,50)+val(4,8,96),i)*(ctl(2)/255)-(1-smoothstep(128-val(3,-50,50)-val(4,8,96),128-val(3,-50,50),i))*(ctl(1)/255)),0,255),ctl(6))",
-      "lerp(c,clamp(c+(cos(ctl(0)/255*1024+341.333333333)/512)*(ctl(5)/255*96)*(smoothstep(128-val(3,-50,50),128-val(3,-50,50)+val(4,8,96),i)*(ctl(2)/255)-(1-smoothstep(128-val(3,-50,50)-val(4,8,96),128-val(3,-50,50),i))*(ctl(1)/255)),0,255),ctl(6))",
-      "a"
-    ]
-  },
-  {
     "id": "duotone-gradient-map",
     "name": "Duotone Gradient Map",
     "description": "Maps source luminance between adjustable black and white points, reshapes midtones with a bias control, and applies a four-stop ramp derived from shadow and highlight RGB colours. Effect Mix blends the grade with the source.",
@@ -3190,146 +2771,6 @@ const pass2PresetDefinitions=[
       "lerp((ctl(6)<32?238:ctl(6)<96?16:ctl(6)<160?25:ctl(6)<224?16:7),(ctl(6)<32?14:ctl(6)<96?226:ctl(6)<160?255:ctl(6)<224?181:246),(1-smoothstep(val(4,4,24)/200,val(4,4,24)/200+0.015,abs(fract(bias((ctl(9)<128?mandelbrot((1.5*cx*X/(min(X,Y)*val(0,0.8,16))-0.5+val(1,-1.5,1.5)),(1.5*cy*Y/(min(X,Y)*val(0,0.8,16))+val(2,-1.5,1.5)),round(val(7,64,256))):julia((1.5*cx*X/(min(X,Y)*val(0,0.8,16))+val(1,-1.5,1.5)),(1.5*cy*Y/(min(X,Y)*val(0,0.8,16))+val(2,-1.5,1.5)),-0.8,0.156,round(val(7,64,256)))),val(5,30,75)/100)*round(val(3,8,72))+0.75+val(8,-10,10)/100)-0.5))))",
       "lerp((ctl(6)<32?224:ctl(6)<96?38:ctl(6)<160?23:ctl(6)<224?34:8),(ctl(6)<32?12:ctl(6)<96?255:ctl(6)<160?54:ctl(6)<224?153:242),(1-smoothstep(val(4,4,24)/200,val(4,4,24)/200+0.015,abs(fract(bias((ctl(9)<128?mandelbrot((1.5*cx*X/(min(X,Y)*val(0,0.8,16))-0.5+val(1,-1.5,1.5)),(1.5*cy*Y/(min(X,Y)*val(0,0.8,16))+val(2,-1.5,1.5)),round(val(7,64,256))):julia((1.5*cx*X/(min(X,Y)*val(0,0.8,16))+val(1,-1.5,1.5)),(1.5*cy*Y/(min(X,Y)*val(0,0.8,16))+val(2,-1.5,1.5)),-0.8,0.156,round(val(7,64,256)))),val(5,30,75)/100)*round(val(3,8,72))+0.75+val(8,-10,10)/100)-0.5))))",
       "a"
-    ]
-  },
-  {
-    "id": "fractal-displacement",
-    "name": "Julia Fractal Displacement",
-    "description": "Warps the complete source image, including alpha, with two related Julia escape-time fields used as hidden X/Y displacement maps. The default Julia constant is tuned for filamentary boundary structure rather than a literal fractal picture, producing sharp contour-driven folds and tearing-like bends while remaining deterministic. Strength sets displacement in pixels; Field Scale and Detail control fractal density; Angle rotates the field; Julia Real and Julia Imag change the Julia-set topology; Contour Bands increases fold frequency; Field Split decorrelates the X/Y maps; Direction Bias favors one displacement axis; Effect Mix blends back to the source.",
-    "author": "Anthony Chimming",
-    "tags": [
-      "Distortion",
-      "Fractal",
-      "Procedural",
-      "Texture"
-    ],
-    "controls": [
-      {
-        "label": "Strength",
-        "value": 59.5,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 120,
-          "step": 1,
-          "format": "integer",
-          "unit": "px"
-        }
-      },
-      {
-        "label": "Field Scale",
-        "value": 136.6071428571429,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0.6,
-          "displayMax": 2,
-          "step": 0.01,
-          "format": "number",
-          "unit": "x"
-        }
-      },
-      {
-        "label": "Detail",
-        "value": 114.3103448275862,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 24,
-          "displayMax": 256,
-          "step": 1,
-          "format": "integer",
-          "unit": "iter"
-        }
-      },
-      {
-        "label": "Angle",
-        "value": 21.958333333333332,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 360,
-          "step": 1,
-          "format": "integer",
-          "unit": "deg"
-        }
-      },
-      {
-        "label": "Julia Real",
-        "value": 39.23076923076922,
-        "ui": {
-          "widget": "slider",
-          "displayMin": -1,
-          "displayMax": 0.3,
-          "step": 0.01,
-          "format": "number",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Julia Imag",
-        "value": 160.65,
-        "ui": {
-          "widget": "slider",
-          "displayMin": -0.6,
-          "displayMax": 0.6,
-          "step": 0.01,
-          "format": "number",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Contour Bands",
-        "value": 72.85714285714285,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 1,
-          "displayMax": 8,
-          "step": 1,
-          "format": "integer",
-          "unit": "bands"
-        }
-      },
-      {
-        "label": "Field Split",
-        "value": 95.2,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 0.75,
-          "step": 0.01,
-          "format": "number",
-          "unit": ""
-        }
-      },
-      {
-        "label": "Direction Bias",
-        "value": 127.5,
-        "ui": {
-          "widget": "slider",
-          "displayMin": -100,
-          "displayMax": 100,
-          "step": 1,
-          "format": "integer",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Effect Mix",
-        "value": 255,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 100,
-          "step": 1,
-          "format": "integer",
-          "unit": "%"
-        }
-      }
-    ],
-    "f": [
-      "lerp(c,srcLinear(x+sin((julia((r2x(val(3,0,360)*1024/360,cx*X/min(X,Y))-r2y(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2),(r2y(val(3,0,360)*1024/360,cx*X/min(X,Y))+r2x(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2),val(4,-1,0.3),val(5,-0.6,0.6),round(val(2,24,256))))*round(val(6,1,8))*1024)/512*val(0,0,120)*(1+val(8,-1,1)*0.65),y+sin((julia(((r2x(val(3,0,360)*1024/360,cx*X/min(X,Y))-r2y(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2))+val(7,0,0.75),((r2y(val(3,0,360)*1024/360,cx*X/min(X,Y))+r2x(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2))-val(7,0,0.75)*0.73,val(4,-1,0.3),val(5,-0.6,0.6),round(val(2,24,256))))*round(val(6,1,8))*1024)/512*val(0,0,120)*(1-val(8,-1,1)*0.65),z),ctl(9))",
-      "lerp(c,srcLinear(x+sin((julia((r2x(val(3,0,360)*1024/360,cx*X/min(X,Y))-r2y(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2),(r2y(val(3,0,360)*1024/360,cx*X/min(X,Y))+r2x(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2),val(4,-1,0.3),val(5,-0.6,0.6),round(val(2,24,256))))*round(val(6,1,8))*1024)/512*val(0,0,120)*(1+val(8,-1,1)*0.65),y+sin((julia(((r2x(val(3,0,360)*1024/360,cx*X/min(X,Y))-r2y(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2))+val(7,0,0.75),((r2y(val(3,0,360)*1024/360,cx*X/min(X,Y))+r2x(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2))-val(7,0,0.75)*0.73,val(4,-1,0.3),val(5,-0.6,0.6),round(val(2,24,256))))*round(val(6,1,8))*1024)/512*val(0,0,120)*(1-val(8,-1,1)*0.65),z),ctl(9))",
-      "lerp(c,srcLinear(x+sin((julia((r2x(val(3,0,360)*1024/360,cx*X/min(X,Y))-r2y(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2),(r2y(val(3,0,360)*1024/360,cx*X/min(X,Y))+r2x(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2),val(4,-1,0.3),val(5,-0.6,0.6),round(val(2,24,256))))*round(val(6,1,8))*1024)/512*val(0,0,120)*(1+val(8,-1,1)*0.65),y+sin((julia(((r2x(val(3,0,360)*1024/360,cx*X/min(X,Y))-r2y(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2))+val(7,0,0.75),((r2y(val(3,0,360)*1024/360,cx*X/min(X,Y))+r2x(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2))-val(7,0,0.75)*0.73,val(4,-1,0.3),val(5,-0.6,0.6),round(val(2,24,256))))*round(val(6,1,8))*1024)/512*val(0,0,120)*(1-val(8,-1,1)*0.65),z),ctl(9))",
-      "lerp(c,srcLinear(x+sin((julia((r2x(val(3,0,360)*1024/360,cx*X/min(X,Y))-r2y(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2),(r2y(val(3,0,360)*1024/360,cx*X/min(X,Y))+r2x(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2),val(4,-1,0.3),val(5,-0.6,0.6),round(val(2,24,256))))*round(val(6,1,8))*1024)/512*val(0,0,120)*(1+val(8,-1,1)*0.65),y+sin((julia(((r2x(val(3,0,360)*1024/360,cx*X/min(X,Y))-r2y(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2))+val(7,0,0.75),((r2y(val(3,0,360)*1024/360,cx*X/min(X,Y))+r2x(val(3,0,360)*1024/360,cy*Y/min(X,Y)))*val(1,0.6,2))-val(7,0,0.75)*0.73,val(4,-1,0.3),val(5,-0.6,0.6),round(val(2,24,256))))*round(val(6,1,8))*1024)/512*val(0,0,120)*(1-val(8,-1,1)*0.65),z),ctl(9))"
     ]
   },
   {
@@ -4313,146 +3754,6 @@ const pass2PresetDefinitions=[
     ]
   },
   {
-    "id": "red-black-diagonal-plaid",
-    "name": "Red-Black Diagonal Plaid",
-    "description": "Reconstructs the supplied red-and-black plaid: alternating solid colour and black checks with 45-degree colour/black diagonal hatching in the intervening cells. Cell Size sets the square repeat; Stripe Spacing and Black Stripe Width shape the hatch; X/Y Phase translate the complete plaid across its full two-cell repeat; Stripe Offset fine-tunes hatch registration; Hue Rotation rotates the plaid colour; Saturation ranges from grayscale through the default colour to intensified chroma; Effect Mix blends the generated pattern with the source.",
-    "author": "Anthony Chimming",
-    "tags": [
-      "Pattern",
-      "Textile",
-      "Procedural",
-      "Texture"
-    ],
-    "controls": [
-      {
-        "label": "Cell Size",
-        "value": 104.39062500000001,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 8,
-          "displayMax": 24,
-          "step": 0.01,
-          "format": "number",
-          "unit": "% short"
-        }
-      },
-      {
-        "label": "Stripe Spacing",
-        "value": 100.24687499999999,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 8,
-          "displayMax": 24,
-          "step": 0.01,
-          "format": "number",
-          "unit": "% cell"
-        }
-      },
-      {
-        "label": "Black Stripe Width",
-        "value": 170,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 35,
-          "displayMax": 65,
-          "step": 1,
-          "format": "number",
-          "unit": "% cycle"
-        }
-      },
-      {
-        "label": "X Phase",
-        "value": 77.775,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 2,
-          "step": 0.01,
-          "format": "number",
-          "unit": "cells"
-        }
-      },
-      {
-        "label": "Y Phase",
-        "value": 63.75,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 2,
-          "step": 0.01,
-          "format": "number",
-          "unit": "cells"
-        }
-      },
-      {
-        "label": "Stripe Offset",
-        "value": 46.49422673198056,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 100,
-          "step": 0.1,
-          "format": "number",
-          "unit": "% cycle"
-        }
-      },
-      {
-        "label": "Effect Mix",
-        "value": 255,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 100,
-          "step": 1,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Hue Rotation",
-        "value": 127.5,
-        "ui": {
-          "widget": "slider",
-          "displayMin": -180,
-          "displayMax": 180,
-          "step": 1,
-          "format": "integer",
-          "unit": "deg"
-        }
-      },
-      {
-        "label": "Saturation",
-        "value": 127.5,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 200,
-          "step": 1,
-          "format": "integer",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Control 10",
-        "value": 128,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 255,
-          "step": 1,
-          "format": "number",
-          "unit": ""
-        }
-      }
-    ],
-    "f": [
-      "lerp(r,clamp(211*(0.299+1.13983*((-0.14713*(sin((val(7,-180,180)*1024/360))/512)+0.615*(cos((val(7,-180,180)*1024/360))/512))*(val(8,0,200)/100))),0,255)*((1-floor(repeat(x/(min(X,Y)*val(0,8,24)/100)+val(3,0,2),2)))*(1-floor(repeat(y/(min(X,Y)*val(0,8,24)/100)+val(4,0,2),2)))+abs((1-floor(repeat(x/(min(X,Y)*val(0,8,24)/100)+val(3,0,2),2)))-(1-floor(repeat(y/(min(X,Y)*val(0,8,24)/100)+val(4,0,2),2))))*(fract((x+y+(min(X,Y)*val(0,8,24)/100)*(val(3,0,2)+val(4,0,2)))/((min(X,Y)*val(0,8,24)/100)*val(1,8,24)/100)+val(5,0,100)/100)>=val(2,35,65)/100?1:0)),ctl(6))",
-      "lerp(g,clamp(211*(0.299-0.39465*((-0.14713*(cos((val(7,-180,180)*1024/360))/512)-0.615*(sin((val(7,-180,180)*1024/360))/512))*(val(8,0,200)/100))-0.58060*((-0.14713*(sin((val(7,-180,180)*1024/360))/512)+0.615*(cos((val(7,-180,180)*1024/360))/512))*(val(8,0,200)/100))),0,255)*((1-floor(repeat(x/(min(X,Y)*val(0,8,24)/100)+val(3,0,2),2)))*(1-floor(repeat(y/(min(X,Y)*val(0,8,24)/100)+val(4,0,2),2)))+abs((1-floor(repeat(x/(min(X,Y)*val(0,8,24)/100)+val(3,0,2),2)))-(1-floor(repeat(y/(min(X,Y)*val(0,8,24)/100)+val(4,0,2),2))))*(fract((x+y+(min(X,Y)*val(0,8,24)/100)*(val(3,0,2)+val(4,0,2)))/((min(X,Y)*val(0,8,24)/100)*val(1,8,24)/100)+val(5,0,100)/100)>=val(2,35,65)/100?1:0)),ctl(6))",
-      "lerp(b,clamp(211*(0.299+2.03211*((-0.14713*(cos((val(7,-180,180)*1024/360))/512)-0.615*(sin((val(7,-180,180)*1024/360))/512))*(val(8,0,200)/100))),0,255)*((1-floor(repeat(x/(min(X,Y)*val(0,8,24)/100)+val(3,0,2),2)))*(1-floor(repeat(y/(min(X,Y)*val(0,8,24)/100)+val(4,0,2),2)))+abs((1-floor(repeat(x/(min(X,Y)*val(0,8,24)/100)+val(3,0,2),2)))-(1-floor(repeat(y/(min(X,Y)*val(0,8,24)/100)+val(4,0,2),2))))*(fract((x+y+(min(X,Y)*val(0,8,24)/100)*(val(3,0,2)+val(4,0,2)))/((min(X,Y)*val(0,8,24)/100)*val(1,8,24)/100)+val(5,0,100)/100)>=val(2,35,65)/100?1:0)),ctl(6))",
-      "a"
-    ]
-  },
-  {
     "id": "selective-color-isolate",
     "name": "Selective Color Isolate",
     "description": "Isolates a chosen colour family while converting the rest of the image to monochrome. The selector compares normalized opponent-chroma direction, so tints and shaded versions of the target colour stay selected more reliably than simple RGB chromaticity matching. Minimum Saturation suppresses neutral spill and an automatic deep-shadow gate reduces dark chroma noise. Use Target Red/Green/Blue to choose the accent colour, Tolerance and Edge Softness to shape the selection, Mono Contrast/Brightness for the background, Color Boost for the retained colour, and Effect Mix for the final strength. Best suited to distinctly coloured subjects rather than neutral grey/white isolation.",
@@ -4875,6 +4176,574 @@ const pass2PresetDefinitions=[
 ];
 
 
+/* src/presets/pass3-builtins.js */
+/**
+ * Filter FabJS pass-three built-in filters, preserved from the supplied native exports.
+ * Licensed GPL-2.0-or-later. See LICENSE and README.md.
+ */
+const pass3PresetDefinitions=[
+  {
+    "id": "warped-sdf-bloom-contour",
+    "name": "Warped SDF Contour Vortex",
+    "description": "A single-pass periodic polar-distance field with deterministic noise warping. Warp Strength and Warp Scale shape the deformation; Contour Spacing and Spiral Arms control topology; Band Balance adjusts the warm-violet proportion; Hue Shift rotates the palette impression; Seed generates repeatable variations; and Effect Mix blends the generated result with the source.",
+    "author": "Anthony Chimming",
+    "tags": [
+      "Procedural",
+      "Distortion",
+      "Pattern",
+      "Color"
+    ],
+    "controls": [
+      {
+        "label": "Warp Strength",
+        "value": 157.25,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 60,
+          "step": 0.5,
+          "format": "number",
+          "unit": "px"
+        }
+      },
+      {
+        "label": "Contour Spacing",
+        "value": 194.02173913043478,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 14,
+          "displayMax": 60,
+          "step": 1,
+          "format": "number",
+          "unit": "px"
+        }
+      },
+      {
+        "label": "Spiral Arms",
+        "value": 153,
+        "ui": {
+          "widget": "number",
+          "displayMin": -5,
+          "displayMax": 5,
+          "step": 1,
+          "format": "integer",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Warp Scale",
+        "value": 247.15384615384616,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 20,
+          "displayMax": 150,
+          "step": 1,
+          "format": "number",
+          "unit": "px"
+        }
+      },
+      {
+        "label": "Band Balance",
+        "value": 10.200000000000001,
+        "ui": {
+          "widget": "slider",
+          "displayMin": -100,
+          "displayMax": 100,
+          "step": 1,
+          "format": "number",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Hue Shift",
+        "value": 144.43359375,
+        "ui": {
+          "widget": "slider",
+          "displayMin": -128,
+          "displayMax": 128,
+          "step": 1,
+          "format": "number",
+          "unit": "levels"
+        }
+      },
+      {
+        "label": "Seed",
+        "value": 15.583616723344669,
+        "ui": {
+          "widget": "seed",
+          "displayMin": 1,
+          "displayMax": 9999,
+          "step": 1,
+          "format": "integer",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Effect Mix",
+        "value": 255,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 100,
+          "step": 1,
+          "format": "number",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Control 9",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 10",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      }
+    ],
+    "f": [
+      "lerp(r,clamp(gradient3(smoothstep(-0.24,0.24,sin(m/val(1,14,60)*1024+d*val(2,-5,5)+((valueNoise(x,y,val(3,20,150),val(6,1,9999))-0.5)*2+(valueNoise(x+317,y-211,val(3,20,150)*0.55,val(6,1,9999))-0.5)*0.7)*val(0,0,60)/val(1,14,60)*1024)/512+val(4,-0.35,0.35)),clamp(62+val(5,-128,128)*0.55,0,255),clamp(122+val(5,-128,128)*0.30,0,255),clamp(246-val(5,-128,128)*0.12,0,255)),0,255),ctl(7))",
+      "lerp(g,clamp(gradient3(smoothstep(-0.24,0.24,sin(m/val(1,14,60)*1024+d*val(2,-5,5)+((valueNoise(x,y,val(3,20,150),val(6,1,9999))-0.5)*2+(valueNoise(x+317,y-211,val(3,20,150)*0.55,val(6,1,9999))-0.5)*0.7)*val(0,0,60)/val(1,14,60)*1024)/512+val(4,-0.35,0.35)),clamp(18-val(5,-128,128)*0.22,0,255),clamp(42+val(5,-128,128)*0.55,0,255),clamp(92+val(5,-128,128)*0.42,0,255)),0,255),ctl(7))",
+      "lerp(b,clamp(gradient3(smoothstep(-0.24,0.24,sin(m/val(1,14,60)*1024+d*val(2,-5,5)+((valueNoise(x,y,val(3,20,150),val(6,1,9999))-0.5)*2+(valueNoise(x+317,y-211,val(3,20,150)*0.55,val(6,1,9999))-0.5)*0.7)*val(0,0,60)/val(1,14,60)*1024)/512+val(4,-0.35,0.35)),clamp(138-val(5,-128,128)*0.45,0,255),clamp(128-val(5,-128,128)*0.15,0,255),clamp(88+val(5,-128,128)*0.58,0,255)),0,255),ctl(7))",
+      "a"
+    ]
+  },
+  {
+    "id": "kaleidoscope-mirror",
+    "name": "Kaleidoscope Mirror",
+    "description": "Folds the source into radial mirrored sectors around the image center. Segments sets the even wedge count, Rotation turns the fold, Radius / Zoom changes radial sampling scale, Mix blends with the original, Twist spirals the sectors progressively with radius, and Radial Offset shifts which concentric source region feeds the fold. Transparency follows the same mirrored geometry.",
+    "author": "Anthony Chimming",
+    "tags": [
+      "Distortion",
+      "Pattern",
+      "Shapes"
+    ],
+    "controls": [
+      {
+        "label": "Segments",
+        "value": 51,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 4,
+          "displayMax": 24,
+          "step": 2,
+          "format": "integer",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Rotation",
+        "value": 0,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 360,
+          "step": 1,
+          "format": "number",
+          "unit": "deg"
+        }
+      },
+      {
+        "label": "Radius / Zoom",
+        "value": 63.75,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0.5,
+          "displayMax": 2.5,
+          "step": 0.05,
+          "format": "number",
+          "unit": "x"
+        }
+      },
+      {
+        "label": "Mix",
+        "value": 255,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 100,
+          "step": 1,
+          "format": "number",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Twist",
+        "value": 127.5,
+        "ui": {
+          "widget": "slider",
+          "displayMin": -180,
+          "displayMax": 180,
+          "step": 1,
+          "format": "number",
+          "unit": "deg"
+        }
+      },
+      {
+        "label": "Radial Offset",
+        "value": 127.5,
+        "ui": {
+          "widget": "slider",
+          "displayMin": -25,
+          "displayMax": 25,
+          "step": 1,
+          "format": "number",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Control 7",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 8",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 9",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 10",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      }
+    ],
+    "f": [
+      "lerp(c,rad(mirror(d+val(1,0,1024)+val(4,-512,512)*(m/M),1024/(round(val(0,4,24)/2)*2)),clamp(m/val(2,0.5,2.5)+val(5,-0.25,0.25)*min(X,Y),0,M),z),ctl(3))",
+      "lerp(c,rad(mirror(d+val(1,0,1024)+val(4,-512,512)*(m/M),1024/(round(val(0,4,24)/2)*2)),clamp(m/val(2,0.5,2.5)+val(5,-0.25,0.25)*min(X,Y),0,M),z),ctl(3))",
+      "lerp(c,rad(mirror(d+val(1,0,1024)+val(4,-512,512)*(m/M),1024/(round(val(0,4,24)/2)*2)),clamp(m/val(2,0.5,2.5)+val(5,-0.25,0.25)*min(X,Y),0,M),z),ctl(3))",
+      "lerp(c,rad(mirror(d+val(1,0,1024)+val(4,-512,512)*(m/M),1024/(round(val(0,4,24)/2)*2)),clamp(m/val(2,0.5,2.5)+val(5,-0.25,0.25)*min(X,Y),0,M),z),ctl(3))"
+    ]
+  },
+  {
+    "id": "photoshop-hue-saturation-master",
+    "name": "Photoshop-Style Hue/Saturation",
+    "description": "Photoshop-style Master Hue/Saturation adjustment. Hue rotates color from -180° to +180°. Saturation ranges from full desaturation at -100 through the source saturation at 0 to maximum saturation at +100 while achromatic pixels remain neutral. Lightness fades the adjusted RGB result toward black for negative values and toward white for positive values, matching Photoshop's Master Lightness response more closely than a simple HSL-lightness replacement. Source alpha is preserved. Per-color ranges and Colorize are intentionally not included.",
+    "author": "Anthony Chimming",
+    "tags": [
+      "Color",
+      "Tone",
+      "Utility"
+    ],
+    "controls": [
+      {
+        "label": "Hue",
+        "value": 127.5,
+        "ui": {
+          "widget": "slider",
+          "displayMin": -180,
+          "displayMax": 180,
+          "step": 1,
+          "format": "integer",
+          "unit": "°"
+        }
+      },
+      {
+        "label": "Saturation",
+        "value": 127.5,
+        "ui": {
+          "widget": "slider",
+          "displayMin": -100,
+          "displayMax": 100,
+          "step": 1,
+          "format": "integer",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Lightness",
+        "value": 127.5,
+        "ui": {
+          "widget": "slider",
+          "displayMin": -100,
+          "displayMax": 100,
+          "step": 1,
+          "format": "integer",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 4",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 5",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 6",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 7",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 8",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 9",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 10",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      }
+    ],
+    "f": [
+      "clamp((255*(((max(r,max(g,b))+min(r,min(g,b)))/510)+((max(r,max(g,b))-min(r,min(g,b)))==0?0:((max(r,max(g,b))-min(r,min(g,b)))/(255-abs(max(r,max(g,b))+min(r,min(g,b))-255)))*(1-abs(val(1,-100,100))/100)+max(val(1,-100,100),0)/100)*min(((max(r,max(g,b))+min(r,min(g,b)))/510),1-((max(r,max(g,b))+min(r,min(g,b)))/510))*(2*clamp(abs(wrap(((max(r,max(g,b))-min(r,min(g,b)))==0?0:max(r,max(g,b))==r?wrap((g-b)/(max(r,max(g,b))-min(r,min(g,b))),6):max(r,max(g,b))==g?(b-r)/(max(r,max(g,b))-min(r,min(g,b)))+2:(r-g)/(max(r,max(g,b))-min(r,min(g,b)))+4)+val(0,-180,180)/60+(z==0?0:z==1?4:2),6)-3)-1,0,1)-1)))*(1-abs(val(2,-100,100))/100)+255*max(val(2,-100,100),0)/100,0,255)",
+      "clamp((255*(((max(r,max(g,b))+min(r,min(g,b)))/510)+((max(r,max(g,b))-min(r,min(g,b)))==0?0:((max(r,max(g,b))-min(r,min(g,b)))/(255-abs(max(r,max(g,b))+min(r,min(g,b))-255)))*(1-abs(val(1,-100,100))/100)+max(val(1,-100,100),0)/100)*min(((max(r,max(g,b))+min(r,min(g,b)))/510),1-((max(r,max(g,b))+min(r,min(g,b)))/510))*(2*clamp(abs(wrap(((max(r,max(g,b))-min(r,min(g,b)))==0?0:max(r,max(g,b))==r?wrap((g-b)/(max(r,max(g,b))-min(r,min(g,b))),6):max(r,max(g,b))==g?(b-r)/(max(r,max(g,b))-min(r,min(g,b)))+2:(r-g)/(max(r,max(g,b))-min(r,min(g,b)))+4)+val(0,-180,180)/60+(z==0?0:z==1?4:2),6)-3)-1,0,1)-1)))*(1-abs(val(2,-100,100))/100)+255*max(val(2,-100,100),0)/100,0,255)",
+      "clamp((255*(((max(r,max(g,b))+min(r,min(g,b)))/510)+((max(r,max(g,b))-min(r,min(g,b)))==0?0:((max(r,max(g,b))-min(r,min(g,b)))/(255-abs(max(r,max(g,b))+min(r,min(g,b))-255)))*(1-abs(val(1,-100,100))/100)+max(val(1,-100,100),0)/100)*min(((max(r,max(g,b))+min(r,min(g,b)))/510),1-((max(r,max(g,b))+min(r,min(g,b)))/510))*(2*clamp(abs(wrap(((max(r,max(g,b))-min(r,min(g,b)))==0?0:max(r,max(g,b))==r?wrap((g-b)/(max(r,max(g,b))-min(r,min(g,b))),6):max(r,max(g,b))==g?(b-r)/(max(r,max(g,b))-min(r,min(g,b)))+2:(r-g)/(max(r,max(g,b))-min(r,min(g,b)))+4)+val(0,-180,180)/60+(z==0?0:z==1?4:2),6)-3)-1,0,1)-1)))*(1-abs(val(2,-100,100))/100)+255*max(val(2,-100,100),0)/100,0,255)",
+      "a"
+    ]
+  },
+  {
+    "id": "versatile-stripes",
+    "name": "Versatile Stripes",
+    "description": "Creates crisp repeating two-colour stripes with independent stripe and background colours. Stripe Width and Gap Width range from fine pinstripes to broad bands; Angle rotates the pattern from -180° to 180°, and Offset shifts the stripe phase in either direction. Designed for posters, packaging, textiles, retro graphics, and layout backgrounds.",
+    "author": "Anthony Chimming",
+    "tags": [
+      "Pattern",
+      "Shapes",
+      "Procedural",
+      "Print",
+      "Retro"
+    ],
+    "controls": [
+      {
+        "label": "Stripe Width",
+        "value": 29.5,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 2,
+          "displayMax": 512,
+          "step": 1,
+          "format": "integer",
+          "unit": "px"
+        }
+      },
+      {
+        "label": "Gap Width",
+        "value": 30.380859375,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 512,
+          "step": 1,
+          "format": "integer",
+          "unit": "px"
+        }
+      },
+      {
+        "label": "Angle",
+        "value": 127.5,
+        "ui": {
+          "widget": "slider",
+          "displayMin": -180,
+          "displayMax": 180,
+          "step": 1,
+          "format": "integer",
+          "unit": "°"
+        }
+      },
+      {
+        "label": "Offset",
+        "value": 127.5,
+        "ui": {
+          "widget": "slider",
+          "displayMin": -50,
+          "displayMax": 50,
+          "step": 1,
+          "format": "integer",
+          "unit": "%"
+        }
+      },
+      {
+        "label": "Stripe Red",
+        "value": 255,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "integer",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Stripe Green",
+        "value": 235,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "integer",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Stripe Blue",
+        "value": 0,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "integer",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Background Red",
+        "value": 254,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "integer",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Background Green",
+        "value": 93,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "integer",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Background Blue",
+        "value": 124,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "integer",
+          "unit": ""
+        }
+      }
+    ],
+    "f": [
+      "ctl(7)+(ctl(4)-ctl(7))*(val(1,0,512)<=0?1:1-smoothstep(val(0,2,512)/2-0.5,val(0,2,512)/2+0.5,mirrorRepeat((((x-X/2)*cos(val(2,-180,180)*1024/360+256)+(y-Y/2)*sin(val(2,-180,180)*1024/360+256))/512-val(0,2,512)/2+(val(3,-50,50)*(val(0,2,512)+val(1,0,512))/100)),(val(0,2,512)+val(1,0,512))/2)))",
+      "ctl(8)+(ctl(5)-ctl(8))*(val(1,0,512)<=0?1:1-smoothstep(val(0,2,512)/2-0.5,val(0,2,512)/2+0.5,mirrorRepeat((((x-X/2)*cos(val(2,-180,180)*1024/360+256)+(y-Y/2)*sin(val(2,-180,180)*1024/360+256))/512-val(0,2,512)/2+(val(3,-50,50)*(val(0,2,512)+val(1,0,512))/100)),(val(0,2,512)+val(1,0,512))/2)))",
+      "ctl(9)+(ctl(6)-ctl(9))*(val(1,0,512)<=0?1:1-smoothstep(val(0,2,512)/2-0.5,val(0,2,512)/2+0.5,mirrorRepeat((((x-X/2)*cos(val(2,-180,180)*1024/360+256)+(y-Y/2)*sin(val(2,-180,180)*1024/360+256))/512-val(0,2,512)/2+(val(3,-50,50)*(val(0,2,512)+val(1,0,512))/100)),(val(0,2,512)+val(1,0,512))/2)))",
+      "a"
+    ]
+  }
+];
+
+
 /* src/presets/builtins.js */
 /**
  * Filter FabJS
@@ -4883,36 +4752,16 @@ const pass2PresetDefinitions=[
  */
 
 
+
 const BUILTIN_AUTHOR='Anthony Chimming';
 
 const richControl=(label,value,widget,displayMin,displayMax,step=1,format='number',unit='')=>({label,value,ui:{widget,displayMin,displayMax,step,format,unit}});
-const unusedControl=index=>richControl(`Control ${index+1}`,128,'slider',0,255);
 const sierpinskiMask=`sierpinski(x,y,X/2,Y/2,min(X,Y)*val(1,0.5,0.96),val(0,2,9),val(2,0,2.5))`;
 const sierpinskiShade=`(0.76+linearGrad(x,y,0,Y*0.15,0,Y*0.85)*0.24)`;
 const sierpinskiFormulas=[
   `lerp(r,ctl(6)+(ctl(3)-ctl(6))*${sierpinskiMask}*${sierpinskiShade},ctl(7))`,
   `lerp(g,ctl(6)+(ctl(4)-ctl(6))*${sierpinskiMask}*${sierpinskiShade},ctl(7))`,
   `lerp(b,ctl(6)+(ctl(5)-ctl(6))*${sierpinskiMask}*${sierpinskiShade},ctl(7))`,
-  'a'
-];
-const warpedSdfScale='val(1,20,110)',warpedSdfAmount='val(0,0,30)',warpedSdfSeed='val(2,1,9999)';
-const warpedSdfX=`x+(valueNoise(x,y,${warpedSdfScale},${warpedSdfSeed})-0.5)*${warpedSdfAmount}`;
-const warpedSdfY=`y+(valueNoise(x+431,y+719,${warpedSdfScale},${warpedSdfSeed})-0.5)*${warpedSdfAmount}`;
-const warpedSdfSize='min(X,Y)*val(3,0.12,0.32)',warpedSdfSmooth='val(4,0,28)',warpedSdfCutout='min(X,Y)*val(5,0.03,0.16)';
-const warpedSdfOuter=`sdfSmoothUnion(sdfCircle(${warpedSdfX},${warpedSdfY},X/2,Y/2,${warpedSdfSize}),sdfBox(${warpedSdfX},${warpedSdfY},X/2,Y/2,${warpedSdfSize}*1.55,${warpedSdfSize}*1.05,128),${warpedSdfSmooth})`;
-const warpedSdfField=`sdfSubtract(${warpedSdfOuter},sdfCircle(${warpedSdfX},${warpedSdfY},X/2,Y/2,${warpedSdfCutout}))`;
-const warpedSdfFill=`sdfFill(${warpedSdfField},val(7,0,3))`,warpedSdfOutline=`sdfOutline(${warpedSdfField},val(6,0.5,8),val(7,0,3))`,warpedSdfHue='val(8,0,1)';
-const warpedSdfFormulas=[
-  `lerp(r,clamp(10+${warpedSdfFill}*(80+${warpedSdfHue}*130),0,255),ctl(9))`,
-  `lerp(g,clamp(12+${warpedSdfOutline}*(70+${warpedSdfHue}*130),0,255),ctl(9))`,
-  `lerp(b,clamp(22+${warpedSdfFill}*(230-${warpedSdfHue}*80),0,255),ctl(9))`,
-  'a'
-];
-const benchmarkNoiseScale='val(0,10,96)',benchmarkNoiseOctaves='val(1,2,8)',benchmarkNoiseSeed='val(2,1,9999)',benchmarkNoiseContrast='val(3,0.65,1.65)';
-const benchmarkNoiseFormulas=[
-  `lerp(r,clamp(fbm(x,y,${benchmarkNoiseScale},${benchmarkNoiseOctaves},2,0.5,${benchmarkNoiseSeed})*255*${benchmarkNoiseContrast},0,255),ctl(9))`,
-  `lerp(g,clamp(turbulence(x+37,y+71,${benchmarkNoiseScale},${benchmarkNoiseOctaves},${benchmarkNoiseSeed})*255*${benchmarkNoiseContrast},0,255),ctl(9))`,
-  `lerp(b,clamp(ridged(x-53,y+29,${benchmarkNoiseScale},${benchmarkNoiseOctaves},${benchmarkNoiseSeed})*255*${benchmarkNoiseContrast},0,255),ctl(9))`,
   'a'
 ];
 const presetDescriptions={
@@ -4922,10 +4771,8 @@ const presetDescriptions={
   analoggrain:'Adds deterministic monochrome grain to simulate a lightly textured analog image. Adjust Amount for intensity and Seed for a different grain pattern.',
   brightcontrast:'Adjusts image brightness and contrast while preserving colour relationships and alpha.',
   chromasolar:'Solarizes each colour channel around a shared threshold with adjustable channel separation.',
-  digitalglitch:'Displaces RGB channels in deterministic rectangular blocks. Block dimensions, displacement, and seed control the glitch structure.',
   fractalclouds:'Blends the image with deterministic multi-octave fractal noise. Adjust scale, seed, and mix to create cloud-like texture.',
   sierpinskifractal:'Generates a recursive triangular Sierpiński mask with adjustable depth, scale, edge softness, colours, and source mix.',
-  layerednoisebenchmark:'Exercises bounded FBM, turbulence, and ridged noise in separate colour channels for repeatable CPU/WebGPU performance and parity comparisons.',
   mosaic:'Samples the centre of repeating rectangular blocks to produce a pixelated mosaic.',
   poster:'Reduces each RGB channel to a controlled number of tonal levels while preserving alpha.',
   rgbshift:'Offsets the red, green, and blue channels independently in two dimensions for chromatic misregistration effects.',
@@ -4934,7 +4781,6 @@ const presetDescriptions={
   softfocus:'Blends four diagonal bilinear samples with the original image to produce an adjustable soft-focus glow.',
   swirl:'Rotates source sampling progressively around the image centre to create a radial swirl.',
   vignettepro:'Darkens the image progressively toward the edges with adjustable strength and radius.',
-  warpedsdfbloom:'Combines, subtracts, outlines, and noise-warps signed-distance shapes. It also serves as the SDF composition benchmark.',
   warmcool:'Applies opposing warm and cool colour shifts along a diagonal image gradient.'
 };
 
@@ -4945,10 +4791,8 @@ const presetDefinitions=[
 {id:'analoggrain',name:'Analog Grain',controls:[richControl('Amount',52,'slider',0,90,1,'number','levels'),richControl('Seed',91,'seed',1,9999,1,'integer')],f:Array(3).fill('clamp(c+(hash2(x,y,val(1,1,9999))-0.5)*val(0,0,90),0,255)').concat('a')},
 {id:'brightcontrast',name:'Brightness / Contrast',controls:[richControl('Brightness',128,'slider',-128,128,1,'number','levels'),richControl('Contrast',85,'slider',0,300,1,'number','%')],f:Array(3).fill('clamp(((c-128)*val(1,0,300))/100+128+val(0,-128,128),0,255)').concat('a')},
 {id:'chromasolar',name:'Chromatic Solarize',controls:[richControl('Threshold',128,'slider',0,255,1,'integer'),richControl('Channel Spread',64,'slider',-72,72,1,'number','levels')],f:['r>=clamp(ctl(0)+val(1,-72,72),0,255)?255-r:r','g>=ctl(0)?255-g:g','b>=clamp(ctl(0)-val(1,-72,72),0,255)?255-b:b','a']},
-{id:'digitalglitch',name:'Digital Block Glitch',controls:[richControl('Displacement',77,'slider',0,100,1,'number','px'),richControl('Block Width',64,'slider',8,96,1,'integer','px'),richControl('Block Height',45,'slider',4,48,1,'integer','px'),richControl('Seed',91,'seed',1,9999,1,'integer')],f:['srcWrap(x+(hash2(floor(x/val(1,8,96)),floor(y/val(2,4,48)),val(3,1,9999))-0.5)*val(0,0,100),y,0)','srcWrap(x+(hash2(floor(x/val(1,8,96))+11,floor(y/val(2,4,48)),val(3,1,9999))-0.5)*val(0,0,70),y,1)','srcWrap(x+(hash2(floor(x/val(1,8,96))+23,floor(y/val(2,4,48)),val(3,1,9999))-0.5)*val(0,0,100),y,2)','a']},
 {id:'fractalclouds',name:'Fractal Clouds',controls:[richControl('Scale',58,'slider',12,180,1,'integer','px'),richControl('Seed',135,'seed',1,9999,1,'integer'),richControl('Blend',190,'slider',0,100,1,'number','%')],f:Array(3).fill('lerp(c,fbm(x,y,val(0,12,180),5,2,0.5,val(1,1,9999))*255,ctl(2))').concat('a')},
 {id:'sierpinskifractal',name:'Sierpiński Fractal',controls:[richControl('Recursion Depth',174,'number',2,9,1,'integer'),richControl('Fractal Scale',208,'slider',0.5,0.96,0.01),richControl('Edge Softness',32,'slider',0,2.5,0.1,'number','px'),richControl('Foreground R',238,'number',0,255,1,'integer'),richControl('Foreground G',232,'number',0,255,1,'integer'),richControl('Foreground B',214,'number',0,255,1,'integer'),richControl('Background',8,'number',0,255,1,'integer'),richControl('Effect Mix',255,'slider',0,100,1,'number','%')],f:sierpinskiFormulas},
-{id:'layerednoisebenchmark',name:'Layered Noise Benchmark',benchmark:true,controls:[richControl('Noise Scale',92,'slider',10,96,1,'integer','px'),richControl('Octaves',192,'slider',2,8,1,'integer'),richControl('Seed',73,'seed',1,9999,1,'integer'),richControl('Contrast',150,'slider',0.65,1.65,0.01,'number','×'),unusedControl(4),unusedControl(5),unusedControl(6),unusedControl(7),unusedControl(8),richControl('Effect Mix',255,'slider',0,100,1,'number','%')],f:benchmarkNoiseFormulas},
 {id:'mosaic',name:'Mosaic',controls:[richControl('Block Width',35,'slider',2,64,1,'integer','px'),richControl('Block Height',35,'slider',2,64,1,'integer','px')],f:Array(4).fill('srcLinear(floor(x/val(0,2,64))*val(0,2,64)+val(0,2,64)/2,floor(y/val(1,2,64))*val(1,2,64)+val(1,2,64)/2,z)')},
 {id:'poster',name:'Posterize',controls:[richControl('Levels',72,'slider',2,16,1,'integer')],f:Array(3).fill('round(c*(val(0,2,16)-1)/255)*255/(val(0,2,16)-1)').concat('a')},
 {id:'rgbshift',name:'RGB Shift',controls:[richControl('Red X',136,'number',-128,127,1,'number','px'),richControl('Red Y',128,'number',-128,127,1,'number','px'),richControl('Green X',120,'number',-128,127,1,'number','px'),richControl('Green Y',128,'number',-128,127,1,'number','px'),richControl('Blue X',128,'number',-128,127,1,'number','px'),richControl('Blue Y',136,'number',-128,127,1,'number','px')],f:['srcLinear(x+ctl(0)-128,y+ctl(1)-128,0)','srcLinear(x+ctl(2)-128,y+ctl(3)-128,1)','srcLinear(x+ctl(4)-128,y+ctl(5)-128,2)','a']},
@@ -4957,16 +4801,16 @@ const presetDefinitions=[
 {id:'softfocus',name:'Soft Focus',controls:[richControl('Radius',75,'slider',1,14,0.5,'number','px'),richControl('Blend',175,'slider',0,100,1,'number','%')],f:Array(3).fill('lerp(c,(c+srcLinear(x-val(0,1,14),y-val(0,1,14),z)+srcLinear(x+val(0,1,14),y-val(0,1,14),z)+srcLinear(x-val(0,1,14),y+val(0,1,14),z)+srcLinear(x+val(0,1,14),y+val(0,1,14),z))/5,ctl(1))').concat('a')},
 {id:'swirl',name:'Swirl',controls:[richControl('Twist',165,'slider',-91.4,91.4,0.1,'number','°')],f:['rad(d+((M-m)*val(0,-260,260))/max(1,M),m,0)','rad(d+((M-m)*val(0,-260,260))/max(1,M),m,1)','rad(d+((M-m)*val(0,-260,260))/max(1,M),m,2)','a']},
 {id:'vignettepro',name:'Vignette Pro',controls:[richControl('Strength',160,'slider',0,100,1,'number','%'),richControl('Radius',105,'slider',0,100,1,'number','%')],f:Array(3).fill('clamp(c*(1-smoothstep(val(1,0,M),M,m)*val(0,0,100)/100),0,255)').concat('a')},
-{id:'warpedsdfbloom',name:'Warped SDF Bloom',benchmark:true,controls:[richControl('Warp Amount',80,'slider',0,30,0.1,'number','px'),richControl('Warp Scale',100,'slider',20,110,1,'number','px'),richControl('Seed',73,'seed',1,9999,1,'integer'),richControl('Shape Size',150,'slider',0.12,0.32,0.01),richControl('Smooth Union',100,'slider',0,28,0.5,'number','px'),richControl('Cutout Size',75,'slider',0.03,0.16,0.01),richControl('Outline Width',80,'slider',0.5,8,0.1,'number','px'),richControl('Edge Softness',48,'slider',0,3,0.1,'number','px'),richControl('Colour Shift',115,'slider',0,1,0.01),richControl('Effect Mix',255,'slider',0,100,1,'number','%')],f:warpedSdfFormulas},
 {id:'warmcool',name:'Warm–Cool Gradient',controls:[richControl('Warm Strength',120,'slider',0,100,1,'number','%'),richControl('Cool Strength',120,'slider',0,100,1,'number','%')],f:['clamp(r+linearGrad(x,y,0,0,X,Y)*val(0,0,70)-val(1,0,30),0,255)','g','clamp(b+(1-linearGrad(x,y,0,0,X,Y))*val(1,0,70)-val(0,0,30),0,255)','a']}
 ];
 
-const presetTags={"pass": ["Utility"], "invert": ["Color", "Negative"], "amberfilm": ["Retro", "Warm", "Portrait"], "analoggrain": ["Noise", "Retro"], "brightcontrast": ["Tone"], "chromasolar": ["Color", "Retro"], "digitalglitch": ["Glitch"], "fractalclouds": ["Noise", "Procedural"], "sierpinskifractal": ["Fractal", "Shapes"], "layerednoisebenchmark": ["Noise", "Procedural"], "mosaic": ["Pixelate"], "poster": ["Color", "Print"], "rgbshift": ["Color", "Distortion"], "saturation": ["Color"], "sharpen": ["Detail"], "softfocus": ["Blur", "Portrait"], "swirl": ["Distortion"], "vignettepro": ["Tone", "Portrait"], "warpedsdfbloom": ["Shapes", "Procedural"], "warmcool": ["Color", "Gradient"]};
+const presetTags={"pass": ["Utility"], "invert": ["Color", "Negative"], "amberfilm": ["Retro", "Warm", "Portrait"], "analoggrain": ["Noise", "Retro"], "brightcontrast": ["Tone"], "chromasolar": ["Color", "Retro"], "fractalclouds": ["Noise", "Procedural"], "sierpinskifractal": ["Fractal", "Shapes"], "mosaic": ["Pixelate"], "poster": ["Color", "Print"], "rgbshift": ["Color", "Distortion"], "saturation": ["Color"], "sharpen": ["Detail"], "softfocus": ["Blur", "Portrait"], "swirl": ["Distortion"], "vignettepro": ["Tone", "Portrait"], "warmcool": ["Color", "Gradient"]};
 
 const presets=[
   ...presetDefinitions.map(preset=>({...preset,tags:[...(presetTags[preset.id]||[]),...(preset.benchmark?['Benchmark']:[])],description:presetDescriptions[preset.id],author:BUILTIN_AUTHOR})),
   ...contributedPresetDefinitions.map(preset=>({...preset,author:BUILTIN_AUTHOR,tags:[...preset.tags],controls:preset.controls.map(control=>({...control,ui:{...control.ui}})),f:[...preset.f]})),
-  ...pass2PresetDefinitions.map(preset=>({...preset,author:BUILTIN_AUTHOR,tags:[...preset.tags],controls:preset.controls.map(control=>({...control,ui:{...control.ui}})),f:[...preset.f]}))
+  ...pass2PresetDefinitions.map(preset=>({...preset,author:BUILTIN_AUTHOR,tags:[...preset.tags],controls:preset.controls.map(control=>({...control,ui:{...control.ui}})),f:[...preset.f]})),
+  ...pass3PresetDefinitions.map(preset=>({...preset,tags:[...preset.tags],controls:preset.controls.map(control=>({...control,ui:{...control.ui}})),f:[...preset.f]}))
 ];
 
 
@@ -6961,13 +6805,22 @@ const controlStatesEqual=(a,b)=>Boolean(a&&b&&a.length===b.length&&a.every((v,i)
 function createExploreSession(controls){
   return {defaults:[...controls],locks:{},strength:'Medium',undo:null,snapshots:{A:null,B:null,C:null,D:null},active:null};
 }
+function forceNumericDifference(raw,ui,random){
+  const display=rawToDisplay(raw,ui),direction=random()<.5?-1:1;
+  for(const value of [display+direction*ui.step,display-direction*ui.step,ui.displayMin,ui.displayMax]){
+    const next=displayToRaw(value,ui);if(next!==raw)return next;
+  }
+  return raw;
+}
 function exploreValues(controls,uis,used,session,mutate=false,random=Math.random){
   const factor=MUTATION_FACTORS[session.strength];
-  return controls.map((raw,i)=>{
+  const numeric=[];
+  const next=controls.map((raw,i)=>{
     if(!used[i]||session.locks[i])return raw;
     const ui=normalizeControlUI(uis[i]);
     if(ui.widget==='toggle')return mutate?(random()<factor?255-normalizeToggleRaw(raw):raw):(random()<.5?0:255);
     if(ui.widget==='seed'){
+      if(mutate&&random()>=factor)return raw;
       let next=displayToRaw(randomSeedDisplay(ui,random),ui);
       if(mutate&&next===raw){
         for(const value of [rawToDisplay(raw,ui)+Math.max(1,ui.step),rawToDisplay(raw,ui)-Math.max(1,ui.step),ui.displayMin,ui.displayMax]){
@@ -6976,9 +6829,18 @@ function exploreValues(controls,uis,used,session,mutate=false,random=Math.random
       }
       return next;
     }
+    if(mutate){
+      numeric.push({index:i,ui});
+      if(random()>=factor)return raw;
+    }
     const span=ui.displayMax-ui.displayMin;
     return displayToRaw(mutate?rawToDisplay(raw,ui)+(random()*2-1)*span*factor:ui.displayMin+random()*span,ui);
   });
+  if(mutate&&numeric.length&&next.every((value,i)=>value===controls[i])){
+    const {index,ui}=numeric[Math.min(numeric.length-1,Math.floor(random()*numeric.length))];
+    next[index]=forceNumericDifference(controls[index],ui,random);
+  }
+  return next;
 }
 function commitExploreValues(state,next,{undo=true}={}){
   state.explore.undo=undo?[...state.controls]:null;
@@ -7036,7 +6898,7 @@ function createExploreController({state,root,resetButton,syncControls,scheduleRe
   for(const action of ['Lock all','Unlock all','Invert locks'])button(locks,action,()=>{state.usedControls.forEach((used,i)=>{if(used)state.explore.locks[i]=action==='Lock all'||(action==='Invert locks'&&!state.explore.locks[i]);});syncControls();});
   buttons.undo=button(actions,'Undo',()=>{if(state.explore.undo)commit(state.explore.undo,false);});
   const section=document.createElement('section');section.className='section snapshots-section';root.closest('.adjust-section').after(section);
-  const heading=document.createElement('div');heading.className='section-head';heading.textContent='Snapshots';section.append(heading);
+  const heading=document.createElement('div');heading.className='section-head';const title=document.createElement('strong');title.textContent='Snapshots';heading.append(title);section.append(heading);
   const body=document.createElement('div');body.className='section-body';section.append(body);
   const row=document.createElement('div');row.className='snapshot-slots';body.append(row);
   for(const slot of ['A','B','C','D'])slots[slot]=button(row,slot,()=>{const saved=state.explore.snapshots[slot];if(!saved){toast(`Snapshot ${slot} is empty. Use Save current.`);return;}state.explore.active=slot;commit(saved);});
@@ -7511,7 +7373,7 @@ function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL
 
   function triggerDownload(href,name,revoke=false){try{const anchor=document.createElement('a');anchor.href=href;anchor.download=name;anchor.rel='noopener';anchor.style.display='none';document.body.appendChild(anchor);anchor.click();setTimeout(()=>{anchor.remove();if(revoke)URL.revokeObjectURL(href);},10000);toast(`Download started: ${name}`);return true;}catch(error){if(revoke)URL.revokeObjectURL(href);console.error('Download failed',error);toast(`Download failed: ${error.message||'browser blocked the file'}`);return false;}}
   function downloadBlob(blob,name){if(!(blob instanceof Blob)||!blob.size){toast('Nothing was generated to download');return false;}return triggerDownload(URL.createObjectURL(blob),name,true);}
-  async function exportPNG(){if(!state.filtered||!state.width||!state.height){toast('Load and render an image before exporting');return;}const filter=validatedCurrentFilter();if(!filter)return;if(state.lastSuccessfulRenderSignature!==filterRenderSignature(filter)){setStatus('Render the current filter changes before exporting.','error');toast('Render the current filter changes before exporting.');return;}setStatus('Encoding PNG…','busy');try{const canvas=renderedImageCanvas(state.filtered,state.width,state.height),name=slug($('#filterName').value||'filtered-image')+'.png',encoded=await canvasBlob(canvas,'image/png'),envelope=createFilterFabPngEnvelope(filter,'2.9.2'),blob=await embedFilterFabMetadata(encoded,envelope);if(downloadBlob(blob,name))setStatus('Ready');}catch(error){console.error('PNG export failed',error);setStatus('PNG export failed','error');toast(`PNG export failed: ${error.message}`);}}
+  async function exportPNG(){if(!state.filtered||!state.width||!state.height){toast('Load and render an image before exporting');return;}const filter=validatedCurrentFilter();if(!filter)return;if(state.lastSuccessfulRenderSignature!==filterRenderSignature(filter)){setStatus('Render the current filter changes before exporting.','error');toast('Render the current filter changes before exporting.');return;}setStatus('Encoding PNG…','busy');try{const canvas=renderedImageCanvas(state.filtered,state.width,state.height),name=slug($('#filterName').value||'filtered-image')+'.png',encoded=await canvasBlob(canvas,'image/png'),envelope=createFilterFabPngEnvelope(filter,'2.9.3'),blob=await embedFilterFabMetadata(encoded,envelope);if(downloadBlob(blob,name))setStatus('Ready');}catch(error){console.error('PNG export failed',error);setStatus('PNG export failed','error');toast(`PNG export failed: ${error.message}`);}}
   function exportFilter(){const filter=validatedCurrentFilter();if(!filter)return;if(!activeDocument.id)activeDocument.id=createCustomPresetId();filter.id=activeDocument.id;const base=slug(filter.name);try{downloadBlob(new Blob([JSON.stringify(filter,null,2)+'\n'],{type:'application/json;charset=utf-8'}),base+'.json');}catch(error){console.error('Filter export failed',error);toast(`Filter export failed: ${error.message}`);}}
   async function deletePreset(){
     if(!activeDocument.key?.startsWith('custom:'))return;
@@ -7628,7 +7490,7 @@ function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL
     window.addEventListener('beforeunload',()=>{if(librarySession)abortLibraryPackages(librarySession);onlineLibrary.dispose();thumbnailService.dispose();state.rendererManager?.dispose();});
   }
 
-  window.FilterFabJS=Object.freeze({version:'2.9.2',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getThumbnailDiagnostics:()=>thumbnailService.diagnostics(),getRendererPreference:()=>state.rendererPreference,getWorkspaceMode:()=>state.workspaceMode,getLibraryPreviewState:()=>({open:Boolean(librarySession),candidateKey:librarySession?.candidateEntry?.key||null,candidateRendered:Boolean(librarySession?.candidateRendered),activeKey:activeDocument.key,activeId:activeDocument.id,imported:activeDocument.imported,importSource:activeDocument.importSource,baseline:activeDocument.baseline,recordBaseline:activeDocument.recordBaseline})});
+  window.FilterFabJS=Object.freeze({version:'2.9.3',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getThumbnailDiagnostics:()=>thumbnailService.diagnostics(),getRendererPreference:()=>state.rendererPreference,getWorkspaceMode:()=>state.workspaceMode,getLibraryPreviewState:()=>({open:Boolean(librarySession),candidateKey:librarySession?.candidateEntry?.key||null,candidateRendered:Boolean(librarySession?.candidateRendered),activeKey:activeDocument.key,activeId:activeDocument.id,imported:activeDocument.imported,importSource:activeDocument.importSource,baseline:activeDocument.baseline,recordBaseline:activeDocument.recordBaseline})});
   controlsController.buildSliders();wire();const demo=demoImage();initImage(demo.data,demo.width,demo.height);applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');
   return{state,render,applyFilter,loadImageFile,openImageFile};
 }

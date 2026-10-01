@@ -66,6 +66,6 @@ sdfFill(
 )*255
 ```
 
-Domain warping remains ordinary coordinate composition. For example, pass noise-offset `x` and `y` expressions into an SDF primitive before composing the field. The built-in **Warped SDF Bloom** demonstrates this without adding loops, mutable state, intermediate textures, or another execution model.
+Domain warping remains ordinary coordinate composition. For example, pass noise-offset `x` and `y` expressions into an SDF primitive before composing the field. The built-in **Warped SDF Contour Vortex** demonstrates coordinate warping without adding loops, mutable state, intermediate textures, or another execution model.
 
-The built-in **Sierpiński Fractal** uses `sierpinski()` for genuine repeated structure. **Warped SDF Bloom** demonstrates composited distance fields with deterministic coordinate warping. Both remain stateless and GPU-compatible.
+The built-in **Sierpiński Fractal** uses `sierpinski()` for genuine repeated structure. **Warped SDF Contour Vortex** demonstrates distance-field contours with deterministic coordinate warping. Both remain stateless and GPU-compatible.
