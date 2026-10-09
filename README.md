@@ -20,6 +20,7 @@ Use four RGBA expressions to transform an image, expose creative parameters as c
 - **Filter Factory compatibility** — import historic Adobe Filter Factory / Filter Foundry `.afs` filters through the legacy compatibility path.
 - **48 built-in filters** — searchable by name, description, author, tags, and favorites.
 - **Online Filter Library** — browse additional filters, preview them on your current image, then apply, save, or download them.
+- **Maintainer Library Manager** — manage the official Online Library locally with filter lifecycle actions, validation and reviewed publication commits. See the [Library Manager guide](docs/LIBRARY_MANAGER.md).
 - **Artist-first controls** — filters can expose up to ten sliders, number fields, toggles, or seed controls with custom ranges and labels.
 - **Procedural graphics toolkit** — includes image sampling, transforms, gradients, palette ramps, Perlin/Worley noise, FBM, turbulence, fractals, analytic masks, signed-distance fields, convolution, and blend operations.
 - **Portable filter files** — import and export native Filter FabJS JSON filters.

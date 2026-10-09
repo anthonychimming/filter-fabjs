@@ -1,5 +1,9 @@
 # Online Library publishing (Stage 5)
 
+For local Add/Update/Unpublish/Republish workflows and reviewed publication commits,
+see the [Library Manager guide](LIBRARY_MANAGER.md). The manager uses this publisher;
+the CLI and existing GitHub CI/Pages workflows remain available independently.
+
 Filter FabJS v2.9.3 retains native JSON v2 and Typed IR v1. Application releases
 and catalogue revisions are separate: publishing library content does not
 automatically change the app version. App release preparation coordinates

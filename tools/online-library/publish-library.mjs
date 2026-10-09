@@ -11,11 +11,36 @@ import { ONLINE_LIBRARY_MANIFEST_MAX_BYTES } from '../../src/io/filter-library-c
 
 const REGISTRY_LIMIT=1024*1024,PACKAGE_NAME=/^([A-Za-z0-9_-]{1,80})-r([1-9][0-9]*)\.png$/;
 const compare=(a,b)=>a<b?-1:a>b?1:0;
-const fail=(file,message)=>{throw new Error(`${file}: ${message}`);};
+export class LibraryValidationError extends Error{
+  constructor(file,message,code='LIBRARY_VALIDATION_FAILED'){super(`${file}: ${message}`);this.name='LibraryValidationError';this.code=code;this.path=file;}
+}
+const fail=(file,message,code)=>{throw new LibraryValidationError(file,message,code);};
 const json=(bytes,file)=>{try{return JSON.parse(normalizeFilterText(new TextDecoder('utf-8',{fatal:true}).decode(bytes)));}catch{fail(file,'expected valid UTF-8 JSON');}};
 const onlyKeys=(value,keys,file)=>{if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(key=>!keys.includes(key))||keys.some(key=>!Object.hasOwn(value,key)))fail(file,`expected only ${keys.join(', ')}`);};
 const packagePath=entry=>`filters/${entry.id}-r${entry.revision}.png`;
-const portableEqual=(a,b)=>a.id===b.id&&portableContent(a)===portableContent(b);
+export const portableEqual=(a,b)=>a.id===b.id&&portableContent(a)===portableContent(b);
+
+// Shared publication inputs. The manager uses these exact checks, not a parallel validator.
+export function inspectNativeSource(bytes,file,expectedId){
+  if(bytes.length>FILTER_FILE_MAX_BYTES)fail(file,'source exceeds byte limit','SOURCE_TOO_LARGE');
+  const raw=json(bytes,file);
+  if(raw?.version!==2)fail(file,'publishing requires native version 2','SOURCE_VERSION');
+  let document;try{document=validateNativeFilter(raw);}catch(error){fail(file,error.message,'SOURCE_INVALID');}
+  if(expectedId!==undefined&&document.id!==expectedId)fail(file,`native id must match registry id ${expectedId}`,'SOURCE_ID_MISMATCH');
+  return document;
+}
+export async function inspectPortablePackage(bytes,file,expectedId){
+  if(bytes.length>ONLINE_LIBRARY_PACKAGE_MAX_BYTES)fail(file,'package exceeds byte limit','PACKAGE_TOO_LARGE');
+  let document,envelope;
+  try{
+    const blob=new Blob([bytes]),dimensions=await readPngDimensions(blob);
+    if(dimensions.width!==512||dimensions.height!==512)throw new Error(`expected 512×512 PNG, found ${dimensions.width}×${dimensions.height}`);
+    envelope=await extractFilterFabMetadata(blob);if(!envelope)throw new Error('missing FilterFabJS metadata');
+    document=validateNativeFilter(envelope.document);
+  }catch(error){fail(file,error.message,'PACKAGE_INVALID');}
+  if(expectedId!==undefined&&document.id!==expectedId)fail(file,'embedded id does not match package filename','PACKAGE_ID_MISMATCH');
+  return{document,envelope};
+}
 function metadata(entry,document){return{...entry,name:document.name,author:document.author,description:document.description,tags:document.tags,documentType:'filter',filterFormat:2,preview:{url:packagePath(entry),width:512,height:512},package:{url:packagePath(entry)}};}
 
 export function validateRegistry(value){
@@ -58,26 +83,17 @@ function gitReader(root,ref){
 async function inspect(reader,generatedAt){
   const registry=validateRegistry(json(await reader.read('registry.json',REGISTRY_LIMIT),'registry.json')),sources=new Map(),packages=new Map();
   for(const entry of registry.filters){
-    const file=`source/${entry.id}.json`,bytes=await reader.read(file,FILTER_FILE_MAX_BYTES),raw=json(bytes,file);
-    if(raw?.version!==2)fail(file,'publishing requires native version 2');
-    let document;try{document=validateNativeFilter(raw);}catch(error){fail(file,error.message);}
-    if(document.id!==entry.id)fail(file,`native id must match registry id ${entry.id}`);
+    const file=`source/${entry.id}.json`,bytes=await reader.read(file,FILTER_FILE_MAX_BYTES),document=inspectNativeSource(bytes,file,entry.id);
     sources.set(entry.id,{bytes,document});
   }
   // All historical artifacts are validated and deployed, including removed filters.
   for(const name of await reader.list('filters')){
     const match=PACKAGE_NAME.exec(name),file=`filters/${name}`;
     if(!match||!Number.isSafeInteger(Number(match[2])))fail(file,'expected <id>-r<positive revision>.png');
-    const bytes=await reader.read(file,ONLINE_LIBRARY_PACKAGE_MAX_BYTES),blob=new Blob([bytes]);
-    let document;
-    try{
-      const dimensions=await readPngDimensions(blob);if(dimensions.width!==512||dimensions.height!==512)throw new Error(`expected 512×512 PNG, found ${dimensions.width}×${dimensions.height}`);
-      const envelope=await extractFilterFabMetadata(blob);if(!envelope)throw new Error('missing FilterFabJS metadata');document=validateNativeFilter(envelope.document);
-    }catch(error){fail(file,error.message);}
-    if(document.id!==match[1])fail(file,'embedded id does not match package filename');
+    const bytes=await reader.read(file,ONLINE_LIBRARY_PACKAGE_MAX_BYTES),{document}=await inspectPortablePackage(bytes,file,match[1]);
     packages.set(file,{bytes,document,id:match[1],revision:Number(match[2])});
   }
-  for(const entry of registry.filters){const file=packagePath(entry),pkg=packages.get(file);if(!pkg)fail(file,'current package is missing');if(!portableEqual(sources.get(entry.id).document,pkg.document))fail(file,`embedded portable content differs from source/${entry.id}.json`);}
+  for(const entry of registry.filters){const file=packagePath(entry),pkg=packages.get(file);if(!pkg)fail(file,'current package is missing','PACKAGE_MISSING');if(!portableEqual(sources.get(entry.id).document,pkg.document))fail(file,`embedded portable content differs from source/${entry.id}.json`,'PACKAGE_SOURCE_MISMATCH');}
   const manifest=validateOnlineLibraryManifest({schema:'filter-fab-js/library',schemaVersion:1,libraryVersion:registry.libraryVersion,...(generatedAt===undefined?{}:{generatedAt}),filters:registry.filters.map(entry=>metadata(entry,sources.get(entry.id).document))});
   const catalogue=JSON.stringify(manifest,null,2)+'\n';if(Buffer.byteLength(catalogue)>ONLINE_LIBRARY_MANIFEST_MAX_BYTES)fail('catalogue.json','generated manifest exceeds runtime byte limit');
   return{registry,sources,packages,manifest,catalogue};
@@ -85,7 +101,7 @@ async function inspect(reader,generatedAt){
 
 function checkPublication(current,base){
   if(current.registry.libraryVersion<base.registry.libraryVersion)fail('registry.json','libraryVersion regressed');
-  for(const [file,pkg] of base.packages){if(!current.packages.has(file))fail(file,'published historical package was deleted');if(!pkg.bytes.equals(current.packages.get(file).bytes))fail(file,'published historical package was modified in place');}
+  for(const [file,pkg] of base.packages){if(!current.packages.has(file))fail(file,'published historical package was deleted','HISTORICAL_PACKAGE_DELETED');if(!pkg.bytes.equals(current.packages.get(file).bytes))fail(file,'published historical package was modified in place','HISTORICAL_PACKAGE_MODIFIED');}
   const oldEntries=new Map(base.registry.filters.map(entry=>[entry.id,entry]));
   for(const entry of current.registry.filters){
     const old=oldEntries.get(entry.id),history=[...base.packages.values()].filter(pkg=>pkg.id===entry.id),maxRevision=Math.max(0,...history.map(pkg=>pkg.revision));
@@ -127,10 +143,16 @@ export async function buildLibrary(options){
   return{...result,out};
 }
 
+export async function validationReport(options){
+  try{const result=await validateLibrary(options);return{valid:true,errors:[],warnings:options.baseRoot||options.baseRef?[]:[{code:'PUBLICATION_BASE_MISSING',message:'Historical publication comparison was not performed.'}],summary:{filters:result.registry.filters.length,packages:result.packages.size,libraryVersion:result.registry.libraryVersion}};}
+  catch(error){return{valid:false,errors:[{code:error.code||'LIBRARY_VALIDATION_FAILED',path:error.path||null,message:error.message}],warnings:[]};}
+}
+
 export async function runCli(args=process.argv.slice(2)){
   const mode=args.shift();if(!['validate','build'].includes(mode))throw new Error('Expected validate or build');
-  const names={'--library-root':'libraryRoot','--out':'out','--base-root':'baseRoot','--base-ref':'baseRef','--generated-at':'generatedAt'},options={};
-  while(args.length){const key=args.shift();if(!names[key]||!args.length||Object.hasOwn(options,names[key]))throw new Error(`Invalid or repeated option: ${key}`);options[names[key]]=args.shift();}
+  const names={'--library-root':'libraryRoot','--out':'out','--base-root':'baseRoot','--base-ref':'baseRef','--generated-at':'generatedAt'},options={};let reportJson=false;
+  while(args.length){const key=args.shift();if(key==='--report-json'&&mode==='validate'&&!reportJson){reportJson=true;continue;}if(!names[key]||!args.length||Object.hasOwn(options,names[key]))throw new Error(`Invalid or repeated option: ${key}`);options[names[key]]=args.shift();}
+  if(reportJson){const report=await validationReport(options);console.log(JSON.stringify(report));if(!report.valid)process.exitCode=1;return;}
   if(mode==='build'&&options.generatedAt===undefined)options.generatedAt=new Date().toISOString();
   const result=await(mode==='build'?buildLibrary(options):validateLibrary(options));
   console.log(`${mode==='build'?'Built':'Validated'} ${result.manifest.filters.length} current filters, ${result.packages.size} packages, libraryVersion ${result.manifest.libraryVersion}${result.out?` → ${result.out}`:''}.`);
