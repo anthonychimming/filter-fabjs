@@ -129,7 +129,7 @@ try{
   const progressRoot=await fixture('publication-progress');
   // Registry observations accept the same BOM normalization as the publisher.
   const bomRegistry=await fs.readFile(path.join(progressRoot,'registry.json'));await put(progressRoot,'registry.json',Buffer.concat([Buffer.from([0xef,0xbb,0xbf]),bomRegistry]));git(progressRoot,'add','registry.json');git(progressRoot,'commit','-m','BOM registry baseline');
-  git(progressRoot,'remote','add','origin','https://example.invalid/library.git');
+  // Offline/local-ref observation fixture: no official remote is configured. Remote status is simulated solely through refs/remotes/origin/*.
   git(progressRoot,'update-ref','refs/remotes/origin/main',git(progressRoot,'rev-parse','HEAD'));
   let live=manifestFor(),transportFailure=null;
   const fetchProgress=async(url,options)=>{assert.equal(url,'https://anthonychimming.github.io/filter-fabjs-library/catalogue.json');assert.equal(options.cache,'no-store');if(transportFailure)throw new Error(transportFailure);return new Response(JSON.stringify(live));};
