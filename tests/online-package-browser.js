@@ -33,7 +33,7 @@ run.onclick=async()=>{
   const assert=(condition,label)=>{if(!condition)throw new Error(label);output.textContent+=`PASS ${label}\n`;};
   const change=(s,value)=>{const node=$(s);node.value=value;node.dispatchEvent(new win.Event('change'));};
   const search=value=>{const node=$('[data-search]');node.value=value;node.dispatchEvent(new win.Event('input'));};
-  const source=()=>change('[data-source]','online'),row=id=>$(`[data-entry-key="online:${id}"]`),action=(id,kind='preview')=>row(id).querySelector(`[data-entry-action="${kind}"]`);
+  const source=()=>change('[data-source]',parameters.has('all')?'all':'online'),row=id=>$(`[data-entry-key="online:${id}"]`),action=(id,kind='preview')=>row(id).querySelector(`[data-entry-action="${kind}"]`);
   const snapshot=()=>JSON.stringify({identity:api.getLibraryPreviewState(),formulas:['R','G','B','A'].map(c=>$('#formula'+c).value),controls:app.state.controls,labels:app.state.labels,controlUIs:app.state.controlUIs,pending:app.state.hasPendingFormulaChanges,name:$('#filterName').value,program:api.getLastProgram(),diagnostics:api.getRendererDiagnostics(),pixels:Array.from(app.state.filtered),status:$('#statusText').textContent,formulaStatus:$('#formulaEditStatus').textContent});
   const pixels=()=>Array.from(app.state.filtered),equal=(a,b)=>a.length===b.length&&a.every((v,i)=>v===b[i]);
   const open=async()=>{$('#browseFiltersBtn').click();await until(()=>$('.filter-browser').open);$('[data-reset]').click();};
@@ -55,7 +55,7 @@ run.onclick=async()=>{
     await new Promise(resolve=>setTimeout(resolve,300));
     const baseline=pixels(),original=snapshot();
     if(savedMode){
-      await open();assert(requests.length===0,'saved catalogue is not read or fetched by local browsing');source();
+      await open();assert(requests.length===1,'opening All starts saved catalogue refresh');source();
       assert(row(a.id)&&$('[data-online-message]').textContent.includes('Showing saved catalogue'),'saved cards appear while refresh is pending');
       await preview(a.id);const retained=snapshot();assert(requests.length===2,'saved card previews through real package validation during refresh');
       manifestResponse=new Response('offline',{status:503});finishManifest();await until(()=>$('[data-online-message]').textContent.includes('Could not refresh'));
@@ -66,7 +66,7 @@ run.onclick=async()=>{
       await close();assert(snapshot()===original,'Cancel restores exact original after candidate card was removed');
       output.textContent+='Stage 4 saved catalogue browser checks passed.\n';return;
     }
-    await open();assert(requests.length===0,'local library is still opt-in');source();await until(()=>row(a.id));assert(requests.length===1&&$('[data-apply]').disabled,'browsing only fetches manifest');
+    await open();assert(requests.length===1,'opening All fetches catalogue metadata');source();await until(()=>row(a.id));assert(requests.length===1&&$('[data-apply]').disabled,'browsing only fetches manifest');
     action(a.id,'favorite').click();assert(requests.length===1&&!api.getLibraryPreviewState().candidateKey,'Favorite never fetches or previews a package');
     // Capture download bytes without letting this test save files on the user's disk.
     let downloads=[],revoked=[];win.URL.createObjectURL=blob=>{const url=originalCreate.call(win.URL,blob);if(blob.type==='image/png')downloads.push({blob,url});return url;};win.URL.revokeObjectURL=url=>{revoked.push(url);originalRevoke.call(win.URL,url);};win.HTMLAnchorElement.prototype.click=function(){downloads.at(-1).name=this.download;};

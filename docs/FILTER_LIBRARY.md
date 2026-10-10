@@ -1,6 +1,6 @@
 # Filter Library — v2.9.0
 
-v2.9.0 brings Built-in, My Filters and Online into the same Filter Library, with search, tags, favorites and pagination. All local remains the default; Online is selected explicitly. Local interaction history is recorded in [UI Phase 3](UI_PHASE_3.md); the dated validation records below describe earlier development checkpoints.
+v2.9.0 brings Built-in, My Filters and Online into the same Filter Library, with search, tags, favorites and pagination. All is the opening default; All local remains available for local-only browsing. Local interaction history is recorded in [UI Phase 3](UI_PHASE_3.md); the dated validation records below describe earlier development checkpoints.
 
 The Explore workspace opens a canvas-visible **Filter Library**. On desktop it docks as a right-side drawer with no backdrop blur over the artwork; on narrow screens it becomes a bottom sheet so part of the canvas remains visible.
 
@@ -30,11 +30,21 @@ If validation fails, the working presentation is not changed. If rendering fails
 
 **Cancel**, the close button, and **Escape** share the same restoration path. Active preview work is cancelled silently, the exact opening state and pixel buffer are restored without rerendering, the library closes, and focus returns to the launcher. This preserves dirty built-in, dirty custom, imported, pending-formula, and invalid-formula work.
 
+## All sources
+
+The Source selector offers **All**, **All local**, **Built-in**, **My Filters**, and **Online**. All is the initial default. Opening the library starts lazy Online catalogue hydration while immediately displaying available Built-in and My Filters cards; app startup alone makes no Online request. Selecting All local limits discovery to local cards. Selecting Online retains its dedicated loading, error, empty, and Retry states.
+
+In All, a supplemental loading notice leaves local results usable and the count reflects currently available matches. Failure shows “Online Library unavailable — showing local filters.” with Retry for the catalogue only. Saved last-known-good Online metadata joins immediately, with the existing background refresh and warning behavior. Asynchronous Online updates preserve focused card actions by stable key when still on the page and retain result-list scroll position where possible.
+
+Search, tag choices, favorites, sorting, and 50-entry pagination share one combined result set across available sources. Online discovery uses metadata only: browsing All or favoriting an Online card never fetches its package, installs it, or saves it to My Filters. Preview and Download remain the explicit package actions. Local thumbnails still use the current image; Online thumbnails remain static, standardized **Sample** images.
+
+Source badges remain explicit. Matching names or portable IDs are never merged: `builtin:<id>`, `custom:<id>`, and `online:<id>` are separate catalogue and favorite identities. All changes discovery only; candidate preview, Apply, and restoration behavior remain unchanged.
+
 ## Search, cards, tags, and favorites
 
 Search matches stored names, descriptions, authors, and tags, never formula source or unsaved edits. Every whitespace-separated query term must match somewhere in the metadata. Matching ignores case and diacritics; tag identity preserves accents and punctuation. Relevance sorts exact names first, then name prefixes, all terms in the name, and other matches. Ties use name, source, and stable identity.
 
-Source, Favorites only, text, and selected tags combine with AND. Selected tags match all. Tag choices come from the source/favorite scope before text and tag restrictions. Reset view clears all criteria; Clear search clears only text. Clicking a card tag clears the other restrictions and browses that exact normalized tag from page one.
+Source, Favorites only, text, and selected tags combine with AND. Selected tags match all. Tag choices come from the source/favorite scope before text and tag restrictions. Reset view returns to All local, empty search, Favorites only off, A–Z sort, and no selected tags; Clear search clears only text. Clicking a card tag preserves the current Source, clears search and Favorites only, restores A–Z sort, replaces selected tags with that exact normalized tag, and returns to page one.
 
 Each local card contains a real source-based thumbnail, filter name, Built-in/My Filter source badge, author, concise description, tags, and a separate favorite control. Cards appear immediately with a neutral checkerboard placeholder. Visible and near-visible cards move through queued/rendering to ready; a failed thumbnail shows **Preview unavailable** without removing or disabling the filter. Actual thumbnail canvases are decorative and do not add keyboard stops.
 
@@ -68,7 +78,7 @@ Desktop uses a full-height right drawer. At 920 CSS pixels or narrower the libra
 
 ## Online Filter Library
 
-Source now offers **All local** (default), **Built-in**, **My Filters**, and **Online**. Opening local sources never requests Online data. Selecting Online loads a bounded static manifest; loading, an empty catalogue, no search matches, and a failed request with Retry are distinct. Successful metadata is saved as a bounded last-known-good catalogue; first Online use on a later page immediately shows validated saved cards while refreshing. There is no periodic polling. Reset view returns to All local. Card tags browse All local for local cards and remain Online for Online cards.
+Opening local sources never requests Online data. Selecting All or Online loads a bounded static manifest. Online-only loading, an empty catalogue, no search matches, and a failed request with Retry remain distinct; All keeps available local results alongside supplemental Online status. Successful metadata is saved as a bounded last-known-good catalogue; first All or Online use on a later page immediately includes validated saved cards while refreshing. There is no periodic polling. Reset view returns to All local. Card tags preserve the current Source.
 
 Online entries are metadata-only (`document: null`). They reuse metadata search, match-all tags, favorites, sorting and pagination. Online cards show lazy static **Sample** images from standardized reference artwork, with **Sample unavailable** on image failure. These Sample images do not render against the current source image. Selecting an Online card explicitly loads its package and previews it on your current source image. Favorites never fetch packages or install filters. Browsing alone cannot enable Apply; a previously rendered candidate remains available for Apply or Cancel. Author's preset dropdown and local thumbnail workflows stay local-only.
 
@@ -76,7 +86,7 @@ The production static catalogue is delivered by the separate `filter-fabjs-libra
 
 For controlled manual testing, run `npm run dev` and open `http://localhost:8080/tests/online-library-browser.html`. The test-only app initializer injects a local URL/fetch implementation. Its first request fails; Retry serves three entries, two static PNG samples and one intentional broken-image path. **Run Stage 2 browser checks** verifies failure isolation, search/favorites, unchanged canvas/program/diagnostics, local candidate coexistence and Cancel restoration. Reload the fixture before rerunning; the check restores its test favorite preference. The fixture also remains usable interactively. Existing local workflow checks remain at `tests/library-browser.html`, for both modular and standalone builds.
 
-For discovery regressions, check local default/no network; Online success and Sample labels; failure/Retry; broken sample plus usable Favorite; local Apply and exact Cancel/Escape restoration; desktop/narrow layouts; and keyboard reachability/focus restoration. Real endpoint availability/CORS and physical touch/screen-reader behavior require their own checks.
+For discovery regressions, check All default/catalogue loading and no network before opening; Online success and Sample labels; failure/Retry; broken sample plus usable Favorite; local Apply and exact Cancel/Escape restoration; desktop/narrow layouts; and keyboard reachability/focus restoration. Real endpoint availability/CORS and physical touch/screen-reader behavior require their own checks.
 
 Stage 2 validation: the new client/UI Node smoke tests and full `npm run verify` pass. The controlled browser fixture passes for modular code and the generated standalone (`online-library-browser.html?standalone=1`), including rapid local candidate switching, pending-formula Escape restoration, My Filter Apply, and Close restoration. Desktop and narrow sample-card layouts were inspected. The older `library-browser.html` workflow currently stops at its pre-existing “single-page catalogs hide inert pagination” assertion: the baseline now includes 52 built-ins, exceeding the 50-entry page size. That assertion has not been weakened; its fixture assumption needs a separate update before relying on the complete older browser run.
 
@@ -128,13 +138,15 @@ The saved catalogue uses `ffw-online-library-cache-v1`, schema 1, tied to the ex
 
 Validated package reuse is memory-only: at most 12 entries / 32 MiB including document payload, evicted least-recently-used. Identity, revision and URL changes force a fresh resolution. Every Preview/Download gets independent copies; editing an applied filter cannot change later cache hits. Completed Preview → Download and Download → Preview reuse the package. Independent concurrent requests retain their existing cancellation behavior; single-flight is deferred. Reload discards packages. Saved catalogue metadata does not promise offline packages or Sample images.
 
-1. Run `npm run dev` and open `http://localhost:8080/tests/online-package-browser.html?manual=1`. Local sources remain default. Open Online and verify Samples, search/tags/favorites and both valid packages.
+1. Run `npm run dev` and open `http://localhost:8080/tests/online-package-browser.html?manual=1`. All opens by default. Select Online and verify Samples, search/tags/favorites and both valid packages.
 2. Reload using `?manual=1&manifestFailure=1`. Enter Online: saved cards appear immediately, then the nonblocking refresh warning with Retry. Search/Preview/Download remain usable. Retry removes the warning on success without clearing the view.
 3. Preview A, switch to B, then A, and Download A. The fixture's request counter should stop increasing for reused packages. Reload and preview A: it requires a fresh package request.
 4. Rapidly switch candidates, Cancel/Close/Escape while loading, and verify original state restoration. Apply, edit in Author, reopen and preview the same Online entry: the published definition remains intact. My Filters changes only after explicit Save.
 5. Verify Online Broken still fails gracefully and Retry/favorites remain independent. Check keyboard focus and narrow layouts for the saved-catalogue notice and actions.
 
 Automated browser modes use isolated storage, so manual saved records cannot hide a tested network failure. Run `online-package-browser.html?cpu=1` for package/cache/race regressions and `online-package-browser.html?saved=1&cpu=1` for saved refresh/removal/restoration. Append `&standalone=1` after `npm run build` to exercise generated code. All three Stage 4 Node suites are part of `npm run verify`.
+
+Append `&all=1` to either package fixture mode to run the same transactions and saved-catalogue checks within All. The discovery fixture `online-library-browser.html` also checks All loading/failure/Retry, combined pagination, and asynchronous focus/scroll preservation; append `?standalone=1` for the generated build.
 
 
 Stage 4 validation: prerequisite and final `npm run verify` passed, including all three new cache suites, build and build-output validation. The integrated package fixture passed all 39 checks in modular and generated standalone forced-CPU runs; the saved-catalogue fixture passed all 8 checks; the Stage 2 discovery/local fixture passed all 27 checks. Manual localhost storage was exercised across navigation: three saved cards survived an intentional manifest failure, with nonblocking Retry. No hardware WebGPU parity, physical touch or screen-reader speech claim is made. The older local fixture pagination assumption noted above remains a separate pre-existing issue.

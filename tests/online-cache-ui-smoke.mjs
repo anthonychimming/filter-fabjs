@@ -6,6 +6,7 @@ import { readEntryPreference, writeEntryPreference } from '../src/app/filter-cat
 import { writeOnlineLibraryCache } from '../src/io/filter-library-cache.js';
 import { packageFixtureMetadata } from './helpers/online-package-fixture.js';
 
+for(const scope of ['online','all']){
 const dom=installBrowserDom(),launcher=document.createElement('button');document.body.append(launcher);
 const data=new Map(),storage={getItem:key=>data.get(key)??null,setItem:(key,value)=>data.set(key,value)};
 const manifestUrl='https://fixture.test/catalogue.json',filters=Array.from({length:55},(_,i)=>({...packageFixtureMetadata(),id:`fixture-${i}`,name:`Fixture ${String(i).padStart(2,'0')}`}));
@@ -20,8 +21,8 @@ const $=selector=>browser.dialog.querySelector(selector),rows=()=>browser.dialog
 const change=(selector,value)=>{const node=$(selector);if(node.type==='checkbox')node.checked=value;else node.value=value;node.onchange();};
 const respond=async response=>{const pending=session.load();finish(response);await pending;};
 try{
-  await launcher.click();assert.equal(requests,0);assert.equal($('[data-online-notice]').hidden,true);
-  change('[data-source]','online');assert.equal(requests,1);assert.equal(rows().length,50);assert.match($('[data-online-message]').textContent,/Showing saved catalogue.*Checking/);assert.equal($('[data-online-retry]').hidden,true);
+  assert.equal(requests,0);await launcher.click();assert.equal($('[data-source]').value,'all');assert.equal(requests,1);assert.equal($('[data-online-notice]').hidden,false);
+  change('[data-source]',scope);assert.equal(requests,1);assert.equal(rows().length,50);assert.match($('[data-online-message]').textContent,/Showing saved catalogue.*Checking/);assert.equal($('[data-online-retry]').hidden,true);
   await rows()[0].querySelector('[data-entry-action="preview"]').click();const originalCandidate=candidate;
   await rows()[0].querySelector('[data-entry-action="download"]').click();assert.equal(previews,1);assert.equal(downloads,1);assert.equal($('[data-apply]').disabled,false);
   await respond(new Response('offline',{status:503}));assert.equal(rows().length,50);assert.match($('[data-online-message]').textContent,/Could not refresh.*saved catalogue/);assert.equal($('[data-online-retry]').hidden,false);assert.equal($('.filter-library-empty'),null);
@@ -39,4 +40,5 @@ try{
   change('[data-source]','local');assert.equal($('[data-online-notice]').hidden,true);assert.equal(requests,3);
   await $('[data-cancel]').click();assert.equal(candidate,null);
 }finally{session.dispose();dom.restore();}
+}
 console.log('Saved catalogue immediate actions, refresh fallback/Retry, view/focus/page preservation and candidate independence passed.');

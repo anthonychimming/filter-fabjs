@@ -95,6 +95,9 @@ assert.deepEqual(searchCatalog(entries,{source:'online',query:'missing'}).choice
 assert.equal(keys({query:'chromatic ripple',sort:'relevance'})[0],online.key);
 const ranked=[onlineCatalogEntry({...metadata,id:'other',name:'Other',description:'Chromatic Ripple'},preference),onlineCatalogEntry({...metadata,id:'prefix',name:'Chromatic Ripple Plus'},preference),online];
 assert.deepEqual(keys({query:'chromatic ripple',sort:'relevance'},ranked),[online.key,'online:prefix','online:other']);
+const mixedRanked=[online,catalogEntry({...localDocument,name:'A Chromatic Ripple'},'builtin',preference),catalogEntry({...localDocument,name:'Chromatic Ripple Plus'},'custom',preference)];
+assert.deepEqual(keys({source:'all',query:'chromatic ripple',sort:'relevance'},mixedRanked),[online.key,custom.key,builtin.key]);
+assert.deepEqual(keys({source:'all',query:'chromatic ripple',sort:'az'},mixedRanked),[builtin.key,online.key,custom.key]);
 const ties=[onlineCatalogEntry({...metadata,id:'z'},preference),onlineCatalogEntry({...metadata,id:'a'},preference),catalogEntry({...localDocument,name:metadata.name},'builtin',{favorite:false,tags:[]})];
 for(const sort of ['az','relevance']){
   const expected=[builtin.key,'online:a','online:z'];
