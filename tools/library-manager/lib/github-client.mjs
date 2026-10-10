@@ -1,4 +1,5 @@
 import { problem } from './repository.mjs';
+import { readGcmCredential } from './github-credential-provider.mjs';
 import { validateRegistry } from '../../online-library/publish-library.mjs';
 import { normalizeFilterText } from '../../../src/io/filter-format.js';
 
@@ -37,18 +38,37 @@ export function checkState(checks){
   return 'Unknown';
 }
 export class GitHubClient{
-  #fetch;#environment;#verifyRepository;#timeout;#createTimeout;
-  constructor(root,{fetchImpl=globalThis.fetch,env=process.env,verifyRepository,timeoutMs=20000,createTimeoutMs=60000}={}){
+  #fetch;#environment;#verifyRepository;#timeout;#createTimeout;#credentialResolver;#credentialCache;
+  constructor(root,{fetchImpl=globalThis.fetch,env=process.env,verifyRepository,credentialResolver=readGcmCredential,timeoutMs=20000,createTimeoutMs=60000}={}){
     this.root=root;this.#fetch=fetchImpl;this.#environment=env;this.#timeout=Math.min(20000,Math.max(1,timeoutMs));this.#createTimeout=Math.min(60000,Math.max(1,createTimeoutMs));
     this.#verifyRepository=verifyRepository||(async()=>{const {GitClient}=await import('./git-client.mjs');return new GitClient(root).publicationRemote();});
-    this.available=null;this.authenticated=false;
+    this.available=null;this.authenticated=false;this.authProvider=null;
+    this.#credentialResolver=credentialResolver;this.#credentialCache=null;
   }
-  #token(){
-    const token=this.#environment.FILTER_FABJS_GITHUB_TOKEN;
-    this.available=typeof token==='string'&&token.length>0;
-    if(!this.available)throw githubProblem('GITHUB_AUTH_REQUIRED','GitHub API authentication is required. Set FILTER_FABJS_GITHUB_TOKEN to a fine-grained token for '+LIBRARY_REPOSITORY+', then restart the Library Manager.');
-    if(! /^[A-Za-z0-9_.-]{1,4096}$/.test(token))throw githubProblem('GITHUB_AUTH_REQUIRED','The GitHub API token is invalid. Replace FILTER_FABJS_GITHUB_TOKEN and restart the Library Manager.');
-    return token;
+  async #token(){
+    const explicit=this.#environment.FILTER_FABJS_GITHUB_TOKEN;
+    // An explicitly supplied token takes precedence. An invalid explicit
+    // token must not silently switch to a different GitHub account via GCM.
+    if(explicit!==undefined){
+      this.available=typeof explicit==='string'&&explicit.length>0;
+      if(!/^[A-Za-z0-9_.-]{1,4096}$/.test(explicit||''))throw githubProblem('GITHUB_AUTH_REQUIRED','The configured FILTER_FABJS_GITHUB_TOKEN is invalid. Replace it or unset it to use Git Credential Manager.');
+      this.authProvider='Environment variable';return explicit;
+    }
+    if(this.#credentialCache&&this.#credentialCache.until>Date.now()){
+      this.available=true;this.authProvider='Git Credential Manager';
+      return this.#credentialCache.token;
+    }
+    let credential=null;
+    try{credential=await this.#credentialResolver();}catch{credential=null;}
+    if(!credential||typeof credential.token!=='string'||!/^[A-Za-z0-9_.-]{1,4096}$/.test(credential.token)){
+      this.available=false;this.authProvider=null;
+      throw githubProblem('GITHUB_AUTH_REQUIRED','No usable GitHub API credential was found. Sign in once using git credential-manager github login, then Refresh; alternatively set FILTER_FABJS_GITHUB_TOKEN and restart the Manager.');
+    }
+    // Keep only a short-lived private in-process copy to avoid repeated GCM
+    // launches across the multiple REST requests in one publication refresh.
+    this.#credentialCache={token:credential.token,until:Date.now()+60000};
+    this.available=true;this.authProvider='Git Credential Manager';
+    return credential.token;
   }
   async #request(endpoint,{method='GET',body,created=false}={}){
     const url=new URL(endpoint,GITHUB_API_ORIGIN);
@@ -57,7 +77,7 @@ export class GitHubClient{
     const allowed=route==='/user'||route===REPO_PATH||route===REPO_PATH+'/pulls'||new RegExp('^'+REPO_PATH+'/pulls/[1-9][0-9]{0,14}$').test(route)||new RegExp('^'+REPO_PATH+'/commits/'+sha+'/check-runs$').test(route)||new RegExp('^'+REPO_PATH+'/compare/'+sha+'\\.\\.\\.'+sha+'$').test(route)||route===REPO_PATH+'/contents/registry.json'||route===REPO_PATH+'/actions/workflows/pages.yml/runs';
     if(url.origin!==GITHUB_API_ORIGIN||url.username||url.password||url.hash||!allowed||!['GET','POST'].includes(method)||method==='POST'&&route!==REPO_PATH+'/pulls')throw githubProblem('GITHUB_ENDPOINT_REJECTED','Unsupported GitHub API intent.');
     if(method==='POST'){const remote=await this.#verifyRepository();repositoryIdentity(remote.url);repositoryIdentity(remote.pushUrl);}
-    const token=this.#token(),controller=new AbortController();
+    const token=await this.#token(),controller=new AbortController();
     const payload=body===undefined?undefined:JSON.stringify(body);
     if(payload!==undefined&&Buffer.byteLength(payload)>32768)throw githubProblem('GITHUB_REQUEST_LIMIT','Pull request content exceeds its request limit.');
     let timer;
@@ -70,7 +90,7 @@ export class GitHubClient{
       const status=response.status;
       if(!Number.isInteger(status))throw invalid();
       // Never propagate remote messages, headers or raw bodies into errors/UI.
-      if(status===401)throw githubProblem('GITHUB_AUTH_REQUIRED','GitHub API authentication failed. Replace the token and restart the Library Manager.');
+      if(status===401){this.#credentialCache=null;throw githubProblem('GITHUB_AUTH_REQUIRED','GitHub API authentication failed. Reauthenticate with Git Credential Manager and Refresh, or replace FILTER_FABJS_GITHUB_TOKEN and restart the Manager.');}
       if(status===429||status===403&&(response.headers.get('x-ratelimit-remaining')==='0'||response.headers.has('retry-after')))throw githubProblem('GITHUB_RATE_LIMIT','GitHub API rate limit reached. PR status cannot be refreshed now. Local publication state is unchanged. Retry later.');
       if(status===403)throw githubProblem('GITHUB_PERMISSION','GitHub API permission denied. Check the token repository selection and required permissions.');
       if(status===404)throw githubProblem('GITHUB_UNAVAILABLE','GitHub repository or resource is unavailable, or the token lacks access.');
@@ -98,7 +118,7 @@ export class GitHubClient{
   async readiness(){
     this.authenticated=false;const user=await this.authenticatedUser();this.authenticated=true;
     const repo=await this.repository();const list=await this.#request(REPO_PATH+'/pulls?state=open&base=main&per_page=1&page=1');if(!Array.isArray(list)||list.length>1)throw invalid();
-    return{available:true,authenticated:true,login:user.login,...repo,pullRequestAccess:'Read access verified; write permission checked on creation',provider:'Environment variable'};
+    return{available:true,authenticated:true,login:user.login,...repo,pullRequestAccess:'Read access verified; write permission checked on creation',provider:this.authProvider};
   }
   #pr(item,prepared){
     preparedInput(prepared);

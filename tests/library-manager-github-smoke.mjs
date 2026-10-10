@@ -40,7 +40,14 @@ const captured=[],originalLog=console.log;console.log=(...values)=>captured.push
 try{
   assert.equal((await client.readiness()).login,'maintainer');assert.equal(client.authenticated,true);assert.ok(!JSON.stringify(client).includes(secret));
   wrongRepo=true;await assert.rejects(client.readiness(),code('REPOSITORY_MISMATCH'));wrongRepo=false;
-  const absent=new GitHubClient('.',{env:{},fetchImpl:()=>assert.fail('No token may not call API')});await assert.rejects(absent.readiness(),code('GITHUB_AUTH_REQUIRED'));
+  const absent=new GitHubClient('.',{env:{},credentialResolver:async()=>null,fetchImpl:()=>assert.fail('No credential may not call API')});await assert.rejects(absent.readiness(),code('GITHUB_AUTH_REQUIRED'));
+   const gcm=new GitHubClient('.',{...options,env:{},credentialResolver:async()=>({token:secret,provider:'Git Credential Manager'})});
+   assert.equal((await gcm.readiness()).provider,'Git Credential Manager');
+   assert.ok(!JSON.stringify(gcm).includes(secret));
+   const explicit=new GitHubClient('.',{...options,credentialResolver:()=>assert.fail('Explicit token must take precedence')});
+   assert.equal((await explicit.readiness()).provider,'Environment variable');
+   const invalidOverride=new GitHubClient('.',{...options,env:{FILTER_FABJS_GITHUB_TOKEN:'bad\\ntoken'},credentialResolver:()=>assert.fail('Never fall back on malformed override')});
+   await assert.rejects(invalidOverride.readiness(),code('GITHUB_AUTH_REQUIRED'));
   const bad=new GitHubClient('.',{...options,env:{FILTER_FABJS_GITHUB_TOKEN:'invalid\n'+secret}});await assert.rejects(bad.readiness(),code('GITHUB_AUTH_REQUIRED'));
   for(const [status,headers,expected] of [[401,{},'GITHUB_AUTH_REQUIRED'],[403,{},'GITHUB_PERMISSION'],[403,{'X-RateLimit-Remaining':'0'},'GITHUB_RATE_LIMIT'],[403,{'Retry-After':'10'},'GITHUB_RATE_LIMIT'],[429,{},'GITHUB_RATE_LIMIT'],[404,{},'GITHUB_UNAVAILABLE'],[500,{},'GITHUB_SERVER']]){failure=()=>reply({message:secret},status,headers);await assert.rejects(client.readiness(),code(expected));}
   failure=new Error('Authorization: Bearer '+secret);await assert.rejects(client.readiness(),code('GITHUB_NETWORK'));
