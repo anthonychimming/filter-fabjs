@@ -67,6 +67,12 @@ returning IDs need a new revision above retained history. Any source file/packag
 change requires a higher revision; unchanged bytes retain the revision. Source
 formatting-only edits count, so avoid unnecessary reformatting. Every catalogue
 change requires a higher libraryVersion; version regression always fails.
+The Manager enforces exactly one increment per discovery-changing batch, verified
+against the staged registry blob before commit. Draft-only deletion does not bump
+the version. Conflict resolution after push must retain the increment; require
+the library validation check before merging into main. A version-only repair of
+an invalid publication preserves existing revisions and all package bytes. See
+the [Manager recovery procedure](LIBRARY_MANAGER.md#repairing-the-october-9-2026-publication).
 generatedAt and registry ordering are excluded from catalogue-change detection.
 A rollback is published as a new revision and higher libraryVersion. Without a
 base, rN requires retained r1, but prior publication cannot be inferred from files.

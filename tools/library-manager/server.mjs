@@ -35,6 +35,7 @@ export async function startManagerServer({libraryRoot,baseRef,port=8091,manager:
       // Serialize repository reads as well as writes: no observer sees half an application.
       if(waiting>=32)throw problem('OPERATION_BUSY','Too many manager operations are waiting. Retry shortly.');
       const previous=queue;queue=new Promise(resolve=>{release=resolve;});waiting++;await previous;
+      if(request.method==='GET'&&route==='/api/publication/remote-status')return send(200,manager.remotePublication);
       if(request.method==='GET'&&route==='/api/library')return send(200,manager.summary());
       if(request.method==='GET'&&route==='/api/diff')return send(200,{workingTree:await manager.git.diff(),candidate:manager.review?.diff||''});
       let match;
@@ -43,7 +44,7 @@ export async function startManagerServer({libraryRoot,baseRef,port=8091,manager:
       if(request.method==='GET'&&(match=/^\/api\/inspection\/([a-f0-9-]+)\/preview$/.exec(route))){const item=manager.inspections.get(match[1]);if(!item)throw problem('INSPECTION_EXPIRED','Inspect this candidate again.');return send(200,item.packageBytes,'image/png');}
       if(request.method==='GET'&&(match=/^\/api\/candidate\/([^/]+)\/preview$/.exec(route))){const item=manager.pending.get(decodeURIComponent(match[1]));if(!item?.packageBytes)throw problem('PACKAGE_MISSING','No candidate preview.');return send(200,item.packageBytes,'image/png');}
       if(request.method==='POST'){
-        const handlers={'/api/refresh':()=>manager.refresh(),'/api/candidate/inspect':data=>manager.inspect(data),'/api/candidate/accept':data=>manager.accept(data),'/api/candidate/unpublish':data=>manager.unpublish(data),'/api/candidate/delete-draft':data=>manager.deleteDraft(data),'/api/candidate/discard':data=>manager.discard(data),'/api/validate':()=>manager.validate(),'/api/prepare-publication':data=>manager.prepare(data)};
+        const handlers={'/api/publication/push-and-create-pr':data=>manager.pushAndCreate(data),'/api/refresh':()=>manager.refresh(),'/api/candidate/inspect':data=>manager.inspect(data),'/api/candidate/accept':data=>manager.accept(data),'/api/candidate/unpublish':data=>manager.unpublish(data),'/api/candidate/delete-draft':data=>manager.deleteDraft(data),'/api/candidate/discard':data=>manager.discard(data),'/api/validate':()=>manager.validate(),'/api/prepare-publication':data=>manager.prepare(data)};
         if(handlers[route])return send(200,await handlers[route](await body(request)));
       }
       return send(404,{error:{code:'NOT_FOUND',message:'Unknown manager operation.'}});
@@ -59,7 +60,7 @@ export async function runCli(args=process.argv.slice(2)){
   const options={},names={'--library-root':'libraryRoot','--base-ref':'baseRef','--port':'port'};
   while(args.length){const key=args.shift();if(!names[key]||!args.length||Object.hasOwn(options,names[key]))throw new Error(`Invalid or repeated option: ${key}`);options[names[key]]=args.shift();}
   if(options.port!==undefined){options.port=Number(options.port);if(!Number.isInteger(options.port)||options.port<1||options.port>65535)throw new Error('--port must be 1–65535');}
-  const app=await startManagerServer(options);console.log(`Filter FabJS Library Manager: ${app.url}\nLibrary: ${app.manager.root}\nPublication base: ${app.manager.baseSha}\nPending candidates remain local until Prepare Publication. No push is performed.`);
+  const app=await startManagerServer(options);console.log(`Filter FabJS Library Manager: ${app.url}\nLibrary: ${app.manager.root}\nPublication base: ${app.manager.baseSha}\nRemote publication requires explicit confirmation in the Manager. Merge remains manual.`);
   let stopping=false;const stop=async()=>{if(stopping)return;stopping=true;await app.close();};process.once('SIGINT',stop);process.once('SIGTERM',stop);return app;
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))runCli().catch(error=>{console.error(`ERROR ${error.message}`);process.exitCode=1;});
