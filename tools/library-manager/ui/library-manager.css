@@ -14,5 +14,7 @@
 .status-attention{--status-fg:var(--status-attention-fg);--status-bg:var(--status-attention-bg);--status-border:var(--status-attention-border)}
 .status-failure{--status-fg:var(--status-failure-fg);--status-bg:var(--status-failure-bg);--status-border:var(--status-failure-border)}
 @media(forced-colors:active){.status-badge{color:CanvasText;background:Canvas;border-color:CanvasText}}
+.repository-sync{border-block:1px solid var(--line);padding:12px 0 24px;margin-block:24px}.repository-sync dl{display:grid;grid-template-columns:minmax(120px,1fr) minmax(0,3fr);gap:8px 16px}.repository-sync dt{color:var(--muted)}.repository-sync dd{margin:0;overflow-wrap:anywhere}body[aria-busy="true"] button{pointer-events:none}body[aria-busy="true"] .repository-sync{opacity:.8}
+@media(max-width:540px){.repository-sync dl{grid-template-columns:1fr;gap:4px}.repository-sync dd{margin-bottom:8px}}
 @media(max-width:800px){header{flex-wrap:wrap;padding:12px}header #health{margin-left:0}.subtitle{display:block;margin-left:0}.toolbar{flex-wrap:wrap;padding:14px}.search{flex-basis:100%}.workspace{grid-template-columns:210px minmax(0,1fr)}#details,#history-panel,#publish-panel{padding:18px}nav{padding-inline:12px}}
 @media(max-width:540px){.workspace{display:block}aside{border-right:0;border-bottom:1px solid var(--line)}#filters{max-height:220px}.toolbar label:not(.search){flex:1}header{gap:12px}footer{padding:12px;gap:10px}td,th{padding:6px}}

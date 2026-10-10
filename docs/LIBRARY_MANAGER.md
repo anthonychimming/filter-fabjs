@@ -1,5 +1,140 @@
 # Filter FabJS Library Manager
 
+## Repository Synchronization
+
+After merging a publication PR and confirming its deployed Online catalogue,
+open **Workspace → Repository Synchronization → Check Sync Status**. Review the
+current branch/HEAD, local and official main SHAs, ancestry and publication
+evidence. Choose **Sync with Main**, then **Confirm Sync**; Cancel leaves the
+checkout unchanged. Checking deliberately fetches only official main into the
+`origin/main` tracking ref for ancestry inspection. It does not change files,
+the index or the checked-out branch. There is no startup polling or automatic
+synchronization.
+
+The server accepts only clean `main` or a recorded `library/publish-*` branch.
+A publication branch additionally needs a freshly verified merged PR, its
+reviewed registry, a merge commit reachable from official main, and a validated
+deployed catalogue matching every published/removed revision. Catalogue absence
+alone cannot authorize an unpublish. Unrecorded older branches need manual
+review. Local main must exist and be equal to or behind official main; ahead or
+diverged commits are preserved and block synchronization. Main occupied in
+another worktree, unsafe origins/URL rewrites, nonstandard `--base-ref`, pending
+or inspected candidates, publication reviews, stale state, recovery journals,
+Git operations/locks and any tracked/untracked changes also block execution.
+Hidden assume-unchanged/skip-worktree entries require manual review.
+Opening an upload records a live session on the server, so even an unsubmitted
+candidate blocks synchronization. **Cancel Candidate** or **Cancel Candidate
+Inspection** explicitly clears that session/inspection while retaining pending
+publication changes.
+
+`POST /api/git/sync-main/preview {}` returns bounded status fields and an opaque
+five-minute review token. `POST /api/git/sync-main/apply` requires
+`{confirmed: true, reviewToken}`. The server binds the token to the repository,
+branch, HEAD, main, live remote SHA, index/canonical fingerprint, Manager base
+and verified publication/deployment state. Tokens are consumed on an apply
+attempt, and other Manager POST operations invalidate them. Existing origin,
+session-token and serialized-request protections apply. Expired/reused tokens
+and changed state require a fresh check; client SHA values are never authority.
+Other tracked and ignored files are also fingerprinted. Ancillary inspection is
+bounded to 1,024 regular files, 16 MiB per file and 64 MiB total; ancillary
+symlinks or larger inputs require manual synchronization. Their bytes are never
+rewritten by the inspection.
+
+Confirmation rechecks safety and live main, fetches only official main without
+tags/submodules, verifies the exact reviewed SHA and ancestry, validates the
+target catalogue and retained source/package files, then rechecks before
+switching. It uses a normal `git switch main` and `git merge --ff-only` of the
+verified SHA, with ignored-file overwrites and auto-stashing disabled. It never
+resets, stashes, cleans, deletes publication branches, rewrites commits, pushes,
+creates/merges PRs or deploys. Git credentials/GCM/SSH remain responsible for Git
+transport; existing REST authentication handles PR proof.
+
+Success verifies main/HEAD, clean status and refreshed library health, then
+rebuilds the normal snapshot, history, base and online observations. The next
+batch starts from that main HEAD and its current registry version. Completed PR
+history remains visible for the session. Already-current main reports that
+state without a confirmation token or checkout operation. Sync does not replace
+publication validation or remote-base freshness safeguards.
+The result includes old/new branch and main SHAs plus the before/after checkout
+`libraryVersion`; the version can stay unchanged when the completed publication
+already had the deployed registry.
+
+For Git for Windows CRLF checkouts, refresh aligns equivalent source text only
+in the disposable comparison base. Canonical JSON and immutable PNG files are
+not rewritten; source content changes still require the existing revision rules.
+
+Failures report the actual checkout and require refresh/recheck. If switching
+succeeds but fast-forward/verification fails, the Manager leaves that safe state
+in place and performs no rollback. Another Git process is not transactionally
+locked out; immediate rechecks and Git's non-force rules protect operations. A
+remote advance after the final check is reported with guidance to check again.
+For manual fallback, inspect `git status`, the actual branch/HEAD and PR/Online
+evidence first. Once all the same safety gates hold, fetch official main, switch
+to main and merge `--ff-only origin/main`; retain the old publication branch.
+Reconcile ahead/diverged commits yourself without discarding them.
+
+`tests/library-manager-sync-smoke.mjs` uses disposable bare remotes and real Git
+commands, including checkouts with spaces; GitHub/Online observations and network
+transport are injected. It never touches the production library or live GitHub.
+The UI suite covers readiness, confirmation/cancel, stale/blocked/in-flight
+states and refreshed catalogue/base/details. Live credentials, actual GitHub
+merge/Pages deployment and OneDrive synchronization require maintainer acceptance
+using the normal `npm.cmd run library:manager -- --library-root ../filter-fabjs-library`
+launch. Restart the Manager after installing these code changes.
+
+### Implementation and verification — October 10, 2026
+
+Changed files:
+
+- `tools/library-manager/lib/sync-main.mjs` — guarded Git inspection, completion
+  proof, preview tokens, safe switching/fast-forward and partial-state reporting.
+- `tools/library-manager/lib/operations.mjs` — Manager integration, explicit
+  upload/inspection sessions, completed PR history and CRLF comparison-base fix.
+- `tools/library-manager/server.mjs` — protected, serialized sync/session intents
+  and preview invalidation by other POST operations.
+- `tools/library-manager/ui/library-manager.js` and `library-manager.css` —
+  separate synchronization section, confirmation/cancel, progress, guidance,
+  refreshed views and responsive layout. The HTML shell is unchanged.
+- `tests/library-manager-sync-smoke.mjs` and `library-manager-ui-smoke.mjs` —
+  disposable real-Git safety/publication fixtures and UI interaction coverage.
+- `package.json` — registers the new sync suite in `library:manager:test`.
+- `docs/LIBRARY_MANAGER.md` — workflow, safety/limits and acceptance instructions.
+
+`npm.cmd run library:manager:test`, `npm.cmd run library:test`, `npm.cmd test`
+and `npm.cmd run verify` all completed with exit code 0. Verification checked 51
+modules, passed the regressions, built v2.9.3 and validated static/standalone
+output. The final result-version fields also passed a focused real-Git
+fast-forward check. `git diff --check` passed; generated `dist/` files are
+unchanged. No commits, application branches, GitHub writes or production-library
+mutations were made; unrelated `tmp/` content was retained.
+
+Real Git for Windows fixtures covered current/behind main, successive squash
+publications with fresh parents/versions, unpublish evidence, retained branch
+trees, pending/inspection/upload/review state, recovery/Git operations, dirty and
+conflicted files, ignored-file preservation/invalidation, hidden index flags,
+unsafe/missing/occupied branches, ahead/diverged main, unsafe/unavailable remotes,
+invalid target registries, stale/expired/reused confirmations, remote fetch
+races, partial failures and origin/session/queue protection. GitHub and Online
+observations were injected; no tests contacted production GitHub.
+
+A disposable browser fixture verified preview, cancel, keyboard confirmation,
+success and merged history at 520- and 800-pixel widths without horizontal text
+overflow. It used simulated state and performed no Git/publication writes.
+
+Initial failures were resolved: sandbox Git could not create temporary HEAD
+refs, so approved host-side fixture runs were used; squash synchronization
+exposed the CRLF/LF comparison-base mismatch, fixed above. A temporary result
+test was initially launched before its file creation completed and passed after
+retry. Sandbox DNS also prevented the initial PR #15 lookup; a read-only host
+request confirmed it was then open and unmerged. An initial browser binding
+lookup was corrected before the responsive acceptance checks. No final test or
+build failures remain. During commit/push preparation, a fresh fetch found PR #15
+had subsequently merged as `91b5267`; this implementation was rebased onto those
+publication safeguards and the full verification workflow was rerun. This task
+did not merge or modify PR #15. Live GCM/SSH transport,
+GitHub merge/Pages deployment and real OneDrive library synchronization remain
+manual acceptance steps; hardware WebGPU parity was not run.
+
 The Library Manager is a local maintainer tool for the official Online Filter
 Library. It translates Add, Update, Unpublish and Republish into canonical library
 changes, a reviewed local Git commit, and an explicitly confirmed GitHub pull request. It does not replace the publisher,

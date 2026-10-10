@@ -14,7 +14,7 @@ function summary({pending=true,published=false,draft=false}={}){
   const online={state:'checked',manifest:{filters:published?[{id:first.id,revision:1}]:[]}};
   return{filters:catalogue(snapshot,candidates,{online}),pending:[...candidates].map(([id,item])=>({id,name:item.document.name,kind:item.kind,revision:item.revision,approved:true,changes:[]})),workspaceCount:candidates.size,health:{valid:true,errors:[],warnings:[]},online:{state:'checked',error:null},dirty:[],stale:false,recovery:false};
 }
-function ui(fixture,fixtureId=first.id){
+function ui(fixture,fixtureId=first.id,fetchImpl=()=>assert.fail('Navigation must not perform API operations')){
   const nodes=new Map();let document;
   class Node{
     constructor(tag='div'){this.tagName=tag.toUpperCase();this.children=[];this.text='';this.dataset={};this.attributes={};this.listeners=new Map();this.value='';}
@@ -35,7 +35,7 @@ function ui(fixture,fixtureId=first.id){
   const get=id=>{if(!nodes.has(id)){const node=new Node();node.id=id;nodes.set(id,node);}return nodes.get(id);};
   document={body:new Node('body'),activeElement:null,getElementById:get,createElement:tag=>new Node(tag),createTextNode:text=>{const node=new Node('#text');node.textContent=text;return node;}};
   get('status').value='All';get('sort').value='name';get('history-panel').hidden=true;get('publish-panel').hidden=true;
-  const context=vm.createContext({document,fixture,fixtureId,fetch:()=>assert.fail('Navigation must not perform API operations')});
+  const context=vm.createContext({document,fixture,fixtureId,fetch:fetchImpl});
   vm.runInContext(source.slice(0,source.lastIndexOf('await run(async()=>{token=')),context);
   vm.runInContext('state=fixture;selected=fixtureId;render();',context);
   return{get,document,context,progress:()=>vm.runInContext('({section,selected,state})',context)};
@@ -139,3 +139,29 @@ for(const semantic of ['success','progress','attention','failure','neutral']){
 assert.match(css,/overflow-wrap:anywhere/);assert.match(css,/@media\(forced-colors:active\)/);
 console.log('Library Manager primary publication CTA, labels, shared navigation, ID focus, batch preservation and lifecycle exclusions passed.');
 console.log('Library Manager semantic badges, exact state mapping, shared views, unchanged labels/lifecycle, fallback and AA contrast passed.');
+
+const syncFixture=summary({pending:false}),syncCalls=[];
+const syncPreview={ready:true,status:'Ready to sync',branch:'library/publish-2026-10-10',head:'a'.repeat(40),mainSha:'b'.repeat(40),remoteSha:'c'.repeat(40),behind:2,workingTree:'Clean',publication:{number:17},reviewToken:'opaque-token',blockers:[]};
+let syncMode='ready',releaseSync;
+const syncApp=ui(syncFixture,first.id,async(route,options)=>{
+  syncCalls.push({route,data:JSON.parse(options.body)});
+  if(route.endsWith('/preview'))return{ok:true,json:async()=>syncMode==='blocked'?{ready:false,status:'Blocked — pending workspace changes',blockers:[{message:'Finish the inspection before rechecking.'}]}:syncPreview};
+  if(syncMode==='stale')return{ok:false,json:async()=>({error:{code:'SYNC_STATE_CHANGED',message:'Stale preview — recheck required.'}})};
+  await new Promise(resolve=>{releaseSync=resolve;});
+  return{ok:true,json:async()=>({...summary({pending:false,published:true}),branch:'main',head:syncPreview.remoteSha,baseSha:syncPreview.remoteSha,libraryVersion:4,syncResult:{message:'Sync completed — on up-to-date main.'},completedPublication:{branch:syncPreview.branch,pr:{number:17,state:'MERGED',checks:'Passed'}}})};
+});
+await syncApp.get('publish-tab').click();
+const syncButton=text=>buttons(syncApp.get('publish-panel')).find(node=>node.textContent===text);
+assert.ok(syncButton('Sync with Main').disabled);assert.equal(syncCalls.length,0,'rendering never starts synchronization');
+await syncButton('Check Sync Status').click();assert.equal(syncCalls.length,1);assert.equal(syncButton('Sync with Main').disabled,false);assert.match(syncApp.get('publish-panel').textContent,/Behind by 2 commits/);
+await syncButton('Sync with Main').click();assert.equal(syncCalls.length,1);assert.match(syncApp.get('publish-panel').textContent,/bbbbbbbbbbbb → cccccccccccc/);assert.ok(syncButton('Confirm Sync'));await syncButton('Cancel').click();assert.equal(syncCalls.length,1);assert.ok(!syncButton('Confirm Sync'));
+await syncButton('Sync with Main').click();syncMode='stale';await syncButton('Confirm Sync').click();assert.match(syncApp.get('publish-panel').textContent,/Stale preview/);assert.equal(syncButton('Sync with Main').disabled,true);
+syncMode='blocked';await syncButton('Check Sync Status').click();assert.match(syncApp.get('publish-panel').textContent,/Finish the inspection/);assert.ok(syncButton('Sync with Main').disabled);
+syncMode='ready';await syncButton('Check Sync Status').click();await syncButton('Sync with Main').click();
+const confirmButton=syncButton('Confirm Sync'),applying=confirmButton.click();
+await Promise.resolve();assert.equal(confirmButton.disabled,true);assert.equal(syncButton('Cancel').disabled,true);assert.equal(syncButton('Check Sync Status').disabled,true);assert.equal(syncApp.document.body.getAttribute('aria-busy'),'true');
+releaseSync();await applying;
+assert.match(syncApp.get('publish-panel').textContent,/Sync completed — on up-to-date main/);assert.match(syncApp.get('publish-panel').textContent,/Completed publication history.*MERGED/);assert.equal(syncApp.progress().state.baseSha,syncPreview.remoteSha);assert.equal(syncApp.progress().state.libraryVersion,4);assert.match(syncApp.get('details').textContent,/Published Online/);assert.ok(syncButton('Sync with Main').disabled);
+assert.deepEqual(syncCalls.filter(call=>call.route.endsWith('/apply')).map(call=>call.data),[{confirmed:true,reviewToken:'opaque-token'},{confirmed:true,reviewToken:'opaque-token'}]);
+assert.match(css,/repository-sync dl/);assert.match(css,/@media\(max-width:540px\).*repository-sync/s);
+console.log('Repository synchronization UI: explicit check, readiness, confirmation/cancel, stale/blocked guidance, in-flight controls, refreshed catalogue/details/base and merged history passed.');

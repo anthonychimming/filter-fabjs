@@ -14,7 +14,7 @@ function statusBadge(text,value,kind='publication'){return el('span',text,'statu
 function filterStatusBadge(item,detail=false){const revision=item.publication.expectedRevision??item.revision;return statusBadge(`${statusLabel(item)}${revision?` · ${detail?'Revision ':'r'}${revision}`:''}`,item.status);}
 const button=(text,handler,className)=>{const node=el('button',text,className);node.type='button';node.addEventListener('click',()=>run(handler));return node;};
 const note=(message,error=false)=>{$('notice').textContent=message;$('notice').dataset.error=String(error);};
-async function api(route,data){const response=await fetch(route,{method:data===undefined?'GET':'POST',headers:{'X-Library-Token':token,...(data===undefined?{}:{'Content-Type':'application/json'})},...(data===undefined?{}:{body:JSON.stringify(data)})});const value=await response.json();if(!response.ok){const error=new Error(value.error.message);error.details=value.error.details;error.code=value.error.code;throw error;}return value;}
+async function api(route,data){if(data!==undefined&&!route.startsWith('/api/git/sync-main/')&&state)state.syncPreview=null;const response=await fetch(route,{method:data===undefined?'GET':'POST',headers:{'X-Library-Token':token,...(data===undefined?{}:{'Content-Type':'application/json'})},...(data===undefined?{}:{body:JSON.stringify(data)})});const value=await response.json();if(!response.ok){const error=new Error(value.error.message);error.details=value.error.details;error.code=value.error.code;throw error;}return value;}
 async function run(work){if(busy)return;busy=true;document.body.setAttribute('aria-busy','true');try{await work();}catch(error){note(error.message,true);if(error.details){const details=el('details'),summary=el('summary','Technical details');details.append(summary,el('pre',JSON.stringify(error.details,null,2)));$('notice').append(details);}}finally{busy=false;document.body.removeAttribute('aria-busy');}}
 function image(url,alt){const img=el('img',undefined,'preview');img.src=`${url}?token=${encodeURIComponent(token)}`;img.alt=alt;img.width=512;img.height=512;img.addEventListener('error',()=>{img.alt='Preview could not be displayed. Refresh and inspect the package.';});return img;}
 function switchSection(name){section=name;for(const key of ['library','history','publish']){$(`${key}-panel`).hidden=key!==name;if(key===name)$(`${key}-tab`).setAttribute('aria-current','page');else $(`${key}-tab`).removeAttribute('aria-current');}if(name==='publish')renderPublish();if(name==='history')return renderHistory();}
@@ -89,7 +89,9 @@ function changesTable(changes){
   const table=el('table'),head=el('thead'),row=el('tr');for(const title of ['Change','Previous','Candidate'])row.append(el('th',title));head.append(row);table.append(head);const body=el('tbody');
   for(const change of changes){const tr=el('tr');tr.append(el('td',change.field));for(const value of [change.before,change.after])tr.append(el('td',value===null||value===undefined?'—':typeof value==='string'?value:JSON.stringify(value), 'changed-value'));body.append(tr);}table.append(body);return table;
 }
-function editor(kind,item){
+async function editor(kind,item){
+  state=await api('/api/candidate/start-inspection',{});
+  state.syncPreview=null;
   switchSection('library');const panel=$('details');panel.replaceChildren();panel.append(el('h1',kind==='add'?'Add Filter':kind==='update'?`Update ${item.name}`:`Republish ${item.name}`),el('p','Supply an approved 512 × 512 portable PNG. Native JSON is optional when the PNG contains the complete filter definition.','muted'));
   const form=el('form',undefined,'upload');const source=el('input');source.type='file';source.accept='.json,application/json';source.id='candidate-source';const sourceLabel=el('label','Native Filter FabJS JSON (optional)');sourceLabel.htmlFor=source.id;sourceLabel.append(source);
   const pkg=el('input');pkg.type='file';pkg.accept='.png,image/png';pkg.required=true;pkg.id='candidate-package';const packageLabel=el('label','Approved portable PNG (required)');packageLabel.htmlFor=pkg.id;packageLabel.append(pkg);const inspect=el('button','Inspect Candidate','primary');inspect.type='submit';form.append(sourceLabel,packageLabel,inspect);form.addEventListener('submit',event=>{event.preventDefault();run(async()=>{
@@ -97,7 +99,7 @@ function editor(kind,item){
     let candidate=panel.querySelector('#candidate-review');if(candidate)candidate.remove();candidate=el('section');candidate.id='candidate-review';const preview=image(result.preview,`${result.name} candidate preview`);candidate.append(el('h2',result.name),el('p',`Revision ${result.currentRevision?`${result.currentRevision} → `:''}${result.revision}`),preview);for(const check of result.checks)candidate.append(el('p',`✓ ${check}`));if(result.changes.length)candidate.append(changesTable(result.changes));
     const approval=el('label',undefined,'check'),checkbox=el('input');checkbox.type='checkbox';checkbox.disabled=true;preview.addEventListener('load',()=>{checkbox.disabled=preview.naturalWidth!==512||preview.naturalHeight!==512;});preview.addEventListener('error',()=>{note('The candidate preview could not be decoded. Supply a working portable PNG before visual approval.',true);});approval.append(checkbox,document.createTextNode('Visual preview reviewed — I approve this package for publication.'));const accept=button('Add to Pending Publication',async()=>{state=await api('/api/candidate/accept',{token:result.token,approved:checkbox.checked});review=null;render();note(`${result.name} is ready in the pending publication workspace.`);},'primary');accept.disabled=true;checkbox.addEventListener('change',()=>{accept.disabled=!checkbox.checked;});
     source.addEventListener('change',()=>{accept.disabled=true;candidate.remove();},{once:true});pkg.addEventListener('change',()=>{accept.disabled=true;candidate.remove();},{once:true});candidate.append(approval,accept);panel.append(candidate);
-  });});panel.append(form,button('Back to Filter',renderDetails));pkg.focus();
+  });});panel.append(form,button('Cancel Candidate',async()=>{state=await api('/api/candidate/cancel-inspection',{confirmed:true});render();note('Candidate upload and inspection cancelled. Pending publication changes retained.');}));pkg.focus();
 }
 async function renderHistory(){
   const panel=$('history-panel'),item=state.filters.find(filter=>filter.id===selected);panel.replaceChildren(el('h1',item?`${item.name} · History`:'Filter history'));if(!item){panel.append(el('p','Choose a filter in Library to inspect its history.'));return;}
@@ -148,10 +150,47 @@ function renderRemotePublication(panel){
     }),'primary'));
   }
 }
+function renderSyncMain(parent){
+  const panel=el('section',undefined,'repository-sync');panel.setAttribute('aria-label','Repository Synchronization');
+  panel.append(el('h2','Repository Synchronization'),el('p','After merge and deployed catalogue confirmation, return this checkout to official main. Checking fetches only the origin/main tracking ref; files and the current branch stay unchanged.','muted'));
+  const message=el('p',state.syncMessage||state.syncPreview?.status||'Check Sync Status before synchronizing.');message.setAttribute('role','status');message.setAttribute('aria-live','polite');panel.append(message);
+  const check=button('Check Sync Status',async()=>{
+    check.disabled=true;message.textContent='Checking sync status…';
+    try{state.syncPreview=await api('/api/git/sync-main/preview',{});state.syncMessage=null;}catch(error){state.syncPreview=null;state.syncMessage=error.message;}
+    renderPublish();
+  });
+  const upload=$('details').querySelector('.upload')||state.inspectionActive;check.disabled=!!upload;
+  if(upload){panel.append(el('p','Finish or cancel the candidate upload/inspection before checking synchronization.','issue'));panel.append(button('Cancel Candidate Inspection',()=>confirmation(panel,'Cancel candidate inspection?','This cancels only the active upload/inspection. Pending publication changes are retained.',async()=>{state=await api('/api/candidate/cancel-inspection',{confirmed:true});render();})));}
+  const preview=state.syncPreview;
+  if(preview){
+    const rows=el('dl');for(const [label,value] of [
+      ['Current checkout',preview.branch||state.branch||'Unknown'],['HEAD',preview.head?.slice(0,12)||'Unknown'],['Working tree',preview.workingTree||'Requires review'],
+      ['Last publication',preview.publication?`PR #${preview.publication.number} merged; deployed catalogue confirmed`:'No publication branch exit required'],
+      ['Local main',preview.mainSha?.slice(0,12)||'Unknown'],['Official origin/main',preview.remoteSha?.slice(0,12)||'Unknown'],
+      ['Local main position',preview.behind===0?'Already current':Number.isInteger(preview.behind)?`Behind by ${preview.behind} commits`:'Unknown'],
+      ['Proposed operation',preview.proposedAction||'Blocked'],['Publication branches','Retained, not deleted'],['Outcome','Local catalogue refreshed after synchronization']
+    ])rows.append(el('dt',label),el('dd',value));panel.append(rows);
+    for(const blocker of preview.blockers||[])panel.append(el('p',blocker.message,'issue'));
+  }
+  const sync=button('Sync with Main',()=>{
+    const confirmationPanel=el('section',undefined,'confirmation');
+    confirmationPanel.append(el('h3','Confirm synchronization'),el('p',`Switch from ${preview.branch} to main and fast-forward ${preview.mainSha.slice(0,12)} → ${preview.remoteSha.slice(0,12)}. Publication branches and history are retained. The local catalogue will be refreshed.`));
+    const confirm=button('Confirm Sync',async()=>{
+      confirm.disabled=true;cancel.disabled=true;check.disabled=true;sync.disabled=true;message.textContent='Synchronizing with main…';
+      try{state=await api('/api/git/sync-main/apply',{confirmed:true,reviewToken:preview.reviewToken});review=null;state.syncMessage=state.syncResult.message;render();}
+      catch(error){if(error.code==='SYNC_PARTIAL'){try{state=await api('/api/library');}catch{}}state.syncPreview=null;state.syncMessage=error.message;render();}
+    },'primary');
+    const cancel=button('Cancel',()=>{confirmationPanel.remove();sync.disabled=false;sync.focus();});
+    confirmationPanel.append(confirm,cancel);panel.append(confirmationPanel);sync.disabled=true;confirm.focus();
+  },'primary');sync.disabled=!preview?.ready||!!upload;
+  const actions=el('div',undefined,'actions');actions.append(check,sync);panel.append(actions);parent.append(panel);
+}
 function renderPublish(){
   const panel=$('publish-panel');const heading=el('h1','Publication workspace');heading.tabIndex=-1;panel.replaceChildren(heading,el('p','Review filter changes, validate the complete batch, then prepare a local branch and commit. GitHub CI and Pages remain the publication gate.','muted'));
   if(state.lastPublication){panel.append(el('h2','Publication prepared locally'),el('p','Prepare Publication created a local branch and commit. It does not publish to GitHub or the Online Library.'),el('p','Continue with the GitHub publication controls below. Online publication remains unconfirmed until the deployed catalogue shows the expected revision.'));technical(panel,'Prepared branch and commit',state.lastPublication);}
   renderRemotePublication(panel);
+  renderSyncMain(panel);
+  if(state.completedPublication){panel.append(el('h2','Completed publication history'),el('p',state.completedPublication.branch));renderPr(panel,state.completedPublication.pr,true);}
   panel.append(el('p','Workspace count includes pending local changes awaiting preparation. Prepared commits are tracked separately below.','muted'));
   if(state.online.error)panel.append(el('p',state.online.error,'muted'));
   if(state.gitPublication?.error)panel.append(el('p',state.gitPublication.error,'muted'));
@@ -172,5 +211,5 @@ function renderPublish(){
 }
 $('search').addEventListener('input',renderList);$('status').addEventListener('change',renderList);$('sort').addEventListener('change',renderList);
 $('refresh').addEventListener('click',()=>run(async()=>{state=await api('/api/refresh',{});review=null;render();if(!state.stale&&!state.dirty.length&&!state.recovery)note('Library refreshed.');}));
-$('add').addEventListener('click',()=>editor('add'));for(const name of ['library','history','publish'])$(`${name}-tab`).addEventListener('click',()=>run(()=>name==='publish'?openPublicationWorkspace():switchSection(name)));$('review-button').addEventListener('click',()=>run(()=>openPublicationWorkspace()));
+$('add').addEventListener('click',()=>run(()=>editor('add')));for(const name of ['library','history','publish'])$(`${name}-tab`).addEventListener('click',()=>run(()=>name==='publish'?openPublicationWorkspace():switchSection(name)));$('review-button').addEventListener('click',()=>run(()=>openPublicationWorkspace()));
 await run(async()=>{token=(await api('/api/session')).token;state=await api('/api/library');render();});

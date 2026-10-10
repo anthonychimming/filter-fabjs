@@ -10,6 +10,7 @@ import { onlinePublication } from './publication-state.mjs';
 import { GitHubClient } from './github-client.mjs';
 import { remoteStatus, pushAndCreate } from './remote-publication.mjs';
 import { GitClient } from './git-client.mjs';
+import { previewSyncMain, applySyncMain } from './sync-main.mjs';
 import { openRepository, scanRepository, copySnapshot, readCanonical, checkedPath, relativePath, requireId, digest, problem, REGISTRY_LIMIT } from './repository.mjs';
 
 const jsonBytes=value=>Buffer.from(JSON.stringify(value,null,2)+'\n');
@@ -40,6 +41,17 @@ export class LibraryManager{
     if(!this.pending.size){this.snapshot=snapshot;this.head=head;this.branch=branch;this.review=null;this.inspections.clear();
       if(this.baseRoot)await fs.rm(this.baseRoot,{recursive:true,force:true});
       this.baseRoot=path.join(this.temp,`base-${randomUUID()}`);this.baseSha=await this.git.exportBase(this.baseRef||head,this.baseRoot);
+      // Git for Windows can check out CRLF while its blobs use LF. Align only
+      // equivalent source text in the disposable comparison base; immutable
+      // PNG bytes and canonical working-tree files remain untouched.
+      for(const [id,item] of snapshot.sources){
+        if(!item.document)continue;
+        const file=`source/${id}.json`,baseFile=path.join(this.baseRoot,file);
+        let baseBytes;try{baseBytes=await fs.readFile(baseFile);}catch(error){if(error.code==='ENOENT')continue;throw error;}
+        const current=await readCanonical(this.root,file,FILTER_FILE_MAX_BYTES);
+        if(digest(current)!==snapshot.files.get(file)?.hash)throw problem('STALE_REPOSITORY','Library changed while refreshing its comparison base. Refresh again.');
+        if(!baseBytes.equals(current)&&normalizeFilterText(baseBytes.toString('utf8'))===normalizeFilterText(current.toString('utf8')))await fs.writeFile(baseFile,current);
+      }
     }
     this.liveSnapshot=snapshot;this.status=status;this.recovery=await this.readJournal();
     this.health=await validationReport({libraryRoot:this.root,baseRoot:this.baseRoot});
@@ -56,7 +68,14 @@ export class LibraryManager{
     return this.summary();
   }
   async pushAndCreate(data){return pushAndCreate(this,data);}
-  summary(){const online={state:this.online?.state||'unknown',url:this.online?.url,checkedAt:this.online?.checkedAt,libraryVersion:this.online?.manifest?.libraryVersion||null,error:this.online?.error||null};const gitPublication=this.gitPublication?Object.fromEntries(Object.entries(this.gitPublication).filter(([key])=>!key.endsWith('Registry'))):null;const errors=[...(this.health?.errors||[]),...(this.liveSnapshot?.errors||[]),...(this.publicationErrors||[])];return{remotePublication:this.remotePublication,root:this.root,branch:this.branch,head:this.head,online,gitPublication,workspaceCount:this.pending.size,baseSha:this.baseSha,libraryVersion:this.snapshot?.registry?.libraryVersion,health:{...this.health,valid:!!this.health?.valid&&!errors.length,errors,warnings:[...(this.health?.warnings||[]),...(this.historyComplete?[]:[{code:'HISTORY_INCOMPLETE',message:'History inspection is limited or contains invalid registries. New IDs and draft deletion are disabled because prior publication cannot be ruled out.'}])]},dirty:this.status||[],stale:!!this.stale,recovery:!!this.recovery,filters:catalogue(this.pending.size?this.snapshot:this.liveSnapshot,this.pending,{git:this.gitPublication,online:this.online,onlineHistory:this.confirmedOnlineIds}),pending:[...this.pending].map(([id,item])=>({id,kind:item.kind,name:item.document?.name||id,revision:item.revision,approved:item.approved,changes:item.changes})),lastPublication:this.lastPublication};}
+  async startInspection(){this.uploadActive=true;this.syncReview=null;return this.summary();}
+  async cancelInspection({confirmed}={}){
+    if(confirmed!==true)throw problem('CONFIRMATION_REQUIRED','Confirm cancelling this candidate upload/inspection.');
+    this.uploadActive=false;this.inspections.clear();this.syncReview=null;return this.summary();
+  }
+  async previewSyncMain(){return previewSyncMain(this);}
+  async applySyncMain(data){return applySyncMain(this,data);}
+  summary(){const online={state:this.online?.state||'unknown',url:this.online?.url,checkedAt:this.online?.checkedAt,libraryVersion:this.online?.manifest?.libraryVersion||null,error:this.online?.error||null};const gitPublication=this.gitPublication?Object.fromEntries(Object.entries(this.gitPublication).filter(([key])=>!key.endsWith('Registry'))):null;const errors=[...(this.health?.errors||[]),...(this.liveSnapshot?.errors||[]),...(this.publicationErrors||[])];return{inspectionActive:!!this.uploadActive||this.inspections.size>0,completedPublication:this.completedPublication||null,remotePublication:this.remotePublication,root:this.root,branch:this.branch,head:this.head,online,gitPublication,workspaceCount:this.pending.size,baseSha:this.baseSha,libraryVersion:this.snapshot?.registry?.libraryVersion,health:{...this.health,valid:!!this.health?.valid&&!errors.length,errors,warnings:[...(this.health?.warnings||[]),...(this.historyComplete?[]:[{code:'HISTORY_INCOMPLETE',message:'History inspection is limited or contains invalid registries. New IDs and draft deletion are disabled because prior publication cannot be ruled out.'}])]},dirty:this.status||[],stale:!!this.stale,recovery:!!this.recovery,filters:catalogue(this.pending.size?this.snapshot:this.liveSnapshot,this.pending,{git:this.gitPublication,online:this.online,onlineHistory:this.confirmedOnlineIds}),pending:[...this.pending].map(([id,item])=>({id,kind:item.kind,name:item.document?.name||id,revision:item.revision,approved:item.approved,changes:item.changes})),lastPublication:this.lastPublication};}
   async assertFresh({clean=true}={}){
     if(await this.readJournal())throw problem('RECOVERY_REQUIRED','A prior preparation was interrupted. Review and discard its manager-created changes before continuing.');
     if(clean)await this.git.ensureClean();
@@ -99,7 +118,7 @@ export class LibraryManager{
     if(approved!==true)throw problem('VISUAL_REVIEW_REQUIRED','Review the visual preview before adding it to the publication workspace.');
     const others=[...this.pending.values()].filter(value=>value.id!==item.id);
     if(others.length>=100||others.reduce((sum,value)=>sum+(value.sourceBytes?.length||0)+(value.packageBytes?.length||0),item.sourceBytes.length+item.packageBytes.length)>CANDIDATE_LIMIT)throw problem('WORKSPACE_LIMIT','A workspace supports at most 100 changes and 128 MiB of candidate data.');
-    this.pending.set(item.id,{...item,approved:true});this.inspections.clear();this.review=null;return this.summary();
+    this.pending.set(item.id,{...item,approved:true});this.uploadActive=false;this.inspections.clear();this.review=null;return this.summary();
   }
   async unpublish({id,confirmed}={}){
     await this.assertFresh();requireId(id);if(confirmed!==true)throw problem('CONFIRMATION_REQUIRED','Confirm removal from Online discovery. Source and published packages will be preserved.');
@@ -127,7 +146,7 @@ export class LibraryManager{
   async discard({confirmed}={}){
     if(confirmed!==true)throw problem('CONFIRMATION_REQUIRED','Confirm discarding manager-created pending changes.');
     const journal=await this.readJournal();if(journal)await this.rollback(journal);
-    this.pending.clear();this.inspections.clear();this.review=null;this.stale=false;return this.refresh();
+    this.pending.clear();this.uploadActive=false;this.inspections.clear();this.review=null;this.stale=false;return this.refresh();
   }
   plan(date){
     const registry=structuredClone(this.snapshot.registry),writes=new Map();let catalogueChanged=false;
