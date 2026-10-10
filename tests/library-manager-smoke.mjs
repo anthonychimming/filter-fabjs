@@ -129,11 +129,15 @@ try{
   const progressRoot=await fixture('publication-progress');
   // Registry observations accept the same BOM normalization as the publisher.
   const bomRegistry=await fs.readFile(path.join(progressRoot,'registry.json'));await put(progressRoot,'registry.json',Buffer.concat([Buffer.from([0xef,0xbb,0xbf]),bomRegistry]));git(progressRoot,'add','registry.json');git(progressRoot,'commit','-m','BOM registry baseline');
-  // Offline/local-ref observation fixture: no official remote is configured. Remote status is simulated solely through refs/remotes/origin/*.
+  // Local-ref observation only: the deliberately invalid origin is not an
+  // official publication endpoint. Keep these tests isolated from live I/O.
+  git(progressRoot,'remote','add','origin','https://example.invalid/library.git');
+  const offlineProgressGit=new GitClient(progressRoot);
+  offlineProgressGit.publicationMain=async base=>({available:false,current:null,remoteMainSha:null,reviewedBaseSha:base});
   git(progressRoot,'update-ref','refs/remotes/origin/main',git(progressRoot,'rev-parse','HEAD'));
   let live=manifestFor(),transportFailure=null;
   const fetchProgress=async(url,options)=>{assert.equal(url,'https://anthonychimming.github.io/filter-fabjs-library/catalogue.json');assert.equal(options.cache,'no-store');if(transportFailure)throw new Error(transportFailure);return new Response(JSON.stringify(live));};
-  const progress=await open(progressRoot,{fetchImpl:fetchProgress});
+  const progress=await open(progressRoot,{fetchImpl:fetchProgress,gitClient:offlineProgressGit});
   const selectedProgress=()=>progress.summary().filters.find(item=>item.id===added.id);
   assert.equal(progress.summary().filters.find(item=>item.id===document.id).status,'Published Online');
   await queue(progress,'add',added);assert.equal(selectedProgress().status,'Ready to Publish');assert.equal(selectedProgress().publication.gitState,'unprepared');assert.equal(publicationUi(progress.summary(),added.id).count,1);
