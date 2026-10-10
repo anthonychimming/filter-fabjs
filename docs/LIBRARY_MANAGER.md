@@ -429,24 +429,44 @@ resolved with `npm.cmd`; no final verification failures remain.
 
 The Manager uses Node 22 built-in fetch for GitHub REST coordination; no GitHub CLI or npm dependency is required. Git still pushes branches using existing Git/SSH/Git Credential Manager authentication. REST authentication is separate and does not prove push access. Push authentication is labelled verified only after the exact remote branch is confirmed.
 
-For REST authentication, create a fine-grained personal access token through GitHub **Settings → Developer settings → Personal access tokens → Fine-grained tokens**. Select resource owner anthonychimming and **Only select repositories → anthonychimming/filter-fabjs-library**. Set an appropriate expiry and grant only:
+For REST authentication, the server tries two sources in priority order:
+
+1. **Explicit override:** if `FILTER_FABJS_GITHUB_TOKEN` is set, use that token exclusively (including when it is malformed; do not silently switch GitHub accounts).
+2. **Git Credential Manager (GCM):** otherwise call `git credential-manager get` with the fixed `https://github.com` credential request. The Manager calls GCM **directly**, not `git credential fill`, so arbitrary configured helpers are never executed. This is noninteractive (`GCM_INTERACTIVE=0`, `GIT_TERMINAL_PROMPT=0`) and reuses an already signed-in credential from the OS-backed credential store. The credential provider never writes or erases credentials.
+
+On Git for Windows, initialize the GCM login once in PowerShell **outside** the Manager:
+
+```powershell
+git credential-manager --version
+git credential-manager github login
+```
+
+Complete the GCM sign-in flow using your GitHub account with access to `anthonychimming/filter-fabjs-library`. Then launch or refresh the Manager normally:
+
+```powershell
+npm.cmd run library:manager -- --library-root ../filter-fabjs-library
+```
+
+The status row identifies the source as **Git Credential Manager**. Browser refresh, server restart and reboot should reuse the OS credential while it is valid; a new sign-in is needed after revocation, expiration, account change, or a missing/insufficiently scoped credential. **If GCM is unavailable or no stored credential exists, the Manager fails safely and displays sign-in guidance; it never launches a browser/login dialog during background refresh.** A sign-in from an SSH-only Git workflow does not necessarily populate HTTPS GCM credentials.
+
+For those who prefer a repository-restricted fine-grained token, create it through GitHub **Settings → Developer settings → Personal access tokens → Fine-grained tokens**. Select resource owner anthonychimming and **Only select repositories → anthonychimming/filter-fabjs-library**. Set an appropriate expiry and grant only:
 
 - **Pull requests: Read and write** for listing, reading and creating PRs. [GitHub pull-request permissions](https://docs.github.com/en/rest/pulls/pulls#create-a-pull-request).
 - **Checks: Read** for the Actions check runs used by this library. [GitHub check-run permissions](https://docs.github.com/en/rest/checks/runs#list-check-runs-for-a-git-reference).
 - **Metadata: Read**, implicitly included, for repository verification. [GitHub repository permissions](https://docs.github.com/en/rest/repos/repos#get-a-repository).
 
-Contents, Commit statuses, Actions, Administration and account permissions are not requested by these endpoints. Reading the authenticated account through GET /user requires no additional token permissions. [Authenticated user contract](https://docs.github.com/en/rest/users/users#get-the-authenticated-user). Repository/PR read access can be checked without creating anything; PR write permission is ultimately verified on creation, not inferred from a successful read.
+Contents, Commit statuses, Actions, Administration and account permissions are not requested by these endpoints. Reading the authenticated account through GET /user requires no additional token permissions. Repository/PR read access can be checked without creating anything; PR write permission is ultimately verified on creation, not inferred from a successful read. GCM-managed OAuth credentials may have **broader privileges** than a dedicated fine-grained token; choose the token override when strict repository-scoped least privilege is required.
 
-Set the environment variable for the server session before launching:
+To use the explicit override instead of GCM, set it before launching the Manager:
 
 ```powershell
 $env:FILTER_FABJS_GITHUB_TOKEN="YOUR_FINE_GRAINED_TOKEN"
 npm.cmd run library:manager -- --library-root ../filter-fabjs-library
 ```
 
-Do not commit the token or place it in repository/configuration files. There is no .env support or browser token entry. Replace an expired/invalid token in the launch environment and restart the Manager. The token stays in private server memory, never in summaries, browser storage, commit records or logs. It is stripped from Git child-process environments, so Git continues to use its own credentials.
+Do not commit tokens or place them in repository/configuration files. There is no .env support or browser token entry. For an expired/invalid explicit token, replace or unset it and restart the Manager; when using GCM, complete sign-in and click **Refresh Library** without restarting. Neither provider exposes the credential to browser data, UI summaries or logs. The explicit token is stripped from Git subprocess environments. REST authentication does not prove Git push permission: Git continues to use its own HTTPS/SSH credentials.
 
-Credential-helper REST reuse is deliberately not implemented. The standard git credential fill protocol can invoke configured external programs or shell snippets, trigger interactive authentication, and return credentials whose REST suitability and permissions are unknown. The environment provider gives predictable, noninteractive scope without inspecting, approving, rejecting or modifying stored Git credentials. HTTPS and SSH remotes both require the environment token for API operations. [Git credential helper contract](https://git-scm.com/docs/gitcredentials).
+GCM use is tightly bounded: GitHub.com host only, fixed command without shell, no prompts, 8-second timeout, 8-KiB output limit, strict credential parsing, no untrusted stdout/stderr in diagnostics, short private memory cache, and REST verification of the authenticated account/repository before publication. The server never invokes `credential approve`, `reject`, `store`, or `erase`. [GCM environment and interactivity documentation](https://github.com/git-ecosystem/git-credential-manager/blob/main/docs/environment.md). [Git credential helper contract](https://git-scm.com/docs/gitcredentials).
 
 All API requests pin https://api.github.com and reject redirects, cache use and arbitrary endpoint construction. API version 2022-11-28 is centralized in GITHUB_API_VERSION; it remains supported until March 10, 2028. [GitHub supported API versions](https://docs.github.com/en/rest/about-the-rest-api/api-versions).
 
