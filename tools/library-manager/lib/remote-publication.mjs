@@ -44,12 +44,12 @@ export async function assertPrepared(manager,prepared){
   if(!actual||JSON.stringify(actual)!==JSON.stringify(prepared))throw problem('STALE_PREPARATION','The prepared record changed.');
 }
 export async function remoteStatus(manager){
-  const result={prepared:null,preview:null,ready:false,git:true,remote:null,github:null,pushed:false,remoteKnown:false,pr:null,error:null};
+  const result={prepared:null,preview:null,ready:false,git:true,remote:null,baseState:null,github:null,pushed:false,remoteKnown:false,pr:null,error:null};
   try{
     result.prepared=await preparedPublication(manager.git,manager.head,manager.branch);
     if(result.prepared&&manager.remotePublication?.prepared?.commit===result.prepared.commit)result.pr=manager.remotePublication.pr;
     result.remote=await manager.git.publicationRemote();
-    if(!result.prepared){result.github=await manager.github.readiness();throw problem('PREPARED_REQUIRED','Automatic push requires a reviewed preparation record. Older local commits remain viewable; use the manual GitHub workflow for them.');}
+    if(!result.prepared){result.baseState=await manager.git.publicationMain(manager.baseSha);result.github=await manager.github.readiness();if(result.baseState.available&&!result.baseState.current)await manager.git.requirePublicationMain(manager.baseSha);throw problem('PREPARED_REQUIRED','Automatic push requires a reviewed preparation record. Older local commits remain viewable; use the manual GitHub workflow for them.');}
     result.preview=prPreview(result.prepared);
     result.github=await manager.github.readiness();
     const observed=result.pr?await manager.github.getPullRequest(result.pr.number,result.prepared):await manager.github.find(result.prepared);
@@ -58,7 +58,10 @@ export async function remoteStatus(manager){
     const remoteSha=await manager.git.remoteCommit(result.remote.pushUrl,result.prepared.branch);result.remoteKnown=true;result.pushed=remoteSha===result.prepared.commit||!!result.pr&&remoteSha===result.pr.headSha;
     if(remoteSha&&remoteSha!==result.prepared.commit&&remoteSha!==result.pr?.headSha)throw problem('REMOTE_BRANCH_CONFLICT','Remote publication branch conflict. It does not match the prepared commit or reconciled PR. No force push was attempted.');
     await assertPrepared(manager,result.prepared);
+    result.baseState=await manager.git.publicationMain(result.prepared.parent);
+    // A completed PR remains historical: main is expected to move after merge.
     if(result.pr?.state==='MERGED')return result;
+    if(result.baseState.available&&!result.baseState.current)await manager.git.requirePublicationMain(result.prepared.parent);
     if(result.pr?.state==='CLOSED')throw problem('PR_CLOSED','This publication pull request was closed without merging. Review it on GitHub; another PR will not be created automatically.');
     if(result.pr?.headChanged)throw problem('REMOTE_BRANCH_CONFLICT','PR head changed after review. Check the remote diff and validation before merging. No further automatic writes are allowed.');
     if(result.pr?.publicationValid===false)throw problem('PUBLICATION_INVALID',result.pr.publicationError);
@@ -87,10 +90,12 @@ export async function pushAndCreate(manager,{confirmed,commit,branch}={}){
     await assertPrepared(manager,prepared);
     // Re-read canonical origin immediately before each remote mutation.
     if(JSON.stringify(await manager.git.publicationRemote())!==JSON.stringify(remote))throw problem('REMOTE_CHANGED','Origin changed during publication. Refresh and review it.');
+    await manager.git.requirePublicationMain(prepared.parent);
     if(!status.pushed)await manager.git.pushPrepared(prepared,remote);
     status.pushed=true;status.remoteKnown=true;
     await manager.git.fetchPublicationMain(remote);
     await assertPrepared(manager,prepared);
+    await manager.git.requirePublicationMain(prepared.parent);
     if(await manager.git.remoteCommit(remote.pushUrl,prepared.branch)!==prepared.commit)throw problem('REMOTE_BRANCH_CONFLICT','Remote publication branch changed before PR creation.');
     if(JSON.stringify(await manager.git.publicationRemote())!==JSON.stringify(remote))throw problem('REMOTE_CHANGED','Origin changed before PR creation.');
     const existing=await manager.github.find(prepared);
@@ -98,6 +103,7 @@ export async function pushAndCreate(manager,{confirmed,commit,branch}={}){
     if(!existing){
       await assertPrepared(manager,prepared);
       if(JSON.stringify(await manager.git.publicationRemote())!==JSON.stringify(remote)||await manager.git.remoteCommit(remote.pushUrl,prepared.branch)!==prepared.commit)throw problem('REMOTE_CHANGED','Remote publication changed immediately before PR creation.');
+      await manager.git.requirePublicationMain(prepared.parent);
     }
     status.pr=existing||await manager.github.create(prepared,status.preview);
   }catch(error){failure=error;}

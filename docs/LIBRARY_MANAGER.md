@@ -425,6 +425,31 @@ and r1 remained intact. No hardware WebGPU parity run was needed or performed fo
 this maintainer-only change. The PowerShell npm option-forwarding failure was
 resolved with `npm.cmd`; no final verification failures remain.
 
+## Remote main freshness before publishing
+
+The Library Manager checks the **live** `origin/main` SHA before publication actions. It does not trust a stale local `origin/main` ref or the fact that a candidate passed an earlier local validation. The official GitHub origin is verified before a read or write; failure to contact a configured official remote blocks online publication safely. An offline fixture/checkout without `origin` can still be used for local authoring, but cannot push or create PRs.
+
+**Publication gates:**
+
+- **Validate Publication:** when a candidate is pending, the local reviewed base and local HEAD must correspond to current live `main`. If `main` has moved, validation is blocked with `REMOTE_MAIN_ADVANCED` and no files are changed.
+- **Prepare Publication:** checks the same live base before writing anything and again after candidate validation. An earlier review token never authorizes a commit after the remote base changes.
+- **Push & Create Pull Request:** verifies the prepared commit's recorded parent against live `main` during readiness, immediately before push and again before creating a PR. A late change after push stops PR creation and preserves the pushed branch; no force push, reset, rebase or merge is performed automatically.
+- **Existing merged PRs:** historical merged PR status is retained when `main` subsequently advances. A newer main is normal after merge; it does not convert a completed PR back into an error.
+
+The Publication Workspace displays the reviewed SHA, live `main` SHA and a **Remote main freshness** row. A stale base is an actionable warning, not an auto-merge prompt.
+
+**Manual recovery** for an unpublished candidate based on old `main`:
+
+1. Stop the Manager and preserve the original source/PNG inputs. If there are pending candidates in memory, keep copies; switching branches may invalidate their approval/review and require re-adding them.
+2. In a PowerShell terminal, inspect `git -C ..\\filter-fabjs-library status --short --branch`. Do **not** reset or discard unrelated modifications.
+3. For a clean library checkout with no unfinished publication that must be preserved, switch to `main` and run `git -C ..\\filter-fabjs-library pull --ff-only origin main`. If the fast-forward fails, stop and inspect divergence; do not force it.
+4. Restart/Refresh the Manager, restore/re-approve any pending candidates, and run **Validate Publication** again against the new versioned registry. Confirm the review's `libraryVersion` is the current `main` version plus one per batch.
+5. Prepare a **new** reviewed publication commit/branch and push/create its PR. Never reuse an outdated review token or force-push the old prepared branch.
+
+For a **previously pushed branch or an open PR** that has become stale, preserve it and stop publication writes. A maintainer must reconcile changes against current `main`, run the authoritative validation against that new base and review the final diff before pushing any updated branch. Merging PRs with unresolved `registry.json` conflicts directly through GitHub's web editor can silently regress `libraryVersion`; avoid doing so without validation. GitHub branch protection should require successful library validation checks before merge.
+
+This feature prevents publishing **from an already outdated base at the time of each check**. GitHub may advance after a PR is opened, so branch protection and CI remain the final merge gate; the Manager does not continuously watch remote branches while idle.
+
 ## Push and create pull request
 
 The Manager uses Node 22 built-in fetch for GitHub REST coordination; no GitHub CLI or npm dependency is required. Git still pushes branches using existing Git/SSH/Git Credential Manager authentication. REST authentication is separate and does not prove push access. Push authentication is labelled verified only after the exact remote branch is confirmed.

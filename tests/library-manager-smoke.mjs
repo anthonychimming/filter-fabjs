@@ -129,11 +129,15 @@ try{
   const progressRoot=await fixture('publication-progress');
   // Registry observations accept the same BOM normalization as the publisher.
   const bomRegistry=await fs.readFile(path.join(progressRoot,'registry.json'));await put(progressRoot,'registry.json',Buffer.concat([Buffer.from([0xef,0xbb,0xbf]),bomRegistry]));git(progressRoot,'add','registry.json');git(progressRoot,'commit','-m','BOM registry baseline');
+  // Local-ref observation only: the deliberately invalid origin is not an
+  // official publication endpoint. Keep these tests isolated from live I/O.
   git(progressRoot,'remote','add','origin','https://example.invalid/library.git');
+  const offlineProgressGit=new GitClient(progressRoot);
+  offlineProgressGit.publicationMain=async base=>({available:false,current:null,remoteMainSha:null,reviewedBaseSha:base});
   git(progressRoot,'update-ref','refs/remotes/origin/main',git(progressRoot,'rev-parse','HEAD'));
   let live=manifestFor(),transportFailure=null;
   const fetchProgress=async(url,options)=>{assert.equal(url,'https://anthonychimming.github.io/filter-fabjs-library/catalogue.json');assert.equal(options.cache,'no-store');if(transportFailure)throw new Error(transportFailure);return new Response(JSON.stringify(live));};
-  const progress=await open(progressRoot,{fetchImpl:fetchProgress});
+  const progress=await open(progressRoot,{fetchImpl:fetchProgress,gitClient:offlineProgressGit});
   const selectedProgress=()=>progress.summary().filters.find(item=>item.id===added.id);
   assert.equal(progress.summary().filters.find(item=>item.id===document.id).status,'Published Online');
   await queue(progress,'add',added);assert.equal(selectedProgress().status,'Ready to Publish');assert.equal(selectedProgress().publication.gitState,'unprepared');assert.equal(publicationUi(progress.summary(),added.id).count,1);
@@ -221,8 +225,32 @@ try{
   }});
   const remoteOptions=()=>({githubClient:github,gitClient:transport(),fetchImpl:async()=>new Response(JSON.stringify(remoteLive))});
   const remoteManager=await open(remoteRoot,remoteOptions());await queue(remoteManager,'update',updated);
-  const rr=await remoteManager.validate();await remoteManager.prepare({token:rr.review.token,confirmed:true});
+  // Live main moves after a candidate was accepted: validation must not
+  // approve the outdated local checkout, and a retry must revalidate.
+  const trueRemoteCommit=remoteManager.git.remoteCommit.bind(remoteManager.git);
+  const simulateAdvancedMain=async(url,ref)=>ref==='main'?'b'.repeat(40):trueRemoteCommit(url,ref);
+  remoteManager.git.remoteCommit=simulateAdvancedMain;
+  await assert.rejects(remoteManager.validate(),code('REMOTE_MAIN_ADVANCED'));
+  assert.equal(git(remoteRoot,'status','--porcelain'),'');
+  remoteManager.git.remoteCommit=trueRemoteCommit;
+  const rr=await remoteManager.validate();
+  // Main can also advance after review but before Prepare Publication.
+  remoteManager.git.remoteCommit=simulateAdvancedMain;
+  await assert.rejects(remoteManager.prepare({token:rr.review.token,confirmed:true}),code('REMOTE_MAIN_ADVANCED'));
+  remoteManager.git.remoteCommit=trueRemoteCommit;
+  await remoteManager.prepare({token:rr.review.token,confirmed:true});
   remotePrepared=remoteManager.remotePublication.prepared;assert.ok(remotePrepared);assert.equal(remoteManager.remotePublication.ready,true);
+  // A previously prepared branch is not safe to push when main changed.
+  remoteManager.git.remoteCommit=simulateAdvancedMain;
+  await remoteManager.refresh();
+  assert.equal(remoteManager.remotePublication.error.code,'REMOTE_MAIN_ADVANCED');
+  assert.equal(remoteManager.remotePublication.ready,false);
+  assert.equal(remoteManager.remotePublication.baseState.current,false);
+  assert.match(publicationUi(remoteManager.summary(),document.id).workspace,/Revalidation required/);
+  await assert.rejects(remoteManager.pushAndCreate({confirmed:true,commit:remotePrepared.commit,branch:remotePrepared.branch}),code('REMOTE_MAIN_ADVANCED'));
+  remoteManager.git.remoteCommit=trueRemoteCommit;
+  await remoteManager.refresh();
+  assert.equal(remoteManager.remotePublication.ready,true);
   assert.equal(remoteManager.remotePublication.preview.repository,LIBRARY_REPOSITORY);assert.ok(!remoteManager.remotePublication.preview.body.includes(sandbox));
   const confirm={confirmed:true,commit:remotePrepared.commit,branch:remotePrepared.branch};
   await assert.rejects(remoteManager.pushAndCreate({...confirm,confirmed:false}),code('CONFIRMATION_REQUIRED'));
@@ -232,6 +260,18 @@ try{
   git(remoteRoot,'commit','--allow-empty','-m','External commit');await assert.rejects(remoteManager.pushAndCreate(confirm),code('STALE_PREPARATION'));
   // Move only this fixture branch back; the product never resets preparation.
   git(remoteRoot,'reset','--hard',remotePrepared.commit);
+  // A concurrent main update *after the branch push* must prevent PR creation
+  // while preserving the pushed branch for later manual reconciliation.
+  const truePush=remoteManager.git.pushPrepared.bind(remoteManager.git);
+  remoteManager.git.pushPrepared=async(...args)=>{const pushed=await truePush(...args);remoteManager.git.remoteCommit=simulateAdvancedMain;return pushed;};
+  const raced=await remoteManager.pushAndCreate(confirm);
+  assert.equal(raced.remoteError.code,'REMOTE_MAIN_ADVANCED');
+  assert.equal(raced.remotePublication.pushed,true);
+  assert.equal(raced.remotePublication.pr,null);
+  assert.equal(creates,0);
+  remoteManager.git.remoteCommit=trueRemoteCommit;
+  remoteManager.git.pushPrepared=truePush;
+  await remoteManager.refresh();
   const partial=await remoteManager.pushAndCreate(confirm);assert.equal(partial.remotePublication.pushed,true);assert.equal(partial.remotePublication.pr,null);assert.equal(partial.remoteError.code,'GITHUB_PERMISSION');
   assert.equal(git(remoteRoot,'ls-remote',bare,'refs/heads/'+remotePrepared.branch).split(/\s/)[0],remotePrepared.commit);
   assert.equal(remoteManager.summary().filters.find(item=>item.id===document.id).status,'Pushed');

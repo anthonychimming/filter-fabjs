@@ -140,7 +140,12 @@ export class LibraryManager{
     return{registry,writes,expectedVersion:this.snapshot.registry.libraryVersion+(catalogueChanged?1:0)};
   }
   async validate(){
-    await this.assertFresh();if(!this.pending.size){const report=await validationReport({libraryRoot:this.root,baseRoot:this.baseRoot});return{...report,review:null};}
+    await this.assertFresh();
+    if(this.pending.size){
+      await this.git.requirePublicationMain(this.baseSha);
+      if(this.baseSha!==this.head)throw problem('PUBLICATION_BASE_INVALID','Publication must be reviewed against the current local main commit. Update main and validate again.');
+    }
+    if(!this.pending.size){const report=await validationReport({libraryRoot:this.root,baseRoot:this.baseRoot});return{...report,review:null};}
     if([...this.pending.values()].some(item=>!item.approved))throw problem('VISUAL_REVIEW_REQUIRED','All candidate previews must be reviewed.');
     const date=this.date(),plan=this.plan(date),tree=path.join(this.temp,`candidate-${randomUUID()}`);
     await fs.mkdir(tree);await copySnapshot(this.root,tree,this.snapshot);
@@ -156,7 +161,7 @@ export class LibraryManager{
       diff+=raw.split('\n').map(line=>line.startsWith('diff --git ')?`diff --git a/${file} b/${file}`:line.startsWith('--- ')?`--- ${added?'/dev/null':`a/${file}`}`:line.startsWith('+++ ')?`+++ ${removed?'/dev/null':`b/${file}`}`:line.startsWith('Binary files ')?`Binary files ${added?'/dev/null':`a/${file}`} and ${removed?'/dev/null':`b/${file}`} differ`:line).join('\n');
     }
     if(this.review?.tree)await fs.rm(this.review.tree,{recursive:true,force:true});
-    this.review={token:randomUUID(),tree,date,plan,diff};
+    this.review={token:randomUUID(),tree,date,plan,diff,baseSha:this.baseSha};
     return{...report,review:{token:this.review.token,date,libraryVersion:{before:this.snapshot.registry.libraryVersion,after:plan.registry.libraryVersion},baseSha:this.baseSha,changes:this.summary().pending,files:[...plan.writes].map(([file,bytes])=>({path:file,action:bytes===null?'Removed':this.snapshot.files.has(file)?'Modified':'Added',size:bytes?.length||0})),diff,historicalFilesRetained:this.snapshot.packages.size}};
   }
   async rollback(journal){
@@ -176,6 +181,9 @@ export class LibraryManager{
     if(!this.review||token!==this.review.token)throw problem('REVIEW_REQUIRED','Validate and review the exact diff before preparation.');
     if(this.date()!==this.review.date)throw problem('REVIEW_EXPIRED','The preparation date changed. Validate and review again.');
     await this.assertFresh();const review=this.review;
+    if(review.baseSha!==this.baseSha)throw problem('REVIEW_MISMATCH','Publication base changed. Validate and review again.');
+    await this.git.requirePublicationMain(review.baseSha);
+    if(review.baseSha!==this.head)throw problem('PUBLICATION_BASE_INVALID','Publication must be prepared from the current local main commit. Update main and validate again.');
     await this.verifyReview(review);
     const report=await validationReport({libraryRoot:review.tree,baseRoot:this.baseRoot});if(!report.valid)throw problem('PUBLICATION_INVALID','Authoritative publication validation failed.',{details:report.errors});
     const files=[...review.plan.writes.keys()];await this.git.assertAttributes(files);
@@ -189,6 +197,7 @@ export class LibraryManager{
       await this.assertTransactionFresh(journal);
       for(const [file,bytes] of review.plan.writes){const target=await checkedPath(this.root,file,{missing:true});if(file.startsWith('filters/')&&this.snapshot.files.has(file))throw problem('HISTORICAL_PACKAGE_MODIFIED','Refusing to overwrite a historical package.');if(bytes===null)await fs.unlink(target);else if(file.startsWith('filters/')||!this.snapshot.files.has(file))await createFile(target,bytes);else await replaceFile(target,bytes);}
       const final=await validationReport({libraryRoot:this.root,baseRoot:this.baseRoot});if(!final.valid)throw problem('PUBLICATION_INVALID','Applied publication failed validation.',{details:final.errors});
+      await this.git.requirePublicationMain(review.baseSha);
       const status=await this.git.status();if(status.some(item=>!files.includes(item.path)))throw problem('DIRTY_REPOSITORY','External changes appeared during publication.');
       const branch=await this.git.publicationBranch(review.date);journal.createdBranch=branch;await replaceFile(this.journal,jsonBytes(journal));await this.git.stage(files);
       if(await this.git.head()!==journal.head)throw problem('STALE_REPOSITORY','HEAD changed during preparation.');

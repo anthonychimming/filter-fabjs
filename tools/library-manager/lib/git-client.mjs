@@ -89,6 +89,24 @@ export class GitClient{
     const repository=repositoryIdentity(urls[0]);repositoryIdentity(pushUrls[0]);
     return{repository,url:urls[0],pushUrl:pushUrls[0]};
   }
+  // Live freshness check. Local origin/main refs alone can be days old, so use
+  // ls-remote against the verified official origin rather than rev-parse.
+  // A checkout without origin may still be used for offline/local authoring;
+  // the remote publication operation has its own mandatory origin checks.
+  async publicationMain(baseSha){
+    if(!/^[a-f0-9]{40,64}$/.test(baseSha||''))throw problem('PUBLICATION_BASE_INVALID','A reviewed Git base commit is required.');
+    const remotes=(await this.run(['remote'])).trim().split(/\r?\n/).filter(Boolean);
+    if(!remotes.includes('origin'))return{available:false,current:null,remoteMainSha:null,reviewedBaseSha:baseSha};
+    const remote=await this.publicationRemote();
+    const remoteMainSha=await this.remoteCommit(remote.url,'main');
+    if(!remoteMainSha)throw problem('REMOTE_MAIN_UNAVAILABLE','Cannot confirm the official library main branch. Retry when the remote is available.');
+    return{available:true,current:remoteMainSha===baseSha,remoteMainSha,reviewedBaseSha:baseSha};
+  }
+  async requirePublicationMain(baseSha){
+    const state=await this.publicationMain(baseSha);
+    if(state.available&&!state.current)throw problem('REMOTE_MAIN_ADVANCED','The official Online Library main branch differs from the reviewed publication base. No remote publication changes were made. Update your local library main from origin/main, then validate and prepare this publication again. Do not resolve registry.json conflicts without revalidation.');
+    return state;
+  }
   async remoteCommit(url,branch){
     const text=(await this.run(['ls-remote','--refs','--',url,'refs/heads/'+branch],{network:true})).trim();
     if(!text)return null;
