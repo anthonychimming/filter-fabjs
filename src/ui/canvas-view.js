@@ -22,7 +22,7 @@ export function createCanvasView({state,el,ctx}){
     el.splitOverlay.hidden=!visible;
     if(!visible){endSplitDrag();return;}
     const image=el.canvas.getBoundingClientRect(),stage=el.stage.getBoundingClientRect();
-    Object.assign(el.splitOverlay.style,{left:`${image.left-stage.left}px`,top:`${image.top-stage.top}px`,width:`${image.width}px`,height:`${image.height}px`});
+    Object.assign(el.splitOverlay.style,{left:`${image.left-stage.left+(el.stage.scrollLeft||0)}px`,top:`${image.top-stage.top+(el.stage.scrollTop||0)}px`,width:`${image.width}px`,height:`${image.height}px`});
     // Align with the existing integer-pixel comparison boundary.
     divider.style.left=`${Math.round(state.width*state.split/100)/state.width*100}%`;
     divider.setAttribute('aria-valuenow',String(state.split));
@@ -50,13 +50,14 @@ export function createCanvasView({state,el,ctx}){
     });
     const observer=new ResizeObserver(()=>{endSplitDrag();if(state.zoom==='fit')fitCanvas();else syncDivider();});
     observer.observe(el.stage);observer.observe(el.canvas);
+    el.stage.addEventListener?.('scroll',syncDivider);
   }
   function cachedImageData(pixels,cache){if(!cache||cache.pixels!==pixels||cache.width!==state.width||cache.height!==state.height)cache={pixels,width:state.width,height:state.height,imageData:imageDataFromPixels(pixels,state.width,state.height)};return cache}
   function invalidatePixels(){endSplitDrag();sourceCache=filteredCache=null}
   function drawView(){syncDivider();if(!state.source)return;ctx.clearRect(0,0,state.width,state.height);if(state.view==='original'||!state.filtered){sourceCache=cachedImageData(state.source,sourceCache);ctx.putImageData(sourceCache.imageData,0,0)}else if(state.view==='filtered'){filteredCache=cachedImageData(state.filtered,filteredCache);ctx.putImageData(filteredCache.imageData,0,0)}else{const cut=Math.round(state.width*state.split/100);sourceCache=cachedImageData(state.source,sourceCache);filteredCache=cachedImageData(state.filtered,filteredCache);ctx.putImageData(sourceCache.imageData,0,0,0,0,cut,state.height);ctx.putImageData(filteredCache.imageData,0,0,cut,0,state.width-cut,state.height);}}
   function requestDraw(){if(drawScheduled)return;drawScheduled=true;requestAnimationFrame(()=>{drawScheduled=false;drawView()})}
   function fitCanvas(){if(!state.width)return;const rect=el.stage.getBoundingClientRect();state.zoomLevel=Math.min(Math.max(100,rect.width-48)/state.width,Math.max(100,rect.height-48)/state.height,1);state.zoom='fit';applyZoom();}
-  function applyZoom(){endSplitDrag();el.wrap.style.width=`${Math.round(state.width*state.zoomLevel)}px`;el.wrap.style.height=`${Math.round(state.height*state.zoomLevel)}px`;el.canvas.style.width=el.canvas.style.height='100%';el.zoomLabel.textContent=state.zoom==='fit'?'Fit':`${Math.round(state.zoomLevel*100)}%`;syncDivider();}
+  function applyZoom(){endSplitDrag();el.stage.setAttribute?.('data-manual-zoom',String(state.zoom==='manual'));el.wrap.style.width=`${Math.round(state.width*state.zoomLevel)}px`;el.wrap.style.height=`${Math.round(state.height*state.zoomLevel)}px`;el.canvas.style.width=el.canvas.style.height='100%';el.zoomLabel.textContent=state.zoom==='fit'?'Fit':`${Math.round(state.zoomLevel*100)}%`;syncDivider();}
   function zoom(factor){state.zoom='manual';state.zoomLevel=clamp(state.zoomLevel*factor,.1,4);applyZoom();}
   return{drawView,requestDraw,invalidatePixels,fitCanvas,applyZoom,zoom};
 }

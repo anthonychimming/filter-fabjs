@@ -252,6 +252,56 @@ body[data-workspace-mode=explore] #renderInfo{display:none}
 .snapshot-status{font-size:12px;color:var(--muted);margin:7px 0 0;min-height:18px}
 .snapshots-section .explore-actions>.explore-menu:last-child{margin-left:auto}
 
+/* Responsive workspace and full-height inspector. */
+html,body{overflow:hidden}
+.app{height:100dvh;grid-template-columns:minmax(0,1fr) 8px var(--inspector-width,384px);grid-template-rows:minmax(0,1fr)}
+.workspace{grid-column:1;grid-row:1;min-width:0;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;overflow:hidden}
+.topbar{min-width:0;min-height:58px;flex-wrap:wrap;padding-top:8px;padding-bottom:8px}
+.toolbar-group,.toolbar-cluster{flex-wrap:wrap;min-width:0}.file-actions{flex:1 1 auto}
+.preview-pane{height:auto;min-height:0}.preview-toolbar{flex-wrap:wrap;height:auto;overflow:visible}
+.sidebar{grid-column:3;grid-row:1;min-height:0;height:100%;border-left:0;overflow:hidden;display:flex;flex-direction:column}
+.sidebar-head{flex-shrink:0;display:flex;align-items:center;gap:8px}.workspace-mode{flex:1;min-width:0}
+.sidebar-scroll{min-height:0;flex:1;overflow:auto;overscroll-behavior:contain}
+#inspectorClose,#inspectorExpand{display:none}
+.inspector-resize{grid-column:2;grid-row:1;cursor:col-resize;touch-action:none;background:var(--panel);border-left:1px solid var(--line);position:relative}
+.inspector-resize::after{content:"";position:absolute;left:2px;top:calc(50% - 20px);width:2px;height:40px;border-radius:2px;background:var(--line2)}
+.inspector-resize{z-index:25}
+.inspector-resize::before{content:"";position:absolute;inset:0 -6px}
+@media(pointer:coarse){.inspector-resize::before{left:-18px;right:-18px}}
+.inspector-resize:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+.app[data-inspector-dragging]{user-select:none;cursor:col-resize}
+.app[data-inspector-hidden=true]{grid-template-columns:minmax(0,1fr)}
+.app[data-inspector-hidden=true] .sidebar,.app[data-inspector-hidden=true] .inspector-resize{display:none}
+.inspector-backdrop[hidden]{display:none}
+.filter-meta,.formula-toolbar,.filter-actions{min-width:0;flex-wrap:wrap}
+.sidebar input,.sidebar select,.sidebar textarea{max-width:100%;min-width:0}.formula textarea{overflow-wrap:anywhere}
+.active-filter-heading{flex-wrap:wrap}.active-filter-heading>div{min-width:0}
+/* Explicit pixel sizing keeps manual zoom's aspect ratio when the stage shrinks. */
+.canvas-wrap{max-width:none;max-height:none;flex-shrink:0}
+@media(max-width:1023px){
+ .app,.app[data-inspector-hidden=true]{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr)}
+ .workspace{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto}
+ .inspector-resize{display:none}
+ .sidebar{position:fixed;inset:0 0 0 auto;width:min(440px,90vw);z-index:40;border-left:1px solid var(--line);box-shadow:var(--shadow)}
+ .inspector-backdrop{position:fixed;inset:0;z-index:30;background:rgba(3,1,5,.55)}
+ #inspectorClose{display:block}.sidebar-head{position:static}
+ .preview-pane{height:auto;min-height:0}
+ .topbar .brand{min-width:0}.topbar>.spacer{display:none}
+}
+@media(max-width:767px){
+ .sidebar{inset:auto 0 0;width:100%;height:80dvh;max-height:100dvh;border-left:0;border-top:1px solid var(--line);border-radius:16px 16px 0 0;padding-bottom:env(safe-area-inset-bottom)}
+ .app[data-inspector-expanded=true] .sidebar{height:100dvh;border-radius:0}
+ #inspectorExpand{display:block;font-size:12px;padding:7px}
+ .sidebar-head{padding:9px}.sidebar-head button{white-space:normal}
+ .workspace-mode button{padding:7px 5px}
+ .topbar{gap:7px;padding:8px}.brand{flex:1 1 180px}.file-actions{order:2;flex-basis:100%}
+ .toolbar-divider{display:none}.toolbar-cluster{flex-wrap:wrap}
+ .preview-toolbar>.spacer{display:none}.preview-toolbar .segmented{margin-right:auto}
+ .preview-pane{min-height:0;height:auto}
+}
+
+.canvas-stage[data-manual-zoom=true]{overflow:auto;place-items:safe center}
+
 /* OFL-Inter.txt
 Copyright (c) 2016 The Inter Project Authors (https://github.com/rsms/inter)
 
@@ -498,10 +548,14 @@ font bytes; intentional font upgrades must update this record and the tests.
 </head>
 <body data-workspace-mode="explore">
 <div class="app">
-<header class="topbar ui-lock-panel"><div class="brand"><div class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M3.5 5.5h17L14 13.2v6.8l-4-3v-3.8z"/></svg></div><div><strong>Filter FabJS</strong><small>Procedural RGBA expression editor · v2.9.3</small></div></div><div class="toolbar-group file-actions" aria-label="File and clipboard actions"><div class="toolbar-cluster" aria-label="Image actions"><button id="openImageBtn" class="primary action-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5h5l1.5-2h9.5v15H4z"/><path d="m7 16 3.4-3.5 2.5 2.3 2.2-2.1 3.4 3.3"/><circle cx="15.7" cy="8.8" r="1.3"/></svg><span>Open image</span></button><button id="pasteImageBtn" class="action-button" title="Paste an image from the clipboard (Ctrl/⌘+V)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5.5h6"/><path d="M9.5 3.5h5a1.5 1.5 0 0 1 1.5 1.5v1H8v-1a1.5 1.5 0 0 1 1.5-1.5Z"/><path d="M16 5h3v15H5V5h3"/><path d="M12 9v7"/><path d="m9 13 3 3 3-3"/></svg><span>Paste image</span></button><button id="copyImageBtn" class="action-button" title="Copy the rendered PNG with alpha when present (Ctrl/⌘+Shift+C)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/><path d="m10.5 16 2.4-2.5 1.8 1.7 1.5-1.4 1.5 1.5"/></svg><span>Copy image</span></button><button id="exportImageBtn" class="action-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M5 19h14"/></svg><span>Export PNG</span></button></div><span class="toolbar-divider" aria-hidden="true"></span><div class="toolbar-cluster" aria-label="Filter file actions"><button id="importBtn">Import filter</button><button id="exportFilterBtn">Export filter</button></div></div><div class="spacer"></div><div class="toolbar-group"><a id="githubBtn" class="icon-link" href="https://github.com/anthonychimming" target="_blank" rel="noopener noreferrer" title="Open @anthonychimming on GitHub" aria-label="Open Anthony Chimming GitHub profile"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .7A11.3 11.3 0 0 0 8.43 22.72c.57.1.78-.25.78-.55v-2.16c-3.18.69-3.85-1.35-3.85-1.35-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.68 1.24 3.33.95.1-.74.4-1.24.73-1.53-2.54-.29-5.21-1.27-5.21-5.65 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.45.11-3.03 0 0 .96-.31 3.12 1.17A10.8 10.8 0 0 1 12 6.92c.96 0 1.92.13 2.82.38 2.16-1.48 3.12-1.17 3.12-1.17.62 1.58.23 2.74.11 3.03.74.8 1.18 1.82 1.18 3.07 0 4.39-2.68 5.35-5.23 5.64.41.36.78 1.06.78 2.14v3.16c0 .3.21.66.79.55A11.3 11.3 0 0 0 12 .7Z"/></svg></a><button id="helpBtn" class="icon ghost" title="Help" aria-label="Help">?</button></div><input id="imageInput" type="file" accept="image/*" hidden><input id="filterInput" type="file" accept=".json,.afs,application/json,text/plain" hidden></header>
-<main class="workspace">
-<section class="preview-pane"><div class="preview-toolbar"><div class="segmented" id="viewMode"><button data-view="filtered" class="active" aria-pressed="true">Filtered</button><button data-view="original" aria-pressed="false">Original</button><button data-view="split" aria-pressed="false">Split</button></div><div class="spacer"></div><button id="zoomOut" class="icon" title="Zoom out" aria-label="Zoom out">−</button><button id="zoomFit">Fit</button><button id="zoomIn" class="icon" title="Zoom in" aria-label="Zoom in">+</button><span id="zoomLabel" style="min-width:40px;text-align:right;color:var(--muted);font-size:12px">Fit</span></div><div class="canvas-stage" id="canvasStage"><div class="canvas-wrap" id="canvasWrap"><canvas id="displayCanvas"></canvas></div><div class="split-overlay" id="splitOverlay" hidden><div class="split-divider" id="splitDivider" role="slider" tabindex="0" aria-label="Comparison split position" aria-orientation="horizontal" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-valuetext="50% Original, 50% Filtered"><span class="split-handle-target" aria-hidden="true"><span class="split-handle"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"><path d="M9 7 4 12 9 17M15 7 20 12 15 17"/></svg></span></span></div></div><div class="drop-overlay" id="dropOverlay"><div class="drop-card"><b>Drop image here</b><span>PNG, JPEG, WebP or another browser-supported image</span></div></div><div class="render-overlay" id="renderOverlay" aria-hidden="true"><div class="render-card"><strong>Rendering filter…</strong><span>Inputs are temporarily locked while the image is processed. Press <kbd>Esc</kbd> to cancel.</span><div class="progress-bar" role="progressbar" aria-label="Render progress" aria-valuemin="0" aria-valuemax="100"><div class="progress-fill" id="progressFill"></div></div><div class="progress-meta"><span id="progressPercent">0%</span><span id="progressRows">Preparing…</span></div></div></div></div></section>
-<aside class="sidebar ui-lock-panel"><div class="sidebar-head"><div id="workspaceMode" class="workspace-mode" role="tablist" aria-label="Workspace mode"><button id="exploreModeTab" type="button" role="tab" aria-selected="true" aria-controls="explorePanel" data-workspace-mode="explore">Explore</button><button id="authorModeTab" type="button" role="tab" aria-selected="false" aria-controls="authorPanel" data-workspace-mode="author" tabindex="-1">Author</button></div></div><div class="sidebar-scroll">
+<main class="workspace" aria-label="Image workspace">
+<header class="topbar ui-lock-panel"><div class="brand"><div class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M3.5 5.5h17L14 13.2v6.8l-4-3v-3.8z"/></svg></div><div><strong>Filter FabJS</strong><small>Procedural RGBA expression editor</small></div></div><div class="toolbar-group file-actions" aria-label="File and clipboard actions"><div class="toolbar-cluster" aria-label="Image actions"><button id="openImageBtn" class="primary action-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5h5l1.5-2h9.5v15H4z"/><path d="m7 16 3.4-3.5 2.5 2.3 2.2-2.1 3.4 3.3"/><circle cx="15.7" cy="8.8" r="1.3"/></svg><span>Open image</span></button><button id="pasteImageBtn" class="action-button" title="Paste an image from the clipboard (Ctrl/⌘+V)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5.5h6"/><path d="M9.5 3.5h5a1.5 1.5 0 0 1 1.5 1.5v1H8v-1a1.5 1.5 0 0 1 1.5-1.5Z"/><path d="M16 5h3v15H5V5h3"/><path d="M12 9v7"/><path d="m9 13 3 3 3-3"/></svg><span>Paste image</span></button><button id="copyImageBtn" class="action-button" title="Copy the rendered PNG with alpha when present (Ctrl/⌘+Shift+C)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/><path d="m10.5 16 2.4-2.5 1.8 1.7 1.5-1.4 1.5 1.5"/></svg><span>Copy image</span></button><button id="exportImageBtn" class="action-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M5 19h14"/></svg><span>Export PNG</span></button></div><span class="toolbar-divider" aria-hidden="true"></span><div class="toolbar-cluster" aria-label="Filter file actions"><button id="importBtn">Import filter</button><button id="exportFilterBtn">Export filter</button></div></div><div class="spacer"></div><div class="toolbar-group"><a id="githubBtn" class="icon-link" href="https://github.com/anthonychimming" target="_blank" rel="noopener noreferrer" title="Open @anthonychimming on GitHub" aria-label="Open Anthony Chimming GitHub profile"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .7A11.3 11.3 0 0 0 8.43 22.72c.57.1.78-.25.78-.55v-2.16c-3.18.69-3.85-1.35-3.85-1.35-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.68 1.24 3.33.95.1-.74.4-1.24.73-1.53-2.54-.29-5.21-1.27-5.21-5.65 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.45.11-3.03 0 0 .96-.31 3.12 1.17A10.8 10.8 0 0 1 12 6.92c.96 0 1.92.13 2.82.38 2.16-1.48 3.12-1.17 3.12-1.17.62 1.58.23 2.74.11 3.03.74.8 1.18 1.82 1.18 3.07 0 4.39-2.68 5.35-5.23 5.64.41.36.78 1.06.78 2.14v3.16c0 .3.21.66.79.55A11.3 11.3 0 0 0 12 .7Z"/></svg></a><button id="helpBtn" class="icon ghost" title="Help" aria-label="Help">?</button></div><input id="imageInput" type="file" accept="image/*" hidden><input id="filterInput" type="file" accept=".json,.afs,application/json,text/plain" hidden></header>
+<section class="preview-pane"><div class="preview-toolbar"><div class="segmented" id="viewMode"><button data-view="filtered" class="active" aria-pressed="true">Filtered</button><button data-view="original" aria-pressed="false">Original</button><button data-view="split" aria-pressed="false">Split</button></div><div class="spacer"></div><button id="zoomOut" class="icon" title="Zoom out" aria-label="Zoom out">−</button><button id="zoomFit">Fit</button><button id="zoomIn" class="icon" title="Zoom in" aria-label="Zoom in">+</button><span id="zoomLabel" style="min-width:40px;text-align:right;color:var(--muted);font-size:12px">Fit</span><button id="inspectorToggle" type="button" aria-expanded="true" aria-controls="inspector">Hide inspector</button></div><div class="canvas-stage" id="canvasStage"><div class="canvas-wrap" id="canvasWrap"><canvas id="displayCanvas"></canvas></div><div class="split-overlay" id="splitOverlay" hidden><div class="split-divider" id="splitDivider" role="slider" tabindex="0" aria-label="Comparison split position" aria-orientation="horizontal" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-valuetext="50% Original, 50% Filtered"><span class="split-handle-target" aria-hidden="true"><span class="split-handle"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"><path d="M9 7 4 12 9 17M15 7 20 12 15 17"/></svg></span></span></div></div><div class="drop-overlay" id="dropOverlay"><div class="drop-card"><b>Drop image here</b><span>PNG, JPEG, WebP or another browser-supported image</span></div></div><div class="render-overlay" id="renderOverlay" aria-hidden="true"><div class="render-card"><strong>Rendering filter…</strong><span>Inputs are temporarily locked while the image is processed. Press <kbd>Esc</kbd> to cancel.</span><div class="progress-bar" role="progressbar" aria-label="Render progress" aria-valuemin="0" aria-valuemax="100"><div class="progress-fill" id="progressFill"></div></div><div class="progress-meta"><span id="progressPercent">0%</span><span id="progressRows">Preparing…</span></div></div></div></div></section>
+<footer class="statusbar"><span class="status-dot" id="statusDot"></span><span id="statusText" role="status" aria-live="polite" aria-atomic="true">Ready</span><span id="imageInfo"></span><span class="spacer"></span><span id="renderInfo"></span></footer>
+</main>
+<div id="inspectorResize" class="inspector-resize" role="separator" tabindex="0" aria-orientation="vertical" aria-controls="inspector" aria-label="Inspector width" title="Left/Right: resize 16 px; Shift: 32 px; Home/End: minimum/maximum"></div>
+<div id="inspectorBackdrop" class="inspector-backdrop" hidden></div>
+<aside id="inspector" aria-label="Filter inspector" class="sidebar ui-lock-panel"><div class="sidebar-head"><div id="workspaceMode" class="workspace-mode" role="tablist" aria-label="Workspace mode"><button id="exploreModeTab" type="button" role="tab" aria-selected="true" aria-controls="explorePanel" data-workspace-mode="explore">Explore</button><button id="authorModeTab" type="button" role="tab" aria-selected="false" aria-controls="authorPanel" data-workspace-mode="author" tabindex="-1">Author</button></div><button id="inspectorExpand" type="button" aria-pressed="false">Expand sheet</button><button id="inspectorClose" type="button" aria-label="Close inspector">Close</button></div><div class="sidebar-scroll">
 <div id="explorePanel" class="mode-panel" role="tabpanel" aria-labelledby="exploreModeTab" data-mode-panel="explore">
 <section class="section active-filter-section"><div class="section-body"><div class="active-filter-heading"><div><span class="eyebrow">Active filter</span><h2 id="activeFilterName">Pass Through</h2></div><button id="activeFavoriteBtn" class="favorite-button" type="button" aria-pressed="false">☆ Favorite</button></div><div class="active-filter-meta"><span id="activeFilterSource">Built-in</span><span aria-hidden="true">·</span><span id="activeFilterStatus">Saved</span></div><p id="activeFilterDescription" class="active-filter-description">Leaves the source image unchanged.</p><button id="browseFiltersBtn" class="browser-launcher primary" type="button" aria-haspopup="dialog">Open Filter Library</button></div></section>
 <section class="section adjust-section"><div class="section-head"><strong>Adjust</strong><div class="controls-head-meta"><span id="controlsUsage">No controls used</span><button id="exploreResetBtn" type="button" title="Reset to authored defaults">Reset</button></div></div><div class="section-body"><div class="slider-grid" id="sliderGrid"></div><p id="controlsEmpty" class="controls-empty">This filter has no adjustable controls.</p></div></section>
@@ -520,11 +574,11 @@ font bytes; intentional font upgrades must update this record and the tests.
 <details class="reference diagnostics"><summary>Technical diagnostics</summary><div class="ref-body"><label class="renderer-control" title="Auto uses WebGPU when the current formula is compatible, otherwise CPU"><span>Renderer</span><select id="rendererSelect"><option value="auto">Auto</option><option value="webgpu">GPU</option><option value="cpu">CPU</option></select></label><output id="rendererDiagnostics" class="renderer-diagnostics" data-state="pending" role="note" aria-live="off">Checking GPU eligibility…</output><p id="rendererReason" class="renderer-reason"></p></div></details>
 <details class="reference"><summary>Formula quick reference</summary><div class="ref-body"><b>Common variables</b><div class="chips"><span class="chip">r g b a</span><span class="chip">c</span><span class="chip">x y</span><span class="chip">nx ny / cx cy</span><span class="chip">X Y</span><span class="chip">z Z</span><span class="chip">i</span><span class="chip">d m M</span></div><div style="margin-top:9px"><b>Core</b></div><div class="chips"><span class="chip">src / srcLinear</span><span class="chip">srcWrap / srcMirror</span><span class="chip">ctl / val</span><span class="chip">clamp / lerp</span><span class="chip">step / smoothstep</span><span class="chip">floor / fract</span><span class="chip">radius / angle</span><span class="chip">repeat / mirrorRepeat</span></div><div style="margin-top:9px"><b>Procedural</b></div><div class="chips"><span class="chip">hash2</span><span class="chip">valueNoise / perlin</span><span class="chip">worleyF1 / F2</span><span class="chip">fbm / turbulence / ridged</span><span class="chip">periodicNoise</span><span class="chip">mandelbrot / julia</span><span class="chip">gradient3 / gradient4</span><span class="chip">gradients / checker / brick</span><span class="chip">line / circle / ring</span><span class="chip">box / triangle / grid</span><span class="chip">sdf primitives / composition</span><span class="chip">sierpinski</span></div><div style="margin-top:9px">Floating-point intermediates; final channel output clamps to 0–255.</div></div></details>
 </div>
-</div></aside></main>
-<footer class="statusbar"><span class="status-dot" id="statusDot"></span><span id="statusText" role="status" aria-live="polite" aria-atomic="true">Ready</span><span id="imageInfo"></span><span class="spacer"></span><span id="renderInfo"></span></footer></div>
+</div></aside>
+</div>
 <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 <dialog id="editControlsDialog" class="control-editor-dialog" aria-labelledby="controlEditorTitle"><div class="modal-head"><strong id="controlEditorTitle">Edit controls</strong><button id="closeControlEditor" class="icon" type="button" aria-label="Close control editor">×</button></div><div class="control-editor-body"><nav id="controlEditorList" class="control-editor-list" aria-label="Control slots"></nav><section class="control-editor-detail" aria-label="Selected control definition"><div class="control-editor-heading"><strong>Control definition</strong><label>Authoring shortcut<select id="controlAuthoringPreset"><option value="">Choose…</option><option value="generic">Generic</option><option value="percentage">Percentage</option><option value="angle">Angle</option><option value="seed">Seed</option></select></label></div><div class="control-editor-fields"><label>Label<input id="controlEditorLabel" type="text" maxlength="80"></label><label>Widget<select id="controlEditorWidget"><option value="slider">Slider</option><option value="number">Number</option><option value="toggle">Toggle</option><option value="seed">Seed</option></select></label><label>Display minimum<input id="controlEditorMin" type="number"></label><label>Display maximum<input id="controlEditorMax" type="number"></label><label>Step<input id="controlEditorStep" type="number" min="0" step="any"></label><label>Format<select id="controlEditorFormat"><option value="number">Number</option><option value="integer">Integer</option></select></label><label>Unit<input id="controlEditorUnit" type="text" maxlength="12"></label></div><div id="controlMappingFeedback" class="control-mapping-feedback"></div><div class="control-preview"><strong>Preview</strong><div id="controlEditorPreview" class="control-preview-row"></div></div><p id="controlEditorError" class="control-editor-error" role="alert"></p></section></div><div class="control-editor-actions"><button id="cancelControlEditor" type="button">Cancel</button><button id="doneControlEditor" class="primary" type="button">Done</button></div></dialog>
-<dialog id="helpDialog" aria-labelledby="helpTitle"><div class="modal-head"><strong id="helpTitle">Filter FabJS — Help</strong><button id="closeHelp" class="icon" aria-label="Close help">×</button></div><div class="modal-body"><p>Open the Filter Library to browse Built-in, My Filters and Online. Search names, descriptions, authors and tags, then preview candidates on the canvas. Apply Filter commits the selected candidate; Cancel or Escape restores the exact working filter. Selected tags match all. Favorites and built-in My tags are saved in this browser. Exporting a built-in includes its supplied tags and My tags in the portable document. Save updates a custom filter by ID; Save as new creates a separate copy. Rendering does not save changes.</p>
+<dialog id="helpDialog" aria-labelledby="helpTitle"><div class="modal-head"><strong id="helpTitle">Filter FabJS v2.9.3 — Help</strong><button id="closeHelp" class="icon" aria-label="Close help">×</button></div><div class="modal-body"><p>Open the Filter Library to browse Built-in, My Filters and Online. Search names, descriptions, authors and tags, then preview candidates on the canvas. Apply Filter commits the selected candidate; Cancel or Escape restores the exact working filter. Selected tags match all. Favorites and built-in My tags are saved in this browser. Exporting a built-in includes its supplied tags and My tags in the portable document. Save updates a custom filter by ID; Save as new creates a separate copy. Rendering does not save changes.</p>
 <p>Online cards show standardized Sample images. Selecting a card previews its filter on your current image. Apply Filter keeps it as an imported, unsaved filter; Save in Author creates an independent My Filter. Download PNG returns the portable package. Favorites do not install filters. Saved catalogue metadata is available while refreshing; Retry handles catalogue errors, and selecting a failed preview again retries its package. Packages are cached only for this page session.</p>
 <p>Filter FabJS evaluates four formulas—red, green, blue, and alpha—for every pixel. Intermediate calculations use floating-point values; final channel output is clamped to 0–255.</p>
 <h3>Core variables</h3><table>
@@ -7208,7 +7262,7 @@ function createCanvasView({state,el,ctx}){
     el.splitOverlay.hidden=!visible;
     if(!visible){endSplitDrag();return;}
     const image=el.canvas.getBoundingClientRect(),stage=el.stage.getBoundingClientRect();
-    Object.assign(el.splitOverlay.style,{left:`${image.left-stage.left}px`,top:`${image.top-stage.top}px`,width:`${image.width}px`,height:`${image.height}px`});
+    Object.assign(el.splitOverlay.style,{left:`${image.left-stage.left+(el.stage.scrollLeft||0)}px`,top:`${image.top-stage.top+(el.stage.scrollTop||0)}px`,width:`${image.width}px`,height:`${image.height}px`});
     // Align with the existing integer-pixel comparison boundary.
     divider.style.left=`${Math.round(state.width*state.split/100)/state.width*100}%`;
     divider.setAttribute('aria-valuenow',String(state.split));
@@ -7236,15 +7290,67 @@ function createCanvasView({state,el,ctx}){
     });
     const observer=new ResizeObserver(()=>{endSplitDrag();if(state.zoom==='fit')fitCanvas();else syncDivider();});
     observer.observe(el.stage);observer.observe(el.canvas);
+    el.stage.addEventListener?.('scroll',syncDivider);
   }
   function cachedImageData(pixels,cache){if(!cache||cache.pixels!==pixels||cache.width!==state.width||cache.height!==state.height)cache={pixels,width:state.width,height:state.height,imageData:imageDataFromPixels(pixels,state.width,state.height)};return cache}
   function invalidatePixels(){endSplitDrag();sourceCache=filteredCache=null}
   function drawView(){syncDivider();if(!state.source)return;ctx.clearRect(0,0,state.width,state.height);if(state.view==='original'||!state.filtered){sourceCache=cachedImageData(state.source,sourceCache);ctx.putImageData(sourceCache.imageData,0,0)}else if(state.view==='filtered'){filteredCache=cachedImageData(state.filtered,filteredCache);ctx.putImageData(filteredCache.imageData,0,0)}else{const cut=Math.round(state.width*state.split/100);sourceCache=cachedImageData(state.source,sourceCache);filteredCache=cachedImageData(state.filtered,filteredCache);ctx.putImageData(sourceCache.imageData,0,0,0,0,cut,state.height);ctx.putImageData(filteredCache.imageData,0,0,cut,0,state.width-cut,state.height);}}
   function requestDraw(){if(drawScheduled)return;drawScheduled=true;requestAnimationFrame(()=>{drawScheduled=false;drawView()})}
   function fitCanvas(){if(!state.width)return;const rect=el.stage.getBoundingClientRect();state.zoomLevel=Math.min(Math.max(100,rect.width-48)/state.width,Math.max(100,rect.height-48)/state.height,1);state.zoom='fit';applyZoom();}
-  function applyZoom(){endSplitDrag();el.wrap.style.width=`${Math.round(state.width*state.zoomLevel)}px`;el.wrap.style.height=`${Math.round(state.height*state.zoomLevel)}px`;el.canvas.style.width=el.canvas.style.height='100%';el.zoomLabel.textContent=state.zoom==='fit'?'Fit':`${Math.round(state.zoomLevel*100)}%`;syncDivider();}
+  function applyZoom(){endSplitDrag();el.stage.setAttribute?.('data-manual-zoom',String(state.zoom==='manual'));el.wrap.style.width=`${Math.round(state.width*state.zoomLevel)}px`;el.wrap.style.height=`${Math.round(state.height*state.zoomLevel)}px`;el.canvas.style.width=el.canvas.style.height='100%';el.zoomLabel.textContent=state.zoom==='fit'?'Fit':`${Math.round(state.zoomLevel*100)}%`;syncDivider();}
   function zoom(factor){state.zoom='manual';state.zoomLevel=clamp(state.zoomLevel*factor,.1,4);applyZoom();}
   return{drawView,requestDraw,invalidatePixels,fitCanvas,applyZoom,zoom};
+}
+
+
+/* src/ui/inspector-layout.js */
+/** UI-only shell state. Never owns filter data or schedules rendering. */
+const INSPECTOR_WIDTH_DEFAULT=384;
+function inspectorWidthBounds(appWidth){return {min:320,max:Math.max(320,Math.min(520,Math.floor(appWidth*.44),appWidth-640))};}
+function readInspectorWidth(storage){
+  try{const value=JSON.parse(storage.getItem('ffw-workspace-layout'));return value?.version===1&&typeof value.inspectorWidth==='number'&&Number.isFinite(value.inspectorWidth)?Math.min(520,Math.max(320,value.inspectorWidth)):INSPECTOR_WIDTH_DEFAULT;}catch{return INSPECTOR_WIDTH_DEFAULT;}
+}
+function createInspectorLayout({document:doc=globalThis.document,window:win=globalThis.window,storage=()=>win.localStorage}={}){
+  const app=doc.querySelector('.app'),workspace=doc.querySelector('.workspace'),panel=doc.getElementById('inspector'),toggle=doc.getElementById('inspectorToggle'),separator=doc.getElementById('inspectorResize'),close=doc.getElementById('inspectorClose'),expand=doc.getElementById('inspectorExpand'),backdrop=doc.getElementById('inspectorBackdrop');
+  const desktop=win.matchMedia('(min-width:1024px)'),mobile=win.matchMedia('(max-width:767px)');
+  const removals=[];
+  function listen(target,type,handler,options){target.addEventListener(type,handler,options);removals.push(()=>target.removeEventListener?.(type,handler,options));}
+  let width;try{width=readInspectorWidth(storage());}catch{width=INSPECTOR_WIDTH_DEFAULT;}
+  let focused=false,opened=false,expanded=false,pointer=null,bounds;
+  function persist(){try{storage().setItem('ffw-workspace-layout',JSON.stringify({version:1,inspectorWidth:width}));}catch{/* Preferences are optional. */}}
+  function size(value){bounds=inspectorWidthBounds(app.getBoundingClientRect().width);const current=Math.min(bounds.max,Math.max(bounds.min,value));app.style.setProperty('--inspector-width',`${current}px`);separator.setAttribute('aria-valuemin',String(bounds.min));separator.setAttribute('aria-valuemax',String(bounds.max));separator.setAttribute('aria-valuenow',String(current));separator.setAttribute('aria-valuetext',`${current} pixels`);return current;}
+  function sync(){
+    const modal=!desktop.matches&&opened,visible=desktop.matches?!focused:opened;
+    app.dataset.inspectorLayout=desktop.matches?'desktop':mobile.matches?'mobile':'tablet';
+    app.dataset.inspectorHidden=String(!visible);app.dataset.inspectorOpen=String(modal);app.dataset.inspectorExpanded=String(expanded);
+    panel.inert=!visible;workspace.inert=modal;backdrop.hidden=!modal;
+    toggle.textContent=desktop.matches?(focused?'Show inspector':'Hide inspector'):'Inspector';toggle.setAttribute('aria-expanded',String(visible));
+    if(modal){panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');}else{panel.removeAttribute('role');panel.removeAttribute('aria-modal');}
+    expand.textContent=expanded?'Reduce sheet':'Expand sheet';expand.setAttribute('aria-pressed',String(expanded));size(width);
+  }
+  function dismiss(){opened=false;expanded=false;sync();toggle.focus({preventScroll:true});}
+  listen(toggle,'click',()=>{if(desktop.matches){focused=!focused;sync();}else{opened=true;sync();const selected=panel.querySelector('[role=tab][aria-selected=true]');(selected.disabled?close:selected).focus({preventScroll:true});}});
+  listen(close,'click',dismiss);listen(backdrop,'click',dismiss);
+  listen(expand,'click',()=>{expanded=!expanded;sync();});
+  function endDrag(){if(pointer===null)return;const id=pointer;pointer=null;app.removeAttribute('data-inspector-dragging');if(separator.hasPointerCapture(id))separator.releasePointerCapture(id);persist();}
+  listen(separator,'pointerdown',event=>{if(!desktop.matches||focused||pointer!==null||event.button!==0||event.isPrimary===false)return;event.preventDefault();separator.focus({preventScroll:true});pointer=event.pointerId;separator.setPointerCapture(pointer);app.setAttribute('data-inspector-dragging','');});
+  listen(separator,'pointermove',event=>{if(event.pointerId===pointer){const rect=app.getBoundingClientRect();width=size(rect.right-event.clientX);}});
+  for(const type of ['pointerup','pointercancel','lostpointercapture'])listen(separator,type,event=>{if(event.pointerId===pointer)endDrag();});
+  listen(separator,'keydown',event=>{const current=Number(separator.getAttribute('aria-valuenow')),step=event.shiftKey?32:16;const next=event.key==='ArrowLeft'?current+step:event.key==='ArrowRight'?current-step:event.key==='Home'?bounds.min:event.key==='End'?bounds.max:null;if(next!==null){event.preventDefault();width=size(next);persist();}});
+  listen(separator,'dblclick',()=>{width=size(INSPECTOR_WIDTH_DEFAULT);persist();});
+  function breakpoint(){endDrag();const hadFocus=panel.contains(doc.activeElement)||doc.activeElement===separator;opened=false;expanded=false;sync();if(hadFocus&&(!desktop.matches||focused))toggle.focus({preventScroll:true});}
+  listen(desktop,'change',breakpoint);listen(mobile,'change',breakpoint);
+  listen(win,'resize',()=>size(width));
+  listen(doc,'keydown',event=>{
+    if(!opened||desktop.matches||doc.querySelector('dialog[open]'))return;
+    if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();dismiss();}
+    if(event.key==='Tab'){
+      const items=[...panel.querySelectorAll('button,input,select,textarea,summary,a[href],[tabindex="0"]')].filter(item=>!item.disabled&&!item.closest('[inert]')&&item.tabIndex>=0&&item.getClientRects().length);
+      const first=items[0],last=items.at(-1);if(event.shiftKey&&doc.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&doc.activeElement===last){event.preventDefault();first?.focus();}
+    }
+  },true);
+  sync();
+  return {destroy(){endDrag();removals.splice(0).forEach(remove=>remove());workspace.inert=false;},hide(){if(desktop.matches){focused=true;const hadFocus=panel.contains(doc.activeElement);sync();if(hadFocus)toggle.focus({preventScroll:true});}else dismiss();}};
 }
 
 
@@ -7492,6 +7598,7 @@ function createExploreController({state,root,resetButton,syncControls,scheduleRe
 
 
 /* src/app/filter-fab-app.js */
+
 /**
  * Filter FabJS
  * Modular source extracted from v2.0.7; modular architecture v2.1.0.
@@ -7626,6 +7733,7 @@ function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL
   const {el,ctx}=getDom();
   const state={source:null,filtered:null,width:0,height:0,view:'filtered',workspaceMode:'explore',split:50,zoom:'fit',zoomLevel:1,controls:defaultControlValues(),labels:defaultControlLabels(),controlUIs:defaultControlUIs(),renderId:0,imageLoadId:0,filterLoadId:0,rendererManager:null,rendererPreference:storageGet('ffw-renderer','auto'),lastProgram:null,lastProgramKey:null,lastSuccessfulRenderSignature:null,lastWGSL:null,lastGpuAnalysis:null,lastRendererDiagnostics:null,isRendering:false,usedControls:Array(CONTROL_COUNT).fill(false),legacyMath:false,hasPendingFormulaChanges:false,focusSnapshot:null};
   const canvasView=createCanvasView({state,el,ctx});
+  const inspectorLayout=createInspectorLayout();
   let exploreController;
   state.explore=createExploreSession(state.controls);
   let controlsController,browser,catalogCache=null,librarySession=null;
@@ -7643,7 +7751,7 @@ function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL
   function toast(text){el.toast.textContent=text;el.toast.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.toast.classList.remove('show'),1800);}
   const interactiveNodes=()=>Array.from(document.querySelectorAll('button,input,select,textarea'));
   function updatePresetDeleteState(){const custom=activeDocument.key?.startsWith('custom:');el.deletePreset.disabled=state.isRendering||!custom;el.deletePreset.title=custom?'Delete current saved filter':'Load a saved custom filter to delete';}
-  function applyInteractionLocks(){interactiveNodes().forEach(node=>{if(librarySession&&node.closest('.filter-browser'))return;node.disabled=state.isRendering;});$$('.slider-row',$('#sliderGrid')).forEach(row=>{const index=Number(row.dataset.controlIndex),unused=!state.usedControls[index];row.classList.toggle('control-unused',unused);row.setAttribute('aria-disabled',String(state.isRendering||unused));row.title=unused?'Unused — not referenced by any channel formula':'';$$('button,input,select',row).forEach(node=>{node.disabled=state.isRendering||unused;});});updatePresetDeleteState();exploreController?.refresh();}
+  function applyInteractionLocks(){interactiveNodes().forEach(node=>{if(node.matches('#inspectorToggle,#inspectorClose,#inspectorExpand')||(librarySession&&node.closest('.filter-browser')))return;node.disabled=state.isRendering;});$$('.slider-row',$('#sliderGrid')).forEach(row=>{const index=Number(row.dataset.controlIndex),unused=!state.usedControls[index];row.classList.toggle('control-unused',unused);row.setAttribute('aria-disabled',String(state.isRendering||unused));row.title=unused?'Unused — not referenced by any channel formula':'';$$('button,input,select',row).forEach(node=>{node.disabled=state.isRendering||unused;});});updatePresetDeleteState();exploreController?.refresh();}
   function captureFocus(){const node=document.activeElement;if(!(node instanceof Element)||node===document.body||!node.matches('button,input,select,textarea'))return null;const snapshot={node};if(typeof node.selectionStart==='number'){snapshot.start=node.selectionStart;snapshot.end=node.selectionEnd;snapshot.direction=node.selectionDirection;}return snapshot;}
   function restoreFocus(snapshot){if(!snapshot?.node?.isConnected||snapshot.node.disabled)return;requestAnimationFrame(()=>{if(!snapshot.node.isConnected||snapshot.node.disabled)return;snapshot.node.focus({preventScroll:true});if(typeof snapshot.start==='number'&&typeof snapshot.node.setSelectionRange==='function')snapshot.node.setSelectionRange(snapshot.start,snapshot.end,snapshot.direction||'none');});}
   function setFormulaEditStatus(kind,text){el.renderBtn.classList.toggle('primary',kind==='pending');el.formulaEditStatus.dataset.state=kind;if(el.formulaEditStatus.textContent!==text)el.formulaEditStatus.textContent=text;}
@@ -8040,7 +8148,7 @@ function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL
       if(activeDocument.key?.startsWith('custom:')){try{const record=findCustomPresetById(library().presets,activeDocument.id);if(!record){activeDocument.key=null;activeDocument.id=undefined;activeDocument.imported=false;activeDocument.importSource=null;toast('Saved filter deleted in another tab. Save as new to keep this draft.');}else if(JSON.stringify(record)!==activeDocument.recordBaseline)toast('Saved filter changed in another tab. Update will require review.');}catch(error){organizationError(error);}}
       catalogCache=null;onlineLibrary.invalidate();refreshTags();populatePresets();
     }});
-    window.addEventListener('beforeunload',()=>{if(librarySession)abortLibraryPackages(librarySession);onlineLibrary.dispose();thumbnailService.dispose();state.rendererManager?.dispose();});
+    window.addEventListener('beforeunload',()=>{inspectorLayout.destroy();if(librarySession)abortLibraryPackages(librarySession);onlineLibrary.dispose();thumbnailService.dispose();state.rendererManager?.dispose();});
   }
 
   window.FilterFabJS=Object.freeze({version:'2.9.3',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getThumbnailDiagnostics:()=>thumbnailService.diagnostics(),getRendererPreference:()=>state.rendererPreference,getWorkspaceMode:()=>state.workspaceMode,getLibraryPreviewState:()=>({open:Boolean(librarySession),candidateKey:librarySession?.candidateEntry?.key||null,candidateRendered:Boolean(librarySession?.candidateRendered),activeKey:activeDocument.key,activeId:activeDocument.id,imported:activeDocument.imported,importSource:activeDocument.importSource,baseline:activeDocument.baseline,recordBaseline:activeDocument.recordBaseline})});
