@@ -13,12 +13,15 @@ assert.ok(toolbarMatch[0].includes(`href="${koFi}"`), 'Support action uses the c
 assert.ok(toolbarMatch[0].includes('target="_blank"'), 'Ko-fi opens in a new tab');
 assert.ok(toolbarMatch[0].includes('rel="noopener noreferrer"'), 'External link has safe rel attributes');
 assert.ok(toolbarMatch[0].includes('aria-label="Support Filter FabJS on Ko-fi"'), 'Icon-only layout remains accessible');
-assert.ok(toolbarMatch[0].includes('class="support-logo"'), 'Toolbar includes the Ko-fi icon');
+assert.ok(toolbarMatch[0].includes('class="support-heart"'), 'Toolbar includes the decorative heart');
+assert.ok(/<svg[^>]*>\s*<path[^>]*\/>\s*<\/svg>/.test(toolbarMatch[0]), 'Support heart uses a crisp inline SVG');
 const githubIndex = html.indexOf('id="githubBtn"');
 assert.ok(html.indexOf('id="supportLink"') < githubIndex, 'Support precedes GitHub');
 assert.ok(html.includes(`support continued development on Ko-fi</a>`), 'Help dialog contains Ko-fi support link');
 assert.ok(html.includes(`href="${koFi}"`), 'Help link uses the correct Ko-fi URL');
 assert.ok(css.includes('.topbar .support-link:focus-visible'), 'Support control has keyboard focus styling');
+assert.ok(css.includes('.topbar .support-heart{') && css.includes('color:var(--accent)'), 'Heart uses the branded accent color on the dark button');
+assert.ok(!css.includes('.topbar .support-logo{'), 'Old Ko-fi logo badge styles are removed');
 assert.ok(css.includes('.topbar .support-label{display:none}'), 'Compact toolbar layout retains icon');
 assert.match(funding, /^ko_fi:\s*filterfabjs\s*$/m, 'GitHub sponsors setting targets the Ko-fi page');
 
