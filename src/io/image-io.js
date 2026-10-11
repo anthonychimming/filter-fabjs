@@ -13,6 +13,31 @@ export function imageFromClipboardData(data){
   }
   return Array.from(data.files||[]).find(file=>String(file.type||'').startsWith('image/'))||null;
 }
+
+// Optional startup source: bound the entire fetch/body/decode operation, not just headers.
+export async function loadDemoSplash({baseURI=globalThis.document.baseURI,fetchImpl=globalThis.fetch,decode=globalThis.createImageBitmap,createCanvas=()=>document.createElement('canvas'),timeoutMs=3000}={}){
+  const controller=new AbortController();let timer;
+  const checkTimeout=()=>{if(controller.signal.aborted)throw new Error('Demo image load timed out');};
+  const operation=(async()=>{
+    let bitmap;
+    try{
+      const response=await fetchImpl(new URL('./assets/demo-splash.png',baseURI),{signal:controller.signal,mode:'same-origin'});
+      checkTimeout();if(!response.ok)throw new Error('Demo image is unavailable');
+      const blob=await response.blob();checkTimeout();
+      if(blob.type!=='image/png')throw new Error('Demo image must be a PNG');
+      bitmap=await decode(blob);checkTimeout();
+      if(bitmap.width!==960||bitmap.height!==640)throw new Error('Demo image must be 960 × 640 pixels');
+      const canvas=createCanvas();canvas.width=bitmap.width;canvas.height=bitmap.height;
+      const context=canvas.getContext('2d',{alpha:true,willReadFrequently:true});
+      if(!context)throw new Error('Demo image canvas is unavailable');
+      context.drawImage(bitmap,0,0);
+      const image=context.getImageData(0,0,canvas.width,canvas.height);
+      return{data:image.data,width:canvas.width,height:canvas.height};
+    }finally{bitmap?.close?.();}
+  })();
+  const timeout=new Promise((resolve,reject)=>{timer=setTimeout(()=>{controller.abort();reject(new Error('Demo image load timed out'));},timeoutMs);});
+  try{return await Promise.race([operation,timeout]);}finally{clearTimeout(timer);}
+}
 export function alphaStats(pixels){
   let min=255,max=0,transparent=0,translucent=0,opaque=0;
   for(let i=3;i<pixels.length;i+=4){const value=pixels[i];min=Math.min(min,value);max=Math.max(max,value);if(value===0)transparent++;else if(value===255)opaque++;else translucent++;}

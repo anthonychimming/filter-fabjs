@@ -22,6 +22,13 @@ assert.doesNotMatch(siteHtml, /assets\/app\.(?:css|js)/, 'deployed HTML must not
 
 const deployedCss = fs.readFileSync(`dist/site/assets/${cssReference}`, 'utf8');
 const deployedJavaScript = fs.readFileSync(`dist/site/assets/${jsReference}`, 'utf8');
+const demoBytes=fs.readFileSync('assets/demo-splash.png');
+assert.deepEqual(fs.readFileSync('dist/site/assets/demo-splash.png'),demoBytes,'the deployed splash must preserve the supplied PNG bytes');
+assert.equal(demoBytes.readUInt32BE(16),960);assert.equal(demoBytes.readUInt32BE(20),640);
+assert.match(deployedJavaScript,/new URL\('\.\/assets\/demo-splash\.png',baseURI\)/,'the splash must resolve relative to the document, including project subpaths');
+assert.equal(new URL('./assets/demo-splash.png','https://example.test/filter-fabjs/').pathname,'/filter-fabjs/assets/demo-splash.png');
+assert.ok(!standaloneHtml.includes(demoBytes.toString('base64')),'standalone must not embed the splash PNG');
+assert.match(standaloneHtml,/function demoImage\(\)/,'standalone must retain the generated offline demo');
 const standaloneCss = standaloneHtml.match(/<style>([\s\S]*?)<\/style>/)?.[1];
 assert.ok(standaloneCss, 'standalone must contain its stylesheet');
 const cssUrls = css => [...css.matchAll(/url\(\s*["']?([^"')\s]+)/gi)].map(([, url]) => url);

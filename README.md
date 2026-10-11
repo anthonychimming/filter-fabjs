@@ -120,6 +120,8 @@ Build output:
 - `dist/site/` — deployable static site
 - `dist/filter-fabjs-v2.9.3.html` — standalone single-file build
 
+Startup immediately displays the built-in canvas demo, then attempts to load `./assets/demo-splash.png` as the real 960 × 640 RGBA source. The static-site build copies this image to `dist/site/assets/demo-splash.png`; its document-relative URL also works under a project subpath such as `/filter-fabjs/`. Missing, invalid, or slow assets quietly retain the built-in demo after a three-second timeout. Starting a user image request prevents a late splash from replacing it, and the splash does not reset filter edits or controls. The standalone HTML keeps the generated demo available offline and does not embed the PNG.
+
 The project currently has no npm package dependencies.
 
 ## Documentation

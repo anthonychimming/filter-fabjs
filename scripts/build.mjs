@@ -56,6 +56,7 @@ function fingerprint(source) {
 
 await fs.rm(path.join(root, 'dist'), { recursive: true, force: true });
 await fs.mkdir(path.join(root, 'dist', 'site', 'assets'), { recursive: true });
+await fs.copyFile(path.join(root, 'assets', 'demo-splash.png'), path.join(root, 'dist', 'site', 'assets', 'demo-splash.png'));
 
 const css = await fs.readFile(path.join(root, 'styles', 'app.css'), 'utf8');
 // Keep development URLs local, fingerprint site fonts, and embed standalone fonts.

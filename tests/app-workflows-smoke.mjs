@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { applyPresetSafely, findCustomPresetById, importLatestFilterFile, initializeImagePreview, normalizeCustomPresetList, upsertCustomPreset, validateFilterForPersistence } from '../src/app/filter-fab-app.js';
+import { applyPresetSafely, findCustomPresetById, importLatestFilterFile, initializeImagePreview, normalizeCustomPresetList, replaceStartupDemo, upsertCustomPreset, validateFilterForPersistence } from '../src/app/filter-fab-app.js';
+import { loadDemoSplash } from '../src/io/image-io.js';
 
 function deferred(){let resolve,reject;const promise=new Promise((nextResolve,nextReject)=>{resolve=nextResolve;reject=nextReject;});return{promise,resolve,reject};}
 function filterText(name,description=''){return JSON.stringify({format:'filter-fab-js',version:2,name,description,formulas:['r','g','b','a']});}
@@ -85,6 +86,55 @@ function filterFile(name,textPromise){return{name:`${name}.json`,size:128,text:(
   assert.equal(updated.preset.id,'preset-existing');assert.equal(updated.preset.description,'Replacement description','overwriting a local preset must preserve edited description metadata');assert.deepEqual(updated.preset.controls[0].ui,controlUI,'overwriting a local preset must preserve rich control metadata');assert.equal(updated.list[0],updated.preset);
   const added=upsertCustomPreset(updated.list,replacement,'Added',()=> 'preset-added');
   assert.equal(added.preset.id,'preset-added');assert.equal(added.preset.description,'Replacement description','new local presets must carry description metadata');assert.deepEqual(added.preset.controls[0].ui,controlUI,'new local presets must carry rich control metadata');assert.equal(findCustomPresetById(added.list,'preset-existing').name,'Existing');assert.equal(findCustomPresetById(added.list,'preset-added').name,'Added');
+}
+
+{
+  const pixels=new Uint8ClampedArray([10,20,30,128]),image={data:pixels,width:960,height:640};
+  const state={imageLoadId:0,filter:'pass',controls:[0]},pending=deferred();let applied=0;
+  const replacement=replaceStartupDemo({state,load:()=>pending.promise,initImage:(data,width,height)=>{applied++;assert.equal(data,pixels);assert.equal(width,960);assert.equal(height,640);}});
+  state.filter='edited';state.controls[0]=192;pending.resolve(image);
+  assert.equal(await replacement,true);assert.equal(applied,1);
+  assert.equal(state.filter,'edited');assert.deepEqual(state.controls,[192],'late startup completion must preserve controls and filter choice');
+  for(const outcome of ['pending','completed','failed']){
+    const load=deferred(),race=replaceStartupDemo({state,load:()=>load.promise,initImage:()=>assert.fail('startup must not replace a newer user image request')});
+    state.imageLoadId++;state.source=outcome==='completed'?'user':'fallback';load.resolve(image);
+    assert.equal(await race,false,`newer ${outcome} user requests must permanently supersede startup`);
+  }
+  assert.equal(await replaceStartupDemo({state,load:async()=>{throw new Error('offline');},initImage:()=>assert.fail('failed startup must retain fallback')}),false);
+  assert.equal(await replaceStartupDemo({state,load:async()=>image,canReplace:()=>false,initImage:()=>assert.fail('startup must not invalidate an active library preview')}),false);
+}
+
+{
+  const pixels=new Uint8ClampedArray(960*640*4);pixels.set([10,20,30,128]);
+  let closed=0,drawn=0,signal;
+  const bitmap={width:960,height:640,close:()=>closed++};
+  const options={baseURI:'https://example.test/filter-fabjs/',timeoutMs:1000,
+    fetchImpl:async(url,request)=>{assert.equal(url.href,'https://example.test/filter-fabjs/assets/demo-splash.png');assert.equal(request.mode,'same-origin');signal=request.signal;return{ok:true,blob:async()=>({type:'image/png'})};},
+    decode:async()=>bitmap,
+    createCanvas:()=>({getContext:(type,settings)=>{assert.equal(type,'2d');assert.equal(settings.alpha,true);return{drawImage:(value,x,y)=>{assert.equal(value,bitmap);assert.equal(x,0);assert.equal(y,0);drawn++;},getImageData:(x,y,width,height)=>{assert.equal(width,960);assert.equal(height,640);return{data:pixels};}};}})};
+  const image=await loadDemoSplash(options);assert.equal(image.data,pixels);assert.equal(image.width,960);assert.equal(image.height,640);assert.equal(closed,1);assert.equal(drawn,1);assert.equal(signal.aborted,false);
+  for(const status of [404,500])await assert.rejects(loadDemoSplash({...options,fetchImpl:async()=>({ok:false,status})}),/unavailable/);
+  await assert.rejects(loadDemoSplash({...options,fetchImpl:async()=>{throw new Error('file URL blocked');}}),/blocked/);
+  await assert.rejects(loadDemoSplash({...options,fetchImpl:async()=>({ok:true,blob:async()=>({type:'text/html'})})}),/PNG/);
+  await assert.rejects(loadDemoSplash({...options,decode:async()=>{throw new Error('corrupt PNG');}}),/corrupt/);
+  for(const dimensions of [[0,0],[959,640]]){
+    const before=closed;
+    await assert.rejects(loadDemoSplash({...options,decode:async()=>({width:dimensions[0],height:dimensions[1],close:()=>closed++})}),/960/);
+    assert.equal(closed,before+1,'unexpected bitmap dimensions must close the bitmap');
+  }
+  const before=closed;
+  await assert.rejects(loadDemoSplash({...options,createCanvas:()=>({getContext:()=>({drawImage:()=>{throw new Error('canvas failed');}})})}),/canvas failed/);
+  assert.equal(closed,before+1,'canvas failures must close the bitmap');
+  for(const phase of ['fetch','body','decode']){
+    const pending=deferred();let timeoutSignal;
+    const fetchImpl=async(url,request)=>{timeoutSignal=request.signal;if(phase==='fetch')return pending.promise;return{ok:true,blob:()=>phase==='body'?pending.promise:Promise.resolve({type:'image/png'})};};
+    const before=closed;
+    await assert.rejects(loadDemoSplash({...options,timeoutMs:5,fetchImpl,decode:()=>pending.promise}),/timed out/);
+    assert.equal(timeoutSignal.aborted,true,'timeouts must abort pending requests');
+    pending.resolve(phase==='decode'?bitmap:phase==='body'?{type:'image/png'}:{ok:true});
+    await new Promise(resolve=>setTimeout(resolve,0));
+    assert.equal(closed,before+(phase==='decode'?1:0),'late decoded bitmaps must be closed without drawing');
+  }
 }
 
 console.log('App workflow smoke checks passed.');

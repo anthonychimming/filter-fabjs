@@ -47,6 +47,12 @@ assert.match(app, /restoreFocus\(snapshot\)/, 'render unlock must restore focus'
 assert.match(app, /mathMode:state\.legacyMath\?'legacy':'float'/, 'filter serialization must preserve legacy math mode');
 assert.doesNotMatch(app, /mathMode:'float'/, 'filter serialization must not hard-code float math');
 assert.match(app, /const requestId=\+\+state\.imageLoadId/, 'file image routing must reserve a latest-request generation before metadata inspection');
+assert.match(app,/state\.imageLoadId\+\+;el\.imageInput\.click\(\)/,'opening the file picker must supersede startup before a file is returned');
+assert.match(app,/const requestId=\+\+state\.imageLoadId;setStatus\('Reading clipboard/,'clipboard reads must supersede startup before the asynchronous permission/read step');
+assert.match(app,/loadImageFile\(blob,\{successMessage:'Image pasted from clipboard',requestId\}\)/,'clipboard decoding must retain the original request generation');
+assert.match(app,/const loadId=requestId\?\?\+\+state\.imageLoadId;if\(!file/,'even failed user image loads must supersede startup');
+assert.match(app,/applyFilter\(presets.find\(preset=>preset.id==='pass'\),'builtin:pass'\);\s*void replaceStartupDemo/,'startup must install its fallback and initial filter before asynchronous substitution');
+assert.match(app,/canReplace:\(\)=>!librarySession/,'startup must not invalidate an active filter-library preview');
 assert.match(app, /requestId===state\.imageLoadId\?loadImageFile\(image,\{requestId\}\):false/, 'metadata choices must not revive a stale image request');
 assert.match(app, /if\(loadId!==state\.imageLoadId\)return false/, 'stale image decodes must be discarded');
 assert.match(app, /finally\{bitmap\?\.close\?\.\(\);\}/, 'decoded image bitmaps must close on every exit path');
