@@ -54,13 +54,20 @@ const posterPreset=presets.find(preset=>preset.id==='poster'),posterControls=def
 const twoLevelPoster=await render(posterPreset.f,{controls:posterControls});
 assert.deepEqual([...twoLevelPoster],[0,0,0,255,0,0,0,128,0,0,255,255,255,0,0,255],'two-level Posterize must quantize to the full 0–255 endpoint range');
 
-for(const id of ['warped-sdf-bloom-contour','kaleidoscope-mirror','photoshop-hue-saturation-master','versatile-stripes']){
+for(const id of ['warped-sdf-bloom-contour','kaleidoscope-mirror','photoshop-hue-saturation-master','versatile-stripes','simple-blur','photoshop-watercolor']){
   const preset=presets.find(p=>p.id===id);
   const pixels=await render(preset.f,{controls:preset.controls.map(c=>c.value)});
   assert.equal(pixels.length,16,id+' must render four RGBA pixels');
   assert.deepEqual([...await render(preset.f,{controls:preset.controls.map(c=>c.value)})],[...pixels],id+' must render deterministically');
   if(preset.f[3]==='a')assert.deepEqual([pixels[3],pixels[7],pixels[11],pixels[15]],[255,128,255,255],id+' must preserve source alpha');
 }
+
+const blurPreset=presets.find(preset=>preset.id==='simple-blur');
+const blurControls=blurPreset.controls.map(control=>control.value);
+blurControls[0]=0;
+assert.deepEqual([...await render(blurPreset.f,{controls:blurControls})],[10,20,30,255,100,110,120,128,0,0,255,255,255,0,0,255],'zero Blur Amount must preserve every source channel');
+blurControls[0]=255;
+assert.deepEqual([...await render(blurPreset.f,{controls:blurControls})],[32,42,52,255,52,60,131,128,89,28,158,255,191,0,64,255],'full Blur Amount must apply the supplied 3x3 kernel with clamped edges and preserve alpha');
 
 const numericEdges = await render(['round(0.5)*255','pow(-2,2)','c2d(0,0)','a']);
 assert.deepEqual([...numericEdges], [255,4,0,255, 255,4,0,128, 255,4,0,255, 255,4,0,255], 'CPU fallback semantics must remain defined at GPU edge cases');
@@ -128,7 +135,7 @@ assert.doesNotThrow(()=>assertCpuRenderBudget(maximalProgram,64,64),'the CPU bud
 const largeImageCpuLimitedBuiltins=new Set([
   'c64multicolorbitmap','linearprismecho','spectraltearglitch','vhstrackingglitch',
   'radialecho','softmeshgradient','chromatic-glass','fractal-contours','halftone-print',
-  'instant-print-frame','iridescent-shift','mandelbrotjuliaatlas','futuristic-sci-fi-glitch-photo','touchingrandomcapsules'
+  'instant-print-frame','iridescent-shift','mandelbrotjuliaatlas','futuristic-sci-fi-glitch-photo','photoshop-watercolor'
 ]);
 for(const preset of presets){
   const program=compileFilterProgram(preset.f.map(formula=>new Parser(formula).parse()));

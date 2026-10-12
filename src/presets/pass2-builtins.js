@@ -2805,141 +2805,141 @@ export const pass2PresetDefinitions=[
     ]
   },
   {
-    "id": "touchingrandomcapsules",
-    "name": "Touching Random Capsules",
-    "description": "Staggered capsule pattern with no vertical spacing. Every two-unit vertical block is either one tall capsule or two shorter touching capsules, chosen deterministically from Seed. White Background Opacity reveals the input image between capsules from 0% to 100% white.",
+    "id": "photoshop-watercolor",
+    "name": "Watercolor",
+    "description": "Simulates a watercolor painting by simplifying detail into soft washes, deepening pigment around tonal edges, enhancing color transitions, and adding paper-like granulation. Controls adjust brush detail, shadow intensity, and texture strength.",
     "author": "Anthony Chimming",
     "tags": [
-      "Pattern",
-      "Shapes",
-      "Procedural"
+      "Artistic",
+      "Painterly",
+      "Texture"
     ],
     "controls": [
       {
-        "label": "Column Spacing",
-        "value": 31.166666666666664,
+        "label": "Brush Detail",
+        "value": 98.07692307692308,
         "ui": {
           "widget": "slider",
-          "displayMin": 110,
-          "displayMax": 200,
-          "step": 1,
-          "format": "integer",
-          "unit": "px"
-        }
-      },
-      {
-        "label": "Pill Width",
-        "value": 165.75000000000009,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 80,
-          "displayMax": 96,
-          "step": 0.1,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Base Height",
-        "value": 161.925,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 200,
-          "displayMax": 400,
-          "step": 1,
-          "format": "integer",
-          "unit": "px"
-        }
-      },
-      {
-        "label": "Background Opacity",
-        "value": 255,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 100,
-          "step": 1,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Horizontal Phase",
-        "value": 80.325,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 200,
-          "step": 1,
-          "format": "integer",
-          "unit": "px"
-        }
-      },
-      {
-        "label": "Vertical Phase",
-        "value": 0,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 800,
-          "step": 1,
-          "format": "integer",
-          "unit": "px"
-        }
-      },
-      {
-        "label": "Seed",
-        "value": 177.9235847169434,
-        "ui": {
-          "widget": "seed",
           "displayMin": 1,
-          "displayMax": 9999,
+          "displayMax": 14,
           "step": 1,
           "format": "integer",
           "unit": ""
         }
       },
       {
-        "label": "Effect Mix",
-        "value": 255,
+        "label": "Shadow Intensity",
+        "value": 170,
         "ui": {
           "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 100,
-          "step": 1,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Hue Shift",
-        "value": 159.8,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 300,
+          "displayMin": 1,
+          "displayMax": 10,
           "step": 1,
           "format": "integer",
-          "unit": "%"
+          "unit": ""
         }
       },
       {
-        "label": "Saturation",
+        "label": "Texture",
         "value": 127.5,
         "ui": {
           "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 200,
+          "displayMin": 1,
+          "displayMax": 3,
           "step": 1,
           "format": "integer",
-          "unit": "%"
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 4",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 5",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 6",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 7",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 8",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 9",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 10",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
         }
       }
     ],
     "f": [
-      "lerp(c,lerp(c,255,ctl(3))+((((((floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2))*2)+(hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55&&repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)>=val(2,200,400)?1:0)+floor((x+val(4,0,200))/val(0,110,200)))%3)==0?val(8,0,3)<1?lerp(clamp(108+(0-108)*val(9,0,2),0,255),clamp(108+(157-108)*val(9,0,2),0,255),val(8,0,3)):val(8,0,3)<2?lerp(clamp(108+(157-108)*val(9,0,2),0,255),clamp(108+(136-108)*val(9,0,2),0,255),val(8,0,3)-1):lerp(clamp(108+(136-108)*val(9,0,2),0,255),clamp(108+(0-108)*val(9,0,2),0,255),val(8,0,3)-2):((((floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2))*2)+(hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55&&repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)>=val(2,200,400)?1:0)+floor((x+val(4,0,200))/val(0,110,200)))%3)==1?val(8,0,3)<1?lerp(clamp(153+(89-153)*val(9,0,2),0,255),clamp(153+(189-153)*val(9,0,2),0,255),val(8,0,3)):val(8,0,3)<2?lerp(clamp(153+(189-153)*val(9,0,2),0,255),clamp(153+(139-153)*val(9,0,2),0,255),val(8,0,3)-1):lerp(clamp(153+(139-153)*val(9,0,2),0,255),clamp(153+(89-153)*val(9,0,2),0,255),val(8,0,3)-2):val(8,0,3)<1?lerp(clamp(192+(164-192)*val(9,0,2),0,255),clamp(192+(217-192)*val(9,0,2),0,255),val(8,0,3)):val(8,0,3)<2?lerp(clamp(192+(217-192)*val(9,0,2),0,255),clamp(192+(137-192)*val(9,0,2),0,255),val(8,0,3)-1):lerp(clamp(192+(137-192)*val(9,0,2),0,255),clamp(192+(164-192)*val(9,0,2),0,255),val(8,0,3)-2))))-lerp(c,255,ctl(3)))*line(repeat(x+val(4,0,200),val(0,110,200)),repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2),val(0,110,200)/2,((hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55?(repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)<val(2,200,400)?0:val(2,200,400)):0)+(val(0,110,200)*val(1,80,96)/100)/2),val(0,110,200)/2,((hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55?(repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)<val(2,200,400)?val(2,200,400):val(2,200,400)*2):val(2,200,400)*2)-(val(0,110,200)*val(1,80,96)/100)/2),(val(0,110,200)*val(1,80,96)/100),0),ctl(7))",
-      "lerp(c,lerp(c,255,ctl(3))+((((((floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2))*2)+(hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55&&repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)>=val(2,200,400)?1:0)+floor((x+val(4,0,200))/val(0,110,200)))%3)==0?val(8,0,3)<1?lerp(clamp(108+(157-108)*val(9,0,2),0,255),clamp(108+(136-108)*val(9,0,2),0,255),val(8,0,3)):val(8,0,3)<2?lerp(clamp(108+(136-108)*val(9,0,2),0,255),clamp(108+(0-108)*val(9,0,2),0,255),val(8,0,3)-1):lerp(clamp(108+(0-108)*val(9,0,2),0,255),clamp(108+(157-108)*val(9,0,2),0,255),val(8,0,3)-2):((((floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2))*2)+(hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55&&repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)>=val(2,200,400)?1:0)+floor((x+val(4,0,200))/val(0,110,200)))%3)==1?val(8,0,3)<1?lerp(clamp(153+(189-153)*val(9,0,2),0,255),clamp(153+(139-153)*val(9,0,2),0,255),val(8,0,3)):val(8,0,3)<2?lerp(clamp(153+(139-153)*val(9,0,2),0,255),clamp(153+(89-153)*val(9,0,2),0,255),val(8,0,3)-1):lerp(clamp(153+(89-153)*val(9,0,2),0,255),clamp(153+(189-153)*val(9,0,2),0,255),val(8,0,3)-2):val(8,0,3)<1?lerp(clamp(192+(217-192)*val(9,0,2),0,255),clamp(192+(137-192)*val(9,0,2),0,255),val(8,0,3)):val(8,0,3)<2?lerp(clamp(192+(137-192)*val(9,0,2),0,255),clamp(192+(164-192)*val(9,0,2),0,255),val(8,0,3)-1):lerp(clamp(192+(164-192)*val(9,0,2),0,255),clamp(192+(217-192)*val(9,0,2),0,255),val(8,0,3)-2))))-lerp(c,255,ctl(3)))*line(repeat(x+val(4,0,200),val(0,110,200)),repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2),val(0,110,200)/2,((hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55?(repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)<val(2,200,400)?0:val(2,200,400)):0)+(val(0,110,200)*val(1,80,96)/100)/2),val(0,110,200)/2,((hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55?(repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)<val(2,200,400)?val(2,200,400):val(2,200,400)*2):val(2,200,400)*2)-(val(0,110,200)*val(1,80,96)/100)/2),(val(0,110,200)*val(1,80,96)/100),0),ctl(7))",
-      "lerp(c,lerp(c,255,ctl(3))+((((((floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2))*2)+(hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55&&repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)>=val(2,200,400)?1:0)+floor((x+val(4,0,200))/val(0,110,200)))%3)==0?val(8,0,3)<1?lerp(clamp(108+(136-108)*val(9,0,2),0,255),clamp(108+(0-108)*val(9,0,2),0,255),val(8,0,3)):val(8,0,3)<2?lerp(clamp(108+(0-108)*val(9,0,2),0,255),clamp(108+(157-108)*val(9,0,2),0,255),val(8,0,3)-1):lerp(clamp(108+(157-108)*val(9,0,2),0,255),clamp(108+(136-108)*val(9,0,2),0,255),val(8,0,3)-2):((((floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2))*2)+(hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55&&repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)>=val(2,200,400)?1:0)+floor((x+val(4,0,200))/val(0,110,200)))%3)==1?val(8,0,3)<1?lerp(clamp(153+(139-153)*val(9,0,2),0,255),clamp(153+(89-153)*val(9,0,2),0,255),val(8,0,3)):val(8,0,3)<2?lerp(clamp(153+(89-153)*val(9,0,2),0,255),clamp(153+(189-153)*val(9,0,2),0,255),val(8,0,3)-1):lerp(clamp(153+(189-153)*val(9,0,2),0,255),clamp(153+(139-153)*val(9,0,2),0,255),val(8,0,3)-2):val(8,0,3)<1?lerp(clamp(192+(137-192)*val(9,0,2),0,255),clamp(192+(164-192)*val(9,0,2),0,255),val(8,0,3)):val(8,0,3)<2?lerp(clamp(192+(164-192)*val(9,0,2),0,255),clamp(192+(217-192)*val(9,0,2),0,255),val(8,0,3)-1):lerp(clamp(192+(217-192)*val(9,0,2),0,255),clamp(192+(137-192)*val(9,0,2),0,255),val(8,0,3)-2))))-lerp(c,255,ctl(3)))*line(repeat(x+val(4,0,200),val(0,110,200)),repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2),val(0,110,200)/2,((hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55?(repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)<val(2,200,400)?0:val(2,200,400)):0)+(val(0,110,200)*val(1,80,96)/100)/2),val(0,110,200)/2,((hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55?(repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)<val(2,200,400)?val(2,200,400):val(2,200,400)*2):val(2,200,400)*2)-(val(0,110,200)*val(1,80,96)/100)/2),(val(0,110,200)*val(1,80,96)/100),0),ctl(7))",
+      "clamp((round(((4*srcLinear(x,y,z)+2*(srcLinear(x+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y,z)+srcLinear(x-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y,z)+srcLinear(x,y+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x,y-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z))+srcLinear(x+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z))/16)/(1.5+10*sqr(1-((val(0,1,14)-1)/13))))*(1.5+10*sqr(1-((val(0,1,14)-1)/13))))+(((fbm(x,y,22,4,2,0.5,613)-0.5))*(4+12*((val(2,1,3)-1)/2)+24*sqr(((val(2,1,3)-1)/2)))+((ridged(x,y,7,3,977)-0.5))*(2+7*((val(2,1,3)-1)/2)+15*sqr(((val(2,1,3)-1)/2))))*(0.35+0.65*(255-i)/255)+clamp((abs(((299*src(x+1,y,0)+587*src(x+1,y,1)+114*src(x+1,y,2))/1000)-((299*src(x-1,y,0)+587*src(x-1,y,1)+114*src(x-1,y,2))/1000))+abs(((299*src(x,y-1,0)+587*src(x,y-1,1)+114*src(x,y-1,2))/1000)-((299*src(x,y+1,0)+587*src(x,y+1,1)+114*src(x,y+1,2))/1000)))/(52-24*sqr(((val(0,1,14)-1)/13))),0,1)*((0.22+0.42*sqr(((val(0,1,14)-1)/13)))*(c-i)-(2+34*((val(1,1,10)-1)/9)+54*sqr(((val(1,1,10)-1)/9)))*(0.5+0.5*(255-i)/255)),0,255)",
+      "clamp((round(((4*srcLinear(x,y,z)+2*(srcLinear(x+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y,z)+srcLinear(x-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y,z)+srcLinear(x,y+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x,y-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z))+srcLinear(x+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z))/16)/(1.5+10*sqr(1-((val(0,1,14)-1)/13))))*(1.5+10*sqr(1-((val(0,1,14)-1)/13))))+(((fbm(x,y,22,4,2,0.5,613)-0.5))*(4+12*((val(2,1,3)-1)/2)+24*sqr(((val(2,1,3)-1)/2)))+((ridged(x,y,7,3,977)-0.5))*(2+7*((val(2,1,3)-1)/2)+15*sqr(((val(2,1,3)-1)/2))))*(0.35+0.65*(255-i)/255)+clamp((abs(((299*src(x+1,y,0)+587*src(x+1,y,1)+114*src(x+1,y,2))/1000)-((299*src(x-1,y,0)+587*src(x-1,y,1)+114*src(x-1,y,2))/1000))+abs(((299*src(x,y-1,0)+587*src(x,y-1,1)+114*src(x,y-1,2))/1000)-((299*src(x,y+1,0)+587*src(x,y+1,1)+114*src(x,y+1,2))/1000)))/(52-24*sqr(((val(0,1,14)-1)/13))),0,1)*((0.22+0.42*sqr(((val(0,1,14)-1)/13)))*(c-i)-(2+34*((val(1,1,10)-1)/9)+54*sqr(((val(1,1,10)-1)/9)))*(0.5+0.5*(255-i)/255)),0,255)",
+      "clamp((round(((4*srcLinear(x,y,z)+2*(srcLinear(x+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y,z)+srcLinear(x-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y,z)+srcLinear(x,y+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x,y-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z))+srcLinear(x+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z))/16)/(1.5+10*sqr(1-((val(0,1,14)-1)/13))))*(1.5+10*sqr(1-((val(0,1,14)-1)/13))))+(((fbm(x,y,22,4,2,0.5,613)-0.5))*(4+12*((val(2,1,3)-1)/2)+24*sqr(((val(2,1,3)-1)/2)))+((ridged(x,y,7,3,977)-0.5))*(2+7*((val(2,1,3)-1)/2)+15*sqr(((val(2,1,3)-1)/2))))*(0.35+0.65*(255-i)/255)+clamp((abs(((299*src(x+1,y,0)+587*src(x+1,y,1)+114*src(x+1,y,2))/1000)-((299*src(x-1,y,0)+587*src(x-1,y,1)+114*src(x-1,y,2))/1000))+abs(((299*src(x,y-1,0)+587*src(x,y-1,1)+114*src(x,y-1,2))/1000)-((299*src(x,y+1,0)+587*src(x,y+1,1)+114*src(x,y+1,2))/1000)))/(52-24*sqr(((val(0,1,14)-1)/13))),0,1)*((0.22+0.42*sqr(((val(0,1,14)-1)/13)))*(c-i)-(2+34*((val(1,1,10)-1)/9)+54*sqr(((val(1,1,10)-1)/9)))*(0.5+0.5*(255-i)/255)),0,255)",
       "a"
     ]
   }

@@ -1,0 +1,142 @@
+{
+  "format": "filter-fab-js",
+  "version": 2,
+  "id": "photoshop-watercolor",
+  "tags": [
+    "Artistic",
+    "Painterly",
+    "Texture"
+  ],
+  "mathMode": "float",
+  "name": "Watercolor",
+  "description": "Simulates a watercolor painting by simplifying detail into soft washes, deepening pigment around tonal edges, enhancing color transitions, and adding paper-like granulation. Controls adjust brush detail, shadow intensity, and texture strength.",
+  "author": "Anthony Chimming",
+  "formulas": [
+    "clamp((round(((4*srcLinear(x,y,z)+2*(srcLinear(x+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y,z)+srcLinear(x-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y,z)+srcLinear(x,y+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x,y-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z))+srcLinear(x+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z))/16)/(1.5+10*sqr(1-((val(0,1,14)-1)/13))))*(1.5+10*sqr(1-((val(0,1,14)-1)/13))))+(((fbm(x,y,22,4,2,0.5,613)-0.5))*(4+12*((val(2,1,3)-1)/2)+24*sqr(((val(2,1,3)-1)/2)))+((ridged(x,y,7,3,977)-0.5))*(2+7*((val(2,1,3)-1)/2)+15*sqr(((val(2,1,3)-1)/2))))*(0.35+0.65*(255-i)/255)+clamp((abs(((299*src(x+1,y,0)+587*src(x+1,y,1)+114*src(x+1,y,2))/1000)-((299*src(x-1,y,0)+587*src(x-1,y,1)+114*src(x-1,y,2))/1000))+abs(((299*src(x,y-1,0)+587*src(x,y-1,1)+114*src(x,y-1,2))/1000)-((299*src(x,y+1,0)+587*src(x,y+1,1)+114*src(x,y+1,2))/1000)))/(52-24*sqr(((val(0,1,14)-1)/13))),0,1)*((0.22+0.42*sqr(((val(0,1,14)-1)/13)))*(c-i)-(2+34*((val(1,1,10)-1)/9)+54*sqr(((val(1,1,10)-1)/9)))*(0.5+0.5*(255-i)/255)),0,255)",
+    "clamp((round(((4*srcLinear(x,y,z)+2*(srcLinear(x+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y,z)+srcLinear(x-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y,z)+srcLinear(x,y+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x,y-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z))+srcLinear(x+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z))/16)/(1.5+10*sqr(1-((val(0,1,14)-1)/13))))*(1.5+10*sqr(1-((val(0,1,14)-1)/13))))+(((fbm(x,y,22,4,2,0.5,613)-0.5))*(4+12*((val(2,1,3)-1)/2)+24*sqr(((val(2,1,3)-1)/2)))+((ridged(x,y,7,3,977)-0.5))*(2+7*((val(2,1,3)-1)/2)+15*sqr(((val(2,1,3)-1)/2))))*(0.35+0.65*(255-i)/255)+clamp((abs(((299*src(x+1,y,0)+587*src(x+1,y,1)+114*src(x+1,y,2))/1000)-((299*src(x-1,y,0)+587*src(x-1,y,1)+114*src(x-1,y,2))/1000))+abs(((299*src(x,y-1,0)+587*src(x,y-1,1)+114*src(x,y-1,2))/1000)-((299*src(x,y+1,0)+587*src(x,y+1,1)+114*src(x,y+1,2))/1000)))/(52-24*sqr(((val(0,1,14)-1)/13))),0,1)*((0.22+0.42*sqr(((val(0,1,14)-1)/13)))*(c-i)-(2+34*((val(1,1,10)-1)/9)+54*sqr(((val(1,1,10)-1)/9)))*(0.5+0.5*(255-i)/255)),0,255)",
+    "clamp((round(((4*srcLinear(x,y,z)+2*(srcLinear(x+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y,z)+srcLinear(x-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y,z)+srcLinear(x,y+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x,y-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z))+srcLinear(x+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z))/16)/(1.5+10*sqr(1-((val(0,1,14)-1)/13))))*(1.5+10*sqr(1-((val(0,1,14)-1)/13))))+(((fbm(x,y,22,4,2,0.5,613)-0.5))*(4+12*((val(2,1,3)-1)/2)+24*sqr(((val(2,1,3)-1)/2)))+((ridged(x,y,7,3,977)-0.5))*(2+7*((val(2,1,3)-1)/2)+15*sqr(((val(2,1,3)-1)/2))))*(0.35+0.65*(255-i)/255)+clamp((abs(((299*src(x+1,y,0)+587*src(x+1,y,1)+114*src(x+1,y,2))/1000)-((299*src(x-1,y,0)+587*src(x-1,y,1)+114*src(x-1,y,2))/1000))+abs(((299*src(x,y-1,0)+587*src(x,y-1,1)+114*src(x,y-1,2))/1000)-((299*src(x,y+1,0)+587*src(x,y+1,1)+114*src(x,y+1,2))/1000)))/(52-24*sqr(((val(0,1,14)-1)/13))),0,1)*((0.22+0.42*sqr(((val(0,1,14)-1)/13)))*(c-i)-(2+34*((val(1,1,10)-1)/9)+54*sqr(((val(1,1,10)-1)/9)))*(0.5+0.5*(255-i)/255)),0,255)",
+    "a"
+  ],
+  "controls": [
+    {
+      "label": "Brush Detail",
+      "value": 98.07692307692308,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 1,
+        "displayMax": 14,
+        "step": 1,
+        "format": "integer",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Shadow Intensity",
+      "value": 170,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 1,
+        "displayMax": 10,
+        "step": 1,
+        "format": "integer",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Texture",
+      "value": 127.5,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 1,
+        "displayMax": 3,
+        "step": 1,
+        "format": "integer",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Control 4",
+      "value": 128,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "number",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Control 5",
+      "value": 128,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "number",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Control 6",
+      "value": 128,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "number",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Control 7",
+      "value": 128,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "number",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Control 8",
+      "value": 128,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "number",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Control 9",
+      "value": 128,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "number",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Control 10",
+      "value": 128,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "number",
+        "unit": ""
+      }
+    }
+  ]
+}

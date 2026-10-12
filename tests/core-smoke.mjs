@@ -149,7 +149,7 @@ const removedBuiltins=new Map([
 const contributedBuiltins=new Map([
   ['c64multicolorbitmap','C64 Multicolor Bitmap'],
   ['linearprismecho','Linear Prism Echo'],
-  ['lomochromepurplexr','LomoChrome Purple XR'],
+  ['simple-blur','Simple Blur'],
   ['popprintquad','Pop Print Quad'],
   ['spectraltearglitch','Spectral Tear Glitch'],
   ['vhstrackingglitch','VHS Tracking Glitch']
@@ -175,7 +175,7 @@ const pass2Builtins=new Map([
   ['radial-aura','Radial Aura'],
   ['selective-color-isolate','Selective Color Isolate'],
   ['futuristic-sci-fi-glitch-photo','Signal Rupture'],
-  ['touchingrandomcapsules','Touching Random Capsules']
+  ['photoshop-watercolor','Watercolor']
 ]);
 assert.equal(new Set(presets.map(preset=>preset.id)).size,presets.length,'remaining built-in IDs must stay unique');
 assert.equal(new Set(presets.map(preset=>preset.name)).size,presets.length,'remaining built-in names must stay unique');
@@ -184,7 +184,7 @@ for(const [id,name] of contributedBuiltins){
   assert.equal(preset?.name,name,`${name} must retain its assigned built-in identity`);
   assert.equal(preset.controls.length,CONTROL_COUNT,`${name} must preserve all ten exported control definitions`);
   assert.ok(preset.description.trim(),`${name} must preserve its exported description`);
-  assert.ok(preset.tags.length>=3,`${name} must preserve its exported searchable tags`);
+  assert.ok(preset.tags.length>=(id==='simple-blur'?2:3),`${name} must preserve its exported searchable tags`);
 }
 for(const [id,name] of pass2Builtins){
   const preset=presets.find(item=>item.id===id);
@@ -194,6 +194,20 @@ for(const [id,name] of pass2Builtins){
 for(const [id,name] of removedBuiltins){
   assert.equal(presets.some(preset=>preset.id===id),false,`${name} legacy ID must be absent`);
   assert.equal(presets.some(preset=>preset.name===name),false,`${name} must be absent from the built-in catalog`);
+}
+
+for(const [id,name] of [['lomochromepurplexr','LomoChrome Purple XR'],['touchingrandomcapsules','Touching Random Capsules']]){
+  assert.equal(presets.some(preset=>preset.id===id||preset.name===name),false,name+' must be replaced');
+}
+const pass4Expected=fs.readdirSync(new URL('./fixtures/pass4-builtins/',import.meta.url)).map(file=>JSON.parse(fs.readFileSync(new URL('./fixtures/pass4-builtins/'+file,import.meta.url),'utf8')));
+for(const expected of pass4Expected){
+  const actual=presets.find(p=>p.id===expected.id);
+  assert.ok(actual,expected.id+' must be included');
+  for(const key of ['name','controls','description','author','tags'])assert.deepEqual(actual[key],expected[key],expected.id+' must preserve exported '+key);
+  assert.deepEqual(actual.f,expected.formulas,expected.id+' must preserve exported formulas');
+  const validated=validateNativeFilter(expected);
+  assert.equal(validated.mathMode,'float');
+  assert.doesNotThrow(()=>WGSLCompiler.compile(compileFilterProgram(getValidatedFormulaAsts(validated))));
 }
 
 const pass3Expected=fs.readdirSync(new URL('./fixtures/pass3-builtins/',import.meta.url)).map(file=>JSON.parse(fs.readFileSync(new URL('./fixtures/pass3-builtins/'+file,import.meta.url),'utf8')));

@@ -283,111 +283,109 @@ export const contributedPresetDefinitions=[
     ]
   },
   {
-    "id": "lomochromepurplexr",
-    "name": "LomoChrome Purple XR",
-    "description": "An  approximation of the Lomography LomoChrome Purple XR 100–400 look. Green foliage is pushed much toward purple/magenta, yellow-green vegetation can skew pink, and blue-dominant areas can drift toward cyan. XR ISO changes the overall warm/cool bias, Grain adds fine deterministic texture, Contrast shapes density, and Effect Mix controls the final blend. Best results come from foliage, parks, trees, grass, flowers, and open-sky outdoor scenes.",
-    "author": "",
+    "id": "simple-blur",
+    "name": "Simple Blur",
+    "description": "A lightweight single-pass 3x3 blur using a Gaussian-like 1-2-1 / 2-4-2 / 1-2-1 kernel. Blur Amount mixes between the original image and the blurred result from 0% to 100%. Edges use Filter FabJS's convolution edge clamping, and source alpha is preserved.",
+    "author": "Anthony Chimming",
     "tags": [
-      "Color",
-      "Retro",
-      "Film",
-      "Foliage"
+      "Blur",
+      "Utility"
     ],
     "controls": [
       {
-        "label": "Purple Strength",
-        "value": 130.05,
+        "label": "Blur Amount",
+        "value": 132.6,
         "ui": {
           "widget": "slider",
           "displayMin": 0,
           "displayMax": 100,
-          "step": 1,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Green Selectivity",
-        "value": 81.60000000000001,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 100,
-          "step": 1,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Blue→Cyan",
-        "value": 96,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 100,
-          "step": 1,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Yellow→Pink",
-        "value": 210,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 100,
-          "step": 1,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "XR ISO",
-        "value": 26,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 100,
-          "displayMax": 400,
           "step": 1,
           "format": "integer",
-          "unit": "ISO"
+          "unit": "%"
         }
       },
       {
-        "label": "Grain",
-        "value": 70,
+        "label": "Control 2",
+        "value": 128,
         "ui": {
           "widget": "slider",
           "displayMin": 0,
-          "displayMax": 100,
+          "displayMax": 255,
           "step": 1,
           "format": "number",
-          "unit": "%"
+          "unit": ""
         }
       },
       {
-        "label": "Contrast",
-        "value": 186,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 80,
-          "displayMax": 140,
-          "step": 1,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Effect Mix",
-        "value": 255,
+        "label": "Control 3",
+        "value": 128,
         "ui": {
           "widget": "slider",
           "displayMin": 0,
-          "displayMax": 100,
+          "displayMax": 255,
           "step": 1,
           "format": "number",
-          "unit": "%"
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 4",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 5",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 6",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 7",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 8",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
         }
       },
       {
@@ -416,9 +414,9 @@ export const contributedPresetDefinitions=[
       }
     ],
     "f": [
-      "lerp(r,clamp((lerp(lerp(lerp(r,clamp(i*1.08+72+val(4,22,-14),0,255),smoothstep(val(1,-10,18),val(1,18,85),g-(r+b)/2)*val(0,0,1)),clamp(i*0.10+val(4,8,-8),0,255),smoothstep(6,80,b-(r+g)/2)*val(2,0,1)),clamp(i*1.15+82+val(4,14,-14),0,255),smoothstep(8,75,min(r,g)-b)*val(3,0,1))-128)*val(6,0.8,1.4)+128+(hash2(x,y,101)-0.5)*val(5,0,28)*(0.7+0.3*(1-i/255)),0,255),ctl(7))",
-      "lerp(g,clamp((lerp(lerp(lerp(g,clamp(i*0.12+4+val(4,2,10),0,255),smoothstep(val(1,-10,18),val(1,18,85),g-(r+b)/2)*val(0,0,1)),clamp(i*0.88+60+val(4,-6,6),0,255),smoothstep(6,80,b-(r+g)/2)*val(2,0,1)),clamp(i*0.32+12+val(4,4,-2),0,255),smoothstep(8,75,min(r,g)-b)*val(3,0,1))-128)*val(6,0.8,1.4)+128+(hash2(x,y,131)-0.5)*val(5,0,24)*(0.7+0.3*(1-i/255)),0,255),ctl(7))",
-      "lerp(b,clamp((lerp(lerp(lerp(b,clamp(i*1.02+92+val(4,-2,18),0,255),smoothstep(val(1,-10,18),val(1,18,85),g-(r+b)/2)*val(0,0,1)),clamp(i*0.96+90+val(4,2,18),0,255),smoothstep(6,80,b-(r+g)/2)*val(2,0,1)),clamp(i*0.80+82+val(4,2,8),0,255),smoothstep(8,75,min(r,g)-b)*val(3,0,1))-128)*val(6,0.8,1.4)+128+(hash2(x,y,151)-0.5)*val(5,0,32)*(0.7+0.3*(1-i/255)),0,255),ctl(7))",
+      "lerp(c,cnv(1,2,1,2,4,2,1,2,1,16),ctl(0))",
+      "lerp(c,cnv(1,2,1,2,4,2,1,2,1,16),ctl(0))",
+      "lerp(c,cnv(1,2,1,2,4,2,1,2,1,16),ctl(0))",
       "a"
     ]
   },
