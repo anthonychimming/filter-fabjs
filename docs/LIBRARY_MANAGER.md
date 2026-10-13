@@ -302,6 +302,25 @@ Open `http://127.0.0.1:8091`. On Windows PowerShell, use `npm.cmd` if the `npm`
 PowerShell shim drops option arguments. `--port 8092` selects another local port.
 The server binds only to `127.0.0.1`.
 
+On Windows, double-click [`start-library-manager.bat`](../start-library-manager.bat)
+in the app folder. It starts the Manager with the sibling `filter-fabjs-library`
+checkout, regardless of the current working directory. Open the URL printed in
+its window and keep that window open while using the Manager; press Ctrl+C to
+stop it. Startup errors remain visible until you press a key. Node and Git must
+be available on PATH.
+
+You can also copy the launcher to your Desktop. If the app is not beside the
+launcher, it looks in `%USERPROFILE%\OneDrive\Documents\ChatGPT\filter-fabjs`.
+For another checkout location, set the `FILTER_FABJS_APP_ROOT` environment
+variable to that app folder. The default library remains beside the app checkout.
+
+The launcher also accepts the server's normal options. When supplying options,
+include `--library-root`:
+
+```bat
+start-library-manager.bat --library-root "C:\path\to\filter-fabjs-library" --port 8092
+```
+
 The library must be a Git repository with an initial commit, `registry.json`,
 `source/` and `filters/`. Configure the maintainer's Git name/email normally before
 preparation. The default publication comparison base is the current `HEAD`.

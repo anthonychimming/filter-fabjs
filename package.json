@@ -14,6 +14,6 @@
     "library:build": "node tools/online-library/publish-library.mjs build",
     "library:test": "node tests/online-library-publish-smoke.mjs",
     "library:manager": "node tools/library-manager/server.mjs",
-    "library:manager:test": "node tests/library-manager-smoke.mjs && node tests/library-manager-gcm-smoke.mjs && node tests/library-manager-github-smoke.mjs && node tests/library-manager-ui-smoke.mjs && node tests/library-manager-sync-smoke.mjs"
+    "library:manager:test": "node tests/library-manager-launcher-smoke.mjs && node tests/library-manager-smoke.mjs && node tests/library-manager-gcm-smoke.mjs && node tests/library-manager-github-smoke.mjs && node tests/library-manager-ui-smoke.mjs && node tests/library-manager-sync-smoke.mjs"
   }
 }
