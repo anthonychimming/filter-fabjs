@@ -167,7 +167,8 @@ export function createFilterBrowser({launcher,getEntries,begin,preview,previewOn
   source.onchange=()=>{page=0;if(includesOnline())loadOnline();refresh();};
   find('[data-online-retry]').onclick=()=>{loadOnline({retry:true});refresh();};
   find('[data-tag-search]').oninput=refresh;find('[data-clear]').onclick=()=>{query.value='';page=0;refresh();query.focus();};find('[data-reset]').onclick=reset;
-  find('[data-prev]').onclick=()=>{page--;refresh();};find('[data-next]').onclick=()=>{page++;refresh();};
+  function changePage(offset){page+=offset;refresh();find('.filter-results').scrollTop=0;}
+  find('[data-prev]').onclick=()=>changePage(-1);find('[data-next]').onclick=()=>changePage(1);
   launcher.onclick=async()=>{try{await begin();sessionEnding=false;sessionEpoch++;sessionOpen=true;selectedKey=null;pendingKey=null;previewErrorKey=null;previewing=false;find('[data-error]').textContent='';find('[data-preview-status]').textContent='Choose a filter to preview it on the canvas.';dialog.showModal();if(includesOnline())loadOnline();refresh();query.focus();}catch(error){onError(error);}};
   return{invalidateSession:()=>{actionId++;sessionEpoch++;downloads.clear();sessionOpen=false;selectedKey=null;pendingKey=null;previewing=false;if(dialog.open)dialog.close('replaced');},refresh,refreshOnline:()=>{if(includesOnline())refresh({preserveScroll:true});},dialog,showError:message=>{find('[data-error]').textContent=message;}};
 }

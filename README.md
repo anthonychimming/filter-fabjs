@@ -2,7 +2,7 @@
 
 **Create custom image filters directly in your browser with mathematical expressions, real-time previews, WebGPU acceleration, and Filter Factory compatibility.**
 
-**Current release: v2.9.3**
+**Current release: v2.9.4**
 
 **[▶ Launch Filter FabJS](https://anthonychimming.github.io/filter-fabjs/)**
 
@@ -27,7 +27,13 @@ Use four RGBA expressions to transform an image, expose creative parameters as c
 - **Filter-aware PNG export** — exported PNGs can carry the active Filter FabJS definition as embedded metadata while remaining ordinary PNG images.
 - **Local filter library** — save custom filters, organize them with tags and favorites, and search them alongside built-ins.
 - **Explore and Author workspaces** — use Explore for fast visual adjustment and Author for formulas, metadata, control definitions, and renderer diagnostics.
-- **Explore sessions** — lock parameters, randomize or mutate, reset to authored defaults, undo one bulk action, and compare four control-only snapshots. See [Explore controls](docs/explore-panel.md) for lifecycle and reset behavior.
+- **Explore sessions** — lock parameters, choose a strength and mutate (including Random), reset to authored defaults, undo one bulk action, and compare four control-only snapshots. See [Explore controls](docs/explore-panel.md) for lifecycle and reset behavior.
+
+## Inspector visibility
+
+Use the chevron at the image workspace's right edge to show the inspector, or the chevron beside the open panel to hide it. The yellow tab highlights the closed state. Desktop starts with a docked inspector at 1024px and wider; smaller layouts keep the existing overlay or bottom sheet, initially closed. A first-use "Explore filters" hint can be dismissed and stays dismissed after opening the panel or dismissing the hint. Discovery completion is stored separately as `ffw-inspector-discovered`; existing width and filter preferences are unchanged. If browser storage is unavailable, completion lasts for the current session.
+
+The tab supports keyboard activation and visible focus. On a phone sheet, a clear lane along its left edge keeps the tab away from authoring controls. Toggling changes layout only and preserves custom zoom.
 
 ## How it works
 
@@ -118,7 +124,7 @@ npm run build
 Build output:
 
 - `dist/site/` — deployable static site
-- `dist/filter-fabjs-v2.9.3.html` — standalone single-file build
+- `dist/filter-fabjs-v2.9.4.html` — standalone single-file build
 
 Startup immediately displays the built-in canvas demo, then attempts to load `./assets/demo-splash.png` as the real 960 × 640 RGBA source. The static-site build copies this image to `dist/site/assets/demo-splash.png`; its document-relative URL also works under a project subpath such as `/filter-fabjs/`. Missing, invalid, or slow assets quietly retain the built-in demo after a three-second timeout. Starting a user image request prevents a late splash from replacing it, and the splash does not reset filter edits or controls. The standalone HTML keeps the generated demo available offline and does not embed the PNG.
 

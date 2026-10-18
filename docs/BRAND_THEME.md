@@ -22,7 +22,7 @@ The v2.1.2 interface adapts the supplied Obsidian palette into semantic UI roles
 
 ## Usage rules
 
-- Show the application version immediately after “Filter FabJS” in the Help heading (for example, “Filter FabJS v2.9.3 — Help”); keep the main brand subtitle unversioned.
+- Show the application version immediately after “Filter FabJS” in the Help heading (for example, “Filter FabJS v2.9.4 — Help”); keep the main brand subtitle unversioned.
 - Chartreuse is reserved for the primary action, keyboard focus, ranges, and render progress. It should not become a general decorative colour.
 - Magenta communicates an edited-but-not-rendered formula and supports the logo glow. It is not used for validation errors.
 - Cyan identifies technical renderer information, while red remains reserved for destructive and invalid states.

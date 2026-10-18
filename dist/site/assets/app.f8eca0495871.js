@@ -665,111 +665,109 @@ const contributedPresetDefinitions=[
     ]
   },
   {
-    "id": "lomochromepurplexr",
-    "name": "LomoChrome Purple XR",
-    "description": "An  approximation of the Lomography LomoChrome Purple XR 100–400 look. Green foliage is pushed much toward purple/magenta, yellow-green vegetation can skew pink, and blue-dominant areas can drift toward cyan. XR ISO changes the overall warm/cool bias, Grain adds fine deterministic texture, Contrast shapes density, and Effect Mix controls the final blend. Best results come from foliage, parks, trees, grass, flowers, and open-sky outdoor scenes.",
-    "author": "",
+    "id": "simple-blur",
+    "name": "Simple Blur",
+    "description": "A lightweight single-pass 3x3 blur using a Gaussian-like 1-2-1 / 2-4-2 / 1-2-1 kernel. Blur Amount mixes between the original image and the blurred result from 0% to 100%. Edges use Filter FabJS's convolution edge clamping, and source alpha is preserved.",
+    "author": "Anthony Chimming",
     "tags": [
-      "Color",
-      "Retro",
-      "Film",
-      "Foliage"
+      "Blur",
+      "Utility"
     ],
     "controls": [
       {
-        "label": "Purple Strength",
-        "value": 130.05,
+        "label": "Blur Amount",
+        "value": 132.6,
         "ui": {
           "widget": "slider",
           "displayMin": 0,
           "displayMax": 100,
-          "step": 1,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Green Selectivity",
-        "value": 81.60000000000001,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 100,
-          "step": 1,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Blue→Cyan",
-        "value": 96,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 100,
-          "step": 1,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Yellow→Pink",
-        "value": 210,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 100,
-          "step": 1,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "XR ISO",
-        "value": 26,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 100,
-          "displayMax": 400,
           "step": 1,
           "format": "integer",
-          "unit": "ISO"
+          "unit": "%"
         }
       },
       {
-        "label": "Grain",
-        "value": 70,
+        "label": "Control 2",
+        "value": 128,
         "ui": {
           "widget": "slider",
           "displayMin": 0,
-          "displayMax": 100,
+          "displayMax": 255,
           "step": 1,
           "format": "number",
-          "unit": "%"
+          "unit": ""
         }
       },
       {
-        "label": "Contrast",
-        "value": 186,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 80,
-          "displayMax": 140,
-          "step": 1,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Effect Mix",
-        "value": 255,
+        "label": "Control 3",
+        "value": 128,
         "ui": {
           "widget": "slider",
           "displayMin": 0,
-          "displayMax": 100,
+          "displayMax": 255,
           "step": 1,
           "format": "number",
-          "unit": "%"
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 4",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 5",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 6",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 7",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 8",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
         }
       },
       {
@@ -798,9 +796,9 @@ const contributedPresetDefinitions=[
       }
     ],
     "f": [
-      "lerp(r,clamp((lerp(lerp(lerp(r,clamp(i*1.08+72+val(4,22,-14),0,255),smoothstep(val(1,-10,18),val(1,18,85),g-(r+b)/2)*val(0,0,1)),clamp(i*0.10+val(4,8,-8),0,255),smoothstep(6,80,b-(r+g)/2)*val(2,0,1)),clamp(i*1.15+82+val(4,14,-14),0,255),smoothstep(8,75,min(r,g)-b)*val(3,0,1))-128)*val(6,0.8,1.4)+128+(hash2(x,y,101)-0.5)*val(5,0,28)*(0.7+0.3*(1-i/255)),0,255),ctl(7))",
-      "lerp(g,clamp((lerp(lerp(lerp(g,clamp(i*0.12+4+val(4,2,10),0,255),smoothstep(val(1,-10,18),val(1,18,85),g-(r+b)/2)*val(0,0,1)),clamp(i*0.88+60+val(4,-6,6),0,255),smoothstep(6,80,b-(r+g)/2)*val(2,0,1)),clamp(i*0.32+12+val(4,4,-2),0,255),smoothstep(8,75,min(r,g)-b)*val(3,0,1))-128)*val(6,0.8,1.4)+128+(hash2(x,y,131)-0.5)*val(5,0,24)*(0.7+0.3*(1-i/255)),0,255),ctl(7))",
-      "lerp(b,clamp((lerp(lerp(lerp(b,clamp(i*1.02+92+val(4,-2,18),0,255),smoothstep(val(1,-10,18),val(1,18,85),g-(r+b)/2)*val(0,0,1)),clamp(i*0.96+90+val(4,2,18),0,255),smoothstep(6,80,b-(r+g)/2)*val(2,0,1)),clamp(i*0.80+82+val(4,2,8),0,255),smoothstep(8,75,min(r,g)-b)*val(3,0,1))-128)*val(6,0.8,1.4)+128+(hash2(x,y,151)-0.5)*val(5,0,32)*(0.7+0.3*(1-i/255)),0,255),ctl(7))",
+      "lerp(c,cnv(1,2,1,2,4,2,1,2,1,16),ctl(0))",
+      "lerp(c,cnv(1,2,1,2,4,2,1,2,1,16),ctl(0))",
+      "lerp(c,cnv(1,2,1,2,4,2,1,2,1,16),ctl(0))",
       "a"
     ]
   },
@@ -4035,141 +4033,141 @@ const pass2PresetDefinitions=[
     ]
   },
   {
-    "id": "touchingrandomcapsules",
-    "name": "Touching Random Capsules",
-    "description": "Staggered capsule pattern with no vertical spacing. Every two-unit vertical block is either one tall capsule or two shorter touching capsules, chosen deterministically from Seed. White Background Opacity reveals the input image between capsules from 0% to 100% white.",
+    "id": "photoshop-watercolor",
+    "name": "Watercolor",
+    "description": "Simulates a watercolor painting by simplifying detail into soft washes, deepening pigment around tonal edges, enhancing color transitions, and adding paper-like granulation. Controls adjust brush detail, shadow intensity, and texture strength.",
     "author": "Anthony Chimming",
     "tags": [
-      "Pattern",
-      "Shapes",
-      "Procedural"
+      "Artistic",
+      "Painterly",
+      "Texture"
     ],
     "controls": [
       {
-        "label": "Column Spacing",
-        "value": 31.166666666666664,
+        "label": "Brush Detail",
+        "value": 98.07692307692308,
         "ui": {
           "widget": "slider",
-          "displayMin": 110,
-          "displayMax": 200,
-          "step": 1,
-          "format": "integer",
-          "unit": "px"
-        }
-      },
-      {
-        "label": "Pill Width",
-        "value": 165.75000000000009,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 80,
-          "displayMax": 96,
-          "step": 0.1,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Base Height",
-        "value": 161.925,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 200,
-          "displayMax": 400,
-          "step": 1,
-          "format": "integer",
-          "unit": "px"
-        }
-      },
-      {
-        "label": "Background Opacity",
-        "value": 255,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 100,
-          "step": 1,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Horizontal Phase",
-        "value": 80.325,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 200,
-          "step": 1,
-          "format": "integer",
-          "unit": "px"
-        }
-      },
-      {
-        "label": "Vertical Phase",
-        "value": 0,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 800,
-          "step": 1,
-          "format": "integer",
-          "unit": "px"
-        }
-      },
-      {
-        "label": "Seed",
-        "value": 177.9235847169434,
-        "ui": {
-          "widget": "seed",
           "displayMin": 1,
-          "displayMax": 9999,
+          "displayMax": 14,
           "step": 1,
           "format": "integer",
           "unit": ""
         }
       },
       {
-        "label": "Effect Mix",
-        "value": 255,
+        "label": "Shadow Intensity",
+        "value": 170,
         "ui": {
           "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 100,
-          "step": 1,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Hue Shift",
-        "value": 159.8,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 300,
+          "displayMin": 1,
+          "displayMax": 10,
           "step": 1,
           "format": "integer",
-          "unit": "%"
+          "unit": ""
         }
       },
       {
-        "label": "Saturation",
+        "label": "Texture",
         "value": 127.5,
         "ui": {
           "widget": "slider",
-          "displayMin": 0,
-          "displayMax": 200,
+          "displayMin": 1,
+          "displayMax": 3,
           "step": 1,
           "format": "integer",
-          "unit": "%"
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 4",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 5",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 6",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 7",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 8",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 9",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 10",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
         }
       }
     ],
     "f": [
-      "lerp(c,lerp(c,255,ctl(3))+((((((floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2))*2)+(hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55&&repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)>=val(2,200,400)?1:0)+floor((x+val(4,0,200))/val(0,110,200)))%3)==0?val(8,0,3)<1?lerp(clamp(108+(0-108)*val(9,0,2),0,255),clamp(108+(157-108)*val(9,0,2),0,255),val(8,0,3)):val(8,0,3)<2?lerp(clamp(108+(157-108)*val(9,0,2),0,255),clamp(108+(136-108)*val(9,0,2),0,255),val(8,0,3)-1):lerp(clamp(108+(136-108)*val(9,0,2),0,255),clamp(108+(0-108)*val(9,0,2),0,255),val(8,0,3)-2):((((floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2))*2)+(hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55&&repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)>=val(2,200,400)?1:0)+floor((x+val(4,0,200))/val(0,110,200)))%3)==1?val(8,0,3)<1?lerp(clamp(153+(89-153)*val(9,0,2),0,255),clamp(153+(189-153)*val(9,0,2),0,255),val(8,0,3)):val(8,0,3)<2?lerp(clamp(153+(189-153)*val(9,0,2),0,255),clamp(153+(139-153)*val(9,0,2),0,255),val(8,0,3)-1):lerp(clamp(153+(139-153)*val(9,0,2),0,255),clamp(153+(89-153)*val(9,0,2),0,255),val(8,0,3)-2):val(8,0,3)<1?lerp(clamp(192+(164-192)*val(9,0,2),0,255),clamp(192+(217-192)*val(9,0,2),0,255),val(8,0,3)):val(8,0,3)<2?lerp(clamp(192+(217-192)*val(9,0,2),0,255),clamp(192+(137-192)*val(9,0,2),0,255),val(8,0,3)-1):lerp(clamp(192+(137-192)*val(9,0,2),0,255),clamp(192+(164-192)*val(9,0,2),0,255),val(8,0,3)-2))))-lerp(c,255,ctl(3)))*line(repeat(x+val(4,0,200),val(0,110,200)),repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2),val(0,110,200)/2,((hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55?(repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)<val(2,200,400)?0:val(2,200,400)):0)+(val(0,110,200)*val(1,80,96)/100)/2),val(0,110,200)/2,((hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55?(repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)<val(2,200,400)?val(2,200,400):val(2,200,400)*2):val(2,200,400)*2)-(val(0,110,200)*val(1,80,96)/100)/2),(val(0,110,200)*val(1,80,96)/100),0),ctl(7))",
-      "lerp(c,lerp(c,255,ctl(3))+((((((floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2))*2)+(hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55&&repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)>=val(2,200,400)?1:0)+floor((x+val(4,0,200))/val(0,110,200)))%3)==0?val(8,0,3)<1?lerp(clamp(108+(157-108)*val(9,0,2),0,255),clamp(108+(136-108)*val(9,0,2),0,255),val(8,0,3)):val(8,0,3)<2?lerp(clamp(108+(136-108)*val(9,0,2),0,255),clamp(108+(0-108)*val(9,0,2),0,255),val(8,0,3)-1):lerp(clamp(108+(0-108)*val(9,0,2),0,255),clamp(108+(157-108)*val(9,0,2),0,255),val(8,0,3)-2):((((floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2))*2)+(hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55&&repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)>=val(2,200,400)?1:0)+floor((x+val(4,0,200))/val(0,110,200)))%3)==1?val(8,0,3)<1?lerp(clamp(153+(189-153)*val(9,0,2),0,255),clamp(153+(139-153)*val(9,0,2),0,255),val(8,0,3)):val(8,0,3)<2?lerp(clamp(153+(139-153)*val(9,0,2),0,255),clamp(153+(89-153)*val(9,0,2),0,255),val(8,0,3)-1):lerp(clamp(153+(89-153)*val(9,0,2),0,255),clamp(153+(189-153)*val(9,0,2),0,255),val(8,0,3)-2):val(8,0,3)<1?lerp(clamp(192+(217-192)*val(9,0,2),0,255),clamp(192+(137-192)*val(9,0,2),0,255),val(8,0,3)):val(8,0,3)<2?lerp(clamp(192+(137-192)*val(9,0,2),0,255),clamp(192+(164-192)*val(9,0,2),0,255),val(8,0,3)-1):lerp(clamp(192+(164-192)*val(9,0,2),0,255),clamp(192+(217-192)*val(9,0,2),0,255),val(8,0,3)-2))))-lerp(c,255,ctl(3)))*line(repeat(x+val(4,0,200),val(0,110,200)),repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2),val(0,110,200)/2,((hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55?(repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)<val(2,200,400)?0:val(2,200,400)):0)+(val(0,110,200)*val(1,80,96)/100)/2),val(0,110,200)/2,((hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55?(repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)<val(2,200,400)?val(2,200,400):val(2,200,400)*2):val(2,200,400)*2)-(val(0,110,200)*val(1,80,96)/100)/2),(val(0,110,200)*val(1,80,96)/100),0),ctl(7))",
-      "lerp(c,lerp(c,255,ctl(3))+((((((floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2))*2)+(hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55&&repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)>=val(2,200,400)?1:0)+floor((x+val(4,0,200))/val(0,110,200)))%3)==0?val(8,0,3)<1?lerp(clamp(108+(136-108)*val(9,0,2),0,255),clamp(108+(0-108)*val(9,0,2),0,255),val(8,0,3)):val(8,0,3)<2?lerp(clamp(108+(0-108)*val(9,0,2),0,255),clamp(108+(157-108)*val(9,0,2),0,255),val(8,0,3)-1):lerp(clamp(108+(157-108)*val(9,0,2),0,255),clamp(108+(136-108)*val(9,0,2),0,255),val(8,0,3)-2):((((floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2))*2)+(hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55&&repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)>=val(2,200,400)?1:0)+floor((x+val(4,0,200))/val(0,110,200)))%3)==1?val(8,0,3)<1?lerp(clamp(153+(139-153)*val(9,0,2),0,255),clamp(153+(89-153)*val(9,0,2),0,255),val(8,0,3)):val(8,0,3)<2?lerp(clamp(153+(89-153)*val(9,0,2),0,255),clamp(153+(189-153)*val(9,0,2),0,255),val(8,0,3)-1):lerp(clamp(153+(189-153)*val(9,0,2),0,255),clamp(153+(139-153)*val(9,0,2),0,255),val(8,0,3)-2):val(8,0,3)<1?lerp(clamp(192+(137-192)*val(9,0,2),0,255),clamp(192+(164-192)*val(9,0,2),0,255),val(8,0,3)):val(8,0,3)<2?lerp(clamp(192+(164-192)*val(9,0,2),0,255),clamp(192+(217-192)*val(9,0,2),0,255),val(8,0,3)-1):lerp(clamp(192+(217-192)*val(9,0,2),0,255),clamp(192+(137-192)*val(9,0,2),0,255),val(8,0,3)-2))))-lerp(c,255,ctl(3)))*line(repeat(x+val(4,0,200),val(0,110,200)),repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2),val(0,110,200)/2,((hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55?(repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)<val(2,200,400)?0:val(2,200,400)):0)+(val(0,110,200)*val(1,80,96)/100)/2),val(0,110,200)/2,((hash2(floor((x+val(4,0,200))/val(0,110,200)),floor((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5)/(val(2,200,400)*2)),val(6,1,9999))<0.55?(repeat((y+val(5,0,800)+(floor((x+val(4,0,200))/val(0,110,200))%3)*val(2,200,400)*0.5),val(2,200,400)*2)<val(2,200,400)?val(2,200,400):val(2,200,400)*2):val(2,200,400)*2)-(val(0,110,200)*val(1,80,96)/100)/2),(val(0,110,200)*val(1,80,96)/100),0),ctl(7))",
+      "clamp((round(((4*srcLinear(x,y,z)+2*(srcLinear(x+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y,z)+srcLinear(x-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y,z)+srcLinear(x,y+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x,y-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z))+srcLinear(x+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z))/16)/(1.5+10*sqr(1-((val(0,1,14)-1)/13))))*(1.5+10*sqr(1-((val(0,1,14)-1)/13))))+(((fbm(x,y,22,4,2,0.5,613)-0.5))*(4+12*((val(2,1,3)-1)/2)+24*sqr(((val(2,1,3)-1)/2)))+((ridged(x,y,7,3,977)-0.5))*(2+7*((val(2,1,3)-1)/2)+15*sqr(((val(2,1,3)-1)/2))))*(0.35+0.65*(255-i)/255)+clamp((abs(((299*src(x+1,y,0)+587*src(x+1,y,1)+114*src(x+1,y,2))/1000)-((299*src(x-1,y,0)+587*src(x-1,y,1)+114*src(x-1,y,2))/1000))+abs(((299*src(x,y-1,0)+587*src(x,y-1,1)+114*src(x,y-1,2))/1000)-((299*src(x,y+1,0)+587*src(x,y+1,1)+114*src(x,y+1,2))/1000)))/(52-24*sqr(((val(0,1,14)-1)/13))),0,1)*((0.22+0.42*sqr(((val(0,1,14)-1)/13)))*(c-i)-(2+34*((val(1,1,10)-1)/9)+54*sqr(((val(1,1,10)-1)/9)))*(0.5+0.5*(255-i)/255)),0,255)",
+      "clamp((round(((4*srcLinear(x,y,z)+2*(srcLinear(x+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y,z)+srcLinear(x-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y,z)+srcLinear(x,y+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x,y-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z))+srcLinear(x+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z))/16)/(1.5+10*sqr(1-((val(0,1,14)-1)/13))))*(1.5+10*sqr(1-((val(0,1,14)-1)/13))))+(((fbm(x,y,22,4,2,0.5,613)-0.5))*(4+12*((val(2,1,3)-1)/2)+24*sqr(((val(2,1,3)-1)/2)))+((ridged(x,y,7,3,977)-0.5))*(2+7*((val(2,1,3)-1)/2)+15*sqr(((val(2,1,3)-1)/2))))*(0.35+0.65*(255-i)/255)+clamp((abs(((299*src(x+1,y,0)+587*src(x+1,y,1)+114*src(x+1,y,2))/1000)-((299*src(x-1,y,0)+587*src(x-1,y,1)+114*src(x-1,y,2))/1000))+abs(((299*src(x,y-1,0)+587*src(x,y-1,1)+114*src(x,y-1,2))/1000)-((299*src(x,y+1,0)+587*src(x,y+1,1)+114*src(x,y+1,2))/1000)))/(52-24*sqr(((val(0,1,14)-1)/13))),0,1)*((0.22+0.42*sqr(((val(0,1,14)-1)/13)))*(c-i)-(2+34*((val(1,1,10)-1)/9)+54*sqr(((val(1,1,10)-1)/9)))*(0.5+0.5*(255-i)/255)),0,255)",
+      "clamp((round(((4*srcLinear(x,y,z)+2*(srcLinear(x+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y,z)+srcLinear(x-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y,z)+srcLinear(x,y+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x,y-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z))+srcLinear(x+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x+(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z)+srcLinear(x-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),y-(0.5+5*sqr(1-((val(0,1,14)-1)/13))),z))/16)/(1.5+10*sqr(1-((val(0,1,14)-1)/13))))*(1.5+10*sqr(1-((val(0,1,14)-1)/13))))+(((fbm(x,y,22,4,2,0.5,613)-0.5))*(4+12*((val(2,1,3)-1)/2)+24*sqr(((val(2,1,3)-1)/2)))+((ridged(x,y,7,3,977)-0.5))*(2+7*((val(2,1,3)-1)/2)+15*sqr(((val(2,1,3)-1)/2))))*(0.35+0.65*(255-i)/255)+clamp((abs(((299*src(x+1,y,0)+587*src(x+1,y,1)+114*src(x+1,y,2))/1000)-((299*src(x-1,y,0)+587*src(x-1,y,1)+114*src(x-1,y,2))/1000))+abs(((299*src(x,y-1,0)+587*src(x,y-1,1)+114*src(x,y-1,2))/1000)-((299*src(x,y+1,0)+587*src(x,y+1,1)+114*src(x,y+1,2))/1000)))/(52-24*sqr(((val(0,1,14)-1)/13))),0,1)*((0.22+0.42*sqr(((val(0,1,14)-1)/13)))*(c-i)-(2+34*((val(1,1,10)-1)/9)+54*sqr(((val(1,1,10)-1)/9)))*(0.5+0.5*(255-i)/255)),0,255)",
       "a"
     ]
   }
@@ -5871,6 +5869,31 @@ function imageFromClipboardData(data){
   }
   return Array.from(data.files||[]).find(file=>String(file.type||'').startsWith('image/'))||null;
 }
+
+// Optional startup source: bound the entire fetch/body/decode operation, not just headers.
+async function loadDemoSplash({baseURI=globalThis.document.baseURI,fetchImpl=globalThis.fetch,decode=globalThis.createImageBitmap,createCanvas=()=>document.createElement('canvas'),timeoutMs=3000}={}){
+  const controller=new AbortController();let timer;
+  const checkTimeout=()=>{if(controller.signal.aborted)throw new Error('Demo image load timed out');};
+  const operation=(async()=>{
+    let bitmap;
+    try{
+      const response=await fetchImpl(new URL('./assets/demo-splash.png',baseURI),{signal:controller.signal,mode:'same-origin'});
+      checkTimeout();if(!response.ok)throw new Error('Demo image is unavailable');
+      const blob=await response.blob();checkTimeout();
+      if(blob.type!=='image/png')throw new Error('Demo image must be a PNG');
+      bitmap=await decode(blob);checkTimeout();
+      if(bitmap.width!==960||bitmap.height!==640)throw new Error('Demo image must be 960 × 640 pixels');
+      const canvas=createCanvas();canvas.width=bitmap.width;canvas.height=bitmap.height;
+      const context=canvas.getContext('2d',{alpha:true,willReadFrequently:true});
+      if(!context)throw new Error('Demo image canvas is unavailable');
+      context.drawImage(bitmap,0,0);
+      const image=context.getImageData(0,0,canvas.width,canvas.height);
+      return{data:image.data,width:canvas.width,height:canvas.height};
+    }finally{bitmap?.close?.();}
+  })();
+  const timeout=new Promise((resolve,reject)=>{timer=setTimeout(()=>{controller.abort();reject(new Error('Demo image load timed out'));},timeoutMs);});
+  try{return await Promise.race([operation,timeout]);}finally{clearTimeout(timer);}
+}
 function alphaStats(pixels){
   let min=255,max=0,transparent=0,translucent=0,opaque=0;
   for(let i=3;i<pixels.length;i+=4){const value=pixels[i];min=Math.min(min,value);max=Math.max(max,value);if(value===0)transparent++;else if(value===255)opaque++;else translucent++;}
@@ -6613,7 +6636,8 @@ function createFilterBrowser({launcher,getEntries,begin,preview,previewOnline=nu
   source.onchange=()=>{page=0;if(includesOnline())loadOnline();refresh();};
   find('[data-online-retry]').onclick=()=>{loadOnline({retry:true});refresh();};
   find('[data-tag-search]').oninput=refresh;find('[data-clear]').onclick=()=>{query.value='';page=0;refresh();query.focus();};find('[data-reset]').onclick=reset;
-  find('[data-prev]').onclick=()=>{page--;refresh();};find('[data-next]').onclick=()=>{page++;refresh();};
+  function changePage(offset){page+=offset;refresh();find('.filter-results').scrollTop=0;}
+  find('[data-prev]').onclick=()=>changePage(-1);find('[data-next]').onclick=()=>changePage(1);
   launcher.onclick=async()=>{try{await begin();sessionEnding=false;sessionEpoch++;sessionOpen=true;selectedKey=null;pendingKey=null;previewErrorKey=null;previewing=false;find('[data-error]').textContent='';find('[data-preview-status]').textContent='Choose a filter to preview it on the canvas.';dialog.showModal();if(includesOnline())loadOnline();refresh();query.focus();}catch(error){onError(error);}};
   return{invalidateSession:()=>{actionId++;sessionEpoch++;downloads.clear();sessionOpen=false;selectedKey=null;pendingKey=null;previewing=false;if(dialog.open)dialog.close('replaced');},refresh,refreshOnline:()=>{if(includesOnline())refresh({preserveScroll:true});},dialog,showError:message=>{find('[data-error]').textContent=message;}};
 }
@@ -6710,24 +6734,47 @@ function readInspectorWidth(storage){
 }
 function createInspectorLayout({document:doc=globalThis.document,window:win=globalThis.window,storage=()=>win.localStorage}={}){
   const app=doc.querySelector('.app'),workspace=doc.querySelector('.workspace'),panel=doc.getElementById('inspector'),toggle=doc.getElementById('inspectorToggle'),separator=doc.getElementById('inspectorResize'),close=doc.getElementById('inspectorClose'),expand=doc.getElementById('inspectorExpand'),backdrop=doc.getElementById('inspectorBackdrop');
+  const edge=doc.getElementById('inspectorEdge'),stage=doc.getElementById('canvasStage'),hint=doc.getElementById('inspectorHint'),hintDismiss=doc.getElementById('inspectorHintDismiss');
   const desktop=win.matchMedia('(min-width:1024px)'),mobile=win.matchMedia('(max-width:767px)');
   const removals=[];
   function listen(target,type,handler,options){target.addEventListener(type,handler,options);removals.push(()=>target.removeEventListener?.(type,handler,options));}
   let width;try{width=readInspectorWidth(storage());}catch{width=INSPECTOR_WIDTH_DEFAULT;}
+  let discovered=false;
+  try{discovered=storage().getItem('ffw-inspector-discovered')==='true';}catch{/* Preferences are optional. */}
+  // Only an initially compact session is eligible; resizing desktop must not introduce a hint.
+  const hintEligible=!desktop.matches;
+  function completeDiscovery(){discovered=true;try{storage().setItem('ffw-inspector-discovered','true');}catch{/* Keep completion for this session. */}}
   let focused=false,opened=false,expanded=false,pointer=null,bounds;
   function persist(){try{storage().setItem('ffw-workspace-layout',JSON.stringify({version:1,inspectorWidth:width}));}catch{/* Preferences are optional. */}}
   function size(value){bounds=inspectorWidthBounds(app.getBoundingClientRect().width);const current=Math.min(bounds.max,Math.max(bounds.min,value));app.style.setProperty('--inspector-width',`${current}px`);separator.setAttribute('aria-valuemin',String(bounds.min));separator.setAttribute('aria-valuemax',String(bounds.max));separator.setAttribute('aria-valuenow',String(current));separator.setAttribute('aria-valuetext',`${current} pixels`);return current;}
+  function positionEdge(){
+    const rect=stage.getBoundingClientRect(),panelRect=panel.getBoundingClientRect();
+    const visible=desktop.matches?!focused:opened;
+    const viewportWidth=doc.documentElement.clientWidth;
+    // A full-width mobile sheet keeps the tab inside its left edge.
+    const x=visible?Math.max(0,panelRect.left-44):viewportWidth-44;
+    const center=rect.top+rect.height/2;
+    const y=visible&&!desktop.matches?Math.min(panelRect.bottom-32,Math.max(panelRect.top+32,center)):center;
+    edge.style.setProperty('--inspector-toggle-x',`${Math.max(0,x)}px`);
+    edge.style.setProperty('--inspector-toggle-y',`${y}px`);
+  }
   function sync(){
     const modal=!desktop.matches&&opened,visible=desktop.matches?!focused:opened;
     app.dataset.inspectorLayout=desktop.matches?'desktop':mobile.matches?'mobile':'tablet';
     app.dataset.inspectorHidden=String(!visible);app.dataset.inspectorOpen=String(modal);app.dataset.inspectorExpanded=String(expanded);
     panel.inert=!visible;workspace.inert=modal;backdrop.hidden=!modal;
-    toggle.textContent=desktop.matches?(focused?'Show inspector':'Hide inspector'):'Inspector';toggle.setAttribute('aria-expanded',String(visible));
+    toggle.setAttribute('aria-label',visible?'Hide inspector':'Show inspector');toggle.setAttribute('aria-expanded',String(visible));
+    if(visible&&!discovered)completeDiscovery();
+    hint.hidden=!hintEligible||discovered||visible;
+    if(hint.hidden)toggle.removeAttribute('aria-describedby');else toggle.setAttribute('aria-describedby','inspectorHintText');
+    // Keep the control within the compact dialog's accessible and keyboard scope.
+    const host=modal?panel:app;if(edge.parentElement!==host)host.append(edge);
     if(modal){panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');}else{panel.removeAttribute('role');panel.removeAttribute('aria-modal');}
-    expand.textContent=expanded?'Reduce sheet':'Expand sheet';expand.setAttribute('aria-pressed',String(expanded));size(width);
+    expand.textContent=expanded?'Reduce sheet':'Expand sheet';expand.setAttribute('aria-pressed',String(expanded));size(width);positionEdge();
   }
   function dismiss(){opened=false;expanded=false;sync();toggle.focus({preventScroll:true});}
-  listen(toggle,'click',()=>{if(desktop.matches){focused=!focused;sync();}else{opened=true;sync();const selected=panel.querySelector('[role=tab][aria-selected=true]');(selected.disabled?close:selected).focus({preventScroll:true});}});
+  listen(toggle,'click',()=>{if(desktop.matches){focused=!focused;sync();}else{if(opened){dismiss();return;}opened=true;sync();const selected=panel.querySelector('[role=tab][aria-selected=true]');(selected.disabled?close:selected).focus({preventScroll:true});}});
+  listen(hintDismiss,'click',()=>{completeDiscovery();sync();toggle.focus({preventScroll:true});});
   listen(close,'click',dismiss);listen(backdrop,'click',dismiss);
   listen(expand,'click',()=>{expanded=!expanded;sync();});
   function endDrag(){if(pointer===null)return;const id=pointer;pointer=null;app.removeAttribute('data-inspector-dragging');if(separator.hasPointerCapture(id))separator.releasePointerCapture(id);persist();}
@@ -6738,7 +6785,9 @@ function createInspectorLayout({document:doc=globalThis.document,window:win=glob
   listen(separator,'dblclick',()=>{width=size(INSPECTOR_WIDTH_DEFAULT);persist();});
   function breakpoint(){endDrag();const hadFocus=panel.contains(doc.activeElement)||doc.activeElement===separator;opened=false;expanded=false;sync();if(hadFocus&&(!desktop.matches||focused))toggle.focus({preventScroll:true});}
   listen(desktop,'change',breakpoint);listen(mobile,'change',breakpoint);
-  listen(win,'resize',()=>size(width));
+  listen(win,'resize',()=>{size(width);positionEdge();});
+  const observer=win.ResizeObserver?new win.ResizeObserver(positionEdge):null;
+  for(const element of [stage,panel])observer?.observe(element);
   listen(doc,'keydown',event=>{
     if(!opened||desktop.matches||doc.querySelector('dialog[open]'))return;
     if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();dismiss();}
@@ -6748,7 +6797,7 @@ function createInspectorLayout({document:doc=globalThis.document,window:win=glob
     }
   },true);
   sync();
-  return {destroy(){endDrag();removals.splice(0).forEach(remove=>remove());workspace.inert=false;},hide(){if(desktop.matches){focused=true;const hadFocus=panel.contains(doc.activeElement);sync();if(hadFocus)toggle.focus({preventScroll:true});}else dismiss();}};
+  return {destroy(){observer?.disconnect();endDrag();removals.splice(0).forEach(remove=>remove());workspace.inert=false;},hide(){if(desktop.matches){focused=true;const hadFocus=panel.contains(doc.activeElement);sync();if(hadFocus)toggle.focus({preventScroll:true});}else dismiss();}};
 }
 
 
@@ -6908,6 +6957,10 @@ function saveExploreSnapshot(state,slot){state.explore.snapshots[slot]=[...state
 
 /* src/ui/explore.js */
 
+
+const MUTATION_STRENGTHS=Object.freeze({Subtle:'Low',Medium:'Medium',Strong:'High',Random:'Random'});
+const MUTATION_STRENGTH_KEY='ffw-mutation-strength';
+
 function exploreMenuPlacement(anchor,menu,bounds){
   const below=Math.max(0,bounds.bottom-anchor.bottom),above=Math.max(0,anchor.top-bounds.top);
   const upwards=menu.height>below&&above>below;
@@ -6915,8 +6968,10 @@ function exploreMenuPlacement(anchor,menu,bounds){
 }
 
 // Session state belongs to the app; this view never writes the filter document.
-function createExploreController({state,root,resetButton,syncControls,scheduleRender,onChange,resetPassThrough,toast}){
+function createExploreController({state,root,resetButton,syncControls,scheduleRender,onChange,resetPassThrough,toast,readPreference=storageGet,writePreference=storageSet}){
   const buttons={},slots={},saveButtons={},menus=[];
+  const preference=readPreference(MUTATION_STRENGTH_KEY,'Medium');
+  let selectedStrength=Object.hasOwn(MUTATION_STRENGTHS,preference)?preference:'Medium';
   function button(parent,text,action){const node=document.createElement('button');node.type='button';node.textContent=text;node.onclick=()=>{if(state.isRendering)return;const owner=menus.find(item=>item.panel===parent);closeMenus();owner?.trigger.focus();action();refresh();};parent.append(node);return node;}
   function closeMenus(){menus.forEach(({panel,trigger})=>{panel.hidden=true;trigger.setAttribute('aria-expanded','false');});}
   function positionMenu(panel,trigger){
@@ -6942,15 +6997,28 @@ function createExploreController({state,root,resetButton,syncControls,scheduleRe
   function commit(next,undo=true){commitExploreValues(state,next,{undo});syncControls();onChange();refresh();scheduleRender();}
   function reset({preserveDefaults=false}={}){const defaults=preserveDefaults?state.explore.defaults:state.controls;state.explore=createExploreSession(defaults);refresh();}
   function manual(){state.explore.undo=null;refresh();}
-  function mutate(){commit(exploreValues(state.controls,state.controlUIs,state.usedControls,state.explore,true));}
+  function mutate(){
+    if(state.isRendering||!state.usedControls.some((used,i)=>used&&!state.explore.locks[i]))return;
+    commit(exploreValues(state.controls,state.controlUIs,state.usedControls,state.explore,selectedStrength!=='Random'));
+  }
   resetButton.textContent='Reset';resetButton.title='Reset to authored defaults';resetButton.onclick=()=>{if(!state.isRendering)commit(state.explore.defaults);};
   const resetMenu=menu(resetButton.parentElement,'▾',true);resetMenu.previousElementSibling?.setAttribute('aria-label','Reset options');
   button(resetMenu,'Reset to defaults',()=>commit(state.explore.defaults));
   button(resetMenu,'Reset to pass-through',resetPassThrough).title='Load Pass Through; clears this filter’s Explore session';
   const actions=document.createElement('div');actions.className='explore-actions';root.append(actions);
-  buttons.random=button(actions,'Randomize',()=>commit(exploreValues(state.controls,state.controlUIs,state.usedControls,state.explore)));
-  const strengths=menu(actions,'Mutate · Medium ▾',true);buttons.mutate=strengths.previousElementSibling;
-  for(const strength of Object.keys(MUTATION_FACTORS))button(strengths,strength,()=>{state.explore.strength=strength;mutate();});
+  buttons.mutate=button(actions,'Mutate',mutate);buttons.mutate.className='mutation-action';
+  buttons.mutate.title='Apply the selected strength to unlocked controls';
+  const strengthLabel=document.createElement('label');strengthLabel.className='mutation-strength';
+  const strengthText=document.createElement('span');strengthText.textContent='Strength:';strengthLabel.append(strengthText);
+  const strengthSelect=document.createElement('select');strengthSelect.setAttribute('aria-label','Mutation strength');
+  strengthSelect.title='Subtle, Medium, and Strong vary current values; Random tries a fresh combination';
+  for(const strength of Object.keys(MUTATION_STRENGTHS)){const option=document.createElement('option');option.value=strength;option.textContent=strength;strengthSelect.append(option);}
+  strengthSelect.onchange=()=>{
+    if(state.isRendering||!Object.hasOwn(MUTATION_STRENGTHS,strengthSelect.value)){strengthSelect.value=selectedStrength;return;}
+    selectedStrength=strengthSelect.value;state.explore.strength=MUTATION_STRENGTHS[selectedStrength];
+    writePreference(MUTATION_STRENGTH_KEY,selectedStrength);
+  };
+  strengthLabel.append(strengthSelect);actions.append(strengthLabel);
   const locks=menu(actions,'Locks ▾');
   for(const action of ['Lock all','Unlock all','Invert locks'])button(locks,action,()=>{state.usedControls.forEach((used,i)=>{if(used)state.explore.locks[i]=action==='Lock all'||(action==='Invert locks'&&!state.explore.locks[i]);});syncControls();});
   buttons.undo=button(actions,'Undo',()=>{if(state.explore.undo)commit(state.explore.undo,false);});
@@ -6972,8 +7040,9 @@ function createExploreController({state,root,resetButton,syncControls,scheduleRe
     section.hidden=!state.usedControls.some(Boolean);
     if(section.hidden)closeMenus();
     const active=session.active,modified=active&&!controlStatesEqual(state.controls,session.snapshots[active]),busy=state.isRendering;
-    buttons.mutate.textContent=`Mutate · ${session.strength} ▾`;
-    buttons.random.disabled=buttons.mutate.disabled=busy||!state.usedControls.some((used,i)=>used&&!session.locks[i]);
+    session.strength=MUTATION_STRENGTHS[selectedStrength];strengthSelect.value=selectedStrength;
+    strengthSelect.disabled=busy;
+    buttons.mutate.disabled=busy||!state.usedControls.some((used,i)=>used&&!session.locks[i]);
     buttons.undo.disabled=busy||!session.undo;buttons.clear.disabled=busy||!active;
     buttons.clearAll.disabled=busy||!Object.values(session.snapshots).some(Boolean);
     buttons.update.hidden=!modified;buttons.update.textContent=`Update ${active||''}`;
@@ -7073,6 +7142,16 @@ function applyPresetSafely(definition,selection,{applyFilter,updatePresetDeleteS
 
 function initializeImagePreview(data,width,height,{state,canvasView,canvas}){
   canvasView.invalidatePixels();state.width=width;state.height=height;state.source=data instanceof Uint8ClampedArray?data:new Uint8ClampedArray(data);state.filtered=state.source;canvas.width=width;canvas.height=height;canvasView.fitCanvas();canvasView.drawView();
+}
+
+async function replaceStartupDemo({state,initImage,load=loadDemoSplash,canReplace=()=>true}){
+  const loadId=state.imageLoadId;
+  try{
+    const image=await load();
+    if(loadId!==state.imageLoadId||!canReplace())return false;
+    initImage(image.data,image.width,image.height);
+    return true;
+  }catch{return false;} // The generated source is already usable; this asset is optional.
 }
 
 const CUSTOM_PRESET_ID_PATTERN=/^[A-Za-z0-9_-]{1,80}$/;
@@ -7419,7 +7498,7 @@ function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL
 
   function initImage(data,width,height){state.renderId++;invalidateLibraryForReplacement();$('#openImageBtn').classList.remove('primary');state.lastSuccessfulRenderSignature=null;if(state.isRendering)setUILocked(false);initializeImagePreview(data,width,height,{state,canvasView,canvas:el.canvas});el.imageInfo.textContent=`${width} × ${height} px`;thumbnailService.setSource(state.source,width,height).catch(error=>console.warn('Thumbnail source initialization failed',error));initializeRendererSource().catch(error=>{console.error('Renderer initialization failed',error);setStatus('Preview unavailable · see Technical diagnostics in Author','error');});render();}
   function demoImage(){const width=960,height=640,canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const context=canvas.getContext('2d'),background=context.createLinearGradient(0,0,width,height);background.addColorStop(0,'#08050d');background.addColorStop(.48,'#6c47b1');background.addColorStop(1,'#c429a3');context.fillStyle=background;context.fillRect(0,0,width,height);for(let i=0;i<18;i++){context.globalAlpha=.09;context.fillStyle=i%2?'#fff':'#07111f';context.beginPath();context.arc(90+i*58,90+(i%4)*130,60+(i%3)*35,0,Math.PI*2);context.fill();}context.globalAlpha=1;context.fillStyle='rgba(6,16,5,.82)';context.roundRect(84,94,792,452,36);context.fill();context.fillStyle='#f6efc4';context.font='700 62px system-ui';context.fillText('FILTER',132,245);context.fillStyle='#e1ec1a';context.fillText('FABJS',132,316);context.font='24px system-ui';context.fillStyle='#cdddb7';context.fillText('Open an image or experiment with this demo.',136,370);const gradient=context.createLinearGradient(136,0,790,0);gradient.addColorStop(0,'#e45a87');gradient.addColorStop(.5,'#9fd36a');gradient.addColorStop(1,'#38a9d4');context.fillStyle=gradient;context.fillRect(136,412,654,18);return context.getImageData(0,0,width,height);}
-  async function loadImageFile(file,{successMessage='Image loaded',requestId=null}={}){if(!file||!String(file.type||'').startsWith('image/')){toast('Choose a valid image file');return false;}const loadId=requestId??++state.imageLoadId;let bitmap=null;setStatus('Loading image…','busy');try{bitmap=await createImageBitmap(file);if(loadId!==state.imageLoadId)return false;const maximum=1800,scale=Math.min(1,maximum/Math.max(bitmap.width,bitmap.height)),width=Math.max(1,Math.round(bitmap.width*scale)),height=Math.max(1,Math.round(bitmap.height*scale)),canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const context=canvas.getContext('2d',{willReadFrequently:true});if(!context)throw new Error('Canvas image loading is unavailable');context.drawImage(bitmap,0,0,width,height);const pixels=context.getImageData(0,0,width,height).data;if(loadId!==state.imageLoadId)return false;initImage(pixels,width,height);toast(scale<1?`${successMessage} · resized to 1800 px`:successMessage);return true;}catch(error){if(loadId!==state.imageLoadId)return false;setStatus('Could not load image','error');toast(error.message||'Could not load image');return false;}finally{bitmap?.close?.();}}
+  async function loadImageFile(file,{successMessage='Image loaded',requestId=null}={}){const loadId=requestId??++state.imageLoadId;if(!file||!String(file.type||'').startsWith('image/')){toast('Choose a valid image file');return false;}let bitmap=null;setStatus('Loading image…','busy');try{bitmap=await createImageBitmap(file);if(loadId!==state.imageLoadId)return false;const maximum=1800,scale=Math.min(1,maximum/Math.max(bitmap.width,bitmap.height)),width=Math.max(1,Math.round(bitmap.width*scale)),height=Math.max(1,Math.round(bitmap.height*scale)),canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const context=canvas.getContext('2d',{willReadFrequently:true});if(!context)throw new Error('Canvas image loading is unavailable');context.drawImage(bitmap,0,0,width,height);const pixels=context.getImageData(0,0,width,height).data;if(loadId!==state.imageLoadId)return false;initImage(pixels,width,height);toast(scale<1?`${successMessage} · resized to 1800 px`:successMessage);return true;}catch(error){if(loadId!==state.imageLoadId)return false;setStatus('Could not load image','error');toast(error.message||'Could not load image');return false;}finally{bitmap?.close?.();}}
   async function openImageFile(file){
     if(!file)return false;const requestId=++state.imageLoadId;
     const result=await routeImageFileWithMetadata(file,{chooseAction:async({title,detail,choices})=>(await chooseFilterAction(title,choices,{detail})).action,openImage:image=>requestId===state.imageLoadId?loadImageFile(image,{requestId}):false,importFilter:async filter=>{if(requestId!==state.imageLoadId)return false;if(state.isRendering)await cancelRender();if(requestId!==state.imageLoadId)return false;applyFilter(filter,null,{importSource:'png'});toast('Filter imported from PNG');return true;}});
@@ -7428,11 +7507,11 @@ function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL
 
   function isEditableTarget(target){return target instanceof Element&&(target.matches('input,textarea,select,[contenteditable="true"]')||Boolean(target.closest('[contenteditable="true"]')));}
   async function copyImageToClipboard(){if(state.isRendering)return;const ClipboardItemCtor=globalThis.ClipboardItem;if(!navigator.clipboard?.write||!ClipboardItemCtor){toast('Image copy is unavailable in this browser');return;}setStatus('Encoding RGBA PNG…','busy');try{const expected=alphaStats(state.filtered),blob=await canvasBlob(renderedImageCanvas(state.filtered,state.width,state.height),'image/png');await verifyPngAlpha(blob,expected);setStatus('Writing image to clipboard…','busy');await writePngClipboard(blob);if(expected.hasAlpha){setStatus(`Ready · PNG alpha ${expected.min}–${expected.max}`);toast('RGBA PNG copied · alpha preserved');}else{setStatus('Ready · copied image is opaque');toast('PNG copied · output has no transparent pixels');}}catch(error){console.error('Clipboard copy failed',error);setStatus('Clipboard copy unavailable','error');toast(error?.name==='NotAllowedError'?'Clipboard permission was blocked by the browser':`Copy failed: ${error.message||'clipboard unavailable'}`);}}
-  async function pasteImageFromClipboard(){if(state.isRendering)return;if(!navigator.clipboard?.read){toast('Clipboard reading is unavailable. Press Ctrl/⌘+V instead.');return;}setStatus('Reading clipboard…','busy');try{const items=await navigator.clipboard.read();for(const item of items){const types=Array.from(item.types||[]),type=['web image/png','image/png',...types.filter(value=>String(value).startsWith('image/'))].find(value=>types.includes(value));if(!type)continue;const raw=await item.getType(type),mime=String(type).replace(/^web\s+/,'');const blob=String(raw.type||'').startsWith('image/')?raw:new Blob([raw],{type:mime});await loadImageFile(blob,{successMessage:'Image pasted from clipboard'});return;}setStatus('Ready');toast('Clipboard does not contain an image');}catch(error){console.error('Clipboard paste failed',error);setStatus('Clipboard paste unavailable','error');toast(error?.name==='NotAllowedError'?'Clipboard permission was blocked. Press Ctrl/⌘+V instead.':`Paste failed: ${error.message||'clipboard unavailable'}`);}}
+  async function pasteImageFromClipboard(){if(state.isRendering)return;if(!navigator.clipboard?.read){toast('Clipboard reading is unavailable. Press Ctrl/⌘+V instead.');return;}const requestId=++state.imageLoadId;setStatus('Reading clipboard…','busy');try{const items=await navigator.clipboard.read();if(requestId!==state.imageLoadId)return;for(const item of items){const types=Array.from(item.types||[]),type=['web image/png','image/png',...types.filter(value=>String(value).startsWith('image/'))].find(value=>types.includes(value));if(!type)continue;const raw=await item.getType(type);if(requestId!==state.imageLoadId)return;const mime=String(type).replace(/^web\s+/,'');const blob=String(raw.type||'').startsWith('image/')?raw:new Blob([raw],{type:mime});await loadImageFile(blob,{successMessage:'Image pasted from clipboard',requestId});return;}setStatus('Ready');toast('Clipboard does not contain an image');}catch(error){if(requestId!==state.imageLoadId)return;console.error('Clipboard paste failed',error);setStatus('Clipboard paste unavailable','error');toast(error?.name==='NotAllowedError'?'Clipboard permission was blocked. Press Ctrl/⌘+V instead.':`Paste failed: ${error.message||'clipboard unavailable'}`);}}
 
   function triggerDownload(href,name,revoke=false){try{const anchor=document.createElement('a');anchor.href=href;anchor.download=name;anchor.rel='noopener';anchor.style.display='none';document.body.appendChild(anchor);anchor.click();setTimeout(()=>{anchor.remove();if(revoke)URL.revokeObjectURL(href);},10000);toast(`Download started: ${name}`);return true;}catch(error){if(revoke)URL.revokeObjectURL(href);console.error('Download failed',error);toast(`Download failed: ${error.message||'browser blocked the file'}`);return false;}}
   function downloadBlob(blob,name){if(!(blob instanceof Blob)||!blob.size){toast('Nothing was generated to download');return false;}return triggerDownload(URL.createObjectURL(blob),name,true);}
-  async function exportPNG(){if(!state.filtered||!state.width||!state.height){toast('Load and render an image before exporting');return;}const filter=validatedCurrentFilter();if(!filter)return;if(state.lastSuccessfulRenderSignature!==filterRenderSignature(filter)){setStatus('Render the current filter changes before exporting.','error');toast('Render the current filter changes before exporting.');return;}setStatus('Encoding PNG…','busy');try{const canvas=renderedImageCanvas(state.filtered,state.width,state.height),name=slug($('#filterName').value||'filtered-image')+'.png',encoded=await canvasBlob(canvas,'image/png'),envelope=createFilterFabPngEnvelope(filter,'2.9.3'),blob=await embedFilterFabMetadata(encoded,envelope);if(downloadBlob(blob,name))setStatus('Ready');}catch(error){console.error('PNG export failed',error);setStatus('PNG export failed','error');toast(`PNG export failed: ${error.message}`);}}
+  async function exportPNG(){if(!state.filtered||!state.width||!state.height){toast('Load and render an image before exporting');return;}const filter=validatedCurrentFilter();if(!filter)return;if(state.lastSuccessfulRenderSignature!==filterRenderSignature(filter)){setStatus('Render the current filter changes before exporting.','error');toast('Render the current filter changes before exporting.');return;}setStatus('Encoding PNG…','busy');try{const canvas=renderedImageCanvas(state.filtered,state.width,state.height),name=slug($('#filterName').value||'filtered-image')+'.png',encoded=await canvasBlob(canvas,'image/png'),envelope=createFilterFabPngEnvelope(filter,'2.9.4'),blob=await embedFilterFabMetadata(encoded,envelope);if(downloadBlob(blob,name))setStatus('Ready');}catch(error){console.error('PNG export failed',error);setStatus('PNG export failed','error');toast(`PNG export failed: ${error.message}`);}}
   function exportFilter(){const filter=validatedCurrentFilter();if(!filter)return;if(!activeDocument.id)activeDocument.id=createCustomPresetId();filter.id=activeDocument.id;const base=slug(filter.name);try{downloadBlob(new Blob([JSON.stringify(filter,null,2)+'\n'],{type:'application/json;charset=utf-8'}),base+'.json');}catch(error){console.error('Filter export failed',error);toast(`Filter export failed: ${error.message}`);}}
   async function deletePreset(){
     if(!activeDocument.key?.startsWith('custom:'))return;
@@ -7480,7 +7559,7 @@ function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL
     modeButtons.forEach(button=>{button.onclick=()=>setWorkspaceMode(button.dataset.workspaceMode);button.onkeydown=event=>{const index=modeButtons.indexOf(button),offset=event.key==='ArrowRight'?1:event.key==='ArrowLeft'?-1:0,target=event.key==='Home'?0:event.key==='End'?modeButtons.length-1:offset?(index+offset+modeButtons.length)%modeButtons.length:-1;if(target<0)return;event.preventDefault();setWorkspaceMode(modeButtons[target].dataset.workspaceMode);modeButtons[target].focus();};});
     el.rendererSelect.value=['auto','webgpu','cpu'].includes(state.rendererPreference)?state.rendererPreference:'auto';
     el.rendererSelect.onchange=()=>{state.rendererPreference=el.rendererSelect.value;storageSet('ffw-renderer',state.rendererPreference);if(!state.hasPendingFormulaChanges)render();else validatePendingFormulas();};
-    $('#openImageBtn').onclick=()=>el.imageInput.click();
+    $('#openImageBtn').onclick=()=>{state.imageLoadId++;el.imageInput.click();};
     el.imageInput.onchange=async()=>{await openImageFile(el.imageInput.files[0]);el.imageInput.value='';};
     $('#pasteImageBtn').onclick=pasteImageFromClipboard;
     $('#copyImageBtn').onclick=copyImageToClipboard;
@@ -7549,8 +7628,9 @@ function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL
     window.addEventListener('beforeunload',()=>{inspectorLayout.destroy();if(librarySession)abortLibraryPackages(librarySession);onlineLibrary.dispose();thumbnailService.dispose();state.rendererManager?.dispose();});
   }
 
-  window.FilterFabJS=Object.freeze({version:'2.9.3',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getThumbnailDiagnostics:()=>thumbnailService.diagnostics(),getRendererPreference:()=>state.rendererPreference,getWorkspaceMode:()=>state.workspaceMode,getLibraryPreviewState:()=>({open:Boolean(librarySession),candidateKey:librarySession?.candidateEntry?.key||null,candidateRendered:Boolean(librarySession?.candidateRendered),activeKey:activeDocument.key,activeId:activeDocument.id,imported:activeDocument.imported,importSource:activeDocument.importSource,baseline:activeDocument.baseline,recordBaseline:activeDocument.recordBaseline})});
+  window.FilterFabJS=Object.freeze({version:'2.9.4',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getThumbnailDiagnostics:()=>thumbnailService.diagnostics(),getRendererPreference:()=>state.rendererPreference,getWorkspaceMode:()=>state.workspaceMode,getLibraryPreviewState:()=>({open:Boolean(librarySession),candidateKey:librarySession?.candidateEntry?.key||null,candidateRendered:Boolean(librarySession?.candidateRendered),activeKey:activeDocument.key,activeId:activeDocument.id,imported:activeDocument.imported,importSource:activeDocument.importSource,baseline:activeDocument.baseline,recordBaseline:activeDocument.recordBaseline})});
   controlsController.buildSliders();wire();const demo=demoImage();initImage(demo.data,demo.width,demo.height);applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');
+  void replaceStartupDemo({state,initImage,canReplace:()=>!librarySession});
   return{state,render,applyFilter,loadImageFile,openImageFile};
 }
 

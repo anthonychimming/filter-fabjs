@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.9.4
+
+- Replace the toolbar inspector control with an accessible edge tab and a persistent first-use filter-discovery hint; preserve responsive inspector defaults and resizing.
+- Remove the redundant resize marker and give the complete toggle hit area priority, with mouse, touch and keyboard regression coverage.
+- Keep the canvas undimmed while previewing filters in the Filter Library, and scroll results to the top when moving between pages.
+- Unify Randomize and Mutate into one Mutate action and an independent Subtle, Medium, Strong or Random strength preference. Preserve relative mutation math and the original Randomize behavior, locks, Undo and Reset.
+- Update Help, Explore documentation and UI tests; regenerate the static site and standalone v2.9.4 release.
+
 ## 2.9.3
 
 - Update the built-in catalog to 48 filters, including pass-three definitions, with matching catalog documentation and regression coverage.

@@ -88,7 +88,12 @@ try{
     assert.equal($('[data-apply]').disabled,false);assert.equal(rows().length,50);assert.equal($('[data-online-notice]').hidden,true);
     await new Promise(resolve=>setTimeout(resolve,170));assert.equal($('[data-count]').textContent,'57 filters');
     assert.deepEqual(keys().slice(0,2),['builtin:sample-00','online:sample-00'],'same name and portable ID remain distinct');
+    $('.filter-results').scrollTop=450;
     $('[data-next]').click();assert.equal(rows().length,7);assert.equal($('[data-page]').textContent,'Page 2 of 2');
+    assert.equal($('.filter-results').scrollTop,0,'Next starts the new page at the top');
+    $('.filter-results').scrollTop=200;
+    $('[data-prev]').click();assert.equal(rows().length,50);assert.equal($('[data-page]').textContent,'Page 1 of 2');
+    assert.equal($('.filter-results').scrollTop,0,'Previous starts the new page at the top');
     search('  ANDRE radial ');assert.deepEqual(keys(),['builtin:sample-00','online:sample-00']);
     assert.deepEqual($('[data-choices]').querySelectorAll('input').map(node=>node.value),['art','colour','local tag']);
     search('Sample');change('[data-sort]','relevance');assert.deepEqual(keys().slice(0,2),['builtin:sample-00','online:sample-00']);

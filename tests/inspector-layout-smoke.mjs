@@ -10,11 +10,12 @@ assert.equal(readInspectorWidth({getItem(){throw Error('blocked')}}),384);
 
 class Element{
   constructor(){this.listeners={};this.attrs={};this.dataset={};this.style={setProperty:(k,v)=>this.style[k]=v};this.inert=false;this.hidden=false;this.scrollTop=120;}
+  append(e){e.parentElement=this;}
   addEventListener(k,fn){this.listeners[k]=fn;}
   setAttribute(k,v){this.attrs[k]=v;}
   getAttribute(k){return this.attrs[k];}
   removeAttribute(k){delete this.attrs[k];}
-  getBoundingClientRect(){return {width:1440,right:1440};}
+  getBoundingClientRect(){return {width:1440,right:1440,left:1056,top:100,height:780,bottom:880};}
   getClientRects(){return [1];}
   focus(){doc.activeElement=this;}
   contains(e){return e===this||e===tab;}
@@ -24,16 +25,20 @@ class Element{
   hasPointerCapture(id){return this.capture===id;}
   releasePointerCapture(){this.capture=null;}
 }
-const elements=Object.fromEntries(['inspector','inspectorToggle','inspectorResize','inspectorClose','inspectorExpand','inspectorBackdrop'].map(k=>[k,new Element()]));
+const elements=Object.fromEntries(['inspector','inspectorToggle','inspectorResize','inspectorClose','inspectorExpand','inspectorBackdrop','inspectorEdge','canvasStage','inspectorHint','inspectorHintDismiss'].map(k=>[k,new Element()]));
 const app=new Element(),workspace=new Element(),tab=new Element(),close=elements.inspectorClose;
 tab.tabIndex=close.tabIndex=0;tab.closest=close.closest=()=>null;
-const doc={activeElement:null,querySelector:s=>s==='.app'?app:s==='.workspace'?workspace:null,getElementById:k=>elements[k],addEventListener(k,fn){this[k]=fn;}};
+const doc={documentElement:{clientWidth:1440},activeElement:null,querySelector:s=>s==='.app'?app:s==='.workspace'?workspace:null,getElementById:k=>elements[k],addEventListener(k,fn){this[k]=fn;}};
 const desktop={matches:true,addEventListener(k,fn){this.change=fn;}},mobile={matches:false,addEventListener(k,fn){this.change=fn;}};
 const win={matchMedia:s=>s.includes('1024')?desktop:mobile,addEventListener(){}};
-let saved,writes=0;const layout=createInspectorLayout({document:doc,window:win,storage:()=>({getItem:()=>null,setItem(k,v){writes++;saved=JSON.parse(v);}})});
+let saved,writes=0;const layout=createInspectorLayout({document:doc,window:win,storage:()=>({getItem:()=>null,setItem(k,v){writes++;if(k==='ffw-workspace-layout')saved=JSON.parse(v);}})});
 const fire=(node,type,extra={})=>node.listeners[type]({preventDefault(){},stopImmediatePropagation(){},...extra});
 const resize=elements.inspectorResize,toggle=elements.inspectorToggle,panel=elements.inspector;
 assert.equal(resize.attrs['aria-valuenow'],'384');
+assert.equal(toggle.attrs['aria-label'],'Hide inspector');
+assert.equal(toggle.attrs['aria-expanded'],'true');
+assert.equal(elements.inspectorHint.hidden,true);
+assert.equal(elements.inspectorEdge.style['--inspector-toggle-y'],'490px');
 fire(resize,'keydown',{key:'ArrowLeft'});assert.equal(saved.inspectorWidth,400);
 fire(resize,'keydown',{key:'ArrowRight',shiftKey:true});assert.equal(saved.inspectorWidth,368);
 fire(resize,'keydown',{key:'End'});assert.equal(saved.inspectorWidth,520);
@@ -50,6 +55,10 @@ doc.keydown({key:'Escape',preventDefault(){},stopImmediatePropagation(){}});asse
 mobile.matches=true;mobile.change();fire(toggle,'click');fire(elements.inspectorExpand,'click');assert.equal(app.dataset.inspectorExpanded,'true');
 desktop.matches=true;desktop.change();assert.equal(panel.attrs.role,undefined);assert.equal(workspace.inert,false);assert.equal(panel.inert,false);
 desktop.matches=false;desktop.change();tab.disabled=true;fire(toggle,'click');assert.equal(doc.activeElement,close,'rendering must still permit a focusable overlay close action');tab.disabled=false;
+assert.equal(toggle.attrs['aria-label'],'Hide inspector');
+fire(toggle,'click');assert.equal(panel.inert,true,'edge control must close compact inspector');
+assert.equal(toggle.attrs['aria-label'],'Show inspector');
+assert.equal(toggle.attrs['aria-expanded'],'false');
 layout.destroy();assert.equal(workspace.inert,false,'teardown must release background interaction');
 const html=fs.readFileSync('index.html','utf8');
 assert.ok(html.indexOf('<main class="workspace"')<html.indexOf('<header class="topbar'));
@@ -57,3 +66,34 @@ assert.ok(html.indexOf('<footer class="statusbar"')<html.indexOf('</main>'));
 assert.ok(html.indexOf('</main>')<html.indexOf('id="inspector"'));
 assert.equal((html.match(/id="formulaR"/g)||[]).length,1);
 console.log('Inspector width, pointer/keyboard persistence, focus, modal transitions and shell smoke: pass.');
+
+// Fresh compact sessions show the hint once; width persistence stays independent.
+desktop.matches=false;
+const preferences=new Map();
+const storage=()=>({getItem:k=>preferences.get(k)??null,setItem:(k,v)=>preferences.set(k,v)});
+let fresh=createInspectorLayout({document:doc,window:win,storage});
+assert.equal(elements.inspectorHint.hidden,false);
+assert.equal(toggle.attrs['aria-describedby'],'inspectorHintText');
+fire(elements.inspectorHintDismiss,'click');
+assert.equal(elements.inspectorHint.hidden,true);
+assert.equal(doc.activeElement,toggle);
+assert.equal(preferences.get('ffw-inspector-discovered'),'true');
+fire(resize,'keydown',{key:'Home'});
+assert.equal(preferences.get('ffw-inspector-discovered'),'true');
+fresh.destroy();
+fresh=createInspectorLayout({document:doc,window:win,storage});
+assert.equal(elements.inspectorHint.hidden,true,'manual dismissal survives refresh');
+fresh.destroy();preferences.clear();
+fresh=createInspectorLayout({document:doc,window:win,storage});
+fire(toggle,'click');assert.equal(elements.inspectorHint.hidden,true);
+fire(toggle,'click');assert.equal(elements.inspectorHint.hidden,true);
+fresh.destroy();
+fresh=createInspectorLayout({document:doc,window:win,storage});
+assert.equal(elements.inspectorHint.hidden,true,'successful discovery survives refresh');
+fresh.destroy();
+const blocked=createInspectorLayout({document:doc,window:win,storage:()=>{throw Error('blocked');}});
+fire(elements.inspectorHintDismiss,'click');fire(toggle,'click');fire(toggle,'click');
+assert.equal(elements.inspectorHint.hidden,true,'blocked storage retains completion in memory');blocked.destroy();
+assert.equal((html.match(/id="inspectorToggle"/g)||[]).length,1);
+assert.ok(html.indexOf('id="inspectorToggle"')>html.indexOf('</main>'),'toggle must be outside inert workspace');
+console.log('Inspector edge labels, geometry, compact toggle and first-use persistence: pass.');

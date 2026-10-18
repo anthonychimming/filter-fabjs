@@ -1,4 +1,8 @@
-import { MUTATION_FACTORS, controlStatesEqual, createExploreSession, exploreValues, commitExploreValues, saveExploreSnapshot } from '../app/explore-state.js';
+import { controlStatesEqual, createExploreSession, exploreValues, commitExploreValues, saveExploreSnapshot } from '../app/explore-state.js';
+import { storageGet, storageSet } from '../core/utils.js';
+
+const MUTATION_STRENGTHS=Object.freeze({Subtle:'Low',Medium:'Medium',Strong:'High',Random:'Random'});
+const MUTATION_STRENGTH_KEY='ffw-mutation-strength';
 
 export function exploreMenuPlacement(anchor,menu,bounds){
   const below=Math.max(0,bounds.bottom-anchor.bottom),above=Math.max(0,anchor.top-bounds.top);
@@ -7,8 +11,10 @@ export function exploreMenuPlacement(anchor,menu,bounds){
 }
 
 // Session state belongs to the app; this view never writes the filter document.
-export function createExploreController({state,root,resetButton,syncControls,scheduleRender,onChange,resetPassThrough,toast}){
+export function createExploreController({state,root,resetButton,syncControls,scheduleRender,onChange,resetPassThrough,toast,readPreference=storageGet,writePreference=storageSet}){
   const buttons={},slots={},saveButtons={},menus=[];
+  const preference=readPreference(MUTATION_STRENGTH_KEY,'Medium');
+  let selectedStrength=Object.hasOwn(MUTATION_STRENGTHS,preference)?preference:'Medium';
   function button(parent,text,action){const node=document.createElement('button');node.type='button';node.textContent=text;node.onclick=()=>{if(state.isRendering)return;const owner=menus.find(item=>item.panel===parent);closeMenus();owner?.trigger.focus();action();refresh();};parent.append(node);return node;}
   function closeMenus(){menus.forEach(({panel,trigger})=>{panel.hidden=true;trigger.setAttribute('aria-expanded','false');});}
   function positionMenu(panel,trigger){
@@ -34,15 +40,28 @@ export function createExploreController({state,root,resetButton,syncControls,sch
   function commit(next,undo=true){commitExploreValues(state,next,{undo});syncControls();onChange();refresh();scheduleRender();}
   function reset({preserveDefaults=false}={}){const defaults=preserveDefaults?state.explore.defaults:state.controls;state.explore=createExploreSession(defaults);refresh();}
   function manual(){state.explore.undo=null;refresh();}
-  function mutate(){commit(exploreValues(state.controls,state.controlUIs,state.usedControls,state.explore,true));}
+  function mutate(){
+    if(state.isRendering||!state.usedControls.some((used,i)=>used&&!state.explore.locks[i]))return;
+    commit(exploreValues(state.controls,state.controlUIs,state.usedControls,state.explore,selectedStrength!=='Random'));
+  }
   resetButton.textContent='Reset';resetButton.title='Reset to authored defaults';resetButton.onclick=()=>{if(!state.isRendering)commit(state.explore.defaults);};
   const resetMenu=menu(resetButton.parentElement,'▾',true);resetMenu.previousElementSibling?.setAttribute('aria-label','Reset options');
   button(resetMenu,'Reset to defaults',()=>commit(state.explore.defaults));
   button(resetMenu,'Reset to pass-through',resetPassThrough).title='Load Pass Through; clears this filter’s Explore session';
   const actions=document.createElement('div');actions.className='explore-actions';root.append(actions);
-  buttons.random=button(actions,'Randomize',()=>commit(exploreValues(state.controls,state.controlUIs,state.usedControls,state.explore)));
-  const strengths=menu(actions,'Mutate · Medium ▾',true);buttons.mutate=strengths.previousElementSibling;
-  for(const strength of Object.keys(MUTATION_FACTORS))button(strengths,strength,()=>{state.explore.strength=strength;mutate();});
+  buttons.mutate=button(actions,'Mutate',mutate);buttons.mutate.className='mutation-action';
+  buttons.mutate.title='Apply the selected strength to unlocked controls';
+  const strengthLabel=document.createElement('label');strengthLabel.className='mutation-strength';
+  const strengthText=document.createElement('span');strengthText.textContent='Strength:';strengthLabel.append(strengthText);
+  const strengthSelect=document.createElement('select');strengthSelect.setAttribute('aria-label','Mutation strength');
+  strengthSelect.title='Subtle, Medium, and Strong vary current values; Random tries a fresh combination';
+  for(const strength of Object.keys(MUTATION_STRENGTHS)){const option=document.createElement('option');option.value=strength;option.textContent=strength;strengthSelect.append(option);}
+  strengthSelect.onchange=()=>{
+    if(state.isRendering||!Object.hasOwn(MUTATION_STRENGTHS,strengthSelect.value)){strengthSelect.value=selectedStrength;return;}
+    selectedStrength=strengthSelect.value;state.explore.strength=MUTATION_STRENGTHS[selectedStrength];
+    writePreference(MUTATION_STRENGTH_KEY,selectedStrength);
+  };
+  strengthLabel.append(strengthSelect);actions.append(strengthLabel);
   const locks=menu(actions,'Locks ▾');
   for(const action of ['Lock all','Unlock all','Invert locks'])button(locks,action,()=>{state.usedControls.forEach((used,i)=>{if(used)state.explore.locks[i]=action==='Lock all'||(action==='Invert locks'&&!state.explore.locks[i]);});syncControls();});
   buttons.undo=button(actions,'Undo',()=>{if(state.explore.undo)commit(state.explore.undo,false);});
@@ -64,8 +83,9 @@ export function createExploreController({state,root,resetButton,syncControls,sch
     section.hidden=!state.usedControls.some(Boolean);
     if(section.hidden)closeMenus();
     const active=session.active,modified=active&&!controlStatesEqual(state.controls,session.snapshots[active]),busy=state.isRendering;
-    buttons.mutate.textContent=`Mutate · ${session.strength} ▾`;
-    buttons.random.disabled=buttons.mutate.disabled=busy||!state.usedControls.some((used,i)=>used&&!session.locks[i]);
+    session.strength=MUTATION_STRENGTHS[selectedStrength];strengthSelect.value=selectedStrength;
+    strengthSelect.disabled=busy;
+    buttons.mutate.disabled=busy||!state.usedControls.some((used,i)=>used&&!session.locks[i]);
     buttons.undo.disabled=busy||!session.undo;buttons.clear.disabled=busy||!active;
     buttons.clearAll.disabled=busy||!Object.values(session.snapshots).some(Boolean);
     buttons.update.hidden=!modified;buttons.update.textContent=`Update ${active||''}`;

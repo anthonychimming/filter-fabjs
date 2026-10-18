@@ -85,7 +85,7 @@ assert.deepEqual(mutateValues([127.5,0,0],[numericUI,state.controlUIs[2],state.c
 state.explore.locks={};state.controls[0]=100;
 assert.ok(controlStatesEqual([1],[1+1e-12]));assert.ok(!controlStatesEqual([1],[1.001]));
 
-const dom=installBrowserDom();
+const dom=installBrowserDom(),originalRandom=Math.random;
 const bounds={top:0,bottom:600,left:0,right:400};
 assert.equal(exploreMenuPlacement({top:100,bottom:130},{height:150,left:10,right:180},bounds).upwards,false);
 assert.equal(exploreMenuPlacement({top:500,bottom:530},{height:150,left:10,right:180},bounds).upwards,true);
@@ -106,7 +106,8 @@ try{
   const section=doc.createElement('section');section.className='adjust-section';doc.body.append(section);
   const head=doc.createElement('div'),root=doc.createElement('div'),resetButton=doc.createElement('button');section.append(head,root);head.append(resetButton);
   let renders=0,syncs=0,pass=0;
-  const view=createExploreController({state,root,resetButton,syncControls:()=>syncs++,scheduleRender:()=>renders++,onChange:()=>{},resetPassThrough:()=>{pass++;view.reset();},toast:()=>{}});
+  const preferences=new Map(),readPreference=(key,fallback)=>preferences.get(key)??fallback,writePreference=(key,value)=>preferences.set(key,value);
+  const view=createExploreController({state,root,resetButton,readPreference,writePreference,syncControls:()=>syncs++,scheduleRender:()=>renders++,onChange:()=>{},resetPassThrough:()=>{pass++;view.reset();},toast:()=>{}});
   const find=text=>doc.body.querySelectorAll('button').find(node=>node.textContent===text);
   const action=(text,expected=0)=>{const before=renders;const node=find(text);assert.ok(node,text);node.click();assert.equal(renders-before,expected,`${text} render count`);};
   view.reset();const defaults=[...state.controls];
@@ -125,23 +126,57 @@ try{
   action('Save to A');const saved=[...state.controls];state.controls[0]++;view.manual();assert.deepEqual(state.explore.snapshots.A,saved);assert.ok(!find('Update A').hidden);
   action('A ● *',1);assert.deepEqual(state.controls,saved);state.controls[0]++;view.manual();assert.deepEqual(state.explore.snapshots.A,saved);
   action('Update A');assert.deepEqual(state.explore.snapshots.A,state.controls);assert.ok(find('Update A').hidden);
-  action('Randomize',1);assert.ok(state.explore.undo);action('Undo',1);assert.equal(state.explore.undo,null);
-  action('Mutate · Medium ▾');
-  const strengthMenu=find('Medium').parentElement;
-  assert.equal(strengthMenu.hidden,false,'the combined Mutate button opens its menu without rendering');
-  assert.deepEqual(strengthMenu.children.map(node=>node.textContent),['Low','Medium','High','Chaos']);
-  const beforeMutate=[...state.controls];
-  action('High',1);assert.equal(state.explore.strength,'High');assert.equal(strengthMenu.hidden,true);
-  assert.deepEqual(state.explore.undo,beforeMutate,'one Mutate saves the complete prior array');
-  action('Mutate · High ▾');assert.equal(find('Mutate · High ▾').getAttribute('aria-expanded'),'true');
-  action('High',1);
-  const lastUndo=[...state.explore.undo];action('Undo',1);assert.deepEqual(state.controls,lastUndo);
+  assert.equal(find('Randomize'),undefined,'there is no separate Randomize action');
+  assert.equal(root.querySelectorAll('button').filter(node=>node.textContent==='Mutate').length,1);
+  const strengthSelect=root.querySelector('select');
+  assert.equal(strengthSelect.getAttribute('aria-label'),'Mutation strength');
+  assert.equal(strengthSelect.value,'Medium');
+  assert.deepEqual(strengthSelect.options.map(node=>[node.value,node.textContent]),['Subtle','Medium','Strong','Random'].map(value=>[value,value]));
+  const select=strength=>{const before=[...state.controls],undo=state.explore.undo,beforeRenders=renders,beforeSyncs=syncs;strengthSelect.value=strength;strengthSelect.onchange();assert.deepEqual(state.controls,before);assert.equal(state.explore.undo,undo);assert.equal(renders,beforeRenders);assert.equal(syncs,beforeSyncs);};
+  Math.random=()=>.75;
+  for(const [strength,internal] of [['Subtle','Low'],['Medium','Medium'],['Strong','High'],['Random','Random']]){
+    select(strength);assert.equal(state.explore.strength,internal);
+    assert.equal(preferences.get('ffw-mutation-strength'),strength);
+    state.explore.locks={0:true};view.refresh();
+    const before=[...state.controls];
+    const expected=exploreValues(before,state.controlUIs,state.usedControls,state.explore,strength!=='Random',()=>.75);
+    action('Mutate',1);assert.deepEqual(state.controls,expected);assert.equal(strengthSelect.value,strength);
+    assert.equal(state.controls[0],before[0]);assert.equal(state.controls[9],before[9]);
+    state.controls.forEach(value=>assert.ok(Number.isFinite(value)&&value>=0&&value<=255));
+    assert.deepEqual(state.explore.undo,before,'one action saves the complete prior array');
+    const current=[...state.controls],again=exploreValues(current,state.controlUIs,state.usedControls,state.explore,strength!=='Random',()=>.75);
+    action('Mutate',1);assert.deepEqual(state.controls,again,'repeated clicks use current values');
+    assert.deepEqual(state.explore.undo,current);
+    action('Undo',1);assert.deepEqual(state.controls,current);assert.equal(state.explore.undo,null);assert.equal(state.explore.locks[0],true);
+  }
+  // Random keeps the old independent full-range distribution for every unlocked widget.
+  state.explore.locks={};const oldUsed=[...state.usedControls];state.usedControls.fill(true);view.refresh();
+  state.controls=state.controls.map(()=>20);action('Mutate',1);const randomA=[...state.controls];
+  state.controls=state.controls.map(()=>220);action('Mutate',1);assert.deepEqual(state.controls,randomA);
+  state.usedControls=oldUsed;
+  select('Strong');state.isRendering=true;view.refresh();
+  assert.ok(find('Mutate').disabled);assert.ok(strengthSelect.disabled);action('Mutate');select('Random');assert.equal(strengthSelect.value,'Strong');
+  state.isRendering=false;view.refresh();select('Random');
+  action('Lock all');assert.ok(find('Mutate').disabled);action('Mutate');action('Unlock all');
+  const activeUsed=[...state.usedControls];state.usedControls.fill(false);view.refresh();action('Mutate');assert.ok(find('Mutate').disabled);state.usedControls=activeUsed;view.refresh();
+  action('Mutate',1);action('Mutate',1);action('Mutate',1);assert.equal(strengthSelect.value,'Random');
   const beforeReset=[...state.controls];action('Lock all');action('Reset',1);assert.deepEqual(state.controls,defaults);action('Undo',1);assert.deepEqual(state.controls,beforeReset);
   action('Reset',1);view.manual();assert.equal(state.explore.undo,null);assert.ok(find('Undo').disabled);
   action('Save to B');action('Clear active snapshot');assert.equal(state.explore.snapshots.B,null);assert.ok(state.explore.snapshots.A);action('Clear all snapshots');assert.ok(Object.values(state.explore.snapshots).every(v=>v===null));
   action('Save to C');state.source={};state.workspaceMode='author';view.refresh();assert.ok(state.explore.snapshots.C);
   state.controls[0]++;view.reset({preserveDefaults:true});assert.deepEqual(state.explore.defaults,defaults,'formula changes must not drift the activation defaults');assert.equal(state.explore.snapshots.C,null);
-  action('Reset to pass-through');assert.equal(pass,1);assert.equal(state.explore.active,null);assert.deepEqual(state.explore.locks,{});assert.equal(state.explore.strength,'Medium');
+  action('Reset to pass-through');assert.equal(pass,1);assert.equal(state.explore.active,null);assert.deepEqual(state.explore.locks,{});assert.equal(state.explore.strength,'Random','filter/session reset retains the independent preference');
+  assert.equal(strengthSelect.value,'Random');
+  const reload=(value)=>{
+    if(value!==undefined)preferences.set('ffw-mutation-strength',value);
+    const reloadSection=doc.createElement('section');reloadSection.className='adjust-section';doc.body.append(reloadSection);
+    const reloadHead=doc.createElement('div'),reloadRoot=doc.createElement('div'),reloadReset=doc.createElement('button');reloadSection.append(reloadHead,reloadRoot);reloadHead.append(reloadReset);
+    const reloadState={...state,explore:createExploreSession(state.controls)};
+    createExploreController({state:reloadState,root:reloadRoot,resetButton:reloadReset,readPreference,writePreference,syncControls:()=>{},scheduleRender:()=>assert.fail('reload must not render'),onChange:()=>{},resetPassThrough:()=>{},toast:()=>{}});
+    return reloadRoot.querySelector('select').value;
+  };
+  assert.equal(reload(),'Random','reload restores preference');
+  assert.equal(reload('Strong'),'Strong');assert.equal(reload('Chaos'),'Medium','invalid preferences use Medium');
   assert.ok(syncs>0);
-}finally{dom.restore();}
+}finally{Math.random=originalRandom;dom.restore();}
 console.log('Explore state and UI action smoke tests passed.');
