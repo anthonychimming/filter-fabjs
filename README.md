@@ -2,7 +2,7 @@
 
 **Create custom image filters directly in your browser with mathematical expressions, real-time previews, WebGPU acceleration, and Filter Factory compatibility.**
 
-**Current release: v2.9.4**
+**Current release: v2.9.5**
 
 **[▶ Launch Filter FabJS](https://anthonychimming.github.io/filter-fabjs/)**
 
@@ -73,7 +73,9 @@ See **[Filter Library documentation](docs/FILTER_LIBRARY.md)** for metadata, sto
 
 ## Split preview comparison
 
-In Split mode, drag the vertical divider or its circular handle to compare Original (left) with Filtered (right). Use Left/Right to move by 1%, Shift+Left/Right by 5%, or Home/End to reach either edge. The position remains when switching preview modes and follows the displayed image during Fit, zoom, and resizing.
+The floating canvas controls start in Filtered view. Select the eye (Show original) or split (Compare images) button to switch views; selecting the active button again returns to Filtered. Fit image reserves space for the controls, and the readout always shows the actual zoom percentage. The rail becomes a bottom group when the available canvas width is narrow.
+
+In Split mode, click or tap the displayed image, or drag the vertical divider or its circular handle, to compare Original (left) with Filtered (right). Use Left/Right to move by 1%, Shift+Left/Right by 5%, or Home/End to reach either edge. The position remains when switching preview modes and follows the displayed image during Fit, zoom, and resizing.
 
 ## Portable PNG filters
 
@@ -124,7 +126,7 @@ npm run build
 Build output:
 
 - `dist/site/` — deployable static site
-- `dist/filter-fabjs-v2.9.4.html` — standalone single-file build
+- `dist/filter-fabjs-v2.9.5.html` — standalone single-file build
 
 Startup immediately displays the built-in canvas demo, then attempts to load `./assets/demo-splash.png` as the real 960 × 640 RGBA source. The static-site build copies this image to `dist/site/assets/demo-splash.png`; its document-relative URL also works under a project subpath such as `/filter-fabjs/`. Missing, invalid, or slow assets quietly retain the built-in demo after a three-second timeout. Starting a user image request prevents a late splash from replacing it, and the splash does not reset filter edits or controls. The standalone HTML keeps the generated demo available offline and does not embed the PNG.
 

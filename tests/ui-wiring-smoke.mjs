@@ -17,7 +17,13 @@ assert.match(html,/id="rendererReason"/,'fallback reasons must be visible inside
 assert.match(html,/id="statusText"[^>]*role="status"/,'render completion and errors need a status region');
 assert.match(controls,/readout.setAttribute\('aria-live','off'\)/,'native value changes must not produce duplicate live announcements');
 assert.match(html,/id="zoomOut"[^>]*aria-label="Zoom out"/,'icon actions need explicit accessible names');
-assert.match(app,/item.setAttribute\('aria-pressed',String\(item===button\)\)/,'preview mode selection must be exposed programmatically');
+const canvasView=fs.readFileSync('src/ui/canvas-view.js','utf8');
+assert.match(canvasView,/button.setAttribute\('aria-pressed',String\(selected\)\)/,'preview selection must be exposed programmatically');
+assert.doesNotMatch(html,/preview-toolbar|data-view="filtered"|role="toolbar"/);
+assert.doesNotMatch(css,/\.preview-toolbar/);
+assert.match(html,/id="canvasToolbar" role="group" aria-label="Canvas view controls"/);
+assert.equal((html.match(/data-view=/g)||[]).length,2);
+for(const name of ['Show original','Compare images','Zoom out','Fit image','Zoom in'])assert.ok(html.includes('aria-label="'+name+'"'));
 assert.match(html, /id="rendererDiagnostics"[^>]+aria-live="off"/, 'technical diagnostics must be readable without duplicate live announcements');
 assert.match(html, /id="workspaceMode"[^>]+role="tablist"[^>]+aria-label="Workspace mode"/, 'the inspector must expose a labelled workspace-mode tab list');
 assert.match(html, /id="exploreModeTab"[^>]+role="tab"[^>]+aria-selected="true"[^>]+aria-controls="explorePanel"/, 'Explore must be the selected initial mode');

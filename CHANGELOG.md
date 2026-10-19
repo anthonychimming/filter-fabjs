@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.9.5
+
+- Replace the preview toolbar row with five floating canvas actions; adapt from a left rail to a bottom group based on available canvas width.
+- Make Original and Compare mutually exclusive toggles that return to Filtered when selected again, with synchronized accessible states.
+- Reserve measured toolbar clearance in Fit mode, preserve manual zoom and scrolling during inspector changes, and show actual zoom percentages in both modes.
+- Add guarded image click/tap split positioning alongside existing divider dragging and keyboard controls.
+- Update Help, responsive workspace documentation, focus/tooltips, touch targets and forced-colors states; extend focused and browser regressions.
+- Regenerate the static site and standalone v2.9.5 release without changing formula, renderer or file-format semantics.
+
 ## 2.9.4
 
 - Replace the toolbar inspector control with an accessible edge tab and a persistent first-use filter-discovery hint; preserve responsive inspector defaults and resizing.

@@ -59,7 +59,7 @@ for (const selector of ['html','body','.filter-description textarea','.control-w
 for (const selector of ['textarea','.formula-label','.renderer-diagnostics','.render-card kbd','.render-button kbd','.slider-index','.chip','code','kbd','.modal-body td:first-child','.control-editor-index','.control-widget-seed .slider-value']) expectFont(selector, 'font-code');
 for (const selector of ['.control-widget .slider-value','.control-readout','.control-preview-value','input[type=number]','#zoomLabel','.progress-meta']) assert.equal(rule(selector)['font-variant-numeric'], 'tabular-nums', `${selector} must use aligned UI numerals`);
 assert.equal(rule('dialog')['border-radius'], 'var(--radius-dialog)');
-assert.equal(rule('.segmented')['border-radius'], 'var(--radius-group)');
+assert.equal(rule('.canvas-toolbar')['border-radius'], 'var(--radius-group)');
 
 const fontFaces = rules.filter(([, selector]) => selector.trim() === '@font-face').map(([, , body]) => declarations(body));
 assert.equal(fontFaces.length, 2, 'ship only the two requested upright variable faces');
