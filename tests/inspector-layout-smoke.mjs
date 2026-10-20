@@ -53,7 +53,13 @@ fire(toggle,'click');assert.equal(panel.attrs.role,'dialog');assert.equal(worksp
 doc.activeElement=close;let prevented=false;doc.keydown({key:'Tab',preventDefault(){prevented=true;}});assert.ok(prevented);assert.equal(doc.activeElement,tab);
 doc.keydown({key:'Escape',preventDefault(){},stopImmediatePropagation(){}});assert.equal(workspace.inert,false);assert.equal(doc.activeElement,toggle);
 mobile.matches=true;mobile.change();fire(toggle,'click');fire(elements.inspectorExpand,'click');assert.equal(app.dataset.inspectorExpanded,'true');
+const writesBeforeSuspend=writes,release=layout.suspend();
+assert.equal(panel.inert,true);assert.equal(workspace.inert,false);assert.equal(app.dataset.inspectorSuspended,'true');
+panel.scrollTop=0;mobile.change();assert.equal(writes,writesBeforeSuspend,'suspension and breakpoint changes must not persist temporary state');
+release();release();assert.equal(app.dataset.inspectorSuspended,'false');assert.equal(app.dataset.inspectorExpanded,'true');assert.equal(panel.scrollTop,120);assert.equal(workspace.inert,true,'compact inspector modality restored');
 desktop.matches=true;desktop.change();assert.equal(panel.attrs.role,undefined);assert.equal(workspace.inert,false);assert.equal(panel.inert,false);
+const releaseAcrossBreakpoint=layout.suspend();desktop.matches=false;desktop.change();releaseAcrossBreakpoint();assert.equal(panel.inert,false,'visible desktop inspector restores as an open compact inspector');assert.equal(workspace.inert,true);
+desktop.matches=true;desktop.change();
 desktop.matches=false;desktop.change();tab.disabled=true;fire(toggle,'click');assert.equal(doc.activeElement,close,'rendering must still permit a focusable overlay close action');tab.disabled=false;
 assert.equal(toggle.attrs['aria-label'],'Hide inspector');
 fire(toggle,'click');assert.equal(panel.inert,true,'edge control must close compact inspector');

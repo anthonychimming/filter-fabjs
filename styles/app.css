@@ -142,8 +142,8 @@ body[data-workspace-mode=explore] #renderInfo{display:none}
   .control-label{grid-column:2/-1}
   .filter-browser{height:100dvh}
   .filter-card-main{grid-template-columns:minmax(0,1fr) 38px}
-  .filter-card-preview{grid-template-columns:1fr;gap:5px}
-  .filter-thumbnail{width:100%;height:90px}
+  .filter-card-preview{grid-template-columns:52px minmax(0,1fr);gap:7px}
+  .filter-thumbnail{width:52px;height:52px}
   .result-tags{margin-left:0}
   .active-filter-heading{flex-wrap:wrap}
   .control-editor-dialog{width:calc(100vw - 16px)}
@@ -325,3 +325,116 @@ html,body{overflow:hidden}
 @media(max-width:560px){#viewLabel{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}}
 @media(forced-colors:active){.canvas-toolbar{border-color:ButtonText}.canvas-toolbar button[aria-pressed=true]{color:Highlight;border-color:Highlight;outline:2px solid Highlight}.canvas-toolbar button:disabled{color:GrayText}}
 @media(prefers-reduced-motion:reduce){.canvas-toolbar,.canvas-toolbar button{transition:none}}
+
+/* Filter Library discovery, results and actions share a bounded modal viewport. */
+.filter-browser .library-head{padding:8px 12px}
+.filter-browser .browser-tools{flex:0 1 auto;min-height:0;gap:6px;padding:8px 12px}
+.filter-browser .library-discovery{flex-wrap:nowrap;justify-content:space-between}
+.filter-browser .library-discovery label{flex-wrap:nowrap;white-space:nowrap}
+.filter-browser .library-discovery select{min-width:0;width:112px}
+.filter-browser .library-filters{min-width:0}
+.filter-browser .library-filters summary{cursor:pointer;min-height:40px;align-content:center}
+.filter-browser [data-restrictions]{color:var(--accent);font-size:11px;border:1px solid var(--line2);border-radius:var(--radius-inset);padding:2px 6px}
+.filter-browser .library-filter-fields{display:grid;gap:6px;padding:6px 0}
+.filter-browser .library-filter-fields .chips:empty{display:none}
+.filter-browser .browser-results-head{display:flex;flex:0 0 auto;align-items:center;justify-content:space-between;gap:6px;min-height:40px;padding:0 12px;border-bottom:1px solid var(--line);font-size:11px}
+.filter-browser .browser-pages{border:0;padding:0;gap:4px;font-size:11px}
+.filter-browser .browser-pages button{padding:0 6px}
+.filter-browser .filter-results{min-height:0;flex:1 1 0;overscroll-behavior:contain}
+.filter-browser .library-actions{flex-direction:row;align-items:center;padding:6px 12px calc(6px + env(safe-area-inset-bottom));gap:8px}
+.filter-browser .library-actions>div{display:flex;flex:0 0 auto;gap:6px}
+.filter-browser .library-actions>span{min-width:0}
+.filter-browser button:focus-visible,.filter-browser summary:focus-visible,.filter-browser input:focus-visible,.filter-browser select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.filter-browser [hidden]{display:none}
+@container library (max-width:920px){
+  .filter-browser .browser-tools{grid-template-columns:minmax(0,1fr) auto;align-items:center}
+  .filter-browser .library-search,.filter-browser .library-discovery,.filter-browser [data-online-notice],.filter-browser [data-error]{grid-column:1/-1}
+  .filter-browser [data-clear]{grid-column:2;grid-row:1;padding:0 6px;font-size:11px}
+  .filter-browser .library-search:has(+[data-clear]:not([hidden])){padding-right:100px}
+  .filter-browser .library-filters{grid-column:1;grid-row:3}
+  .filter-browser .library-filters[open]{grid-column:1/-1}
+  .filter-browser [data-reset]{grid-column:2;grid-row:3;font-size:11px;padding:0 6px}
+  .filter-browser .library-filters[open]~[data-reset]{grid-row:4}
+  .filter-browser .filter-card{padding:6px}
+  .filter-browser .filter-card-preview{grid-template-columns:56px minmax(0,1fr);gap:8px;min-height:62px}
+  .filter-browser .filter-thumbnail{width:56px;height:56px}
+  .filter-browser .filter-card-copy{padding:0;align-self:center}
+  .filter-browser .filter-card-name,.filter-browser .result-meta,.filter-browser .filter-excerpt{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;line-height:1.25}
+  .filter-browser .filter-card-name{margin-top:0;font-size:12px}
+  .filter-browser .result-tags{display:none}
+  .filter-browser .library-actions{justify-content:flex-end}
+  .filter-browser .library-actions>span{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .filter-browser .library-actions>div{width:100%}
+  .filter-browser .library-actions button{flex:1}
+}
+@media(max-width:360px){
+  .filter-browser .browser-results-head{padding:0 6px;gap:3px}
+  .filter-browser .browser-pages{gap:2px}
+  .filter-browser .browser-pages button{font-size:11px;padding:0 4px}
+  .filter-browser .library-discovery select{width:96px}
+  .filter-browser .library-discovery{font-size:12px}
+  .filter-browser .filter-card-preview{grid-template-columns:48px minmax(0,1fr);gap:6px}
+  .filter-browser .filter-thumbnail{width:48px;height:48px}
+}
+/* Suppress competing inspector chrome without changing its state or lifecycle. */
+body:has(.filter-browser[open]) #inspector,body:has(.filter-browser[open]) #inspectorEdge,body:has(.filter-browser[open]) #inspectorBackdrop{opacity:0;pointer-events:none}
+@media(min-width:561px){
+  .filter-browser .browser-tools{grid-template-columns:minmax(0,1fr) auto}
+  .filter-browser .library-discovery{grid-column:1;grid-row:2;justify-content:flex-start;gap:18px}
+  .filter-browser .library-filters{grid-column:2;grid-row:2}
+  .filter-browser .library-filters[open]{grid-column:1/-1;grid-row:3}
+  .filter-browser [data-reset]{grid-column:2;grid-row:3}
+  .filter-browser .library-filters[open]~[data-reset]{grid-row:4}
+}
+
+@media(max-height:500px){
+  .filter-browser .library-head{padding:2px 12px}
+  .filter-browser .browser-tools{padding-top:4px;padding-bottom:4px;gap:4px}
+}
+@container library (max-width:920px){
+  .filter-browser .filter-card-main{grid-template-columns:minmax(0,1fr) auto}
+  .filter-browser .filter-card-actions{display:flex;gap:4px}
+  .filter-browser .filter-card-favorite,.filter-browser .filter-card-download{width:40px;height:40px;min-height:40px}
+}
+
+/* Library presentation suspends inspector chrome without mutating its saved state. */
+.app[data-inspector-suspended=true]{grid-template-columns:minmax(0,1fr)}
+.app[data-inspector-suspended=true] .sidebar,.app[data-inspector-suspended=true] .inspector-resize,.app[data-inspector-suspended=true] .inspector-edge,.app[data-inspector-suspended=true] .inspector-backdrop{display:none}
+.app[data-library-layout=side] .preview-pane{margin-right:calc(var(--library-width) + 12px)}
+.filter-browser{container:library / inline-size}
+.filter-browser[data-layout]{position:fixed;inset:var(--library-top) 0 auto auto;height:var(--library-height);margin:0;border-right:0}
+.filter-browser[data-layout=side]{width:var(--library-width);border-radius:16px 0 0 16px}
+.filter-browser[data-layout=sheet]{width:100vw;border-radius:16px 16px 0 0}
+@container library (max-width:560px){
+  .filter-browser .browser-tools{grid-template-columns:minmax(0,1fr) auto}
+  .filter-browser .library-discovery{grid-column:1/-1;grid-row:2;justify-content:space-between;gap:6px}
+  .filter-browser .library-filters{grid-column:1;grid-row:3}
+  .filter-browser .library-filters[open]{grid-column:1/-1;grid-row:3}
+  .filter-browser [data-reset]{grid-column:2;grid-row:3}
+  .filter-browser .library-filters[open]~[data-reset]{grid-row:4}
+  .filter-browser .filter-card-preview{grid-template-columns:48px minmax(0,1fr);gap:6px}
+  .filter-browser .filter-thumbnail{width:48px;height:48px}
+  .filter-browser .browser-results-head{padding:0 6px;gap:3px}
+  .filter-browser .browser-pages{gap:2px}
+  .filter-browser .browser-pages button{font-size:11px;padding:0 4px}
+}
+@media(max-height:500px){
+  .filter-browser .filter-card{padding:6px}
+  .filter-browser .filter-card-preview{grid-template-columns:56px minmax(0,1fr);gap:8px;min-height:62px}
+  .filter-browser .filter-thumbnail{width:56px;height:56px}
+  .filter-browser .filter-card-copy{padding:0;align-self:center}
+  .filter-browser .filter-card-name,.filter-browser .result-meta,.filter-browser .filter-excerpt{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;line-height:1.25}
+  .filter-browser .filter-card-name{font-size:12px}
+  .filter-browser .result-tags{display:none}
+}
+
+/* Explicit mobile image viewing keeps the native modal and transaction open. */
+.filter-browser .library-head>[data-image-view-toggle]{flex:0 0 auto;font-size:12px;padding:0 8px;min-height:40px}
+.filter-browser .library-head:has([data-image-view-toggle]:not([hidden])){gap:6px}
+.filter-browser .library-head:has([data-image-view-toggle]:not([hidden]))>div{flex:1;min-width:0}
+.filter-browser[data-image-view=true] .browser-tools,.filter-browser[data-image-view=true] .browser-results-head,.filter-browser[data-image-view=true] .filter-results{display:none}
+.app[data-library-image-view=true] .topbar,.app[data-library-image-view=true] .statusbar,.app[data-library-image-view=true] .canvas-toolbar{display:none}
+.app[data-library-image-view=true] .preview-pane{margin-bottom:var(--library-image-inset)}
+@media(pointer:coarse){.filter-browser .library-head>[data-image-view-toggle]{min-height:44px}}
+.app[data-library-image-view=true] .workspace{grid-template-rows:0 minmax(0,1fr) 0}
+.app[data-library-image-view=true] .preview-pane{grid-row:2}

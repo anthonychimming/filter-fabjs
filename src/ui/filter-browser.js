@@ -21,9 +21,9 @@ export function chooseFilterAction(title,choices,{name,detail=''}={}){
   });
 }
 
-export function createFilterBrowser({launcher,getEntries,begin,preview,previewOnline=null,downloadOnline=null,apply,cancel,toggleFavorite,requestThumbnail=null,clearThumbnailRequests=()=>{},getOnlineState=()=>({status:'idle'}),loadOnline=()=>{},resolveOnlinePreviewUrl,onError}){
-  const dialog=browserNode('dialog',null,'filter-browser');dialog.id='filterLibraryDialog';dialog.setAttribute('aria-labelledby','filterBrowserTitle');
-  dialog.innerHTML='<div class="modal-head library-head"><div><strong id="filterBrowserTitle">Filter Library</strong><small>Preview treatments on your image, then apply one when it feels right.</small></div><button type="button" data-close aria-label="Cancel and close Filter Library">×</button></div><div class="browser-tools"><label class="library-search"><span>Search</span><input type="search" placeholder="Name, description, author or tag" data-search></label><button data-clear hidden>Clear search</button><div class="filter-actions"><label>Source<select data-source><option value="all" selected>All</option><option value="local">All local</option><option value="builtin">Built-in</option><option value="custom">My Filters</option><option value="online">Online</option></select></label><label><input type="checkbox" data-favorites> Favorites only</label><label>Sort<select data-sort><option value="az">A–Z</option><option value="relevance">Relevance</option></select></label></div><details><summary>Tags</summary><label>Find tags<input type="search" data-tag-search></label><div data-choices class="tag-choices"></div><small>Match all selected tags. Up to 50 suggestions; type to narrow.</small></details><div data-selected class="chips"></div><div class="filter-actions browser-count-row"><span data-count role="status" aria-live="polite"></span><button data-reset>Reset view</button></div><div data-online-notice hidden><span data-online-message role="status" aria-live="polite"></span><button type="button" data-online-retry>Retry</button></div><p data-error role="alert"></p></div><ul class="filter-results" aria-label="Filter results"></ul><div class="browser-pages" data-pages><button data-prev>Previous</button><span data-page></span><button data-next>Next</button></div><div class="library-actions"><span data-preview-status role="status" aria-live="polite">Choose a filter to preview it on the canvas.</span><div><button type="button" data-cancel>Cancel</button><button type="button" class="primary" data-apply disabled>Apply Filter</button></div></div>';
+export function createFilterBrowser({launcher,getEntries,begin,preview,previewOnline=null,downloadOnline=null,apply,cancel,toggleFavorite,requestThumbnail=null,clearThumbnailRequests=()=>{},getOnlineState=()=>({status:'idle'}),loadOnline=()=>{},resolveOnlinePreviewUrl,onOpen=()=>{},onClose=()=>{},onError}){
+  const dialog=browserNode('dialog',null,'filter-browser');dialog.id='filterLibraryDialog';dialog.setAttribute('aria-labelledby','filterBrowserTitle');dialog.setAttribute('aria-describedby','filterBrowserDescription');
+  dialog.innerHTML='<div class="modal-head library-head"><div><strong id="filterBrowserTitle">Filter Library</strong><small id="filterBrowserDescription" class="visually-hidden">Preview filters on your image. Apply to keep one; Cancel to restore your work.</small></div><button type="button" data-image-view-toggle hidden disabled aria-expanded="true" aria-controls="filterBrowserResults" aria-describedby="filterImageViewHelp">View Image</button><span id="filterImageViewHelp" class="visually-hidden">View your preview without applying it. Image controls remain unavailable until the Library closes.</span><button type="button" data-close aria-label="Cancel and close Filter Library">×</button></div><div class="browser-tools"><label class="library-search"><span>Search</span><input type="search" placeholder="Name, description, author or tag" data-search></label><button data-clear hidden>Clear search</button><div class="filter-actions library-discovery"><label>Source<select data-source><option value="all" selected>All</option><option value="local">All local</option><option value="builtin">Built-in</option><option value="custom">My Filters</option><option value="online">Online</option></select></label><label><input type="checkbox" data-favorites> ★ Favorites</label></div><details class="library-filters" data-filters><summary>Filters <span data-restrictions hidden></span></summary><div class="library-filter-fields"><label>Sort<select data-sort><option value="az">A–Z</option><option value="relevance">Relevance</option></select></label><label>Find tags<input type="search" data-tag-search></label><div data-choices class="tag-choices"></div><small>Match all selected tags. Up to 50 suggestions; type to narrow.</small><div data-selected class="chips"></div></div></details><button data-reset hidden>Reset view</button><div data-online-notice hidden><span data-online-message role="status" aria-live="polite"></span><button type="button" data-online-retry>Retry</button></div><p data-error role="alert"></p></div><div class="browser-results-head"><span data-count role="status" aria-live="polite"></span><nav class="browser-pages" data-pages aria-label="Filter result pages"><button data-prev>Previous</button><span data-page></span><button data-next>Next</button></nav></div><ul id="filterBrowserResults" class="filter-results" aria-label="Filter results"></ul><div class="library-actions"><span data-preview-status role="status" aria-live="polite">Choose a filter to preview it on the canvas.</span><div><button type="button" data-cancel>Cancel</button><button type="button" class="primary" data-apply disabled>Apply Filter</button></div></div>';
   document.body.append(dialog);launcher.setAttribute('aria-controls',dialog.id);
   const find=selector=>dialog.querySelector(selector),query=find('[data-search]'),source=find('[data-source]'),favorites=find('[data-favorites]'),sort=find('[data-sort]'),selected=new Set();
   let page=0,composing=false,countTimer,selectedKey=null,previewing=false,sessionOpen=false,actionId=0,thumbnailObserver=null,thumbnailGeneration=0,thumbnailId=0,pendingKey=null,pendingPhase=null,previewErrorKey=null,sessionEpoch=0,sessionEnding=false;
@@ -64,22 +64,32 @@ export function createFilterBrowser({launcher,getEntries,begin,preview,previewOn
     }else rows.slice(0,THUMBNAIL_FALLBACK_COUNT).forEach(row=>enqueueThumbnail(row,10));
   }
 
-  function syncActions(){find('[data-apply]').disabled=previewing||!selectedKey;find('[data-preview-status]').dataset.state=previewing?'busy':selectedKey?'ready':'idle';}
+  function syncActions(){find('[data-image-view-toggle]').disabled=previewing||!selectedKey;find('[data-apply]').disabled=previewing||!selectedKey;find('[data-preview-status]').dataset.state=previewing?'busy':selectedKey?'ready':'idle';}
   async function cancelAndClose(){
     if(sessionEnding)return;sessionEnding=true;
     const id=++actionId;sessionEpoch++;downloads.clear();previewing=true;syncActions();find('[data-error]').textContent='';
     try{await cancel();if(id!==actionId)return;sessionOpen=false;dialog.close('cancel');}
-    catch(error){sessionEnding=false;previewing=false;syncActions();find('[data-error]').textContent=`Could not restore the working filter: ${error.message}`;onError(error);}
+    catch(error){sessionEnding=false;previewing=false;syncActions();find('[data-error]').textContent=`Could not restore the working filter: ${error.message}`;find('[data-preview-status]').textContent=find('[data-error]').textContent;onError(error);}
   }
   async function applyAndClose(){
     if(previewing||!selectedKey||sessionEnding)return;sessionEnding=true;
     const id=++actionId;sessionEpoch++;downloads.clear();previewing=true;syncActions();find('[data-error]').textContent='';find('[data-preview-status]').textContent='Applying selected filter…';
     try{if(!await apply()||id!==actionId){sessionEnding=false;previewing=false;syncActions();return;}sessionOpen=false;dialog.close('apply');}
-    catch(error){sessionEnding=false;previewing=false;syncActions();find('[data-error]').textContent=`Could not apply filter: ${error.message}`;onError(error);}
+    catch(error){sessionEnding=false;previewing=false;syncActions();find('[data-error]').textContent=`Could not apply filter: ${error.message}`;find('[data-preview-status]').textContent=find('[data-error]').textContent;onError(error);}
   }
   find('[data-close]').onclick=cancelAndClose;find('[data-cancel]').onclick=cancelAndClose;find('[data-apply]').onclick=applyAndClose;
   dialog.addEventListener('cancel',event=>{event.preventDefault();cancelAndClose();});
-  dialog.addEventListener('close',()=>{actionId++;sessionEpoch++;downloads.clear();disconnectThumbnailWork();if(sessionOpen){Promise.resolve(cancel()).catch(onError);sessionOpen=false;}if(!launcher.disabled)launcher.focus();});
+  // Search inputs can consume Escape to clear their value before native dialog
+  // cancellation. Keep one Escape sufficient to restore the Library transaction.
+  dialog.addEventListener('keydown',event=>{
+    if(event.key==='Escape'&&!event.isComposing){event.preventDefault();event.stopPropagation();cancelAndClose();}
+    if(event.key==='Tab'){
+      const items=[...dialog.querySelectorAll('button,input,select,textarea,summary,a[href],[tabindex]')].filter(node=>!node.disabled&&node.tabIndex>=0&&node.getClientRects().length&&!node.closest('[inert]'));
+      const first=items[0],last=items.at(-1);
+      if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}
+    }
+  });
+  dialog.addEventListener('close',()=>{actionId++;sessionEpoch++;downloads.clear();disconnectThumbnailWork();if(sessionOpen){Promise.resolve(cancel()).catch(onError);sessionOpen=false;}onClose(dialog.returnValue);if(!launcher.disabled)launcher.focus({preventScroll:true});});
 
   function reset(){query.value='';source.value='local';favorites.checked=false;sort.value='az';selected.clear();find('[data-tag-search]').value='';page=0;refresh();}
   function createResult(entry){
@@ -121,7 +131,7 @@ export function createFilterBrowser({launcher,getEntries,begin,preview,previewOn
     cardTop.append(previewButton,actions);row.append(cardTop);
     const tags=browserNode('div',null,'result-tags');
     for(const tag of entry.tags){
-      const button=browserButton(tag,()=>{query.value='';favorites.checked=false;sort.value='az';selected.clear();selected.add(tagKey(tag));find('[data-tag-search]').value='';page=0;refresh();find('[data-selected] button')?.focus();});
+      const button=browserButton(tag,()=>{query.value='';favorites.checked=false;sort.value='az';selected.clear();selected.add(tagKey(tag));find('[data-tag-search]').value='';find('[data-filters]').open=true;page=0;refresh();find('[data-selected] button')?.focus();});
       button.setAttribute('aria-label',`Show all filters tagged ${tag}`);tags.append(button);
     }
     row.append(tags);row.thumbnailEntry=entry;return row;
@@ -140,9 +150,12 @@ export function createFilterBrowser({launcher,getEntries,begin,preview,previewOn
     find('[data-online-retry]').hidden=!allFailed&&!onlineState.refreshWarning;
     const {results,choices}=searchCatalog(waiting?[]:entries,{query:query.value,source:source.value,favorites:favorites.checked,tags:[...selected],sort:sort.value});
     sort.options[1].disabled=!query.value.trim();find('[data-clear]').hidden=!query.value;
+    const advancedCount=selected.size+(sort.value!=='az'?1:0),restrictionCount=advancedCount+(query.value.trim()?1:0)+(source.value!=='all'?1:0)+(favorites.checked?1:0);
+    find('[data-restrictions]').textContent=advancedCount?`${advancedCount} active`:'';
+    find('[data-restrictions]').hidden=!advancedCount;find('[data-reset]').hidden=!restrictionCount;
     page=Math.min(page,Math.max(0,Math.ceil(results.length/PAGE_SIZE)-1));
     clearTimeout(countTimer);if(waiting)find('[data-count]').textContent=onlineStatus==='error'?'Online Library unavailable':'Loading Online filters…';else countTimer=setTimeout(()=>{const count=`${results.length} filters`;if(find('[data-count]').textContent!==count)find('[data-count]').textContent=count;},150);
-    const selectedBox=find('[data-selected]');selectedBox.replaceChildren();for(const key of selected)selectedBox.append(browserButton(`${choices.find(item=>item[0]===key)?.[1]||key} ×`,()=>{selected.delete(key);page=0;refresh();find('[data-reset]').focus();}));
+    const selectedBox=find('[data-selected]');selectedBox.replaceChildren();for(const key of selected)selectedBox.append(browserButton(`${choices.find(item=>item[0]===key)?.[1]||key} ×`,()=>{selected.delete(key);page=0;refresh();(find('[data-reset]').hidden?find('[data-filters] summary'):find('[data-reset]')).focus();}));
     const choiceBox=find('[data-choices]');choiceBox.replaceChildren();for(const [key,label] of choices.filter(item=>searchText(item[1]).includes(searchText(find('[data-tag-search]').value))).slice(0,50)){
       const wrapper=browserNode('label'),check=browserNode('input');check.type='checkbox';check.checked=selected.has(key);check.onchange=()=>{if(check.checked)selected.add(key);else selected.delete(key);page=0;refresh();[...choiceBox.querySelectorAll('input')].find(node=>node.value===key)?.focus();};check.value=key;wrapper.append(check,document.createTextNode(label));choiceBox.append(wrapper);
     }
@@ -169,6 +182,6 @@ export function createFilterBrowser({launcher,getEntries,begin,preview,previewOn
   find('[data-tag-search]').oninput=refresh;find('[data-clear]').onclick=()=>{query.value='';page=0;refresh();query.focus();};find('[data-reset]').onclick=reset;
   function changePage(offset){page+=offset;refresh();find('.filter-results').scrollTop=0;}
   find('[data-prev]').onclick=()=>changePage(-1);find('[data-next]').onclick=()=>changePage(1);
-  launcher.onclick=async()=>{try{await begin();sessionEnding=false;sessionEpoch++;sessionOpen=true;selectedKey=null;pendingKey=null;previewErrorKey=null;previewing=false;find('[data-error]').textContent='';find('[data-preview-status]').textContent='Choose a filter to preview it on the canvas.';dialog.showModal();if(includesOnline())loadOnline();refresh();query.focus();}catch(error){onError(error);}};
+  launcher.onclick=async()=>{try{await begin();sessionEnding=false;sessionEpoch++;sessionOpen=true;selectedKey=null;pendingKey=null;previewErrorKey=null;previewing=false;find('[data-error]').textContent='';find('[data-preview-status]').textContent='Choose a filter to preview it on the canvas.';dialog.showModal();onOpen();if(includesOnline())loadOnline();refresh();if(globalThis.matchMedia?.('(pointer:coarse)').matches)find('[data-close]').focus();else query.focus();}catch(error){onError(error);}};
   return{invalidateSession:()=>{actionId++;sessionEpoch++;downloads.clear();sessionOpen=false;selectedKey=null;pendingKey=null;previewing=false;if(dialog.open)dialog.close('replaced');},refresh,refreshOnline:()=>{if(includesOnline())refresh({preserveScroll:true});},dialog,showError:message=>{find('[data-error]').textContent=message;}};
 }

@@ -2,7 +2,9 @@
 
 v2.9.0 brings Built-in, My Filters and Online into the same Filter Library, with search, tags, favorites and pagination. All is the opening default; All local remains available for local-only browsing. Local interaction history is recorded in [UI Phase 3](UI_PHASE_3.md); the dated validation records below describe earlier development checkpoints.
 
-The Explore workspace opens a canvas-visible **Filter Library**. On desktop it docks as a right-side drawer with no backdrop blur over the artwork; on narrow screens it becomes a bottom sheet so part of the canvas remains visible.
+The Explore workspace opens a **Filter Library** using a native modal dialog. When measured workspace width and usable height allow, it reserves canvas space beside a 344–378px right-side drawer and refits artwork in Fit mode. Narrow or short windows use a bottom sheet, which can cover the artwork. Manual zoom is preserved; the canvas remains inert while the modal is open. The inspector is temporarily suspended and its presentation restores on close. See [Phase C layout and verification](FILTER_LIBRARY_PHASE_C.md).
+
+On a bottom sheet, select a filter and wait for its preview, then choose **View Image** to reveal the artwork above a compact modal control bar. **Back to Filters** restores browsing, including restrictions, page and scroll. Selection never automatically hides the Library, and image viewing never applies a filter. Cancel, Close and Escape restore the opening filter; Apply commits the ready candidate. Canvas controls remain unavailable until the modal closes. See [Phase D behavior and verification](FILTER_LIBRARY_PHASE_D.md).
 
 The compact Current filter dropdown remains in Author for intentional direct switching. Dropdown selection retains its existing immediate replacement behavior. The Explore library instead uses an explicit session:
 

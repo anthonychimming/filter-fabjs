@@ -1,4 +1,5 @@
 import { createInspectorLayout } from '../ui/inspector-layout.js';
+import { createLibraryLayout } from '../ui/library-layout.js';
 /**
  * Filter FabJS
  * Modular source extracted from v2.0.7; modular architecture v2.1.0.
@@ -147,7 +148,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
   const inspectorLayout=createInspectorLayout();
   let exploreController;
   state.explore=createExploreSession(state.controls);
-  let controlsController,browser,catalogCache=null,librarySession=null;
+  let controlsController,browser,libraryLayout,catalogCache=null,librarySession=null;
   const onlineLibrary=createOnlineLibrarySession({manifestUrl:onlineManifestUrl,fetchImpl:onlineFetchImpl,storage:onlineStorage,preference,onChange:()=>browser?.refreshOnline()});
   const activeDocument={key:null,id:undefined,tags:[],baseline:null,recordBaseline:null,imported:false,importSource:null};
 
@@ -506,7 +507,8 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
     el.renderBtn.onclick=()=>render({focusInvalid:true});
     const resetFilter=()=>applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');$('#resetBtn').onclick=resetFilter;exploreController=createExploreController({state,root:$('#sliderGrid').parentElement,resetButton:$('#exploreResetBtn'),syncControls:()=>controlsController.syncSliders(),scheduleRender,onChange:updateDocumentHeader,resetPassThrough:resetFilter,toast});
     el.activeFavorite.onclick=()=>{if(!activeDocument.key)return;try{const current=preference(activeDocument.key);writeEntryPreference(localStorage,activeDocument.key,{favorite:!current.favorite});catalogCache=null;browser?.refresh();updateDocumentHeader();}catch(error){organizationError(error);}};
-    browser=createFilterBrowser({launcher:el.searchFilters,getEntries:()=>[...catalog(),...onlineLibrary.getEntries()],getOnlineState:onlineLibrary.getState,loadOnline:onlineLibrary.load,resolveOnlinePreviewUrl:onlineLibrary.resolvePreview,begin:beginLibrarySession,preview:previewLibraryEntry,previewOnline:previewLibraryCandidate,downloadOnline:downloadLibraryPackage,apply:applyLibraryCandidate,cancel:cancelLibrarySession,toggleFavorite:entry=>{writeEntryPreference(localStorage,entry.key,{favorite:!entry.favorite});catalogCache=null;onlineLibrary.invalidate();if(entry.key===activeDocument.key)updateDocumentHeader();},requestThumbnail:requestLibraryThumbnail,clearThumbnailRequests:()=>thumbnailService.clearRequests(),onError:organizationError});
+    browser=createFilterBrowser({launcher:el.searchFilters,getEntries:()=>[...catalog(),...onlineLibrary.getEntries()],getOnlineState:onlineLibrary.getState,loadOnline:onlineLibrary.load,resolveOnlinePreviewUrl:onlineLibrary.resolvePreview,begin:beginLibrarySession,onOpen:()=>libraryLayout.open(),onClose:reason=>libraryLayout.close({restoreViewport:reason!=='replaced'}),preview:previewLibraryEntry,previewOnline:previewLibraryCandidate,downloadOnline:downloadLibraryPackage,apply:applyLibraryCandidate,cancel:cancelLibrarySession,toggleFavorite:entry=>{writeEntryPreference(localStorage,entry.key,{favorite:!entry.favorite});catalogCache=null;onlineLibrary.invalidate();if(entry.key===activeDocument.key)updateDocumentHeader();},requestThumbnail:requestLibraryThumbnail,clearThumbnailRequests:()=>thumbnailService.clearRequests(),onError:organizationError});
+    libraryLayout=createLibraryLayout({dialog:browser.dialog,inspectorLayout,canvasView});
     populatePresets();
     el.preset.onchange=async()=>{
       const key=el.preset.value;
@@ -559,7 +561,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
       if(activeDocument.key?.startsWith('custom:')){try{const record=findCustomPresetById(library().presets,activeDocument.id);if(!record){activeDocument.key=null;activeDocument.id=undefined;activeDocument.imported=false;activeDocument.importSource=null;toast('Saved filter deleted in another tab. Save as new to keep this draft.');}else if(JSON.stringify(record)!==activeDocument.recordBaseline)toast('Saved filter changed in another tab. Update will require review.');}catch(error){organizationError(error);}}
       catalogCache=null;onlineLibrary.invalidate();refreshTags();populatePresets();
     }});
-    window.addEventListener('beforeunload',()=>{inspectorLayout.destroy();if(librarySession)abortLibraryPackages(librarySession);onlineLibrary.dispose();thumbnailService.dispose();state.rendererManager?.dispose();});
+    window.addEventListener('beforeunload',()=>{libraryLayout?.destroy();inspectorLayout.destroy();if(librarySession)abortLibraryPackages(librarySession);onlineLibrary.dispose();thumbnailService.dispose();state.rendererManager?.dispose();});
   }
 
   window.FilterFabJS=Object.freeze({version:'2.9.5',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getThumbnailDiagnostics:()=>thumbnailService.diagnostics(),getRendererPreference:()=>state.rendererPreference,getWorkspaceMode:()=>state.workspaceMode,getLibraryPreviewState:()=>({open:Boolean(librarySession),candidateKey:librarySession?.candidateEntry?.key||null,candidateRendered:Boolean(librarySession?.candidateRendered),activeKey:activeDocument.key,activeId:activeDocument.id,imported:activeDocument.imported,importSource:activeDocument.importSource,baseline:activeDocument.baseline,recordBaseline:activeDocument.recordBaseline})});

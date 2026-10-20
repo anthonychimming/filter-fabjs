@@ -37,6 +37,8 @@ try{
   stageRect={left:0,top:0,width:600,height:500};railRect={left:160,top:432,width:280,height:54};fitView.fitCanvas();
   assert.equal(insets['--canvas-bottom'],'80px');assert.equal(fitState.zoomLevel,.495,'horizontal rail reserves measured bottom space');assert.equal(fitEl.zoomLabel.textContent,'50%');
   fitView.zoom(1.2);assert.equal(fitState.zoomLevel,.594);assert.equal(fitState.zoom,'manual');assert.equal(fitEl.zoomLabel.textContent,'59%');
+  fitEl.stage.scrollLeft=30;fitEl.stage.scrollTop=40;const viewport=fitView.captureViewport();fitView.fitCanvas();fitView.restoreViewport(viewport);
+  assert.equal(fitState.zoom,'manual');assert.equal(fitState.zoomLevel,.594);assert.equal(fitEl.stage.scrollLeft,30);assert.equal(fitEl.stage.scrollTop,40);
   fitView.zoom(100);assert.equal(fitState.zoomLevel,4);fitView.zoom(.0001);assert.equal(fitState.zoomLevel,.1);
   fitState.width=2000;fitState.height=4000;fitView.fitCanvas();assert.equal(fitState.zoomLevel,.099,'source replacement uses new dimensions');
   view.drawView();const sourceImageData=puts[0][0],filteredImageData=puts[1][0];

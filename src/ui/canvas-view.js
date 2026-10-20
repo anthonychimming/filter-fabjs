@@ -105,5 +105,11 @@ export function createCanvasView({state,el,ctx}){
   function applyZoom(){cancelTap();endSplitDrag();el.stage.setAttribute?.('data-manual-zoom',String(state.zoom==='manual'));el.wrap.style.width=`${Math.round(state.width*state.zoomLevel)}px`;el.wrap.style.height=`${Math.round(state.height*state.zoomLevel)}px`;el.canvas.style.width=el.canvas.style.height='100%';el.zoomLabel.textContent=`${Math.round(state.zoomLevel*100)}%`;syncDivider();}
   function zoom(factor){state.zoom='manual';state.zoomLevel=clamp(state.zoomLevel*factor,.1,4);applyZoom();}
   syncView();
-  return{drawView,requestDraw,invalidatePixels,fitCanvas,applyZoom,zoom,toggleView};
+  function captureViewport(){return {zoom:state.zoom,zoomLevel:state.zoomLevel,left:el.stage.scrollLeft||0,top:el.stage.scrollTop||0};}
+  function restoreViewport(saved){
+    state.zoom=saved.zoom;state.zoomLevel=saved.zoomLevel;
+    if(saved.zoom==='fit')fitCanvas();else applyZoom();
+    el.stage.scrollLeft=saved.left;el.stage.scrollTop=saved.top;syncDivider();
+  }
+  return{drawView,requestDraw,invalidatePixels,fitCanvas,applyZoom,zoom,toggleView,captureViewport,restoreViewport};
 }

@@ -37,6 +37,7 @@ const order = [
   'src/ui/dom.js',
   'src/ui/canvas-view.js',
   'src/ui/inspector-layout.js',
+  'src/ui/library-layout.js',
   'src/ui/controls.js',
   'src/app/explore-state.js',
   'src/ui/explore.js',

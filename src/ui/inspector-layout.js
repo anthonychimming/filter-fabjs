@@ -16,7 +16,7 @@ export function createInspectorLayout({document:doc=globalThis.document,window:w
   // Only an initially compact session is eligible; resizing desktop must not introduce a hint.
   const hintEligible=!desktop.matches;
   function completeDiscovery(){discovered=true;try{storage().setItem('ffw-inspector-discovered','true');}catch{/* Keep completion for this session. */}}
-  let focused=false,opened=false,expanded=false,pointer=null,bounds;
+  let focused=false,opened=false,expanded=false,pointer=null,bounds,suspended=false;
   function persist(){try{storage().setItem('ffw-workspace-layout',JSON.stringify({version:1,inspectorWidth:width}));}catch{/* Preferences are optional. */}}
   function size(value){bounds=inspectorWidthBounds(app.getBoundingClientRect().width);const current=Math.min(bounds.max,Math.max(bounds.min,value));app.style.setProperty('--inspector-width',`${current}px`);separator.setAttribute('aria-valuemin',String(bounds.min));separator.setAttribute('aria-valuemax',String(bounds.max));separator.setAttribute('aria-valuenow',String(current));separator.setAttribute('aria-valuetext',`${current} pixels`);return current;}
   function positionEdge(){
@@ -31,7 +31,8 @@ export function createInspectorLayout({document:doc=globalThis.document,window:w
     edge.style.setProperty('--inspector-toggle-y',`${y}px`);
   }
   function sync(){
-    const modal=!desktop.matches&&opened,visible=desktop.matches?!focused:opened;
+    const modal=!suspended&&!desktop.matches&&opened,visible=!suspended&&(desktop.matches?!focused:opened);
+    app.dataset.inspectorSuspended=String(suspended);
     app.dataset.inspectorLayout=desktop.matches?'desktop':mobile.matches?'mobile':'tablet';
     app.dataset.inspectorHidden=String(!visible);app.dataset.inspectorOpen=String(modal);app.dataset.inspectorExpanded=String(expanded);
     panel.inert=!visible;workspace.inert=modal;backdrop.hidden=!modal;
@@ -55,13 +56,13 @@ export function createInspectorLayout({document:doc=globalThis.document,window:w
   for(const type of ['pointerup','pointercancel','lostpointercapture'])listen(separator,type,event=>{if(event.pointerId===pointer)endDrag();});
   listen(separator,'keydown',event=>{const current=Number(separator.getAttribute('aria-valuenow')),step=event.shiftKey?32:16;const next=event.key==='ArrowLeft'?current+step:event.key==='ArrowRight'?current-step:event.key==='Home'?bounds.min:event.key==='End'?bounds.max:null;if(next!==null){event.preventDefault();width=size(next);persist();}});
   listen(separator,'dblclick',()=>{width=size(INSPECTOR_WIDTH_DEFAULT);persist();});
-  function breakpoint(){endDrag();const hadFocus=panel.contains(doc.activeElement)||doc.activeElement===separator;opened=false;expanded=false;sync();if(hadFocus&&(!desktop.matches||focused))toggle.focus({preventScroll:true});}
+  function breakpoint(){if(suspended){sync();return;}endDrag();const hadFocus=panel.contains(doc.activeElement)||doc.activeElement===separator;opened=false;expanded=false;sync();if(hadFocus&&(!desktop.matches||focused))toggle.focus({preventScroll:true});}
   listen(desktop,'change',breakpoint);listen(mobile,'change',breakpoint);
   listen(win,'resize',()=>{size(width);positionEdge();});
   const observer=win.ResizeObserver?new win.ResizeObserver(positionEdge):null;
   for(const element of [stage,panel])observer?.observe(element);
   listen(doc,'keydown',event=>{
-    if(!opened||desktop.matches||doc.querySelector('dialog[open]'))return;
+    if(suspended||!opened||desktop.matches||doc.querySelector('dialog[open]'))return;
     if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();dismiss();}
     if(event.key==='Tab'){
       const items=[...panel.querySelectorAll('button,input,select,textarea,summary,a[href],[tabindex="0"]')].filter(item=>!item.disabled&&!item.closest('[inert]')&&item.tabIndex>=0&&item.getClientRects().length);
@@ -69,5 +70,14 @@ export function createInspectorLayout({document:doc=globalThis.document,window:w
     }
   },true);
   sync();
-  return {destroy(){observer?.disconnect();endDrag();removals.splice(0).forEach(remove=>remove());workspace.inert=false;},hide(){if(desktop.matches){focused=true;const hadFocus=panel.contains(doc.activeElement);sync();if(hadFocus)toggle.focus({preventScroll:true});}else dismiss();}};
+  function suspend(){
+    if(suspended)return ()=>{};
+    endDrag();
+    const wasDesktop=desktop.matches,wasVisible=wasDesktop?!focused:opened;
+    const scroll=[panel,...panel.querySelectorAll('.sidebar-scroll,input,textarea')].map(node=>({node,top:node.scrollTop,left:node.scrollLeft,selection:typeof node.selectionStart==='number'?[node.selectionStart,node.selectionEnd,node.selectionDirection]:null}));
+    suspended=true;sync();
+    let released=false;
+    return ()=>{if(released)return;released=true;if(desktop.matches!==wasDesktop){if(desktop.matches)focused=!wasVisible;else opened=wasVisible;}suspended=false;sync();panel.getBoundingClientRect();for(const item of scroll){item.node.scrollTop=item.top;item.node.scrollLeft=item.left;if(item.selection)item.node.setSelectionRange(...item.selection);}};
+  }
+  return {suspend,destroy(){observer?.disconnect();endDrag();removals.splice(0).forEach(remove=>remove());workspace.inert=false;},hide(){if(desktop.matches){focused=true;const hadFocus=panel.contains(doc.activeElement);sync();if(hadFocus)toggle.focus({preventScroll:true});}else dismiss();}};
 }
