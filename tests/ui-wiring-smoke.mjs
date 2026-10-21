@@ -6,12 +6,12 @@ const controls = fs.readFileSync('src/ui/controls.js', 'utf8');
 const thumbnailService = fs.readFileSync('src/app/filter-thumbnail-service.js', 'utf8');
 const html = fs.readFileSync('index.html', 'utf8');
 const css = fs.readFileSync('styles/app.css', 'utf8');
-const filterBrowser = fs.readFileSync('src/ui/filter-browser.js', 'utf8');
+const paginationBrowserSource = fs.readFileSync('src/ui/filter-browser.js', 'utf8');
 
 // The compact library pagination uses decorative SVG chevrons with accessible names.
-assert.match(filterBrowser, /data-prev aria-label="Previous page" title="Previous page"><svg[^>]+aria-hidden="true"[^>]+focusable="false"/, 'previous page must be an accessible icon button');
-assert.match(filterBrowser, /data-next aria-label="Next page" title="Next page"><svg[^>]+aria-hidden="true"[^>]+focusable="false"/, 'next page must be an accessible icon button');
-assert.doesNotMatch(filterBrowser, /data-(?:prev|next)>\s*(?:Previous|Next)<\/button>/, 'pagination labels must not be visible text');
+assert.match(paginationBrowserSource, /data-prev aria-label="Previous page" title="Previous page"><svg[^>]+aria-hidden="true"[^>]+focusable="false"/, 'previous page must be an accessible icon button');
+assert.match(paginationBrowserSource, /data-next aria-label="Next page" title="Next page"><svg[^>]+aria-hidden="true"[^>]+focusable="false"/, 'next page must be an accessible icon button');
+assert.doesNotMatch(paginationBrowserSource, /data-(?:prev|next)>\s*(?:Previous|Next)<\/button>/, 'pagination labels must not be visible text');
 assert.match(css, /\.filter-browser \.browser-pages button svg\{display:block;width:18px;height:18px;/, 'pagination SVG icons must have stable sizing');
 assert.match(css, /@media\(pointer:coarse\)\{\.filter-browser \.browser-pages button\{width:44px;height:44px;/, 'pagination hit targets must increase for touch');
 
