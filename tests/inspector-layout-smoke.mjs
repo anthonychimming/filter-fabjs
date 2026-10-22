@@ -51,6 +51,11 @@ fire(toggle,'click');assert.equal(panel.inert,false);assert.equal(panel.scrollTo
 desktop.matches=false;desktop.change();assert.equal(panel.inert,true);assert.equal(workspace.inert,false);
 fire(toggle,'click');assert.equal(panel.attrs.role,'dialog');assert.equal(workspace.inert,true);assert.equal(doc.activeElement,tab);
 doc.activeElement=close;let prevented=false;doc.keydown({key:'Tab',preventDefault(){prevented=true;}});assert.ok(prevented);assert.equal(doc.activeElement,tab);
+for(const selector of ['.explore-menu','.snapshot-help']){
+  const target={closest:value=>value===selector?{querySelector:()=>({hidden:false})}:null};
+  doc.keydown({key:'Escape',target,preventDefault(){assert.fail('nested control handles Escape');},stopImmediatePropagation(){assert.fail('nested control handles Escape');}});
+  assert.equal(workspace.inert,true,'open dropdown/tooltip keeps compact inspector open');
+}
 doc.keydown({key:'Escape',preventDefault(){},stopImmediatePropagation(){}});assert.equal(workspace.inert,false);assert.equal(doc.activeElement,toggle);
 mobile.matches=true;mobile.change();fire(toggle,'click');fire(elements.inspectorExpand,'click');assert.equal(app.dataset.inspectorExpanded,'true');
 const writesBeforeSuspend=writes,release=layout.suspend();

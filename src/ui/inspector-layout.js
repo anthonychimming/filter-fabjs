@@ -63,7 +63,13 @@ export function createInspectorLayout({document:doc=globalThis.document,window:w
   for(const element of [stage,panel])observer?.observe(element);
   listen(doc,'keydown',event=>{
     if(suspended||!opened||desktop.matches||doc.querySelector('dialog[open]'))return;
-    if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();dismiss();}
+    if(event.key==='Escape'){
+      // Let an open Explore dropdown or snapshot tooltip consume Escape first.
+      const menu=event.target?.closest?.('.explore-menu')?.querySelector('.explore-menu-items');
+      const tooltip=event.target?.closest?.('.snapshot-help')?.querySelector('[role="tooltip"]');
+      if((menu&&!menu.hidden)||(tooltip&&!tooltip.hidden))return;
+      event.preventDefault();event.stopImmediatePropagation();dismiss();
+    }
     if(event.key==='Tab'){
       const items=[...panel.querySelectorAll('button,input,select,textarea,summary,a[href],[tabindex="0"]')].filter(item=>!item.disabled&&!item.closest('[inert]')&&item.tabIndex>=0&&item.getClientRects().length);
       const first=items[0],last=items.at(-1);if(event.shiftKey&&doc.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&doc.activeElement===last){event.preventDefault();first?.focus();}
