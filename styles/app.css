@@ -54,7 +54,14 @@ button.danger:not(:disabled){border-color:rgba(255,100,124,.45);color:#ffb4c0}bu
 .active-filter-heading h2{margin:2px 0 0;color:var(--heading);font-size:19px;line-height:1.2;overflow-wrap:anywhere}
 .favorite-button{min-width:36px;padding:6px var(--space-2)}
 .active-filter-meta{display:flex;align-items:center;gap:6px;margin-top:5px;color:var(--info);font-size:11px;font-weight:650}
-.active-filter-description{margin:10px 0;color:var(--text);font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+.active-filter-details{margin:10px 0}
+.active-filter-details summary{display:flex;align-items:center;justify-content:space-between;gap:8px;list-style:none;min-height:32px;padding:6px 9px;border:1px solid var(--line2);border-radius:var(--radius-inset);background:var(--panel3);color:var(--text);font-size:12px;font-weight:650;cursor:pointer}
+.active-filter-details summary::-webkit-details-marker{display:none}
+.active-filter-details summary::after{content:'';width:7px;height:7px;flex:0 0 auto;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);transition:transform .16s ease}
+.active-filter-details[open] summary::after{transform:rotate(225deg)}
+.active-filter-details summary:hover{background:var(--surface-hover)}
+.active-filter-details summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.active-filter-description{margin:10px 0 2px;color:var(--text);font-size:12px;line-height:1.5;overflow-wrap:anywhere}
 .active-filter-section .browser-launcher{width:100%;height:38px;text-align:center}
 .adjust-section .section-body{padding:var(--space-4)}
 .control-label{overflow:hidden;text-overflow:ellipsis;font-size:12px;color:var(--text-strong)}

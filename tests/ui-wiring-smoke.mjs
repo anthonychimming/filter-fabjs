@@ -42,6 +42,14 @@ assert.ok(html.indexOf('id="authorPanel"')<html.indexOf('id="formulaR"')&&html.i
 assert.match(html, /<label for="filterName">Filter name/, 'filter name must have a visible label');
 assert.match(html, /<label for="filterAuthor">Author/, 'filter author must have a visible label');
 assert.match(html, /<details class="reference diagnostics"><summary>Technical diagnostics<\/summary>/, 'detailed renderer diagnostics must be disclosed in Author');
+// Active Filter documentation is a native, initially closed disclosure; the existing
+// description node remains stable so filter changes never reset the user's open state.
+const activeDescription=html.match(/<details class="active-filter-details"([^>]*)><summary>About this filter<\/summary><p id="activeFilterDescription" class="active-filter-description">[\s\S]*?<\/p><\/details>/);
+assert.ok(activeDescription, 'Active Filter description must be inside the collapsible disclosure');
+assert.doesNotMatch(activeDescription[1], /\bopen\b/, 'Active Filter description must default to collapsed');
+assert.match(app, /el\.activeFilterDescription\.textContent=description\|\|'No description provided\.'/,'filter switches must update description text in place');
+assert.match(css, /\.active-filter-details summary:focus-visible\{outline:2px solid var\(--accent\)/, 'description disclosure needs a visible keyboard focus state');
+
 assert.match(html, /id="rendererSummary"[^>]+aria-live="polite"/, 'Explore must expose a compact renderer summary');
 assert.match(app, /workspaceMode:'explore'/, 'workspace mode must default to Explore in UI-only state');
 const modeSwitchBody=app.match(/function setWorkspaceMode\(mode\)\{[\s\S]*?modePanels\.forEach\(panel=>panel\.hidden=panel\.dataset\.modePanel!==mode\);\}/)?.[0]||'';
