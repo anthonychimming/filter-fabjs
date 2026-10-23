@@ -157,3 +157,32 @@ Stage 4 validation: prerequisite and final `npm run verify` passed, including al
 ## Online publishing (Stage 5)
 
 The separate `filter-fabjs-library` repository supplies the static feed. The main app owns the Node publisher and reuses its native, PNG and Online validators. See [Online Library publishing](ONLINE_LIBRARY_PUBLISHING.md) for registry/revision rules, immutable historical PNGs, deterministic builds, validator pinning, deployment gates and release QA. The centralized production URL remains `https://anthonychimming.github.io/filter-fabjs-library/catalogue.json`. The production launch catalogue contains five published filters with standardized 512×512 Sample images and portable PNG packages; test fixtures are never publication seeds.
+
+
+## My Filters backup and restore
+
+Open **Filter Library → Manage → Export backup** to prepare one JSON file containing
+all saved My Filters, including controls and their presentation, authoring metadata,
+valid saved timestamps, and associated favorites/personal tags. Source, search and
+paging do not limit export. **Import backup** uses a separate file picker and a review
+before any writes. Merge keeps existing records; choose **Keep both** (default) or
+**Skip conflicts**. Repeated imports skip identical records, including existing copies
+of same-ID conflicts. Imported filters are never automatically applied.
+
+This is separate from the toolbar's single-filter Import/Export. Images, thumbnails,
+built-in/Online favorites, drafts and Explore snapshots are excluded. An empty library
+has no download. Corrupt or unsupported local records/fields cause a specific failure;
+they are never silently omitted. Older records without timestamps keep them absent.
+Unknown fields are rejected, rather than claiming a full-fidelity backup after dropping them.
+
+Backup version 1 uses `filter-fabjs-library-backup`, at most 2,000 filters and 16 MiB
+of UTF-8 JSON (checked before parsing). Each document retains the native 256 KiB
+limit. The proposed collection plus custom preferences must fit a conservative 4 MiB
+UTF-16 storage budget; actual browser quotas/shared storage can still reject writes.
+Preferences are written to new-only keys first and the collection last. Failed writes
+remove only preferences created by that attempt. Storage is not transactional: an
+interrupted tab can leave orphan preference keys, and a last-millisecond cross-tab
+race remains possible. Occupied orphan keys are never reused. Changes since review
+abort the import. Library cards and counts refresh immediately after import while preserving its
+candidate and browsing context. The Author dropdown refresh waits until the Library
+preview session ends to keep the editor work intact.

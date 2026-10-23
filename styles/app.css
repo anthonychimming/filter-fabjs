@@ -362,7 +362,7 @@ html,body{overflow:hidden}
 .filter-browser .library-filter-fields{display:grid;gap:6px;padding:6px 0}
 .filter-browser .library-filter-fields .chips:empty{display:none}
 .filter-browser .browser-results-head{display:flex;flex:0 0 auto;align-items:center;justify-content:space-between;gap:6px;min-height:40px;padding:0 12px;border-bottom:1px solid var(--line);font-size:11px}
-.filter-browser .browser-pages{border:0;padding:0;gap:4px;font-size:11px}
+.filter-browser .browser-pages{border:0;padding:0;gap:var(--space-2);font-size:11px}
 .filter-browser .browser-pages button{padding:0;display:grid;place-items:center;width:36px;height:36px;min-width:36px;min-height:36px;flex:0 0 auto}
 .filter-browser .browser-pages button svg{display:block;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
 @media(pointer:coarse){.filter-browser .browser-pages button{width:44px;height:44px;min-width:44px;min-height:44px}}
@@ -395,7 +395,7 @@ html,body{overflow:hidden}
 }
 @media(max-width:360px){
   .filter-browser .browser-results-head{padding:0 6px;gap:3px}
-  .filter-browser .browser-pages{gap:2px}
+  .filter-browser .browser-pages{gap:var(--space-2)}
   .filter-browser .browser-pages button{font-size:11px;padding:0 4px}
   .filter-browser .library-discovery select{width:96px}
   .filter-browser .library-discovery{font-size:12px}
@@ -441,7 +441,7 @@ body:has(.filter-browser[open]) #inspector,body:has(.filter-browser[open]) #insp
   .filter-browser .filter-card-preview{grid-template-columns:48px minmax(0,1fr);gap:6px}
   .filter-browser .filter-thumbnail{width:48px;height:48px}
   .filter-browser .browser-results-head{padding:0 6px;gap:3px}
-  .filter-browser .browser-pages{gap:2px}
+  .filter-browser .browser-pages{gap:var(--space-2)}
   .filter-browser .browser-pages button{font-size:11px;padding:0 4px}
 }
 @media(max-height:500px){
@@ -464,3 +464,23 @@ body:has(.filter-browser[open]) #inspector,body:has(.filter-browser[open]) #insp
 @media(pointer:coarse){.filter-browser .library-head>[data-image-view-toggle]{min-height:44px}}
 .app[data-library-image-view=true] .workspace{grid-template-rows:0 minmax(0,1fr) 0}
 .app[data-library-image-view=true] .preview-pane{grid-row:2}
+
+/* Library collection management; native backup dialogs sit above the preview. */
+.filter-browser .library-head{flex-wrap:wrap;gap:var(--space-2)}
+.filter-browser .library-head>div:first-child{flex:1;min-width:90px}
+.filter-browser .library-head>.library-manage{position:relative;flex:0 0 auto;min-width:0}
+.library-manage>button{font-size:12px;padding:0 8px;min-height:40px}
+.library-manage-menu{position:absolute;right:0;top:100%;z-index:4;min-width:174px;padding:8px;background:var(--panel2);border:1px solid var(--line2);border-radius:var(--radius-inset);box-shadow:0 6px 18px #0005}
+.library-manage-menu[hidden]{display:none}
+.library-manage-menu strong{display:block;font-size:12px;padding:6px}
+.library-manage-menu button{display:block;width:100%;text-align:left;margin-top:4px}
+.library-backup-status:empty{display:none}
+.library-backup-status{margin:0;font-size:12px;overflow-wrap:anywhere}
+.library-backup-dialog{max-height:calc(100dvh - 24px);max-width:calc(100vw - 24px);overflow:auto}
+.library-backup-dialog fieldset{border:1px solid var(--line2);padding:10px;min-width:0}
+.library-backup-dialog fieldset label{display:flex;align-items:center;gap:8px;margin:8px 0}
+.library-backup-dialog fieldset input{width:auto;margin:0;flex:0 0 auto}
+.library-backup-dialog p,.library-backup-dialog button{overflow-wrap:anywhere}
+@media(forced-colors:active){.library-manage-menu{border:1px solid ButtonText}}
+
+.browser-tools>.library-backup-status[role=status]{color:var(--good)}
