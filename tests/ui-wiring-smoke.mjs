@@ -21,6 +21,11 @@ assert.match(html,/id="exploreResetBtn"[^>]*>Reset</,'Explore reset must restore
 assert.match(html,/id="resetBtn"[^>]*>Reset to Pass Through</,'Author reset must describe the same replacement');
 assert.match(app,/const resetFilter=\(\)=>applyFilter\(presets.find\(preset=>preset.id==='pass'\),'builtin:pass'\)/,'reset copy must preserve its actual Pass Through behavior');
 assert.match(app,/textContent=activeDocument.key\?\.startsWith\('custom:'\)\?'Update Filter':'Save Filter'/,'save label must follow saved custom identity');
+assert.match(app,/deleteCustom:deleteLibraryFilter/,'Filter Library must delegate deletion to the application');
+assert.match(app,/function removeSavedFilterRecord\(id\)/,'Author and Library must share the stored-record deletion operation');
+assert.match(app,/if\(librarySession\?\.candidateEntry\?\.key===key\)/,'deleting an active library preview must restore the original session');
+assert.match(fs.readFileSync('src/ui/filter-browser.js','utf8'),/entry.source==='custom'&&deleteCustom/,'delete affordance must only appear on custom cards');
+assert.match(css,/\.filter-card-actions:has\(\.filter-card-delete\)\{display:flex/,'custom card actions must display side by side');
 assert.match(html,/id="rendererReason"/,'fallback reasons must be visible inside Author diagnostics without hovering');
 assert.match(html,/id="statusText"[^>]*role="status"/,'render completion and errors need a status region');
 assert.match(controls,/readout.setAttribute\('aria-live','off'\)/,'native value changes must not produce duplicate live announcements');

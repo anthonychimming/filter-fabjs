@@ -448,14 +448,43 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
   function downloadBlob(blob,name){if(!(blob instanceof Blob)||!blob.size){toast('Nothing was generated to download');return false;}return triggerDownload(URL.createObjectURL(blob),name,true);}
   async function exportPNG(){if(!state.filtered||!state.width||!state.height){toast('Load and render an image before exporting');return;}const filter=validatedCurrentFilter();if(!filter)return;if(state.lastSuccessfulRenderSignature!==filterRenderSignature(filter)){setStatus('Render the current filter changes before exporting.','error');toast('Render the current filter changes before exporting.');return;}setStatus('Encoding PNG…','busy');try{const canvas=renderedImageCanvas(state.filtered,state.width,state.height),name=slug($('#filterName').value||'filtered-image')+'.png',encoded=await canvasBlob(canvas,'image/png'),envelope=createFilterFabPngEnvelope(filter,'2.9.5'),blob=await embedFilterFabMetadata(encoded,envelope);if(downloadBlob(blob,name))setStatus('Ready');}catch(error){console.error('PNG export failed',error);setStatus('PNG export failed','error');toast(`PNG export failed: ${error.message}`);}}
   function exportFilter(){const filter=validatedCurrentFilter();if(!filter)return;if(!activeDocument.id)activeDocument.id=createCustomPresetId();filter.id=activeDocument.id;const base=slug(filter.name);try{downloadBlob(new Blob([JSON.stringify(filter,null,2)+'\n'],{type:'application/json;charset=utf-8'}),base+'.json');}catch(error){console.error('Filter export failed',error);toast(`Filter export failed: ${error.message}`);}}
+  function removeSavedFilterRecord(id){
+    const {storageList}=library();
+    if(!storageList.some(item=>item?.id===id))throw new Error('This filter was already deleted.');
+    localStorage.setItem('ffw-custom-presets',JSON.stringify(storageList.filter(item=>item?.id!==id)));
+    try{localStorage.removeItem(PREFERENCE_PREFIX+`custom:${id}`);}catch(error){organizationError(error);}
+    catalogCache=null;
+  }
+  function detachDeletedFilterIdentity(document){
+    document.key=null;document.id=undefined;document.imported=false;document.importSource=null;document.recordBaseline=null;
+    document.baseline=null;
+  }
+  async function deleteLibraryFilter(entry){
+    if(entry.source!=='custom'||!entry.document?.id)return false;
+    const id=entry.document.id,key=`custom:${id}`;
+    if(!library().presets.some(item=>item?.id===id))throw new Error('This filter was already deleted.');
+    const {action}=await chooseFilterAction(`Delete “${entry.name}” from My Filters?`,[['delete','Delete filter'],['cancel','Cancel']],{detail:'This removes the saved filter and its favorites from this browser. This cannot be undone.'});
+    if(action!=='delete')return false;
+    // If deleting the currently previewed candidate, return to the original
+    // working document before removing its saved record.
+    if(librarySession?.candidateEntry?.key===key){
+      await cancelLibrarySession();
+      await beginLibrarySession();
+    }
+    removeSavedFilterRecord(id);
+    if(librarySession?.originalWorkingDocument.activeDocument.key===key)
+      detachDeletedFilterIdentity(librarySession.originalWorkingDocument.activeDocument);
+    if(activeDocument.key===key){detachDeletedFilterIdentity(activeDocument);refreshTags();}
+    populatePresets();
+    toast(`${entry.name} deleted from My Filters`);
+    return true;
+  }
   async function deletePreset(){
     if(!activeDocument.key?.startsWith('custom:'))return;
     try{
       const id=activeDocument.id,dirty=isDirty(),{action}=await chooseFilterAction(`Delete “${$('#filterName').value}” from My Filters?`,dirty?[['keep','Delete and keep unsaved draft'],['cancel','Cancel']]:[['delete','Delete'],['cancel','Cancel']]);
       if(!['keep','delete'].includes(action))return;
-      const {storageList}=library();localStorage.setItem('ffw-custom-presets',JSON.stringify(storageList.filter(item=>item?.id!==id)));
-      try{localStorage.removeItem(PREFERENCE_PREFIX+`custom:${id}`);}catch(error){organizationError(error);}
-      catalogCache=null;
+      removeSavedFilterRecord(id);
       if(action==='keep'){activeDocument.key=null;activeDocument.id=undefined;activeDocument.imported=false;activeDocument.importSource=null;activeDocument.recordBaseline=null;refreshTags();}else applyFilter(presets.find(item=>item.id==='pass'),'builtin:pass');
       populatePresets();
     }catch(error){organizationError(error);}
@@ -507,7 +536,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
     el.renderBtn.onclick=()=>render({focusInvalid:true});
     const resetFilter=()=>applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');$('#resetBtn').onclick=resetFilter;exploreController=createExploreController({state,root:$('#sliderGrid').parentElement,resetButton:$('#exploreResetBtn'),syncControls:()=>controlsController.syncSliders(),scheduleRender,onChange:updateDocumentHeader,resetPassThrough:resetFilter,toast});
     el.activeFavorite.onclick=()=>{if(!activeDocument.key)return;try{const current=preference(activeDocument.key);writeEntryPreference(localStorage,activeDocument.key,{favorite:!current.favorite});catalogCache=null;browser?.refresh();updateDocumentHeader();}catch(error){organizationError(error);}};
-    browser=createFilterBrowser({launcher:el.searchFilters,getEntries:()=>[...catalog(),...onlineLibrary.getEntries()],getOnlineState:onlineLibrary.getState,loadOnline:onlineLibrary.load,resolveOnlinePreviewUrl:onlineLibrary.resolvePreview,begin:beginLibrarySession,onOpen:()=>libraryLayout.open(),onClose:reason=>libraryLayout.close({restoreViewport:reason!=='replaced'}),preview:previewLibraryEntry,previewOnline:previewLibraryCandidate,downloadOnline:downloadLibraryPackage,apply:applyLibraryCandidate,cancel:cancelLibrarySession,toggleFavorite:entry=>{writeEntryPreference(localStorage,entry.key,{favorite:!entry.favorite});catalogCache=null;onlineLibrary.invalidate();if(entry.key===activeDocument.key)updateDocumentHeader();},requestThumbnail:requestLibraryThumbnail,clearThumbnailRequests:()=>thumbnailService.clearRequests(),onError:organizationError});
+    browser=createFilterBrowser({launcher:el.searchFilters,getEntries:()=>[...catalog(),...onlineLibrary.getEntries()],getOnlineState:onlineLibrary.getState,loadOnline:onlineLibrary.load,resolveOnlinePreviewUrl:onlineLibrary.resolvePreview,begin:beginLibrarySession,onOpen:()=>libraryLayout.open(),onClose:reason=>libraryLayout.close({restoreViewport:reason!=='replaced'}),preview:previewLibraryEntry,previewOnline:previewLibraryCandidate,downloadOnline:downloadLibraryPackage,apply:applyLibraryCandidate,cancel:cancelLibrarySession,toggleFavorite:entry=>{writeEntryPreference(localStorage,entry.key,{favorite:!entry.favorite});catalogCache=null;onlineLibrary.invalidate();if(entry.key===activeDocument.key)updateDocumentHeader();},deleteCustom:deleteLibraryFilter,requestThumbnail:requestLibraryThumbnail,clearThumbnailRequests:()=>thumbnailService.clearRequests(),onError:organizationError});
     libraryLayout=createLibraryLayout({dialog:browser.dialog,inspectorLayout,canvasView});
     populatePresets();
     el.preset.onchange=async()=>{
