@@ -33,6 +33,8 @@ const order = [
   'src/io/filter-library-client.js',
   'src/io/filter-library-package.js',
   'src/app/filter-catalog.js',
+  'src/io/library-backup.js',
+  'src/ui/library-backup.js',
   'src/ui/filter-browser.js',
   'src/ui/dom.js',
   'src/ui/canvas-view.js',

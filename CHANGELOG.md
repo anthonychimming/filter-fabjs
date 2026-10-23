@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Add Filter Library Manage menu with full My Filters JSON backup and reviewed merge-only restore, favorites, deterministic conflict copies and repeat-import deduplication.
+- Validate bounded backups before writes; guard cross-tab changes and preserve the collection on quota failures. Backup dialogs preserve active preview and editing sessions.
+
+
 ## 2.9.5
 
 - Replace the preview toolbar row with five floating canvas actions; adapt from a left rail to a bottom group based on available canvas width.
