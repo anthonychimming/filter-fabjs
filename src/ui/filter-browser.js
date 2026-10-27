@@ -16,7 +16,13 @@ export function chooseFilterAction(title,choices,{name,detail=''}={}){
     heading.id='filterChoiceTitle';dialog.setAttribute('aria-labelledby',heading.id);body.append(heading,browserNode('p',detail));
     let input;if(name!==undefined){const label=browserNode('label','Filter name');input=browserNode('input');input.type='text';input.maxLength=120;input.value=name;label.append(input);body.append(label);}
     const actions=browserNode('div',null,'filter-actions');
-    for(const [value,label] of choices)actions.append(browserButton(label,()=>{if(input&&!input.value.trim()){input.focus();return;}dialog.close(value);}));
+    let promoted=false;
+    for(const [value,label] of choices){
+      const choiceButton=browserButton(label,()=>{if(input&&!input.value.trim()){input.focus();return;}dialog.close(value);});
+      if(value==='delete'||value==='keep')choiceButton.classList.add('danger');
+      else if(value!=='cancel'&&!promoted){choiceButton.classList.add('primary');promoted=true;}
+      actions.append(choiceButton);
+    }
     body.append(actions);dialog.append(body);document.body.append(dialog);
     dialog.addEventListener('close',()=>{const result={action:dialog.returnValue||'cancel',name:input?.value.trim()};dialog.remove();if(previous?.isConnected&&!previous.disabled)previous.focus();resolve(result);},{once:true});dialog.showModal();
   });
@@ -120,7 +126,7 @@ export function createFilterBrowser({launcher,getEntries,begin,preview,previewOn
     if(entry.key===pendingKey)copy.append(browserNode('span',pendingPhase==='loading'?'Loading preview…':'Previewing…','filter-selection-label'));
     else if(entry.key===selectedKey)copy.append(browserNode('span',online?'✓ Previewing on canvas':'✓ Selected preview','filter-selection-label'));
     if(entry.key===previewErrorKey)copy.append(browserNode('span','Preview unavailable','filter-package-error'));copy.append(heading,meta,browserNode('span',entry.description||'No description provided.','filter-excerpt'));previewButton.append(copy);
-    const star=browserButton(entry.favorite?'★':'☆',()=>{try{toggleFavorite(entry);find('[data-error]').textContent='';refresh();}catch(error){find('[data-error]').textContent=`Couldn’t save favorites in this browser. ${error.message}`;onError(error);}});star.className='filter-card-favorite';star.setAttribute('aria-pressed',String(entry.favorite));star.setAttribute('aria-label',`${entry.favorite?'Remove':'Add'} ${entry.name} ${entry.favorite?'from':'to'} favorites`);star.dataset.entryKey=entry.key;star.dataset.entryAction='favorite';
+    const star=browserButton(entry.favorite?'★':'☆',()=>{try{toggleFavorite(entry);find('[data-error]').textContent='';refresh();}catch(error){find('[data-error]').textContent=`Couldn’t save favorites in this browser. ${error.message}`;onError(error);}});star.className='filter-card-favorite';star.setAttribute('aria-pressed',String(entry.favorite));star.setAttribute('aria-label',`${entry.favorite?'Remove':'Add'} ${entry.name} ${entry.favorite?'from':'to'} favorites`);star.title=star.getAttribute('aria-label');star.dataset.entryKey=entry.key;star.dataset.entryAction='favorite';
     const actions=browserNode('div',null,'filter-card-actions');actions.append(star);
     if(entry.source==='custom'&&deleteCustom){
       const remove=browserButton('',async()=>{
@@ -143,7 +149,7 @@ export function createFilterBrowser({launcher,getEntries,begin,preview,previewOn
         try{await downloadOnline(entry);}catch(error){if(epoch===sessionEpoch)find('[data-error]').textContent='Could not download this filter. The package was unavailable or invalid.';}
         finally{if(epoch===sessionEpoch){downloads.delete(entry.key);refresh();}}
       });
-      download.className='filter-card-download';download.disabled=downloads.has(entry.key);download.setAttribute('aria-label',`Download PNG for ${entry.name}`);download.setAttribute('aria-busy',String(download.disabled));download.dataset.entryKey=entry.key;download.dataset.entryAction='download';actions.append(download);
+      download.className='filter-card-download';download.disabled=downloads.has(entry.key);download.setAttribute('aria-label',`Download PNG for ${entry.name}`);download.title=download.getAttribute('aria-label');download.setAttribute('aria-busy',String(download.disabled));download.dataset.entryKey=entry.key;download.dataset.entryAction='download';actions.append(download);
     }
     cardTop.append(previewButton,actions);row.append(cardTop);
     const tags=browserNode('div',null,'result-tags');
