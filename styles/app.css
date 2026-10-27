@@ -522,8 +522,7 @@ body:has(.filter-browser[open]) #inspector,body:has(.filter-browser[open]) #insp
 .active-filter-meta{color:var(--text-secondary);gap:var(--space-2);flex-wrap:wrap}
 #activeFilterSource{color:var(--info)}
 #activeFilterStatus{color:var(--text-label)}
-.active-filter-section .browser-launcher{min-height:var(--control-height-md);height:auto;background:var(--panel3);border:1px solid var(--line2);color:var(--text-strong);box-shadow:none;font-weight:700}
-.active-filter-section .browser-launcher:hover{background:var(--surface-hover);border-color:var(--control-border);box-shadow:none}
+.active-filter-section .browser-launcher{min-height:var(--control-height-md);height:auto;font-weight:800}
 .favorite-button{min-height:var(--control-height-md);border-color:var(--line2)}
 .favorite-button[aria-pressed=true]{color:var(--accent);background:var(--panel3);border-color:var(--control-border)}
 .active-filter-details summary{border-color:var(--line);background:var(--panel)}
@@ -555,6 +554,8 @@ body:has(.filter-browser[open]) #inspector,body:has(.filter-browser[open]) #insp
 .explore-menu-items{border-radius:var(--radius-control);padding:var(--space-1);border-color:var(--control-border);background:var(--panel2)}
 .explore-menu-items button{min-height:var(--control-height-md);border-radius:var(--radius-inset)}
 .explore-menu-items button:hover{background:var(--surface-hover)}
+/* Compact, right-anchored Locks commands stay inside the inspector gutter. */
+.explore-menu.locks-menu .explore-menu-items{left:auto;right:0;min-width:132px;width:max-content;max-width:min(148px,calc(100vw - 16px))}
 
 /* Library: neutral idle cards, explicit selected preview, compact icon action rail. */
 .filter-browser .library-head{min-height:52px;gap:var(--space-2);padding:var(--space-2) var(--space-4)}
