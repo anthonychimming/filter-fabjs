@@ -82,7 +82,7 @@ function audit(context,id,m,touch){
 async function scenario(width,height,touch){
   const id=width+'x'+height;
   await cdp('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:touch});
-  await cdp('Emulation.setTouchEmulationEnabled',{enabled:touch,maxTouchPoints:touch?1:0});
+  await cdp('Emulation.setTouchEmulationEnabled',{enabled:touch,maxTouchPoints:1});
   await cdp('Page.navigate',{url:'http://127.0.0.1:'+port+'/?qa='+id});
   await when('document.readyState==="complete" && !!document.querySelector("#filterLibraryDialog") && !!document.querySelector("#browseFiltersBtn")','page initialization');
   await delay(400);
