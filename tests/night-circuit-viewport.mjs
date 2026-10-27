@@ -74,7 +74,7 @@ function audit(context,id,m,touch){
       if(a.rect.width<(touch?43:35)||a.rect.height<(touch?43:35))issues.push('icon action under minimum size');
     }
   }
-  if(context==='adjusted'&&touch&&m.snapshots.length&&m.snapshots.some(b=>b.height<44))issues.push('snapshot touch target under 44px');
+  if(context==='adjusted'&&touch&&m.snapshots.length&&m.snapshots.some(b=>b.height>0&&b.height<44))issues.push('snapshot touch target under 44px');
   report.push({id,context,touch,metrics:m,issues:[...new Set(issues)]});
   if(issues.length)failures.push({id,context,issues:[...new Set(issues)]});
   console.log('Layout',id,context,'cards='+m.cards.length,'actions='+m.actions.length,'controls='+m.controls.length,'snapshots='+m.snapshots.length,'overflow='+(m.scrollWidth-m.vw),'issues='+issues.length);
@@ -100,8 +100,18 @@ async function scenario(width,height,touch){
     await click('#filterLibraryDialog [data-apply]');
     await when('!document.querySelector("#filterLibraryDialog[open]")','filter applied');
     await delay(200);
+    if(touch){
+      const expanded=await js('document.querySelector("#inspectorToggle").getAttribute("aria-expanded")==="true"');
+      if(!expanded)await click('#inspectorToggle');
+      await when('document.querySelector("#inspector").getBoundingClientRect().width>0 && document.querySelector(".snapshot-slots button").getBoundingClientRect().height>0','visible inspector sheet');
+    }
     await photo(id+'-adjust-snapshots');
     audit('adjusted',id,await readMetrics(),touch);
+    await click('.snapshots-section .explore-menu > button');
+    await when('!document.querySelector(".snapshots-section .explore-menu-items").hidden','snapshot save menu');
+    await click('.snapshots-section .explore-menu-items button');
+    await when('!document.querySelector(".snapshot-slots button").classList.contains("empty")','snapshot A saved');
+    await photo(id+'-snapshot-saved');
   }else{
     failures.push({id,context:'preview',issues:['Filter preview cannot be applied']});
     await click('#filterLibraryDialog [data-cancel]');
@@ -113,6 +123,13 @@ async function scenario(width,height,touch){
   const help=await js('(()=>{const r=document.querySelector("#helpDialog").getBoundingClientRect();return [r.left,r.top,r.right,r.bottom,innerWidth,innerHeight]})()');
   if(help[0]< -3||help[1]< -3||help[2]>help[4]+3||help[3]>help[5]+3)failures.push({id,context:'help',issues:['Help dialog outside viewport']});
   await js('document.querySelector("#helpDialog").close()');
+  await click('#authorModeTab');
+  await click('#editControlsBtn');
+  await when('!!document.querySelector("#editControlsDialog[open]")','control editor dialog');
+  await photo(id+'-control-editor');
+  const editor=await js('(()=>{const r=document.querySelector("#editControlsDialog").getBoundingClientRect();return [r.left,r.top,r.right,r.bottom,innerWidth,innerHeight]})()');
+  if(editor[0]< -3||editor[1]< -3||editor[2]>editor[4]+3||editor[3]>editor[5]+3)failures.push({id,context:'control editor',issues:['Control editor outside viewport']});
+  await click('#cancelControlEditor');
 }
 try{
   await boot();
