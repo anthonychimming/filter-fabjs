@@ -12,8 +12,11 @@ assert.match(consistency,/--surface-selected:rgba\(225,236,26,.06\)/,'selected c
 assert.match(consistency,/\.filter-browser \.filter-card\[data-selected=true\]/,'preview selection must have a visible card state');
 assert.match(consistency,/\.filter-browser \.filter-card-actions\{display:flex;flex-direction:row/,'custom / online card actions must sit side by side');
 assert.match(consistency,/\.filter-browser \.filter-card-delete:not\(:disabled\):hover/,'destructive icon hover needs an error treatment');
-assert.match(consistency,/\.active-filter-section \.browser-launcher\{[^}]*background:var\(--panel3\)/,'library navigation must be neutral');
-assert.doesNotMatch(html,/id="browseFiltersBtn" class="browser-launcher primary"/,'navigation must not masquerade as a primary commit');
+assert.match(html,/id="browseFiltersBtn" class="browser-launcher primary"/,'Library launcher must retain requested highlighted primary style');
+assert.match(consistency,/\.active-filter-section \.browser-launcher\{min-height:var\(--control-height-md\);height:auto;font-weight:800\}/,'local button geometry must not override primary colors');
+assert.match(consistency,/\.explore-menu\.locks-menu \.explore-menu-items\{left:auto;right:0;min-width:132px/,'Locks menu must be compact and right-aligned');
+const explore=fs.readFileSync('src/ui/explore.js','utf8');
+assert.match(explore,/locks\.parentElement\.classList\.add\('locks-menu'\)/,'Locks menu must receive its scoped class');
 assert.match(consistency,/\.adjust-section \.slider-row\{min-height:var\(--control-height-md\)/,'parameter rows need the standard height');
 assert.match(consistency,/\.adjust-section \.control-lock\[aria-pressed=true\]/,'locked controls need a distinct visual state');
 assert.match(consistency,/\.snapshot-slots button\.modified \.snapshot-label::after\{content:" · Edited"/,'edited snapshot must have text beyond colour');
