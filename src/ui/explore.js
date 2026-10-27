@@ -80,7 +80,7 @@ export function createExploreController({state,root,resetButton,syncControls,sch
   };
   strengthLabel.append(strengthSelect);actions.append(strengthLabel);
   const locks=menu(actions,'Locks ▾');
-  locks.parentElement.classList.add('locks-menu');
+  locks.parentElement.className+=' locks-menu';
   for(const action of ['Lock all','Unlock all','Invert locks'])button(locks,action,()=>{state.usedControls.forEach((used,i)=>{if(used)state.explore.locks[i]=action==='Lock all'||(action==='Invert locks'&&!state.explore.locks[i]);});syncControls();});
   buttons.undo=button(actions,'Undo',()=>{if(state.explore.undo)commit(state.explore.undo,false);});
   const section=document.createElement('section');section.className='section snapshots-section';root.closest('.adjust-section').after(section);
