@@ -105,6 +105,17 @@ async function scenario(width,height,touch){
       if(!expanded)await click('#inspectorToggle');
       await when('document.querySelector("#inspector").getBoundingClientRect().width>0 && document.querySelector(".snapshot-slots button").getBoundingClientRect().height>0','visible inspector sheet');
     }
+    // Regression: all three Locks actions must fit within the inspector.
+    await click('.adjust-section .locks-menu > button');
+    await when('!document.querySelector(".adjust-section .locks-menu .explore-menu-items").hidden','Locks menu');
+    const locks=await js('(()=>{const a=document.querySelector(".adjust-section .locks-menu .explore-menu-items").getBoundingClientRect(),b=document.querySelector("#inspector").getBoundingClientRect(),items=[...document.querySelectorAll(".adjust-section .locks-menu .explore-menu-items button")];return {left:a.left,right:a.right,width:a.width,inspectorLeft:b.left,inspectorRight:b.right,items:items.map(n=>({text:n.textContent,scroll:n.scrollWidth,client:n.clientWidth}))};})()');
+    const lockIssues=[];
+    if(locks.left<Math.max(locks.inspectorLeft,0)-2||locks.right>Math.min(locks.inspectorRight,width)+2)lockIssues.push('Locks menu clipped by inspector');
+    if(locks.width>152)lockIssues.push('Locks menu too wide');
+    if(locks.items.length!==3||locks.items.some(n=>n.scroll>n.client+1))lockIssues.push('Locks item text clipped or missing');
+    if(lockIssues.length)failures.push({id,context:'Locks menu',issues:lockIssues,geometry:locks});
+    await photo(id+'-locks-menu');
+    await click('.adjust-section .locks-menu > button');
     await photo(id+'-adjust-snapshots');
     audit('adjusted',id,await readMetrics(),touch);
     await click('.snapshots-section .explore-menu > button');
