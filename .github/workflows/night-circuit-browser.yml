@@ -1,0 +1,29 @@
+name: Night Circuit Browser QA
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  browser-layout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check Chrome availability
+        run: command -v google-chrome || command -v chromium || command -v chromium-browser
+      - name: Desktop and mobile viewport QA
+        run: node tests/night-circuit-viewport.mjs
+      - name: Upload viewport screenshots and geometry report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: night-circuit-viewport-qa
+          path: qa-output/night-circuit
+          retention-days: 14
