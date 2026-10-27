@@ -16,7 +16,7 @@ assert.match(html,/id="browseFiltersBtn" class="browser-launcher primary"/,'Libr
 assert.match(consistency,/\.active-filter-section \.browser-launcher\{min-height:var\(--control-height-md\);height:auto;font-weight:800\}/,'local button geometry must not override primary colors');
 assert.match(consistency,/\.explore-menu\.locks-menu \.explore-menu-items\{left:auto;right:0;min-width:132px/,'Locks menu must be compact and right-aligned');
 const explore=fs.readFileSync('src/ui/explore.js','utf8');
-assert.match(explore,/locks\.parentElement\.classList\.add\('locks-menu'\)/,'Locks menu must receive its scoped class');
+assert.match(explore,/locks\.parentElement\.className\+=' locks-menu'/,'Locks menu must receive its scoped class');
 assert.match(consistency,/\.adjust-section \.slider-row\{min-height:var\(--control-height-md\)/,'parameter rows need the standard height');
 assert.match(consistency,/\.adjust-section \.control-lock\[aria-pressed=true\]/,'locked controls need a distinct visual state');
 assert.match(consistency,/\.snapshot-slots button\.modified \.snapshot-label::after\{content:" · Edited"/,'edited snapshot must have text beyond colour');
