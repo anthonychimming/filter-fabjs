@@ -9,7 +9,7 @@ let browser;
 async function run(){
   browser=await chromium.launch({channel:'msedge',headless:true});
   const reports=[];
-  for(const url of ['http://localhost:8128/index.html','http://localhost:8128/dist/site/index.html',pathToFileURL(path.resolve(`dist/filter-fabjs-v${version}.html`)).href]){
+  for(const url of ['http://localhost:8128/index.html','http://localhost:8128/dist/site/index.html',pathToFileURL(path.resolve(`dist/chromameld-rgba-v${version}.html`)).href]){
     const context=await browser.newContext({viewport:{width:1366,height:768},acceptDownloads:true}),page=await context.newPage();
     const errors=[];page.on('pageerror',error=>errors.push(error.message));
     await context.addInitScript(({records,collection,pref})=>{localStorage.clear();localStorage.setItem('ffw-renderer','cpu');localStorage.setItem(collection,JSON.stringify(records));localStorage.setItem(pref+'one',JSON.stringify({version:1,favorite:true,tags:['私']}));localStorage.setItem('ffw-entry-v1:builtin:pass',JSON.stringify({version:1,favorite:true,tags:['Excluded']}));},{records,collection,pref});

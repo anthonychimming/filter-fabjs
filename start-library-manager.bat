@@ -1,13 +1,13 @@
 @echo off
 setlocal
-title Filter FabJS Library Manager
+title ChromaMeld RGBA Library Manager
 
 set "APP_ROOT=%~dp0"
 if not exist "%APP_ROOT%tools\library-manager\server.mjs" set "APP_ROOT=%USERPROFILE%\OneDrive\Documents\ChatGPT\filter-fabjs"
 if defined FILTER_FABJS_APP_ROOT set "APP_ROOT=%FILTER_FABJS_APP_ROOT%"
 
 if not exist "%APP_ROOT%\tools\library-manager\server.mjs" (
-  echo ERROR: Cannot find the Filter FabJS app checkout.
+  echo ERROR: Cannot find the ChromaMeld RGBA app checkout.
   echo Keep this launcher in the app folder, or set FILTER_FABJS_APP_ROOT to the app folder.
   pause
   exit /b 1
@@ -15,7 +15,7 @@ if not exist "%APP_ROOT%\tools\library-manager\server.mjs" (
 
 pushd "%APP_ROOT%"
 if errorlevel 1 (
-  echo ERROR: Cannot open the Filter FabJS folder.
+  echo ERROR: Cannot open the ChromaMeld RGBA folder.
   pause
   exit /b 1
 )
@@ -36,7 +36,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo Starting Filter FabJS Library Manager...
+echo Starting ChromaMeld RGBA Library Manager...
 echo Open the local URL printed below in your browser.
 echo Keep this window open while using the Manager. Press Ctrl+C to stop.
 echo.

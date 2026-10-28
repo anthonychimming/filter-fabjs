@@ -1,14 +1,14 @@
-# Filter FabJS — Procedural Image Filter Editor for the Web
+# ChromaMeld RGBA — Procedural Image & Effects Editor
 
 **Create custom image filters directly in your browser with mathematical expressions, real-time previews, WebGPU acceleration, and Filter Factory compatibility.**
 
 **Current release: v2.9.5**
 
-**[▶ Launch Filter FabJS](https://anthonychimming.github.io/filter-fabjs/)**
+**[▶ Launch ChromaMeld RGBA](https://anthonychimming.github.io/filter-fabjs/)**
 
-![Filter FabJS v2.9.1 interface showing a split Original/Filtered preview with the Iridescent Shift filter](docs/assets/filter-fabjs-v2.9.1_2.jpg)
+![Historical Filter FabJS v2.9.1 interface showing a split Original/Filtered preview with the Iridescent Shift filter](docs/assets/filter-fabjs-v2.9.1_2.jpg)
 
-Filter FabJS is an open-source procedural image filter editor inspired by Adobe Filter Factory and the open-source Filter Foundry project. It lets you build, edit, preview, organize, and share custom image effects without installing a desktop application.
+ChromaMeld RGBA (formerly Filter FabJS) is an open-source procedural image filter editor inspired by Adobe Filter Factory and the open-source Filter Foundry project. It lets you build, edit, preview, organize, and share custom image effects without installing a desktop application.
 
 Use four RGBA expressions to transform an image, expose creative parameters as controls, and combine sampling, gradients, procedural noise, fractals, masks, convolution, blending, and coordinate transforms. Compatible filters run through WebGPU, while unsupported or historic Filter Factory formulas automatically fall back to the CPU renderer.
 
@@ -23,8 +23,8 @@ Use four RGBA expressions to transform an image, expose creative parameters as c
 - **Maintainer Library Manager** — manage the official Online Library locally with filter lifecycle actions, validation and reviewed publication commits. See the [Library Manager guide](docs/LIBRARY_MANAGER.md).
 - **Artist-first controls** — filters can expose up to ten sliders, number fields, toggles, or seed controls with custom ranges and labels.
 - **Procedural graphics toolkit** — includes image sampling, transforms, gradients, palette ramps, Perlin/Worley noise, FBM, turbulence, fractals, analytic masks, signed-distance fields, convolution, and blend operations.
-- **Portable filter files** — import and export native Filter FabJS JSON filters.
-- **Filter-aware PNG export** — exported PNGs can carry the active Filter FabJS definition as embedded metadata while remaining ordinary PNG images.
+- **Portable filter files** — import and export native ChromaMeld RGBA JSON filters.
+- **Filter-aware PNG export** — exported PNGs can carry the active ChromaMeld RGBA definition as embedded metadata while remaining ordinary PNG images.
 - **Local filter library** — save custom filters, organize them with tags and favorites, and search them alongside built-ins.
 - **Explore and Author workspaces** — use Explore for fast visual adjustment and Author for formulas, metadata, control definitions, and renderer diagnostics.
 - **Explore sessions** — lock parameters, choose a strength and mutate (including Random), reset to authored defaults, undo one bulk action, and compare four control-only snapshots. See [Explore controls](docs/explore-panel.md) for lifecycle and reset behavior.
@@ -37,7 +37,7 @@ The tab supports keyboard activation and visible focus. On a phone sheet, a clea
 
 ## How it works
 
-A Filter FabJS filter contains four mathematical expressions that define the output red, green, blue, and alpha channels.
+A ChromaMeld RGBA filter contains four mathematical expressions that define the output red, green, blue, and alpha channels.
 
 ```text
 R: 255-r
@@ -79,9 +79,9 @@ In Split mode, click or tap the displayed image, or drag the vertical divider or
 
 ## Portable PNG filters
 
-Filter FabJS can embed the current validated native filter definition inside an exported PNG using standard PNG metadata.
+ChromaMeld RGBA can embed the current validated native filter definition inside an exported PNG using standard PNG metadata.
 
-When a Filter FabJS PNG is reopened, the app can detect the embedded filter and let you either import the filter or open only the image.
+When a ChromaMeld RGBA PNG is reopened, the app can detect the embedded filter and let you either import the filter or open only the image.
 
 This metadata is portable convenience data, not proof of authorship or authenticity, and some image editors or optimization services may remove it.
 
@@ -126,7 +126,7 @@ npm run build
 Build output:
 
 - `dist/site/` — deployable static site
-- `dist/filter-fabjs-v2.9.5.html` — standalone single-file build
+- `dist/chromameld-rgba-v2.9.5.html` — standalone single-file build
 
 Startup immediately displays the built-in canvas demo, then attempts to load `./assets/demo-splash.png` as the real 960 × 640 RGBA source. The static-site build copies this image to `dist/site/assets/demo-splash.png`; its document-relative URL also works under a project subpath such as `/filter-fabjs/`. Missing, invalid, or slow assets quietly retain the built-in demo after a three-second timeout. Starting a user image request prevents a late splash from replacing it, and the splash does not reset filter edits or controls. The standalone HTML keeps the generated demo available offline and does not embed the PNG.
 
@@ -155,7 +155,7 @@ See **[CONTRIBUTING.md](CONTRIBUTING.md)** for contribution guidance.
 
 ## License
 
-Filter FabJS is distributed under the **GNU General Public License v2.0 or later**. See **[LICENSE](LICENSE)**.
+ChromaMeld RGBA is distributed under the **GNU General Public License v2.0 or later**. See **[LICENSE](LICENSE)**.
 
 The project is inspired by the open-source [Filter Foundry](https://github.com/danielmarschall/filter_foundry) project and preserves the relevant attribution in the source.
 

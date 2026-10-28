@@ -97,7 +97,7 @@ const html = await fs.readFile(path.join(root, 'index.html'), 'utf8');
 const packageMetadata = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'));
 const cssFilename = `app.${fingerprint(siteCss)}.css`;
 const jsFilename = `app.${fingerprint(bundle)}.js`;
-const standaloneFilename = `filter-fabjs-v${packageMetadata.version}.html`;
+const standaloneFilename = `chromameld-rgba-v${packageMetadata.version}.html`;
 
 const siteHtml = html
   .replace('./styles/app.css', `./assets/${cssFilename}`)

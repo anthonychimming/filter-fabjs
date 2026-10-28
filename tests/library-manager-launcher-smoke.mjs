@@ -37,8 +37,8 @@ if(process.platform!=='win32'){
     assert.deepEqual(JSON.parse(custom.stdout.match(/LAUNCH_CHECK (.+)/)[1]).args,['--library-root','C:\\custom library','--port','8092']);
     const missing=run(desktop,path.join(fixture,'missing app'));
     assert.equal(missing.status,1);
-    assert.match(missing.stdout,/Cannot find the Filter FabJS app checkout/);
-    assert.doesNotMatch(missing.stdout,/Starting Filter FabJS Library Manager/);
+    assert.match(missing.stdout,/Cannot find the ChromaMeld RGBA app checkout/);
+    assert.doesNotMatch(missing.stdout,/Starting ChromaMeld RGBA Library Manager/);
     console.log('Library Manager Windows launcher: app folder, Desktop fallback, override, spaced paths, options and missing checkout pass.');
   }finally{
     fs.rmSync(fixture,{recursive:true,force:true});

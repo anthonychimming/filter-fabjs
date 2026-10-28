@@ -1,4 +1,4 @@
-# Contributing to Filter FabJS
+# Contributing to ChromaMeld RGBA
 
 Contributions and technical feedback are welcome.
 
@@ -27,7 +27,7 @@ The verification suite checks JavaScript syntax, smoke tests, and both productio
 
 Please include, where relevant:
 
-- Filter FabJS version.
+- ChromaMeld RGBA version.
 - Browser and browser version.
 - Operating system.
 - GPU model.
@@ -35,7 +35,7 @@ Please include, where relevant:
 - Filter name or the four formulas involved.
 - Source image dimensions and whether alpha is involved.
 - Exact reproduction steps.
-- Error/status text shown by Filter FabJS.
+- Error/status text shown by ChromaMeld RGBA.
 
 For GPU-specific problems, include whether the same filter succeeds with the CPU renderer.
 
