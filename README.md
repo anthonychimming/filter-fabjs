@@ -4,6 +4,8 @@
 
 [Launch ChromaMeld RGBA](https://anthonychimming.github.io/filter-fabjs/) · [Formula Reference](docs/FORMULA_REFERENCE.md)
 
+## Screenshot
+
 ![ChromaMeld RGBA showing a split preview of the Parametric Slice Glitch filter](docs/assets/chromameld-rgba-screenshot.png)
 
 ChromaMeld RGBA (formerly Filter FabJS) uses mathematical expressions to transform the red, green, blue, and alpha channels of an image. It is inspired by Adobe Filter Factory and the open-source [Filter Foundry](https://github.com/danielmarschall/filter_foundry) project.
