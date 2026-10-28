@@ -2,7 +2,7 @@
 
 **A browser-based editor for creating and exploring procedural image filters.**
 
-[Launch ChromaMeld RGBA](https://anthonychimming.github.io/filter-fabjs/) · [Formula Reference](docs/FORMULA_REFERENCE.md) · [Changelog](CHANGELOG.md)
+[Launch ChromaMeld RGBA](https://anthonychimming.github.io/filter-fabjs/) · [Formula Reference](docs/FORMULA_REFERENCE.md)
 
 ![ChromaMeld RGBA showing a split preview of the Parametric Slice Glitch filter](docs/assets/chromameld-rgba-screenshot.png)
 
