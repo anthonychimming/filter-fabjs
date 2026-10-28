@@ -1,16 +1,16 @@
-# Filter FabJS Codex Guide
+# ChromaMeld RGBA Codex Guide
 
 This file applies to the entire repository. It describes the current implementation and the rules future Codex sessions must follow when changing it.
 
 ## Project overview
 
-Filter FabJS v2.5.0 is an open-source, browser-native procedural RGBA image-filter editor. Users write one expression for each of the red, green, blue, and alpha output channels. The application parses those expressions into a renderer-neutral typed IR, then executes compatible programs with WebGPU or uses a CPU Web Worker as the compatibility backend.
+ChromaMeld RGBA (formerly Filter FabJS) v2.10.0 is an open-source, browser-native procedural RGBA image-filter editor. Users write one expression for each of the red, green, blue, and alpha output channels. The application parses those expressions into a renderer-neutral typed IR, then executes compatible programs with WebGPU or uses a CPU Web Worker as the compatibility backend.
 
-Current user-facing capabilities include formula validation, eight filter controls, built-in and browser-local presets, image and clipboard workflows, native Filter FabJS JSON import/export, historic Filter Factory `.afs` import, render cancellation and progress, alpha-aware previews, and PNG export. Development uses native ES modules; the build produces both a fingerprinted static site and a standalone HTML file.
+Current user-facing capabilities include formula validation, ten filter controls, built-in and browser-local presets, image and clipboard workflows, native Filter FabJS JSON import/export, historic Filter Factory `.afs` import, render cancellation and progress, alpha-aware previews, and PNG export. Development uses native ES modules; the build produces both a fingerprinted static site and a standalone HTML file.
 
 The current release contracts are:
 
-- Application version: 2.5.0.
+- Application version: 2.10.0.
 - Native export format: Filter FabJS JSON version 2.
 - Native import formats: Filter FabJS JSON versions 1 and 2.
 - Typed IR version: 1.
@@ -117,6 +117,8 @@ Maintain existing resource bounds in the formula parser, filter importer, render
 
 ## Backward compatibility
 
+Preserve the legacy `filter-fab-js` JSON and PNG schemas, PNG keyword `FilterFabJS`, PNG generator name `Filter FabJS`, library and backup schemas, browser storage keys, and `window.FilterFabJS` diagnostic API. Branding changes do not migrate browser data between origins.
+
 Correctness and backward compatibility take priority over refactoring. Preserve, unless explicitly approved otherwise:
 
 - Existing formula syntax and numeric semantics in both float and legacy modes.
@@ -152,7 +154,7 @@ npm run verify
 - `npm run dev` serves the repository at `http://localhost:8080`; use localhost or HTTPS for WebGPU and clipboard testing.
 - `npm run check` syntax-checks JavaScript under `src/` and `scripts/`.
 - `npm test` runs the Node smoke suites for core behavior, WGSL, both renderers, renderer management, analytic shapes, canvas behavior, UI wiring, and theme rules.
-- `npm run build` recreates `dist/`, producing `dist/site/` with fingerprinted assets and `dist/filter-fabjs-v<version>.html` as a standalone release.
+- `npm run build` recreates `dist/`, producing `dist/site/` with fingerprinted assets and `dist/chromameld-rgba-v<version>.html` as a standalone release.
 - `npm run verify` runs syntax checks, Node tests, the production build, and build-output smoke validation. This is the standard completion command.
 - Hardware CPU/WebGPU pixel parity is optional and browser-based: run the dev server and open `http://localhost:8080/tests/webgpu-parity.html` on a WebGPU-capable system.
 

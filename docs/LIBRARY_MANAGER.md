@@ -1,4 +1,4 @@
-# Filter FabJS Library Manager
+# ChromaMeld RGBA Library Manager
 
 ## Repository Synchronization
 

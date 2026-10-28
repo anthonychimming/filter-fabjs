@@ -8,7 +8,7 @@ import { WGSLCompiler } from '../src/gpu/wgsl-compiler.js';
 
 const packageMetadata = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 const siteHtml = fs.readFileSync('dist/site/index.html', 'utf8');
-const standalonePath = `dist/filter-fabjs-v${packageMetadata.version}.html`;
+const standalonePath = `dist/chromameld-rgba-v${packageMetadata.version}.html`;
 const standaloneHtml = fs.readFileSync(standalonePath, 'utf8');
 
 const cssReference = siteHtml.match(/href="\.\/assets\/(app\.[0-9a-f]{12}\.css)"/)?.[1];
@@ -27,7 +27,8 @@ assert.deepEqual(fs.readFileSync('dist/site/assets/demo-splash.png'),demoBytes,'
 assert.equal(demoBytes.readUInt32BE(16),960);assert.equal(demoBytes.readUInt32BE(20),640);
 assert.match(deployedJavaScript,/new URL\('\.\/assets\/demo-splash\.png',baseURI\)/,'the splash must resolve relative to the document, including project subpaths');
 assert.equal(new URL('./assets/demo-splash.png','https://example.test/filter-fabjs/').pathname,'/filter-fabjs/assets/demo-splash.png');
-assert.ok(!standaloneHtml.includes(demoBytes.toString('base64')),'standalone must not embed the splash PNG');
+assert.ok(standaloneHtml.includes(demoBytes.toString('base64')),'standalone must embed the exact approved splash PNG');
+assert.ok(!deployedJavaScript.includes(demoBytes.toString('base64')),'site JavaScript must not embed the splash PNG');
 assert.match(standaloneHtml,/function demoImage\(\)/,'standalone must retain the generated offline demo');
 const standaloneCss = standaloneHtml.match(/<style>([\s\S]*?)<\/style>/)?.[1];
 assert.ok(standaloneCss, 'standalone must contain its stylesheet');
@@ -84,14 +85,15 @@ for(const script of [deployedJavaScript,standaloneHtml.match(/<script>([\s\S]*?)
 }
 assert.match(deployedCss, /--accent:#e1ec1a/, 'deployed CSS must contain the v2.1.2 chartreuse accent');
 assert.match(deployedCss, /--panel2:#180e23/, 'deployed CSS must contain the v2.1.2 aubergine surface');
-assert.match(deployedJavaScript, /background\.addColorStop\(0,'#08050d'\)/, 'deployed JavaScript must contain the v2.1.2 demo artwork');
+assert.match(deployedJavaScript, /fillText\('CHROMAMELD',132,151\)|fillText\('CHROMAMELD',108,151\)/, 'deployed JavaScript must contain the branded demo artwork');
+assert.match(deployedJavaScript, /clearRect\(110,391,260,120\)/, 'demo artwork must include transparent pixels');
 const escapedVersion = packageMetadata.version.replaceAll('.', '\\.');
 assert.match(deployedJavaScript, new RegExp(`version:'${escapedVersion}'`), 'deployed JavaScript API must report the package version');
 assert.match(deployedJavaScript, /getRendererDiagnostics/, 'deployed JavaScript must expose the Phase 3.5D renderer diagnostic snapshot');
 assert.match(deployedJavaScript, /filter-fab-js\/png/, 'deployed JavaScript must bundle the PNG metadata envelope schema');
 assert.match(deployedJavaScript, /function embedFilterFabMetadata/, 'deployed JavaScript must bundle the PNG metadata codec');
 
-assert.match(standaloneHtml, new RegExp(`<title>Filter FabJS v${packageMetadata.version.replaceAll('.', '\\.')}<\\/title>`), 'standalone title must match package version');
+assert.ok(standaloneHtml.includes('<title>ChromaMeld RGBA — Procedural Image &amp; Effects Editor</title>'), 'standalone title must use the product name');
 assert.doesNotMatch(standaloneHtml, /<link[^>]+href=|<script[^>]+src=|type="module"/, 'standalone build must not depend on external CSS or JavaScript');
 assert.match(standaloneHtml, /filter-fab-js\/png/, 'standalone build must contain the PNG metadata carrier');
 

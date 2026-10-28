@@ -1,10 +1,10 @@
-# Filter FabJS Project Status
+# ChromaMeld RGBA Project Status
 
 This document describes the implementation currently present in the public repository.
 
 ## Release
 
-- Application version: **2.9.5**
+- Application version: **2.10.0**
 - Native filter format: **version 2**
 - Typed IR: **version 1**
 - Development layout: native ES modules
@@ -12,7 +12,7 @@ This document describes the implementation currently present in the public repos
 
 ## Rendering
 
-Filter FabJS provides two rendering backends:
+ChromaMeld RGBA provides two rendering backends:
 
 - **WebGPU** — compiles supported typed IR into WGSL and renders with a full-frame compute/readback submission using direct RGBA byte views. If the device is lost or destroyed to abort active work, the retained source is uploaded to the replacement device on the next GPU render. Generated plans and pipelines use an entry- and payload-bounded LRU cache.
 - **CPU Worker** — compatibility renderer for unsupported WebGPU operations and legacy integer-mode filters. It reuses hot-loop evaluation storage and keeps the current validated IR so control-only renders send only a compact key.
@@ -63,11 +63,11 @@ Mandelbrot rendering has a pre-existing CPU/WebGPU numerical difference: coordin
 
 Current workflows include:
 
-- Strictly validated and normalized Filter FabJS native JSON v1/v2 import plus version 2 export.
+- Strictly validated and normalized ChromaMeld RGBA native JSON v1/v2 import plus version 2 export.
 - Additive rich-control `ui` metadata preserved through native import/export, browser-local presets, switching, save, and reset. All 48 built-ins provide semantic display ranges and widgets for their active controls; missing metadata and historic AFS controls receive the generic 0–255 slider presentation.
 - Optional multiline filter descriptions, bounded to 2,000 characters and preserved through all 48 built-ins, native import/export, and browser-local presets; missing descriptions normalize to an empty string.
 - Historic `.afs` import with legacy integer math, eight whole-token integer controls with legacy 0–255 clamping, exactly four formula groups, preserved physical line-comment boundaries, and the same formula budgets.
-- Image loading and drag-and-drop with pre-mutation detection of embedded Filter FabJS PNG metadata.
+- Image loading and drag-and-drop with pre-mutation detection of embedded ChromaMeld RGBA PNG metadata.
 - Clipboard image paste.
 - RGBA PNG copy where browser clipboard support permits it.
 - Asynchronous Blob-based PNG export with a bounded, versioned native-v2 filter iTXt envelope and render-provenance guard.
@@ -118,7 +118,7 @@ For hardware parity, run `npm run dev` and open `http://localhost:8080/tests/web
 - CPU and GPU floating-point implementations may have small numerical differences.
 - Historic Filter Factory behavior is not guaranteed to be bit-exact for every edge case.
 - Clipboard interoperability depends on the browser and receiving application.
-- Display ranges are linear; logarithmic curves, enums, colour controls, grouping, conditional visibility, and control reordering are not part of v2.9.5.
+- Display ranges are linear; logarithmic curves, enums, colour controls, grouping, conditional visibility, and control reordering are not part of v2.10.0.
 
 ## Explore and Author workspace
 

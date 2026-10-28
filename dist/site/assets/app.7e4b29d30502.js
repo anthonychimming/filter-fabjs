@@ -6467,7 +6467,175 @@ function writeLibraryRecord(storage,normalize,filter,{targetId=null,expected=nul
 }
 
 
+/* src/io/library-backup.js */
+
+
+
+const LIBRARY_BACKUP_FORMAT='filter-fabjs-library-backup';
+const LIBRARY_BACKUP_MAX_BYTES=16*1024*1024;
+const LIBRARY_BACKUP_MAX_FILTERS=2000;
+// Conservative UTF-16 collection + custom preference budget, below common 5 MiB quotas.
+const LIBRARY_STORAGE_MAX_BYTES=4*1024*1024;
+const LIBRARY_STORAGE_KEY='ffw-custom-presets';
+const backupPreferencePrefix='ffw-entry-v1:custom:';
+const backupBytes=value=>new TextEncoder().encode(value).length;
+function backupObject(value,label){if(!value||typeof value!=='object'||Array.isArray(value))throw new Error(`${label} must be an object`);}
+function backupFields(value,allowed,label){backupObject(value,label);for(const key of Object.keys(value))if(!allowed.includes(key))throw new Error(`${label}: unsupported field “${key}”; data was preserved`);}
+function backupTimestamp(value,label){if(value===undefined)return undefined;if(typeof value!=='string'||value.length>40||!/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/.test(value)||!Number.isFinite(Date.parse(value))||new Date(value).toISOString().slice(0,19)!==value.slice(0,19))throw new Error(`${label} must be a valid UTC timestamp`);return value;}
+function backupDocument(value){
+  backupFields(value,['format','version','id','name','author','description','tags','mathMode','formulas','controls','f','values','labels'],'Filter document');
+  if(!validatePortableId(value.id))throw new Error('Every saved filter needs a portable id');
+  if(backupBytes(JSON.stringify(value))>FILTER_FILE_MAX_BYTES)throw new Error('Filter document exceeds 256 KiB');
+  for(const control of value.controls||[]){if(typeof control==='number'&&(control<0||control>255))throw new Error('Control value is outside 0–255');if(typeof control==='object'&&control){backupFields(control,['label','value','ui'],'Control');if(control.ui!==undefined){backupFields(control.ui,['widget','displayMin','displayMax','step','format','unit'],'Control UI');validateControlUI(control.ui);}if(control.value<0||control.value>255)throw new Error('Control value is outside 0–255');}}
+  for(const number of value.values||[])if(number<0||number>255)throw new Error('Control value is outside 0–255');
+  const document=validateNativeFilter(value);return{...document,version:2};
+}
+function backupPreference(value={favorite:false,tags:[]}){backupFields(value,['version','favorite','tags'],'Preferences');if((value.version!==undefined&&value.version!==1)||typeof value.favorite!=='boolean')throw new Error('Invalid custom filter preferences');return{favorite:value.favorite,tags:normalizeTags(value.tags)};}
+function backupEntry(value){
+  backupFields(value,['document','createdAt','updatedAt','preferences'],'Backup entry');
+  const result={document:backupDocument(value.document),preferences:backupPreference(value.preferences)};
+  for(const field of ['createdAt','updatedAt']){const stamp=backupTimestamp(value[field],field);if(stamp!==undefined)result[field]=stamp;}
+  return result;
+}
+function backupEntries(values){if(!Array.isArray(values)||values.length>LIBRARY_BACKUP_MAX_FILTERS)throw new Error('Backup must contain at most 2,000 filters');const ids=new Set();return values.map((value,index)=>{try{const entry=backupEntry(value);if(ids.has(entry.document.id))throw new Error('Duplicate filter id');ids.add(entry.document.id);return entry;}catch(error){throw new Error(`Filter ${index+1}: ${error.message}`);}});}
+function backupLocalEntries(records,preferences){
+  if(!Array.isArray(records))throw new Error('Saved collection is not an array; stored data was preserved');
+  return backupEntries(records.map(record=>{backupObject(record,'Saved record');const {createdAt,updatedAt,...document}=record;const raw=preferences[backupPreferencePrefix+document.id];return{document,createdAt,updatedAt,preferences:raw===undefined||raw===null?undefined:JSON.parse(raw)};}));
+}
+function readLibraryBackupSnapshot(storage){
+  const raw=storage.getItem(LIBRARY_STORAGE_KEY),records=raw===null?[]:JSON.parse(raw),preferences=Object.create(null);
+  for(let index=0;index<storage.length;index++){const key=storage.key(index);if(key?.startsWith(backupPreferencePrefix))preferences[key]=storage.getItem(key);}
+  // Read only: never run normal-save migrations while preparing a backup.
+  return{raw,records,preferences};
+}
+function createLibraryBackup(records,preferences={},metadata={}){
+  const result={format:LIBRARY_BACKUP_FORMAT,backupVersion:1,appVersion:metadata.appVersion,exportedAt:backupTimestamp(metadata.exportedAt,'exportedAt'),filters:backupLocalEntries(records,preferences).sort((a,b)=>a.document.id.localeCompare(b.document.id))};
+  return parseAndValidateBackup(JSON.stringify(result));
+}
+function serializeLibraryBackup(backup){
+  const text=JSON.stringify(parseAndValidateBackup(JSON.stringify(backup)),null,2)+'\n';
+  if(backupBytes(text)>LIBRARY_BACKUP_MAX_BYTES)throw new Error('Formatted backup exceeds the 16 MiB UTF-8 limit');
+  return text;
+}
+function parseAndValidateBackup(text){
+  if(typeof text!=='string'||backupBytes(text)>LIBRARY_BACKUP_MAX_BYTES)throw new Error('Backup exceeds the 16 MiB UTF-8 limit');
+  let value;try{value=JSON.parse(text.replace(/^\uFEFF/,''));}catch{throw new Error('Backup is not valid JSON');}
+  backupFields(value,['format','backupVersion','appVersion','exportedAt','filters'],'Backup');
+  if(value.format!==LIBRARY_BACKUP_FORMAT)throw new Error('Choose a My Filters library backup, not a single-filter file');
+  if(value.backupVersion!==1)throw new Error('Unsupported backup version; this app supports backup version 1');
+  if(typeof value.appVersion!=='string'||value.appVersion.length>80)throw new Error('Invalid backup appVersion');
+  if(value.exportedAt===undefined)throw new Error('Backup exportedAt is required');
+  return{format:LIBRARY_BACKUP_FORMAT,backupVersion:1,appVersion:value.appVersion,exportedAt:backupTimestamp(value.exportedAt,'exportedAt'),filters:backupEntries(value.filters)};
+}
+// Exact normalized content, except identity. Object key order never affects equality.
+function backupCanonical(value){if(Array.isArray(value))return value.map(backupCanonical);if(value&&typeof value==='object')return Object.fromEntries(Object.keys(value).sort().map(key=>[key,backupCanonical(value[key])]));return value;}
+function backupContent(document){const {id,...content}=document;return JSON.stringify(backupCanonical(content));}
+function planLibraryMerge(snapshot,incoming,conflictPolicy='keep-both'){
+  if(!['keep-both','skip'].includes(conflictPolicy))throw new Error('Unknown conflict policy');
+  const backup=parseAndValidateBackup(JSON.stringify(incoming)),existing=backupLocalEntries(snapshot.records,snapshot.preferences),byId=new Map(existing.map(entry=>[entry.document.id,entry.document])),used=new Set([...byId.keys(),...backup.filters.map(entry=>entry.document.id)]),contentCopies=new Set(existing.map(entry=>backupContent(entry.document))),additions=[],preferenceWrites=[];
+  const counts={new:0,identical:0,conflicts:0,copies:0,added:0};
+  function freshId(base){for(let index=1;index<=10000;index++){const id=`${base.slice(0,64)}-copy-${index}`;if(!used.has(id)&&snapshot.preferences[backupPreferencePrefix+id]===undefined){used.add(id);return id;}}throw new Error('Could not allocate an unoccupied filter id');}
+  for(const entry of backup.filters){
+    const local=byId.get(entry.document.id),content=backupContent(entry.document);let id=entry.document.id;
+    if(local){if(backupContent(local)===content){counts.identical++;continue;}counts.conflicts++;if(contentCopies.has(content)){counts.identical++;continue;}if(conflictPolicy==='skip')continue;id=freshId(id);counts.copies++;}
+    else{
+      if(snapshot.preferences[backupPreferencePrefix+id]!==undefined){
+        // A previous restore may have remapped this ID around an orphan key.
+        // Only this occupied-key path searches copies; ordinary new IDs stay distinct.
+        const copyPrefix=`${id.slice(0,64)}-copy-`;
+        if(existing.some(saved=>saved.document.id.startsWith(copyPrefix)&&/^\d+$/.test(saved.document.id.slice(copyPrefix.length))&&backupContent(saved.document)===content)){counts.identical++;continue;}
+        id=freshId(id);
+      }
+      counts.new++;
+    }
+    const {document,preferences,...timestamps}=entry;additions.push({...document,id,...timestamps});preferenceWrites.push([backupPreferencePrefix+id,JSON.stringify({version:1,...preferences})]);contentCopies.add(content);
+  }
+  counts.added=additions.length;
+  const destination=[...snapshot.records,...additions];backupLocalEntries(destination,{});
+  const serialized=JSON.stringify(destination),storageBytes=2*(LIBRARY_STORAGE_KEY.length+serialized.length+[...Object.entries(snapshot.preferences),...preferenceWrites].reduce((sum,[key,value])=>sum+key.length+(value?.length||0),0));
+  if(storageBytes>LIBRARY_STORAGE_MAX_BYTES)throw new Error('Proposed library exceeds the 4 MiB storage budget; existing library was preserved');
+  return{serialized,preferenceWrites,counts,expectedRaw:snapshot.raw};
+}
+function commitLibraryMerge(storage,snapshot,plan){
+  if(plan.expectedRaw!==snapshot.raw||storage.getItem(LIBRARY_STORAGE_KEY)!==snapshot.raw||plan.preferenceWrites.some(([key])=>storage.getItem(key)!==null))throw new Error('Library changed in another tab. Review the import again.');
+  if(!plan.counts.added)return plan.counts;
+  const created=[];
+  try{
+    for(const [key,value] of plan.preferenceWrites){storage.setItem(key,value);created.push([key,value]);}
+    // Collection last: failed preference preparation cannot expose partial filters.
+    if(storage.getItem(LIBRARY_STORAGE_KEY)!==snapshot.raw)throw new Error('Library changed in another tab. Review the import again.');
+    storage.setItem(LIBRARY_STORAGE_KEY,plan.serialized);
+  }catch(error){let cleanupFailed=false;for(const [key,value] of created){try{if(storage.getItem(key)===value)storage.removeItem(key);}catch{cleanupFailed=true;}}throw new Error(`Import failed; the existing library was preserved. ${error.message}${cleanupFailed?' Some orphan preferences could not be removed.':''}`);}
+  return plan.counts;
+}
+
+
+/* src/ui/library-backup.js */
+// Presentation only. Storage, validation, planning and downloads belong to the app.
+function installLibraryBackupUI({dialog,onExportBackup,onImportBackup}){
+  function node(tag,text){const element=document.createElement(tag);if(text)element.textContent=text;return element;}
+  function button(text,action){const element=node('button',text);element.type='button';element.onclick=action;return element;}
+  const wrapper=node('div');wrapper.className='library-manage';
+  const trigger=button('Manage ⋯',()=>setMenu(menu.hidden));trigger.setAttribute('aria-label','Manage My Filters');trigger.setAttribute('aria-haspopup','menu');trigger.setAttribute('aria-expanded','false');trigger.setAttribute('aria-controls','libraryManageMenu');
+  const menu=node('div');menu.id='libraryManageMenu';menu.className='library-manage-menu';menu.hidden=true;menu.setAttribute('role','menu');menu.setAttribute('aria-label','My Filters');
+  const heading=node('strong','My Filters');heading.setAttribute('role','presentation');menu.append(heading);
+  const status=node('p');status.className='library-backup-status';status.setAttribute('role','status');status.setAttribute('aria-live','polite');dialog.querySelector('.browser-tools').append(status);
+  let busy=false,child=null,generation=0;
+  function setMenu(open,restore=true){menu.hidden=!open;trigger.setAttribute('aria-expanded',String(open));if(open)menu.querySelector('button').focus();else if(restore)trigger.focus({preventScroll:true});}
+  function report(error){status.setAttribute('role','alert');status.textContent=`${error.message||'Backup operation failed.'} No filters were changed.`;}
+  function surface(title){
+    const modal=node('dialog');modal.className='filter-choice library-backup-dialog';modal.setAttribute('aria-labelledby','libraryBackupTitle');const body=node('div');body.className='modal-body';const titleNode=node('h2',title);titleNode.id='libraryBackupTitle';body.append(titleNode);modal.append(body);document.body.append(modal);child=modal;
+    const actions=node('div');actions.className='filter-actions';
+    const close=()=>modal.close();actions.append(button('Cancel',close));
+    modal.addEventListener('close',()=>{modal.remove();child=null;busy=false;if(dialog.open)trigger.focus({preventScroll:true});},{once:true});
+    modal.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();close();}});
+    return{modal,body,actions,close};
+  }
+  async function exportBackup(){
+    if(busy)return;busy=true;const operation=generation;setMenu(false);status.textContent='';
+    try{
+      const prepared=await onExportBackup();if(operation!==generation||!dialog.open)return;const {modal,body,actions,close}=surface('Export My Filters backup');
+      body.append(node('p',`${prepared.count} saved My Filters. Includes all saved filters, controls, authoring metadata, timestamps and My Filters favorites.`),node('p','Excludes built-in and Online favorites, images, thumbnails, unsaved drafts and Explore snapshots.'));
+      if(prepared.count){const download=button('Download backup',()=>{try{if(prepared.download()){status.setAttribute('role','status');status.textContent='Backup download started.';close();}else throw new Error('Backup download could not start. Try again.');}catch(error){feedback.textContent=error.message;}});download.className='primary';actions.append(download);}else body.append(node('p','There are no saved My Filters to back up.'));
+      const feedback=node('p');feedback.setAttribute('role','alert');body.append(feedback,actions);modal.showModal();
+    }catch(error){if(operation!==generation)return;busy=false;report(error);}
+  }
+  const picker=node('input');picker.type='file';picker.accept='.json,application/json';picker.hidden=true;picker.setAttribute('aria-label','Choose My Filters backup');wrapper.append(picker);
+  picker.onchange=async()=>{
+    const file=picker.files?.[0];picker.value='';if(!file||busy)return;busy=true;const operation=generation;status.textContent='';
+    try{
+      const review=await onImportBackup(file);if(operation!==generation||!dialog.open)return;const {modal,body,actions,close}=surface('Review My Filters import');
+      body.append(node('p',file.name),node('p','Merge into My Filters. Existing filters are kept. Nothing is changed until you confirm.'));
+      const summary=node('p');summary.setAttribute('role','status');body.append(summary);
+      const options=node('fieldset');options.append(node('legend','Same-ID conflicts'));
+      let policy='keep-both',plan;
+      for(const [value,text] of [['keep-both','Keep both (recommended)'],['skip','Skip conflicts']]){const label=node('label'),radio=node('input');radio.type='radio';radio.name='libraryBackupConflict';radio.value=value;radio.checked=value===policy;radio.onchange=()=>{policy=value;update();};label.append(radio,document.createTextNode(text));options.append(label);}
+      const feedback=node('p');feedback.setAttribute('role','alert');
+      const confirm=button('',()=>{
+        try{const result=review.commit(plan);status.setAttribute('role','status');status.textContent=`${result.added} filters added · ${result.identical} identical skipped · ${result.copies} conflicts kept as copies.`;close();}
+        catch(error){feedback.textContent=error.message;confirm.disabled=true;}
+      });confirm.className='primary';actions.append(confirm);
+      function update(){try{plan=review.plan(policy);const c=plan.counts;summary.textContent=`${c.new} new · ${c.identical} identical/skipped · ${c.conflicts} same-ID conflicts · ${c.added} to add.`;confirm.textContent=`Import ${c.added} filters`;confirm.disabled=c.added===0;feedback.textContent=c.added?'':'Nothing to add. These filters are already present or conflicts are skipped.';}catch(error){confirm.disabled=true;feedback.textContent=error.message;}}
+      body.append(options,feedback,actions);update();modal.showModal();
+    }catch(error){if(operation!==generation)return;busy=false;report(error);trigger.focus({preventScroll:true});}
+  };
+  for(const [text,action] of [['Export backup',exportBackup],['Import backup',()=>{setMenu(false);picker.click();}]]){const item=button(text,action);item.setAttribute('role','menuitem');menu.append(item);}
+  wrapper.append(trigger,menu);dialog.querySelector('.library-head').append(wrapper);
+  // Keep Close last and available at narrow widths.
+  dialog.querySelector('.library-head').append(dialog.querySelector('[data-close]'));
+  wrapper.addEventListener('keydown',event=>{
+    if(menu.hidden)return;
+    if(event.key==='Escape'){event.preventDefault();event.stopPropagation();setMenu(false);}
+    if(['ArrowDown','ArrowUp','Home','End'].includes(event.key)){event.preventDefault();const items=[...menu.querySelectorAll('button')],index=items.indexOf(document.activeElement);items[event.key==='Home'?0:event.key==='End'?items.length-1:(index+(event.key==='ArrowDown'?1:items.length-1))%items.length].focus();}
+    if(event.key==='Tab')setMenu(false,false);
+  });
+  dialog.addEventListener('click',event=>{if(!wrapper.contains(event.target))setMenu(false,false);});
+  dialog.addEventListener('close',()=>{generation++;busy=false;setMenu(false,false);child?.close();});
+}
+
+
 /* src/ui/filter-browser.js */
+
 
 
 const PAGE_SIZE=50;
@@ -6484,15 +6652,22 @@ function chooseFilterAction(title,choices,{name,detail=''}={}){
     heading.id='filterChoiceTitle';dialog.setAttribute('aria-labelledby',heading.id);body.append(heading,browserNode('p',detail));
     let input;if(name!==undefined){const label=browserNode('label','Filter name');input=browserNode('input');input.type='text';input.maxLength=120;input.value=name;label.append(input);body.append(label);}
     const actions=browserNode('div',null,'filter-actions');
-    for(const [value,label] of choices)actions.append(browserButton(label,()=>{if(input&&!input.value.trim()){input.focus();return;}dialog.close(value);}));
+    let promoted=false;
+    for(const [value,label] of choices){
+      const choiceButton=browserButton(label,()=>{if(input&&!input.value.trim()){input.focus();return;}dialog.close(value);});
+      if(value==='delete'||value==='keep')choiceButton.classList.add('danger');
+      else if(value!=='cancel'&&!promoted){choiceButton.classList.add('primary');promoted=true;}
+      actions.append(choiceButton);
+    }
     body.append(actions);dialog.append(body);document.body.append(dialog);
     dialog.addEventListener('close',()=>{const result={action:dialog.returnValue||'cancel',name:input?.value.trim()};dialog.remove();if(previous?.isConnected&&!previous.disabled)previous.focus();resolve(result);},{once:true});dialog.showModal();
   });
 }
 
-function createFilterBrowser({launcher,getEntries,begin,preview,previewOnline=null,downloadOnline=null,apply,cancel,toggleFavorite,requestThumbnail=null,clearThumbnailRequests=()=>{},getOnlineState=()=>({status:'idle'}),loadOnline=()=>{},resolveOnlinePreviewUrl,onError}){
-  const dialog=browserNode('dialog',null,'filter-browser');dialog.id='filterLibraryDialog';dialog.setAttribute('aria-labelledby','filterBrowserTitle');
-  dialog.innerHTML='<div class="modal-head library-head"><div><strong id="filterBrowserTitle">Filter Library</strong><small>Preview treatments on your image, then apply one when it feels right.</small></div><button type="button" data-close aria-label="Cancel and close Filter Library">×</button></div><div class="browser-tools"><label class="library-search"><span>Search</span><input type="search" placeholder="Name, description, author or tag" data-search></label><button data-clear hidden>Clear search</button><div class="filter-actions"><label>Source<select data-source><option value="all" selected>All</option><option value="local">All local</option><option value="builtin">Built-in</option><option value="custom">My Filters</option><option value="online">Online</option></select></label><label><input type="checkbox" data-favorites> Favorites only</label><label>Sort<select data-sort><option value="az">A–Z</option><option value="relevance">Relevance</option></select></label></div><details><summary>Tags</summary><label>Find tags<input type="search" data-tag-search></label><div data-choices class="tag-choices"></div><small>Match all selected tags. Up to 50 suggestions; type to narrow.</small></details><div data-selected class="chips"></div><div class="filter-actions browser-count-row"><span data-count role="status" aria-live="polite"></span><button data-reset>Reset view</button></div><div data-online-notice hidden><span data-online-message role="status" aria-live="polite"></span><button type="button" data-online-retry>Retry</button></div><p data-error role="alert"></p></div><ul class="filter-results" aria-label="Filter results"></ul><div class="browser-pages" data-pages><button data-prev>Previous</button><span data-page></span><button data-next>Next</button></div><div class="library-actions"><span data-preview-status role="status" aria-live="polite">Choose a filter to preview it on the canvas.</span><div><button type="button" data-cancel>Cancel</button><button type="button" class="primary" data-apply disabled>Apply Filter</button></div></div>';
+function createFilterBrowser({launcher,getEntries,begin,preview,previewOnline=null,downloadOnline=null,apply,cancel,toggleFavorite,deleteCustom=null,requestThumbnail=null,clearThumbnailRequests=()=>{},getOnlineState=()=>({status:'idle'}),loadOnline=()=>{},resolveOnlinePreviewUrl,onOpen=()=>{},onClose=()=>{},onExportBackup=null,onImportBackup=null,onError}){
+  const dialog=browserNode('dialog',null,'filter-browser');dialog.id='filterLibraryDialog';dialog.setAttribute('aria-labelledby','filterBrowserTitle');dialog.setAttribute('aria-describedby','filterBrowserDescription');
+  dialog.innerHTML='<div class="modal-head library-head"><div><strong id="filterBrowserTitle">Filter Library</strong><small id="filterBrowserDescription" class="visually-hidden">Preview filters on your image. Apply to keep one; Cancel to restore your work.</small></div><button type="button" data-image-view-toggle hidden disabled aria-expanded="true" aria-controls="filterBrowserResults" aria-describedby="filterImageViewHelp">View Image</button><span id="filterImageViewHelp" class="visually-hidden">View your preview without applying it. Image controls remain unavailable until the Library closes.</span><button type="button" data-close aria-label="Cancel and close Filter Library">×</button></div><div class="browser-tools"><label class="library-search"><span>Search</span><input type="search" placeholder="Name, description, author or tag" data-search></label><button data-clear hidden>Clear search</button><div class="filter-actions library-discovery"><label>Source<select data-source><option value="all" selected>All</option><option value="local">All local</option><option value="builtin">Built-in</option><option value="custom">My Filters</option><option value="online">Online</option></select></label><label><input type="checkbox" data-favorites> ★ Favorites</label></div><details class="library-filters" data-filters><summary>Filters <span data-restrictions hidden></span></summary><div class="library-filter-fields"><label>Sort<select data-sort><option value="az">A–Z</option><option value="relevance">Relevance</option></select></label><label>Find tags<input type="search" data-tag-search></label><div data-choices class="tag-choices"></div><small>Match all selected tags. Up to 50 suggestions; type to narrow.</small><div data-selected class="chips"></div></div></details><button data-reset hidden>Reset view</button><div data-online-notice hidden><span data-online-message role="status" aria-live="polite"></span><button type="button" data-online-retry>Retry</button></div><p data-error role="alert"></p></div><div class="browser-results-head"><span data-count role="status" aria-live="polite"></span><nav class="browser-pages" data-pages aria-label="Filter result pages"><button type="button" data-prev aria-label="Previous page" title="Previous page"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m15 18-6-6 6-6"/></svg></button><span data-page></span><button type="button" data-next aria-label="Next page" title="Next page"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 18 6-6-6-6"/></svg></button></nav></div><ul id="filterBrowserResults" class="filter-results" aria-label="Filter results"></ul><div class="library-actions"><span data-preview-status role="status" aria-live="polite">Choose a filter to preview it on the canvas.</span><div><button type="button" data-cancel>Cancel</button><button type="button" class="primary" data-apply disabled>Apply Filter</button></div></div>';
+  if(onExportBackup&&onImportBackup)installLibraryBackupUI({dialog,onExportBackup,onImportBackup});
   document.body.append(dialog);launcher.setAttribute('aria-controls',dialog.id);
   const find=selector=>dialog.querySelector(selector),query=find('[data-search]'),source=find('[data-source]'),favorites=find('[data-favorites]'),sort=find('[data-sort]'),selected=new Set();
   let page=0,composing=false,countTimer,selectedKey=null,previewing=false,sessionOpen=false,actionId=0,thumbnailObserver=null,thumbnailGeneration=0,thumbnailId=0,pendingKey=null,pendingPhase=null,previewErrorKey=null,sessionEpoch=0,sessionEnding=false;
@@ -6533,22 +6708,32 @@ function createFilterBrowser({launcher,getEntries,begin,preview,previewOnline=nu
     }else rows.slice(0,THUMBNAIL_FALLBACK_COUNT).forEach(row=>enqueueThumbnail(row,10));
   }
 
-  function syncActions(){find('[data-apply]').disabled=previewing||!selectedKey;find('[data-preview-status]').dataset.state=previewing?'busy':selectedKey?'ready':'idle';}
+  function syncActions(){find('[data-image-view-toggle]').disabled=previewing||!selectedKey;find('[data-apply]').disabled=previewing||!selectedKey;find('[data-preview-status]').dataset.state=previewing?'busy':selectedKey?'ready':'idle';}
   async function cancelAndClose(){
     if(sessionEnding)return;sessionEnding=true;
     const id=++actionId;sessionEpoch++;downloads.clear();previewing=true;syncActions();find('[data-error]').textContent='';
     try{await cancel();if(id!==actionId)return;sessionOpen=false;dialog.close('cancel');}
-    catch(error){sessionEnding=false;previewing=false;syncActions();find('[data-error]').textContent=`Could not restore the working filter: ${error.message}`;onError(error);}
+    catch(error){sessionEnding=false;previewing=false;syncActions();find('[data-error]').textContent=`Could not restore the working filter: ${error.message}`;find('[data-preview-status]').textContent=find('[data-error]').textContent;onError(error);}
   }
   async function applyAndClose(){
     if(previewing||!selectedKey||sessionEnding)return;sessionEnding=true;
     const id=++actionId;sessionEpoch++;downloads.clear();previewing=true;syncActions();find('[data-error]').textContent='';find('[data-preview-status]').textContent='Applying selected filter…';
     try{if(!await apply()||id!==actionId){sessionEnding=false;previewing=false;syncActions();return;}sessionOpen=false;dialog.close('apply');}
-    catch(error){sessionEnding=false;previewing=false;syncActions();find('[data-error]').textContent=`Could not apply filter: ${error.message}`;onError(error);}
+    catch(error){sessionEnding=false;previewing=false;syncActions();find('[data-error]').textContent=`Could not apply filter: ${error.message}`;find('[data-preview-status]').textContent=find('[data-error]').textContent;onError(error);}
   }
   find('[data-close]').onclick=cancelAndClose;find('[data-cancel]').onclick=cancelAndClose;find('[data-apply]').onclick=applyAndClose;
   dialog.addEventListener('cancel',event=>{event.preventDefault();cancelAndClose();});
-  dialog.addEventListener('close',()=>{actionId++;sessionEpoch++;downloads.clear();disconnectThumbnailWork();if(sessionOpen){Promise.resolve(cancel()).catch(onError);sessionOpen=false;}if(!launcher.disabled)launcher.focus();});
+  // Search inputs can consume Escape to clear their value before native dialog
+  // cancellation. Keep one Escape sufficient to restore the Library transaction.
+  dialog.addEventListener('keydown',event=>{
+    if(event.key==='Escape'&&!event.isComposing){event.preventDefault();event.stopPropagation();cancelAndClose();}
+    if(event.key==='Tab'){
+      const items=[...dialog.querySelectorAll('button,input,select,textarea,summary,a[href],[tabindex]')].filter(node=>!node.disabled&&node.tabIndex>=0&&node.getClientRects().length&&!node.closest('[inert]'));
+      const first=items[0],last=items.at(-1);
+      if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}
+    }
+  });
+  dialog.addEventListener('close',()=>{actionId++;sessionEpoch++;downloads.clear();disconnectThumbnailWork();if(sessionOpen){Promise.resolve(cancel()).catch(onError);sessionOpen=false;}onClose(dialog.returnValue);if(!launcher.disabled)launcher.focus({preventScroll:true});});
 
   function reset(){query.value='';source.value='local';favorites.checked=false;sort.value='az';selected.clear();find('[data-tag-search]').value='';page=0;refresh();}
   function createResult(entry){
@@ -6577,20 +6762,35 @@ function createFilterBrowser({launcher,getEntries,begin,preview,previewOnline=nu
     if(entry.key===pendingKey)copy.append(browserNode('span',pendingPhase==='loading'?'Loading preview…':'Previewing…','filter-selection-label'));
     else if(entry.key===selectedKey)copy.append(browserNode('span',online?'✓ Previewing on canvas':'✓ Selected preview','filter-selection-label'));
     if(entry.key===previewErrorKey)copy.append(browserNode('span','Preview unavailable','filter-package-error'));copy.append(heading,meta,browserNode('span',entry.description||'No description provided.','filter-excerpt'));previewButton.append(copy);
-    const star=browserButton(entry.favorite?'★':'☆',()=>{try{toggleFavorite(entry);find('[data-error]').textContent='';refresh();}catch(error){find('[data-error]').textContent=`Couldn’t save favorites in this browser. ${error.message}`;onError(error);}});star.className='filter-card-favorite';star.setAttribute('aria-pressed',String(entry.favorite));star.setAttribute('aria-label',`${entry.favorite?'Remove':'Add'} ${entry.name} ${entry.favorite?'from':'to'} favorites`);star.dataset.entryKey=entry.key;star.dataset.entryAction='favorite';
+    const star=browserButton(entry.favorite?'★':'☆',()=>{try{toggleFavorite(entry);find('[data-error]').textContent='';refresh();}catch(error){find('[data-error]').textContent=`Couldn’t save favorites in this browser. ${error.message}`;onError(error);}});star.className='filter-card-favorite';star.setAttribute('aria-pressed',String(entry.favorite));star.setAttribute('aria-label',`${entry.favorite?'Remove':'Add'} ${entry.name} ${entry.favorite?'from':'to'} favorites`);star.title=star.getAttribute('aria-label');star.dataset.entryKey=entry.key;star.dataset.entryAction='favorite';
     const actions=browserNode('div',null,'filter-card-actions');actions.append(star);
+    if(entry.source==='custom'&&deleteCustom){
+      const remove=browserButton('',async()=>{
+        if(sessionEnding||previewing)return;
+        remove.disabled=true;
+        try{
+          if(!await deleteCustom(entry))return;
+          if(selectedKey===entry.key){selectedKey=null;pendingKey=null;previewErrorKey=null;find('[data-preview-status]').textContent='Choose a filter to preview it on the canvas.';}
+          find('[data-error]').textContent='';refresh({preserveScroll:true});
+          (find('[data-entry-action="favorite"]')||source).focus({preventScroll:true});
+        }catch(error){find('[data-error]').textContent=`Could not delete this filter: ${error.message}`;onError(error);}
+        finally{if(remove.isConnected)remove.disabled=false;}
+      });
+      remove.className='filter-card-delete';remove.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 6h18M8 6V4h8v2m3 0-1 14H6L5 6m5 4v7m4-7v7"/></svg>';
+      remove.setAttribute('aria-label',`Delete ${entry.name} from My Filters`);remove.title=`Delete ${entry.name}`;remove.dataset.entryKey=entry.key;remove.dataset.entryAction='delete';actions.append(remove);
+    }
     if(online&&downloadOnline){
       const download=browserButton(downloads.has(entry.key)?'…':'↓',async()=>{
         if(sessionEnding||downloads.has(entry.key))return;const epoch=sessionEpoch;downloads.add(entry.key);refresh();
         try{await downloadOnline(entry);}catch(error){if(epoch===sessionEpoch)find('[data-error]').textContent='Could not download this filter. The package was unavailable or invalid.';}
         finally{if(epoch===sessionEpoch){downloads.delete(entry.key);refresh();}}
       });
-      download.className='filter-card-download';download.disabled=downloads.has(entry.key);download.setAttribute('aria-label',`Download PNG for ${entry.name}`);download.setAttribute('aria-busy',String(download.disabled));download.dataset.entryKey=entry.key;download.dataset.entryAction='download';actions.append(download);
+      download.className='filter-card-download';download.disabled=downloads.has(entry.key);download.setAttribute('aria-label',`Download PNG for ${entry.name}`);download.title=download.getAttribute('aria-label');download.setAttribute('aria-busy',String(download.disabled));download.dataset.entryKey=entry.key;download.dataset.entryAction='download';actions.append(download);
     }
     cardTop.append(previewButton,actions);row.append(cardTop);
     const tags=browserNode('div',null,'result-tags');
     for(const tag of entry.tags){
-      const button=browserButton(tag,()=>{query.value='';favorites.checked=false;sort.value='az';selected.clear();selected.add(tagKey(tag));find('[data-tag-search]').value='';page=0;refresh();find('[data-selected] button')?.focus();});
+      const button=browserButton(tag,()=>{query.value='';favorites.checked=false;sort.value='az';selected.clear();selected.add(tagKey(tag));find('[data-tag-search]').value='';find('[data-filters]').open=true;page=0;refresh();find('[data-selected] button')?.focus();});
       button.setAttribute('aria-label',`Show all filters tagged ${tag}`);tags.append(button);
     }
     row.append(tags);row.thumbnailEntry=entry;return row;
@@ -6609,9 +6809,12 @@ function createFilterBrowser({launcher,getEntries,begin,preview,previewOnline=nu
     find('[data-online-retry]').hidden=!allFailed&&!onlineState.refreshWarning;
     const {results,choices}=searchCatalog(waiting?[]:entries,{query:query.value,source:source.value,favorites:favorites.checked,tags:[...selected],sort:sort.value});
     sort.options[1].disabled=!query.value.trim();find('[data-clear]').hidden=!query.value;
+    const advancedCount=selected.size+(sort.value!=='az'?1:0),restrictionCount=advancedCount+(query.value.trim()?1:0)+(source.value!=='all'?1:0)+(favorites.checked?1:0);
+    find('[data-restrictions]').textContent=advancedCount?`${advancedCount} active`:'';
+    find('[data-restrictions]').hidden=!advancedCount;find('[data-reset]').hidden=!restrictionCount;
     page=Math.min(page,Math.max(0,Math.ceil(results.length/PAGE_SIZE)-1));
     clearTimeout(countTimer);if(waiting)find('[data-count]').textContent=onlineStatus==='error'?'Online Library unavailable':'Loading Online filters…';else countTimer=setTimeout(()=>{const count=`${results.length} filters`;if(find('[data-count]').textContent!==count)find('[data-count]').textContent=count;},150);
-    const selectedBox=find('[data-selected]');selectedBox.replaceChildren();for(const key of selected)selectedBox.append(browserButton(`${choices.find(item=>item[0]===key)?.[1]||key} ×`,()=>{selected.delete(key);page=0;refresh();find('[data-reset]').focus();}));
+    const selectedBox=find('[data-selected]');selectedBox.replaceChildren();for(const key of selected)selectedBox.append(browserButton(`${choices.find(item=>item[0]===key)?.[1]||key} ×`,()=>{selected.delete(key);page=0;refresh();(find('[data-reset]').hidden?find('[data-filters] summary'):find('[data-reset]')).focus();}));
     const choiceBox=find('[data-choices]');choiceBox.replaceChildren();for(const [key,label] of choices.filter(item=>searchText(item[1]).includes(searchText(find('[data-tag-search]').value))).slice(0,50)){
       const wrapper=browserNode('label'),check=browserNode('input');check.type='checkbox';check.checked=selected.has(key);check.onchange=()=>{if(check.checked)selected.add(key);else selected.delete(key);page=0;refresh();[...choiceBox.querySelectorAll('input')].find(node=>node.value===key)?.focus();};check.value=key;wrapper.append(check,document.createTextNode(label));choiceBox.append(wrapper);
     }
@@ -6638,7 +6841,7 @@ function createFilterBrowser({launcher,getEntries,begin,preview,previewOnline=nu
   find('[data-tag-search]').oninput=refresh;find('[data-clear]').onclick=()=>{query.value='';page=0;refresh();query.focus();};find('[data-reset]').onclick=reset;
   function changePage(offset){page+=offset;refresh();find('.filter-results').scrollTop=0;}
   find('[data-prev]').onclick=()=>changePage(-1);find('[data-next]').onclick=()=>changePage(1);
-  launcher.onclick=async()=>{try{await begin();sessionEnding=false;sessionEpoch++;sessionOpen=true;selectedKey=null;pendingKey=null;previewErrorKey=null;previewing=false;find('[data-error]').textContent='';find('[data-preview-status]').textContent='Choose a filter to preview it on the canvas.';dialog.showModal();if(includesOnline())loadOnline();refresh();query.focus();}catch(error){onError(error);}};
+  launcher.onclick=async()=>{try{await begin();sessionEnding=false;sessionEpoch++;sessionOpen=true;selectedKey=null;pendingKey=null;previewErrorKey=null;previewing=false;find('[data-error]').textContent='';find('[data-preview-status]').textContent='Choose a filter to preview it on the canvas.';dialog.showModal();onOpen();if(includesOnline())loadOnline();refresh();if(globalThis.matchMedia?.('(pointer:coarse)').matches)find('[data-close]').focus();else query.focus();}catch(error){onError(error);}};
   return{invalidateSession:()=>{actionId++;sessionEpoch++;downloads.clear();sessionOpen=false;selectedKey=null;pendingKey=null;previewing=false;if(dialog.open)dialog.close('replaced');},refresh,refreshOnline:()=>{if(includesOnline())refresh({preserveScroll:true});},dialog,showError:message=>{find('[data-error]').textContent=message;}};
 }
 
@@ -6767,7 +6970,13 @@ function createCanvasView({state,el,ctx}){
   function applyZoom(){cancelTap();endSplitDrag();el.stage.setAttribute?.('data-manual-zoom',String(state.zoom==='manual'));el.wrap.style.width=`${Math.round(state.width*state.zoomLevel)}px`;el.wrap.style.height=`${Math.round(state.height*state.zoomLevel)}px`;el.canvas.style.width=el.canvas.style.height='100%';el.zoomLabel.textContent=`${Math.round(state.zoomLevel*100)}%`;syncDivider();}
   function zoom(factor){state.zoom='manual';state.zoomLevel=clamp(state.zoomLevel*factor,.1,4);applyZoom();}
   syncView();
-  return{drawView,requestDraw,invalidatePixels,fitCanvas,applyZoom,zoom,toggleView};
+  function captureViewport(){return {zoom:state.zoom,zoomLevel:state.zoomLevel,left:el.stage.scrollLeft||0,top:el.stage.scrollTop||0};}
+  function restoreViewport(saved){
+    state.zoom=saved.zoom;state.zoomLevel=saved.zoomLevel;
+    if(saved.zoom==='fit')fitCanvas();else applyZoom();
+    el.stage.scrollLeft=saved.left;el.stage.scrollTop=saved.top;syncDivider();
+  }
+  return{drawView,requestDraw,invalidatePixels,fitCanvas,applyZoom,zoom,toggleView,captureViewport,restoreViewport};
 }
 
 
@@ -6790,7 +6999,7 @@ function createInspectorLayout({document:doc=globalThis.document,window:win=glob
   // Only an initially compact session is eligible; resizing desktop must not introduce a hint.
   const hintEligible=!desktop.matches;
   function completeDiscovery(){discovered=true;try{storage().setItem('ffw-inspector-discovered','true');}catch{/* Keep completion for this session. */}}
-  let focused=false,opened=false,expanded=false,pointer=null,bounds;
+  let focused=false,opened=false,expanded=false,pointer=null,bounds,suspended=false;
   function persist(){try{storage().setItem('ffw-workspace-layout',JSON.stringify({version:1,inspectorWidth:width}));}catch{/* Preferences are optional. */}}
   function size(value){bounds=inspectorWidthBounds(app.getBoundingClientRect().width);const current=Math.min(bounds.max,Math.max(bounds.min,value));app.style.setProperty('--inspector-width',`${current}px`);separator.setAttribute('aria-valuemin',String(bounds.min));separator.setAttribute('aria-valuemax',String(bounds.max));separator.setAttribute('aria-valuenow',String(current));separator.setAttribute('aria-valuetext',`${current} pixels`);return current;}
   function positionEdge(){
@@ -6805,7 +7014,8 @@ function createInspectorLayout({document:doc=globalThis.document,window:win=glob
     edge.style.setProperty('--inspector-toggle-y',`${y}px`);
   }
   function sync(){
-    const modal=!desktop.matches&&opened,visible=desktop.matches?!focused:opened;
+    const modal=!suspended&&!desktop.matches&&opened,visible=!suspended&&(desktop.matches?!focused:opened);
+    app.dataset.inspectorSuspended=String(suspended);
     app.dataset.inspectorLayout=desktop.matches?'desktop':mobile.matches?'mobile':'tablet';
     app.dataset.inspectorHidden=String(!visible);app.dataset.inspectorOpen=String(modal);app.dataset.inspectorExpanded=String(expanded);
     panel.inert=!visible;workspace.inert=modal;backdrop.hidden=!modal;
@@ -6829,21 +7039,91 @@ function createInspectorLayout({document:doc=globalThis.document,window:win=glob
   for(const type of ['pointerup','pointercancel','lostpointercapture'])listen(separator,type,event=>{if(event.pointerId===pointer)endDrag();});
   listen(separator,'keydown',event=>{const current=Number(separator.getAttribute('aria-valuenow')),step=event.shiftKey?32:16;const next=event.key==='ArrowLeft'?current+step:event.key==='ArrowRight'?current-step:event.key==='Home'?bounds.min:event.key==='End'?bounds.max:null;if(next!==null){event.preventDefault();width=size(next);persist();}});
   listen(separator,'dblclick',()=>{width=size(INSPECTOR_WIDTH_DEFAULT);persist();});
-  function breakpoint(){endDrag();const hadFocus=panel.contains(doc.activeElement)||doc.activeElement===separator;opened=false;expanded=false;sync();if(hadFocus&&(!desktop.matches||focused))toggle.focus({preventScroll:true});}
+  function breakpoint(){if(suspended){sync();return;}endDrag();const hadFocus=panel.contains(doc.activeElement)||doc.activeElement===separator;opened=false;expanded=false;sync();if(hadFocus&&(!desktop.matches||focused))toggle.focus({preventScroll:true});}
   listen(desktop,'change',breakpoint);listen(mobile,'change',breakpoint);
   listen(win,'resize',()=>{size(width);positionEdge();});
   const observer=win.ResizeObserver?new win.ResizeObserver(positionEdge):null;
   for(const element of [stage,panel])observer?.observe(element);
   listen(doc,'keydown',event=>{
-    if(!opened||desktop.matches||doc.querySelector('dialog[open]'))return;
-    if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();dismiss();}
+    if(suspended||!opened||desktop.matches||doc.querySelector('dialog[open]'))return;
+    if(event.key==='Escape'){
+      // Let an open Explore dropdown or snapshot tooltip consume Escape first.
+      const menu=event.target?.closest?.('.explore-menu')?.querySelector('.explore-menu-items');
+      const tooltip=event.target?.closest?.('.snapshot-help')?.querySelector('[role="tooltip"]');
+      if((menu&&!menu.hidden)||(tooltip&&!tooltip.hidden))return;
+      event.preventDefault();event.stopImmediatePropagation();dismiss();
+    }
     if(event.key==='Tab'){
       const items=[...panel.querySelectorAll('button,input,select,textarea,summary,a[href],[tabindex="0"]')].filter(item=>!item.disabled&&!item.closest('[inert]')&&item.tabIndex>=0&&item.getClientRects().length);
       const first=items[0],last=items.at(-1);if(event.shiftKey&&doc.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&doc.activeElement===last){event.preventDefault();first?.focus();}
     }
   },true);
   sync();
-  return {destroy(){observer?.disconnect();endDrag();removals.splice(0).forEach(remove=>remove());workspace.inert=false;},hide(){if(desktop.matches){focused=true;const hadFocus=panel.contains(doc.activeElement);sync();if(hadFocus)toggle.focus({preventScroll:true});}else dismiss();}};
+  function suspend(){
+    if(suspended)return ()=>{};
+    endDrag();
+    const wasDesktop=desktop.matches,wasVisible=wasDesktop?!focused:opened;
+    const scroll=[panel,...panel.querySelectorAll('.sidebar-scroll,input,textarea')].map(node=>({node,top:node.scrollTop,left:node.scrollLeft,selection:typeof node.selectionStart==='number'?[node.selectionStart,node.selectionEnd,node.selectionDirection]:null}));
+    suspended=true;sync();
+    let released=false;
+    return ()=>{if(released)return;released=true;if(desktop.matches!==wasDesktop){if(desktop.matches)focused=!wasVisible;else opened=wasVisible;}suspended=false;sync();panel.getBoundingClientRect();for(const item of scroll){item.node.scrollTop=item.top;item.node.scrollLeft=item.left;if(item.selection)item.node.setSelectionRange(...item.selection);}};
+  }
+  return {suspend,destroy(){observer?.disconnect();endDrag();removals.splice(0).forEach(remove=>remove());workspace.inert=false;},hide(){if(desktop.matches){focused=true;const hadFocus=panel.contains(doc.activeElement);sync();if(hadFocus)toggle.focus({preventScroll:true});}else dismiss();}};
+}
+
+
+/* src/ui/library-layout.js */
+/** Temporary Library geometry; candidate/document state remains in the app. */
+function libraryPresentation(width,height){
+  const drawer=Math.min(378,Math.max(344,Math.round(width*.32)));
+  return {mode:width>=740&&height>=460&&width-drawer-12>=360?'side':'sheet',drawer};
+}
+
+function createLibraryLayout({dialog,inspectorLayout,canvasView,document:doc=globalThis.document,window:win=globalThis.window}){
+  const app=doc.querySelector('.app'),workspace=doc.querySelector('.workspace'),stage=doc.getElementById('canvasStage'),head=workspace.querySelector('.topbar'),status=workspace.querySelector('.statusbar');
+  const imageToggle=dialog.querySelector('[data-image-view-toggle]'),libraryHead=dialog.querySelector('.library-head'),actions=dialog.querySelector('.library-actions'),results=dialog.querySelector('.filter-results'),tools=dialog.querySelector('.browser-tools');
+  let saved=null,resume=null,observer=null,frame=null,imageRequested=false,browsingScroll=null;
+  function sync(){
+    if(!saved)return;
+    // Measure the normal chrome even while it is hidden for image viewing, so
+    // hiding it cannot turn a sheet into a drawer and cause breakpoint feedback.
+    delete app.dataset.libraryImageView;
+    const rect=workspace.getBoundingClientRect(),viewport=win.visualViewport,height=viewport?.height||win.innerHeight,top=viewport?.offsetTop||0;
+    // Workspace bounds remain unsplit: reserving only the preview pane prevents
+    // header wrapping from feeding back into the breakpoint calculation.
+    const usable=Math.min(rect.height,height)-(head?.getBoundingClientRect().height||0)-(status?.getBoundingClientRect().height||0);
+    const {mode,drawer}=libraryPresentation(rect.width,usable);
+    app.dataset.libraryLayout=mode;dialog.dataset.layout=mode;app.style.setProperty('--library-width',`${drawer}px`);
+    const imageView=imageRequested&&mode==='sheet',wasImageView=dialog.dataset.imageView==='true',focusedToggle=doc.activeElement===imageToggle;
+    if(imageView&&!wasImageView)browsingScroll={results:results.scrollTop,tools:tools.scrollTop};
+    app.dataset.libraryImageView=String(imageView);dialog.dataset.imageView=String(imageView);imageToggle.hidden=mode!=='sheet';
+    imageToggle.textContent=imageView?'Back to Filters':'View Image';imageToggle.setAttribute('aria-expanded',String(!imageView));
+    const dialogHeight=imageView?Math.min(height,Math.ceil(libraryHead.getBoundingClientRect().height+actions.getBoundingClientRect().height+2)):mode==='side'?height:rect.width<=560||height<=500?height:Math.min(height*.76,760);
+    app.style.setProperty('--library-image-inset',`${dialogHeight+8+Math.max(0,rect.bottom-top-height)}px`);
+    dialog.style.setProperty('--library-top',`${top+height-dialogHeight}px`);dialog.style.setProperty('--library-height',`${dialogHeight}px`);dialog.style.setProperty('--library-width',`${drawer}px`);
+    stage.getBoundingClientRect();canvasView.restoreViewport(saved);
+    if(!imageView&&wasImageView&&browsingScroll){results.scrollTop=browsingScroll.results;tools.scrollTop=browsingScroll.tools;}
+    if(focusedToggle&&imageToggle.hidden)dialog.querySelector('[data-close]').focus({preventScroll:true});
+  }
+  imageToggle.addEventListener('click',()=>{if(!saved||imageToggle.disabled||imageToggle.hidden)return;imageRequested=!imageRequested;sync();imageToggle.focus({preventScroll:true});});
+  function schedule(){if(frame!==null||!saved)return;frame=win.requestAnimationFrame(()=>{frame=null;sync();});}
+  function open(){
+    if(saved)return;
+    imageRequested=false;saved=canvasView.captureViewport();resume=inspectorLayout.suspend();sync();
+    observer=win.ResizeObserver?new win.ResizeObserver(schedule):null;
+    for(const node of [workspace,head,status,libraryHead,actions])if(node)observer?.observe(node);
+    win.addEventListener('resize',schedule);win.visualViewport?.addEventListener('resize',schedule);win.visualViewport?.addEventListener('scroll',schedule);
+  }
+  function close({restoreViewport=true}={}){
+    if(!saved)return;
+    observer?.disconnect();observer=null;if(frame!==null)win.cancelAnimationFrame(frame);frame=null;
+    win.removeEventListener('resize',schedule);win.visualViewport?.removeEventListener('resize',schedule);win.visualViewport?.removeEventListener('scroll',schedule);
+    const snapshot=restoreViewport?saved:canvasView.captureViewport();saved=null;delete app.dataset.libraryLayout;delete dialog.dataset.layout;app.style.removeProperty('--library-width');
+    imageRequested=false;browsingScroll=null;delete app.dataset.libraryImageView;delete dialog.dataset.imageView;app.style.removeProperty('--library-image-inset');imageToggle.hidden=true;imageToggle.textContent='View Image';imageToggle.setAttribute('aria-expanded','true');
+    for(const name of ['--library-top','--library-height','--library-width'])dialog.style.removeProperty(name);
+    resume?.();resume=null;stage.getBoundingClientRect();canvasView.restoreViewport(snapshot);
+  }
+  return {open,close,destroy:close};
 }
 
 
@@ -7014,10 +7294,11 @@ function exploreMenuPlacement(anchor,menu,bounds){
 }
 
 // Session state belongs to the app; this view never writes the filter document.
-function createExploreController({state,root,resetButton,syncControls,scheduleRender,onChange,resetPassThrough,toast,readPreference=storageGet,writePreference=storageSet}){
+function createExploreController({state,root,resetButton,syncControls,scheduleRender,onChange,resetPassThrough,toast,readPreference=storageGet,writePreference=storageSet,confirmOverwrite=message=>document.defaultView.confirm(message)}){
   const buttons={},slots={},saveButtons={},menus=[];
   const preference=readPreference(MUTATION_STRENGTH_KEY,'Medium');
   let selectedStrength=Object.hasOwn(MUTATION_STRENGTHS,preference)?preference:'Medium';
+  let snapshotFeedback='';
   function button(parent,text,action){const node=document.createElement('button');node.type='button';node.textContent=text;node.onclick=()=>{if(state.isRendering)return;const owner=menus.find(item=>item.panel===parent);closeMenus();owner?.trigger.focus();action();refresh();};parent.append(node);return node;}
   function closeMenus(){menus.forEach(({panel,trigger})=>{panel.hidden=true;trigger.setAttribute('aria-expanded','false');});}
   function positionMenu(panel,trigger){
@@ -7038,11 +7319,27 @@ function createExploreController({state,root,resetButton,syncControls,scheduleRe
     const trigger=button(wrap,label,()=>{panel.hidden=!panel.hidden;trigger.setAttribute('aria-expanded',String(!panel.hidden));});
     // Toggle without the action button's automatic close.
     trigger.onclick=()=>{if(state.isRendering)return;const open=panel.hidden;closeMenus();panel.hidden=!open;trigger.setAttribute('aria-expanded',String(open));if(open)positionMenu(panel,trigger);};
-    trigger.setAttribute('aria-expanded','false');wrap.append(panel);menus.push({panel,trigger});return panel;
+    trigger.setAttribute('aria-expanded','false');wrap.append(panel);menus.push({panel,trigger});
+    wrap.addEventListener('keydown',event=>{
+      if(!['ArrowDown','ArrowUp','Home','End'].includes(event.key))return;
+      const items=Array.from(panel.querySelectorAll('button')).filter(node=>!node.disabled&&!node.hidden);
+      if(!items.length)return;
+      if(panel.hidden){closeMenus();panel.hidden=false;trigger.setAttribute('aria-expanded','true');positionMenu(panel,trigger);}
+      const index=items.indexOf(document.activeElement);
+      const next=event.key==='Home'?0:event.key==='End'?items.length-1:event.key==='ArrowDown'?(index+1)%items.length:(index<0?items.length-1:(index-1+items.length)%items.length);
+      items[next].focus();event.preventDefault();
+    });
+    wrap.addEventListener('focusout',event=>{if(!wrap.contains(event.relatedTarget)){panel.hidden=true;trigger.setAttribute('aria-expanded','false');}});
+    return panel;
   }
-  function commit(next,undo=true){commitExploreValues(state,next,{undo});syncControls();onChange();refresh();scheduleRender();}
-  function reset({preserveDefaults=false}={}){const defaults=preserveDefaults?state.explore.defaults:state.controls;state.explore=createExploreSession(defaults);refresh();}
-  function manual(){state.explore.undo=null;refresh();}
+  function commit(next,undo=true,feedback=''){snapshotFeedback=feedback;commitExploreValues(state,next,{undo});syncControls();onChange();refresh();scheduleRender();}
+  function reset({preserveDefaults=false}={}){snapshotFeedback='';const defaults=preserveDefaults?state.explore.defaults:state.controls;state.explore=createExploreSession(defaults);refresh();}
+  function manual(){snapshotFeedback='';state.explore.undo=null;refresh();}
+  function saveSnapshot(slot){
+    if(!Object.hasOwn(slots,slot))return;
+    if(state.explore.snapshots[slot]&&!confirmOverwrite(`Replace snapshot ${slot} with the current controls? The saved controls in ${slot} will be lost.`))return;
+    saveExploreSnapshot(state,slot);snapshotFeedback=`Snapshot ${slot} saved`;
+  }
   function mutate(){
     if(state.isRendering||!state.usedControls.some((used,i)=>used&&!state.explore.locks[i]))return;
     commit(exploreValues(state.controls,state.controlUIs,state.usedControls,state.explore,selectedStrength!=='Random'));
@@ -7066,21 +7363,34 @@ function createExploreController({state,root,resetButton,syncControls,scheduleRe
   };
   strengthLabel.append(strengthSelect);actions.append(strengthLabel);
   const locks=menu(actions,'Locks ▾');
+  locks.parentElement.className+=' locks-menu';
   for(const action of ['Lock all','Unlock all','Invert locks'])button(locks,action,()=>{state.usedControls.forEach((used,i)=>{if(used)state.explore.locks[i]=action==='Lock all'||(action==='Invert locks'&&!state.explore.locks[i]);});syncControls();});
   buttons.undo=button(actions,'Undo',()=>{if(state.explore.undo)commit(state.explore.undo,false);});
   const section=document.createElement('section');section.className='section snapshots-section';root.closest('.adjust-section').after(section);
   const heading=document.createElement('div');heading.className='section-head';const title=document.createElement('strong');title.textContent='Snapshots';heading.append(title);section.append(heading);
+  const helpWrap=document.createElement('span');helpWrap.className='snapshot-help';heading.append(helpWrap);
+  const help=button(helpWrap,'?',()=>{});help.setAttribute('aria-label','About snapshots');help.setAttribute('aria-describedby','snapshot-help-text');
+  const tooltip=document.createElement('span');tooltip.id='snapshot-help-text';tooltip.className='snapshot-tooltip';tooltip.setAttribute('role','tooltip');tooltip.textContent='Save up to four filter configurations and restore them to compare variations.';helpWrap.append(tooltip);
+  help.onkeydown=event=>{if(event.key==='Escape'){tooltip.hidden=true;event.preventDefault();}};
+  help.onfocus=help.onmouseenter=()=>{tooltip.hidden=false;};
   const body=document.createElement('div');body.className='section-body';section.append(body);
+  const helper=document.createElement('p');helper.className='snapshot-helper';helper.textContent='Save and restore filter variations.';body.append(helper);
   const row=document.createElement('div');row.className='snapshot-slots';body.append(row);
-  for(const slot of ['A','B','C','D'])slots[slot]=button(row,slot,()=>{const saved=state.explore.snapshots[slot];if(!saved){toast(`Snapshot ${slot} is empty. Use Save current.`);return;}state.explore.active=slot;commit(saved);});
+  for(const slot of ['A','B','C','D']){
+    const node=button(row,'',()=>{const saved=state.explore.snapshots[slot];if(!saved){toast(`Snapshot ${slot} is empty. Use Save current.`);return;}state.explore.active=slot;commit(saved,true,`Snapshot ${slot} restored`);});
+    const icon=document.createElement('span');icon.className='snapshot-icon';icon.setAttribute('aria-hidden','true');
+    const identifier=document.createElement('strong');identifier.textContent=slot;
+    const label=document.createElement('span');label.className='snapshot-label';node.append(icon,identifier,label);slots[slot]=node;
+  }
   const status=document.createElement('p');status.className='snapshot-status';status.setAttribute('role','status');body.append(status);
   const toolbar=document.createElement('div');toolbar.className='explore-actions';body.append(toolbar);
   const saves=menu(toolbar,'Save current ▾');
-  for(const slot of Object.keys(slots))saveButtons[slot]=button(saves,`Save to ${slot}`,()=>saveExploreSnapshot(state,slot));
-  buttons.update=button(toolbar,'Update',()=>saveExploreSnapshot(state,state.explore.active));
+  for(const slot of Object.keys(slots))saveButtons[slot]=button(saves,`Save to ${slot}`,()=>saveSnapshot(slot));
+  buttons.update=button(toolbar,'Update',()=>saveSnapshot(state.explore.active));
   const more=menu(toolbar,'•••',true);more.previousElementSibling.setAttribute('aria-label','Snapshot management');
-  buttons.clear=button(more,'Clear active snapshot',()=>{state.explore.snapshots[state.explore.active]=null;state.explore.active=null;});
-  buttons.clearAll=button(more,'Clear all snapshots',()=>{for(const slot of Object.keys(slots))state.explore.snapshots[slot]=null;state.explore.active=null;});
+  buttons.clear=button(more,'Clear active snapshot',()=>{state.explore.snapshots[state.explore.active]=null;state.explore.active=null;snapshotFeedback='';});
+  buttons.clearAll=button(more,'Clear all snapshots',()=>{for(const slot of Object.keys(slots))state.explore.snapshots[slot]=null;state.explore.active=null;snapshotFeedback='';});
+  buttons.clear.className=buttons.clearAll.className='danger';
   function refresh(){
     const session=state.explore;if(!session)return;
     section.hidden=!state.usedControls.some(Boolean);
@@ -7091,14 +7401,21 @@ function createExploreController({state,root,resetButton,syncControls,scheduleRe
     buttons.mutate.disabled=busy||!state.usedControls.some((used,i)=>used&&!session.locks[i]);
     buttons.undo.disabled=busy||!session.undo;buttons.clear.disabled=busy||!active;
     buttons.clearAll.disabled=busy||!Object.values(session.snapshots).some(Boolean);
+    buttons.clear.title=active?`Delete snapshot ${active}; current controls are kept`:'Select a saved snapshot to clear it';
+    buttons.clearAll.title=Object.values(session.snapshots).some(Boolean)?'Delete all saved snapshots; current controls are kept':'No saved snapshots to clear';
     buttons.update.hidden=!modified;buttons.update.textContent=`Update ${active||''}`;
-    status.textContent=active?`${active}${modified?' · modified':' · active'}`:'No active snapshot';
+    const message=active?`${snapshotFeedback||`Snapshot ${active} selected`}${modified?' · modified':''}`:Object.values(session.snapshots).some(Boolean)?'No snapshot selected':'No snapshots saved';
+    if(status.textContent!==message)status.textContent=message;
     for(const [slot,node] of Object.entries(slots)){
       const saved=session.snapshots[slot],selected=active===slot;
-      node.textContent=`${slot} ${saved?'●':'○'}${selected&&modified?' *':''}`;
+      node.querySelector('.snapshot-icon').textContent=selected?'✓':saved?'●':'○';
+      node.querySelector('.snapshot-label').textContent=selected?'Active':saved?'Saved':'Empty';
+      node.classList.toggle('empty',!saved);node.classList.toggle('modified',Boolean(selected&&modified));
       node.classList.toggle('active',selected);node.setAttribute('aria-pressed',String(selected));
-      node.setAttribute('aria-label',`Snapshot ${slot}, ${selected?`active${modified?', modified':''}`:saved?'saved':'empty'}`);
-      saveButtons[slot].textContent=`${saved?'Replace':'Save to'} ${slot}`;
+      node.setAttribute('aria-label',`Snapshot ${slot}, ${selected?`selected${modified?', modified':''}`:saved?'saved':'empty'}`);
+      node.setAttribute('aria-disabled',String(!saved||busy));node.disabled=busy;
+      node.title=saved?`Restore snapshot ${slot}${selected&&modified?' (working controls modified)':''}`:`Snapshot ${slot} is empty. Use Save current.`;
+      saveButtons[slot].textContent=`${saved?'Replace':'Save to'} ${slot} · ${saved?'Saved':'Empty'}`;
     }
     if(busy)closeMenus();
   }
@@ -7111,6 +7428,8 @@ function createExploreController({state,root,resetButton,syncControls,scheduleRe
 
 
 /* src/app/filter-fab-app.js */
+
+
 
 /**
  * Filter FabJS
@@ -7166,16 +7485,16 @@ async function routeImageFileWithMetadata(file,{extractMetadata=extractFilterFab
   if(!png)return{action:'open',opened:await openImage(file)};
   let envelope;
   try{envelope=await extractMetadata(file);}catch(error){
-    const unsupported=error instanceof PngMetadataError&&error.code==='unsupported',action=await chooseAction({kind:unsupported?'unsupported':'invalid',title:unsupported?'Newer Filter FabJS metadata':'Invalid Filter FabJS metadata',detail:unsupported?'This PNG contains Filter FabJS metadata created by a newer format.':'This image contains invalid Filter FabJS metadata.',choices:[['open','Open Image Only'],['cancel','Cancel']]});
+    const unsupported=error instanceof PngMetadataError&&error.code==='unsupported',action=await chooseAction({kind:unsupported?'unsupported':'invalid',title:unsupported?'Newer embedded filter metadata':'Invalid embedded filter metadata',detail:unsupported?'This PNG contains embedded filter metadata created by a newer format.':'This image contains invalid embedded filter metadata.',choices:[['open','Open Image Only'],['cancel','Cancel']]});
     if(action==='open')return{action,opened:await openImage(file),metadataError:error};return{action:'cancel',metadataError:error};
   }
   if(!envelope)return{action:'open',opened:await openImage(file)};
   let filter;
   try{filter=validateFilter(envelope.document);}catch(error){
-    const action=await chooseAction({kind:'invalid',title:'Invalid Filter FabJS metadata',detail:'This image contains invalid Filter FabJS metadata.',choices:[['open','Open Image Only'],['cancel','Cancel']]});
+    const action=await chooseAction({kind:'invalid',title:'Invalid embedded filter metadata',detail:'This image contains invalid embedded filter metadata.',choices:[['open','Open Image Only'],['cancel','Cancel']]});
     if(action==='open')return{action,opened:await openImage(file),metadataError:error};return{action:'cancel',metadataError:error};
   }
-  const attribution=filter.author?`\nby ${filter.author}`:'',action=await chooseAction({kind:'valid',title:'Filter FabJS filter found',detail:`This PNG contains an embedded Filter FabJS filter: ${filter.name}${attribution}. Apply Embedded Filter keeps your current source image and loads this filter. Open Image Only opens the PNG without applying its filter.`,choices:[['import','Apply Embedded Filter'],['open','Open Image Only'],['cancel','Cancel']]});
+  const attribution=filter.author?`\nby ${filter.author}`:'',action=await chooseAction({kind:'valid',title:'Embedded filter found',detail:`This PNG contains an embedded filter (including legacy Filter FabJS metadata): ${filter.name}${attribution}. Apply Embedded Filter keeps your current source image and loads this filter. Open Image Only opens the PNG without applying its filter.`,choices:[['import','Apply Embedded Filter'],['open','Open Image Only'],['cancel','Cancel']]});
   if(action==='import'){await importFilter(filter);return{action,filter};}
   if(action==='open')return{action,opened:await openImage(file),filter};
   return{action:'cancel',filter};
@@ -7259,7 +7578,7 @@ function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL
   const inspectorLayout=createInspectorLayout();
   let exploreController;
   state.explore=createExploreSession(state.controls);
-  let controlsController,browser,catalogCache=null,librarySession=null;
+  let controlsController,browser,libraryLayout,catalogCache=null,librarySession=null;
   const onlineLibrary=createOnlineLibrarySession({manifestUrl:onlineManifestUrl,fetchImpl:onlineFetchImpl,storage:onlineStorage,preference,onChange:()=>browser?.refreshOnline()});
   const activeDocument={key:null,id:undefined,tags:[],baseline:null,recordBaseline:null,imported:false,importSource:null};
 
@@ -7274,7 +7593,7 @@ function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL
   function toast(text){el.toast.textContent=text;el.toast.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.toast.classList.remove('show'),1800);}
   const interactiveNodes=()=>Array.from(document.querySelectorAll('button,input,select,textarea'));
   function updatePresetDeleteState(){const custom=activeDocument.key?.startsWith('custom:');el.deletePreset.disabled=state.isRendering||!custom;el.deletePreset.title=custom?'Delete current saved filter':'Load a saved custom filter to delete';}
-  function applyInteractionLocks(){interactiveNodes().forEach(node=>{if(node.matches('#inspectorToggle,#inspectorClose,#inspectorExpand')||(librarySession&&node.closest('.filter-browser')))return;node.disabled=state.isRendering;});$$('.slider-row',$('#sliderGrid')).forEach(row=>{const index=Number(row.dataset.controlIndex),unused=!state.usedControls[index];row.classList.toggle('control-unused',unused);row.setAttribute('aria-disabled',String(state.isRendering||unused));row.title=unused?'Unused — not referenced by any channel formula':'';$$('button,input,select',row).forEach(node=>{node.disabled=state.isRendering||unused;});});updatePresetDeleteState();exploreController?.refresh();}
+  function applyInteractionLocks(){interactiveNodes().forEach(node=>{if(node.matches('#inspectorToggle,#inspectorClose,#inspectorExpand')||(librarySession&&node.closest('.filter-browser,.library-backup-dialog')))return;node.disabled=state.isRendering;});$$('.slider-row',$('#sliderGrid')).forEach(row=>{const index=Number(row.dataset.controlIndex),unused=!state.usedControls[index];row.classList.toggle('control-unused',unused);row.setAttribute('aria-disabled',String(state.isRendering||unused));row.title=unused?'Unused — not referenced by any channel formula':'';$$('button,input,select',row).forEach(node=>{node.disabled=state.isRendering||unused;});});updatePresetDeleteState();exploreController?.refresh();}
   function captureFocus(){const node=document.activeElement;if(!(node instanceof Element)||node===document.body||!node.matches('button,input,select,textarea'))return null;const snapshot={node};if(typeof node.selectionStart==='number'){snapshot.start=node.selectionStart;snapshot.end=node.selectionEnd;snapshot.direction=node.selectionDirection;}return snapshot;}
   function restoreFocus(snapshot){if(!snapshot?.node?.isConnected||snapshot.node.disabled)return;requestAnimationFrame(()=>{if(!snapshot.node.isConnected||snapshot.node.disabled)return;snapshot.node.focus({preventScroll:true});if(typeof snapshot.start==='number'&&typeof snapshot.node.setSelectionRange==='function')snapshot.node.setSelectionRange(snapshot.start,snapshot.end,snapshot.direction||'none');});}
   function setFormulaEditStatus(kind,text){el.renderBtn.classList.toggle('primary',kind==='pending');el.formulaEditStatus.dataset.state=kind;if(el.formulaEditStatus.textContent!==text)el.formulaEditStatus.textContent=text;}
@@ -7543,7 +7862,25 @@ function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL
   }
 
   function initImage(data,width,height){state.renderId++;invalidateLibraryForReplacement();$('#openImageBtn').classList.remove('primary');state.lastSuccessfulRenderSignature=null;if(state.isRendering)setUILocked(false);initializeImagePreview(data,width,height,{state,canvasView,canvas:el.canvas});el.imageInfo.textContent=`${width} × ${height} px`;thumbnailService.setSource(state.source,width,height).catch(error=>console.warn('Thumbnail source initialization failed',error));initializeRendererSource().catch(error=>{console.error('Renderer initialization failed',error);setStatus('Preview unavailable · see Technical diagnostics in Author','error');});render();}
-  function demoImage(){const width=960,height=640,canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const context=canvas.getContext('2d'),background=context.createLinearGradient(0,0,width,height);background.addColorStop(0,'#08050d');background.addColorStop(.48,'#6c47b1');background.addColorStop(1,'#c429a3');context.fillStyle=background;context.fillRect(0,0,width,height);for(let i=0;i<18;i++){context.globalAlpha=.09;context.fillStyle=i%2?'#fff':'#07111f';context.beginPath();context.arc(90+i*58,90+(i%4)*130,60+(i%3)*35,0,Math.PI*2);context.fill();}context.globalAlpha=1;context.fillStyle='rgba(6,16,5,.82)';context.roundRect(84,94,792,452,36);context.fill();context.fillStyle='#f6efc4';context.font='700 62px system-ui';context.fillText('FILTER',132,245);context.fillStyle='#e1ec1a';context.fillText('FABJS',132,316);context.font='24px system-ui';context.fillStyle='#cdddb7';context.fillText('Open an image or experiment with this demo.',136,370);const gradient=context.createLinearGradient(136,0,790,0);gradient.addColorStop(0,'#e45a87');gradient.addColorStop(.5,'#9fd36a');gradient.addColorStop(1,'#38a9d4');context.fillStyle=gradient;context.fillRect(136,412,654,18);return context.getImageData(0,0,width,height);}
+  function demoImage(){
+    const width=960,height=640,canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
+    const context=canvas.getContext('2d'),background=context.createLinearGradient(0,0,width,height);
+    background.addColorStop(0,'#080916');background.addColorStop(.5,'#292050');background.addColorStop(1,'#722d72');context.fillStyle=background;context.fillRect(0,0,width,height);
+    // The demo deliberately combines smooth gradients, high-contrast edges, fine
+    // detail and partial transparency so filters have varied pixels to work with.
+    const glow=context.createRadialGradient(744,206,10,744,206,280);glow.addColorStop(0,'#ed6da9');glow.addColorStop(.42,'#884dd0');glow.addColorStop(1,'rgba(39,28,80,0)');context.fillStyle=glow;context.fillRect(450,0,510,500);
+    context.fillStyle='rgba(8,12,22,.86)';context.roundRect(64,64,832,512,28);context.fill();
+    context.fillStyle='#f6efc4';context.font='700 54px system-ui';context.fillText('CHROMAMELD',108,151);context.fillStyle='#e1ec1a';context.fillText('RGBA',108,211);
+    context.font='22px system-ui';context.fillStyle='#cdddb7';context.fillText('Open an image or experiment with this demo.',110,256);
+    const spectrum=context.createLinearGradient(110,0,850,0);for(const [stop,color] of [[0,'#f15b86'],[.2,'#f7ad4b'],[.4,'#e1ec1a'],[.6,'#40d399'],[.8,'#38a9d4'],[1,'#a778ed']])spectrum.addColorStop(stop,color);context.fillStyle=spectrum;context.fillRect(110,294,740,28);
+    const neutral=context.createLinearGradient(110,0,850,0);neutral.addColorStop(0,'#000');neutral.addColorStop(1,'#fff');context.fillStyle=neutral;context.fillRect(110,336,740,22);
+    // Transparent pixels and overlapping translucent shapes exercise alpha.
+    context.clearRect(110,391,260,120);
+    context.fillStyle='rgba(55,200,235,.55)';context.beginPath();context.arc(196,451,51,0,Math.PI*2);context.fill();context.fillStyle='rgba(241,91,134,.6)';context.beginPath();context.arc(261,451,51,0,Math.PI*2);context.fill();
+    const color=context.createLinearGradient(420,390,680,510);color.addColorStop(0,'#f4cc46');color.addColorStop(.5,'#e85b8d');color.addColorStop(1,'#518cef');context.fillStyle=color;context.beginPath();context.arc(549,451,60,0,Math.PI*2);context.fill();
+    context.fillStyle='#f6efc4';for(let i=0;i<16;i++)context.fillRect(705+i*8,395,i%4===0?4:2,112);context.fillStyle='#cdddb7';context.font='14px system-ui';context.fillText('COLOR  /  TONE  /  ALPHA  /  DETAIL',110,546);
+    return context.getImageData(0,0,width,height);
+  }
   async function loadImageFile(file,{successMessage='Image loaded',requestId=null}={}){const loadId=requestId??++state.imageLoadId;if(!file||!String(file.type||'').startsWith('image/')){toast('Choose a valid image file');return false;}let bitmap=null;setStatus('Loading image…','busy');try{bitmap=await createImageBitmap(file);if(loadId!==state.imageLoadId)return false;const maximum=1800,scale=Math.min(1,maximum/Math.max(bitmap.width,bitmap.height)),width=Math.max(1,Math.round(bitmap.width*scale)),height=Math.max(1,Math.round(bitmap.height*scale)),canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const context=canvas.getContext('2d',{willReadFrequently:true});if(!context)throw new Error('Canvas image loading is unavailable');context.drawImage(bitmap,0,0,width,height);const pixels=context.getImageData(0,0,width,height).data;if(loadId!==state.imageLoadId)return false;initImage(pixels,width,height);toast(scale<1?`${successMessage} · resized to 1800 px`:successMessage);return true;}catch(error){if(loadId!==state.imageLoadId)return false;setStatus('Could not load image','error');toast(error.message||'Could not load image');return false;}finally{bitmap?.close?.();}}
   async function openImageFile(file){
     if(!file)return false;const requestId=++state.imageLoadId;
@@ -7557,21 +7894,69 @@ function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL
 
   function triggerDownload(href,name,revoke=false){try{const anchor=document.createElement('a');anchor.href=href;anchor.download=name;anchor.rel='noopener';anchor.style.display='none';document.body.appendChild(anchor);anchor.click();setTimeout(()=>{anchor.remove();if(revoke)URL.revokeObjectURL(href);},10000);toast(`Download started: ${name}`);return true;}catch(error){if(revoke)URL.revokeObjectURL(href);console.error('Download failed',error);toast(`Download failed: ${error.message||'browser blocked the file'}`);return false;}}
   function downloadBlob(blob,name){if(!(blob instanceof Blob)||!blob.size){toast('Nothing was generated to download');return false;}return triggerDownload(URL.createObjectURL(blob),name,true);}
-  async function exportPNG(){if(!state.filtered||!state.width||!state.height){toast('Load and render an image before exporting');return;}const filter=validatedCurrentFilter();if(!filter)return;if(state.lastSuccessfulRenderSignature!==filterRenderSignature(filter)){setStatus('Render the current filter changes before exporting.','error');toast('Render the current filter changes before exporting.');return;}setStatus('Encoding PNG…','busy');try{const canvas=renderedImageCanvas(state.filtered,state.width,state.height),name=slug($('#filterName').value||'filtered-image')+'.png',encoded=await canvasBlob(canvas,'image/png'),envelope=createFilterFabPngEnvelope(filter,'2.9.5'),blob=await embedFilterFabMetadata(encoded,envelope);if(downloadBlob(blob,name))setStatus('Ready');}catch(error){console.error('PNG export failed',error);setStatus('PNG export failed','error');toast(`PNG export failed: ${error.message}`);}}
+  async function exportPNG(){if(!state.filtered||!state.width||!state.height){toast('Load and render an image before exporting');return;}const filter=validatedCurrentFilter();if(!filter)return;if(state.lastSuccessfulRenderSignature!==filterRenderSignature(filter)){setStatus('Render the current filter changes before exporting.','error');toast('Render the current filter changes before exporting.');return;}setStatus('Encoding PNG…','busy');try{const canvas=renderedImageCanvas(state.filtered,state.width,state.height),name=slug($('#filterName').value||'filtered-image')+'.png',encoded=await canvasBlob(canvas,'image/png'),envelope=createFilterFabPngEnvelope(filter,'2.10.0'),blob=await embedFilterFabMetadata(encoded,envelope);if(downloadBlob(blob,name))setStatus('Ready');}catch(error){console.error('PNG export failed',error);setStatus('PNG export failed','error');toast(`PNG export failed: ${error.message}`);}}
+  let backupCatalogPending=false;
+  function prepareLibraryBackup(){
+    const snapshot=readLibraryBackupSnapshot(localStorage),backup=createLibraryBackup(snapshot.records,snapshot.preferences,{appVersion:window.FilterFabJS.version,exportedAt:new Date().toISOString()}),text=serializeLibraryBackup(backup),now=new Date(),date=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-');
+    return{count:backup.filters.length,download:()=>downloadBlob(new Blob([text],{type:'application/json;charset=utf-8'}),`filter-fabjs-my-filters-${date}.json`)};
+  }
+  async function reviewLibraryBackup(file){
+    if(file.size>LIBRARY_BACKUP_MAX_BYTES)throw new Error('Backup exceeds the 16 MiB UTF-8 limit');
+    const incoming=parseAndValidateBackup(await file.text()),snapshot=readLibraryBackupSnapshot(localStorage);
+    return{plan:policy=>planLibraryMerge(snapshot,incoming,policy),commit:plan=>{
+      const result=commitLibraryMerge(localStorage,snapshot,plan);
+      // Refresh cards immediately, preserving the existing candidate/request guards.
+      // The Author dropdown/header refresh waits until preview restoration/apply.
+      if(result.added){
+        backupCatalogPending=true;catalogCache=null;
+        try{browser?.refresh({preserveScroll:true});}catch(error){console.error('Imported filters were saved; Library refresh failed',error);}
+      }
+      return result;
+    }};
+  }
   function exportFilter(){const filter=validatedCurrentFilter();if(!filter)return;if(!activeDocument.id)activeDocument.id=createCustomPresetId();filter.id=activeDocument.id;const base=slug(filter.name);try{downloadBlob(new Blob([JSON.stringify(filter,null,2)+'\n'],{type:'application/json;charset=utf-8'}),base+'.json');}catch(error){console.error('Filter export failed',error);toast(`Filter export failed: ${error.message}`);}}
+  function removeSavedFilterRecord(id){
+    const {storageList}=library();
+    if(!storageList.some(item=>item?.id===id))throw new Error('This filter was already deleted.');
+    localStorage.setItem('ffw-custom-presets',JSON.stringify(storageList.filter(item=>item?.id!==id)));
+    try{localStorage.removeItem(PREFERENCE_PREFIX+`custom:${id}`);}catch(error){organizationError(error);}
+    catalogCache=null;
+  }
+  function detachDeletedFilterIdentity(document){
+    document.key=null;document.id=undefined;document.imported=false;document.importSource=null;document.recordBaseline=null;
+    document.baseline=null;
+  }
+  async function deleteLibraryFilter(entry){
+    if(entry.source!=='custom'||!entry.document?.id)return false;
+    const id=entry.document.id,key=`custom:${id}`;
+    if(!library().presets.some(item=>item?.id===id))throw new Error('This filter was already deleted.');
+    const {action}=await chooseFilterAction(`Delete “${entry.name}” from My Filters?`,[['delete','Delete filter'],['cancel','Cancel']],{detail:'This removes the saved filter and its favorites from this browser. This cannot be undone.'});
+    if(action!=='delete')return false;
+    // If deleting the currently previewed candidate, return to the original
+    // working document before removing its saved record.
+    if(librarySession?.candidateEntry?.key===key){
+      await cancelLibrarySession();
+      await beginLibrarySession();
+    }
+    removeSavedFilterRecord(id);
+    if(librarySession?.originalWorkingDocument.activeDocument.key===key)
+      detachDeletedFilterIdentity(librarySession.originalWorkingDocument.activeDocument);
+    if(activeDocument.key===key){detachDeletedFilterIdentity(activeDocument);refreshTags();}
+    populatePresets();
+    toast(`${entry.name} deleted from My Filters`);
+    return true;
+  }
   async function deletePreset(){
     if(!activeDocument.key?.startsWith('custom:'))return;
     try{
       const id=activeDocument.id,dirty=isDirty(),{action}=await chooseFilterAction(`Delete “${$('#filterName').value}” from My Filters?`,dirty?[['keep','Delete and keep unsaved draft'],['cancel','Cancel']]:[['delete','Delete'],['cancel','Cancel']]);
       if(!['keep','delete'].includes(action))return;
-      const {storageList}=library();localStorage.setItem('ffw-custom-presets',JSON.stringify(storageList.filter(item=>item?.id!==id)));
-      try{localStorage.removeItem(PREFERENCE_PREFIX+`custom:${id}`);}catch(error){organizationError(error);}
-      catalogCache=null;
+      removeSavedFilterRecord(id);
       if(action==='keep'){activeDocument.key=null;activeDocument.id=undefined;activeDocument.imported=false;activeDocument.importSource=null;activeDocument.recordBaseline=null;refreshTags();}else applyFilter(presets.find(item=>item.id==='pass'),'builtin:pass');
       populatePresets();
     }catch(error){organizationError(error);}
   }
-  async function importFilterFile(file){if(!file)return;try{const result=await importLatestFilterFile(file,{state,cancelRender,applyFilter});if(!result)return;toast(result.kind==='afs'?'AFS filter imported · CPU legacy mode':'Filter FabJS project imported');}catch(error){console.error('Filter import failed',error);toast(`Import failed: ${error.message}`);}finally{el.filterInput.value='';}}
+  async function importFilterFile(file){if(!file)return;try{const result=await importLatestFilterFile(file,{state,cancelRender,applyFilter});if(!result)return;toast(result.kind==='afs'?'AFS filter imported · CPU legacy mode':'ChromaMeld RGBA filter imported');}catch(error){console.error('Filter import failed',error);toast(`Import failed: ${error.message}`);}finally{el.filterInput.value='';}}
   async function savePreset(){
     const filter=validatedCurrentFilter();if(!filter){await chooseFilterAction('Could not save filter',[['cancel','Keep editing']],{detail:el.statusText.textContent});return false;}
     try{
@@ -7618,7 +8003,8 @@ function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL
     el.renderBtn.onclick=()=>render({focusInvalid:true});
     const resetFilter=()=>applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');$('#resetBtn').onclick=resetFilter;exploreController=createExploreController({state,root:$('#sliderGrid').parentElement,resetButton:$('#exploreResetBtn'),syncControls:()=>controlsController.syncSliders(),scheduleRender,onChange:updateDocumentHeader,resetPassThrough:resetFilter,toast});
     el.activeFavorite.onclick=()=>{if(!activeDocument.key)return;try{const current=preference(activeDocument.key);writeEntryPreference(localStorage,activeDocument.key,{favorite:!current.favorite});catalogCache=null;browser?.refresh();updateDocumentHeader();}catch(error){organizationError(error);}};
-    browser=createFilterBrowser({launcher:el.searchFilters,getEntries:()=>[...catalog(),...onlineLibrary.getEntries()],getOnlineState:onlineLibrary.getState,loadOnline:onlineLibrary.load,resolveOnlinePreviewUrl:onlineLibrary.resolvePreview,begin:beginLibrarySession,preview:previewLibraryEntry,previewOnline:previewLibraryCandidate,downloadOnline:downloadLibraryPackage,apply:applyLibraryCandidate,cancel:cancelLibrarySession,toggleFavorite:entry=>{writeEntryPreference(localStorage,entry.key,{favorite:!entry.favorite});catalogCache=null;onlineLibrary.invalidate();if(entry.key===activeDocument.key)updateDocumentHeader();},requestThumbnail:requestLibraryThumbnail,clearThumbnailRequests:()=>thumbnailService.clearRequests(),onError:organizationError});
+    browser=createFilterBrowser({launcher:el.searchFilters,getEntries:()=>[...catalog(),...onlineLibrary.getEntries()],getOnlineState:onlineLibrary.getState,loadOnline:onlineLibrary.load,resolveOnlinePreviewUrl:onlineLibrary.resolvePreview,begin:beginLibrarySession,onOpen:()=>libraryLayout.open(),onClose:reason=>{libraryLayout.close({restoreViewport:reason!=='replaced'});if(backupCatalogPending){backupCatalogPending=false;populatePresets();refreshTags();}},onExportBackup:prepareLibraryBackup,onImportBackup:reviewLibraryBackup,preview:previewLibraryEntry,previewOnline:previewLibraryCandidate,downloadOnline:downloadLibraryPackage,apply:applyLibraryCandidate,cancel:cancelLibrarySession,toggleFavorite:entry=>{writeEntryPreference(localStorage,entry.key,{favorite:!entry.favorite});catalogCache=null;onlineLibrary.invalidate();if(entry.key===activeDocument.key)updateDocumentHeader();},deleteCustom:deleteLibraryFilter,requestThumbnail:requestLibraryThumbnail,clearThumbnailRequests:()=>thumbnailService.clearRequests(),onError:organizationError});
+    libraryLayout=createLibraryLayout({dialog:browser.dialog,inspectorLayout,canvasView});
     populatePresets();
     el.preset.onchange=async()=>{
       const key=el.preset.value;
@@ -7671,10 +8057,10 @@ function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL
       if(activeDocument.key?.startsWith('custom:')){try{const record=findCustomPresetById(library().presets,activeDocument.id);if(!record){activeDocument.key=null;activeDocument.id=undefined;activeDocument.imported=false;activeDocument.importSource=null;toast('Saved filter deleted in another tab. Save as new to keep this draft.');}else if(JSON.stringify(record)!==activeDocument.recordBaseline)toast('Saved filter changed in another tab. Update will require review.');}catch(error){organizationError(error);}}
       catalogCache=null;onlineLibrary.invalidate();refreshTags();populatePresets();
     }});
-    window.addEventListener('beforeunload',()=>{inspectorLayout.destroy();if(librarySession)abortLibraryPackages(librarySession);onlineLibrary.dispose();thumbnailService.dispose();state.rendererManager?.dispose();});
+    window.addEventListener('beforeunload',()=>{libraryLayout?.destroy();inspectorLayout.destroy();if(librarySession)abortLibraryPackages(librarySession);onlineLibrary.dispose();thumbnailService.dispose();state.rendererManager?.dispose();});
   }
 
-  window.FilterFabJS=Object.freeze({version:'2.9.5',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getThumbnailDiagnostics:()=>thumbnailService.diagnostics(),getRendererPreference:()=>state.rendererPreference,getWorkspaceMode:()=>state.workspaceMode,getLibraryPreviewState:()=>({open:Boolean(librarySession),candidateKey:librarySession?.candidateEntry?.key||null,candidateRendered:Boolean(librarySession?.candidateRendered),activeKey:activeDocument.key,activeId:activeDocument.id,imported:activeDocument.imported,importSource:activeDocument.importSource,baseline:activeDocument.baseline,recordBaseline:activeDocument.recordBaseline})});
+  window.FilterFabJS=Object.freeze({version:'2.10.0',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getThumbnailDiagnostics:()=>thumbnailService.diagnostics(),getRendererPreference:()=>state.rendererPreference,getWorkspaceMode:()=>state.workspaceMode,getLibraryPreviewState:()=>({open:Boolean(librarySession),candidateKey:librarySession?.candidateEntry?.key||null,candidateRendered:Boolean(librarySession?.candidateRendered),activeKey:activeDocument.key,activeId:activeDocument.id,imported:activeDocument.imported,importSource:activeDocument.importSource,baseline:activeDocument.baseline,recordBaseline:activeDocument.recordBaseline})});
   controlsController.buildSliders();wire();const demo=demoImage();initImage(demo.data,demo.width,demo.height);applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');
   void replaceStartupDemo({state,initImage,canReplace:()=>!librarySession});
   return{state,render,applyFilter,loadImageFile,openImageFile};

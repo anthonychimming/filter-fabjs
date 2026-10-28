@@ -61,7 +61,7 @@ export async function runCli(args=process.argv.slice(2)){
   const options={},names={'--library-root':'libraryRoot','--base-ref':'baseRef','--port':'port'};
   while(args.length){const key=args.shift();if(!names[key]||!args.length||Object.hasOwn(options,names[key]))throw new Error(`Invalid or repeated option: ${key}`);options[names[key]]=args.shift();}
   if(options.port!==undefined){options.port=Number(options.port);if(!Number.isInteger(options.port)||options.port<1||options.port>65535)throw new Error('--port must be 1–65535');}
-  const app=await startManagerServer(options);console.log(`Filter FabJS Library Manager: ${app.url}\nLibrary: ${app.manager.root}\nPublication base: ${app.manager.baseSha}\nRemote publication requires explicit confirmation in the Manager. Merge remains manual.`);
+  const app=await startManagerServer(options);console.log(`ChromaMeld RGBA Library Manager: ${app.url}\nLibrary: ${app.manager.root}\nPublication base: ${app.manager.baseSha}\nRemote publication requires explicit confirmation in the Manager. Merge remains manual.`);
   let stopping=false;const stop=async()=>{if(stopping)return;stopping=true;await app.close();};process.once('SIGINT',stop);process.once('SIGTERM',stop);return app;
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))runCli().catch(error=>{console.error(`ERROR ${error.message}`);process.exitCode=1;});

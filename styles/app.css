@@ -284,6 +284,7 @@ html,body{overflow:hidden}
 
 /* Keep the Ko-fi action accessible when the preview toolbar must contract. */
 @media(max-width:1480px){.topbar .support-link{width:var(--control-height-md);padding:0}.topbar .support-label{display:none}}
+@media(pointer:coarse){.topbar .support-link{min-width:var(--touch-target);min-height:var(--touch-target)}}
 
 /* Edge affordance: 30px visual tab inside a 44 × 64px hit target. */
 .inspector-edge{position:fixed;left:var(--inspector-toggle-x,calc(100% - 44px));top:var(--inspector-toggle-y,50%);width:44px;height:64px;transform:translateY(-50%);z-index:41}

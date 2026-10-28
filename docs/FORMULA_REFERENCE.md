@@ -1,8 +1,8 @@
-# Filter FabJS Formula Reference
+# ChromaMeld RGBA Formula Reference
 
-**Applies to Filter FabJS v2.9.5 · native filter format v2 · typed IR v1**
+**Applies to ChromaMeld RGBA v2.10.0 · native filter format v2 · typed IR v1**
 
-This is the compact, implementation-oriented reference for writing Filter FabJS formulas. For worked explanations and tutorials, see the [Filter FabJS Programming Guide (PDF)](Filter_FabJS_Programming_Guide_v2.4.7.pdf). For analytic mask details, see [ANALYTIC_SHAPES.md](ANALYTIC_SHAPES.md).
+This is the compact, implementation-oriented reference for writing ChromaMeld RGBA formulas. For worked explanations and tutorials, see the [Filter FabJS Programming Guide (PDF)](Filter_FabJS_Programming_Guide_v2.4.7.pdf). For analytic mask details, see [ANALYTIC_SHAPES.md](ANALYTIC_SHAPES.md).
 
 The shipping parser in `src/core/formula-language.js`, CPU evaluator in `src/renderers/cpu-worker-source.js`, and WebGPU compiler in `src/gpu/wgsl-compiler.js` are the implementation source of truth.
 
@@ -107,7 +107,7 @@ For a one-pixel-wide or one-pixel-high dimension, its normalized coordinate is `
 
 ## 4. Controls
 
-Filter FabJS exposes ten controls indexed `0..9`. Raw control values are `0..255`.
+ChromaMeld RGBA exposes ten controls indexed `0..9`. Raw control values are `0..255`.
 
 Each control may also carry presentation metadata for a `slider`, `number`, `toggle`, or `seed` widget. Display minimum/maximum, step, `number`/`integer` formatting, and a short unit are authoring/UI metadata only. The stored canonical value remains a floating-point number from `0..255`; display values are linearly derived from it and edits map back into that canonical domain. The **Edit controls** dialog configures these fields without changing formula or renderer semantics.
 
@@ -183,7 +183,7 @@ cnv(1,1,1,1,1,1,1,1,1,9)
 
 ## 7. Angles and polar helpers
 
-Filter FabJS uses **1024 units per full turn**:
+ChromaMeld RGBA uses **1024 units per full turn**:
 
 - `0` = right
 - `256` = down
@@ -197,7 +197,7 @@ Filter FabJS uses **1024 units per full turn**:
 | `tan(angle)` | `1024 * tan(angle * 2π / 1024)` | Yes |
 | `r2x(angle,radius)` | Cartesian X offset | Yes |
 | `r2y(angle,radius)` | Cartesian Y offset | Yes |
-| `c2d(x,y)` | Cartesian vector to Filter FabJS direction | Yes |
+| `c2d(x,y)` | Cartesian vector to ChromaMeld RGBA direction | Yes |
 | `c2m(x,y)` | Vector magnitude | Yes |
 | `angle(x,y)` | Descriptive alias of `c2d(x,y)` | Yes |
 | `radius(x,y)` | Descriptive alias of `c2m(x,y)` | Yes |
@@ -360,7 +360,7 @@ multiply(c,128,ctl(0))
 | comma sequencing | Evaluate left expression, return right expression |
 | legacy integer math | Historic `.afs` compatibility mode |
 
-`get()`/`put()` cells are cleared at the start of every render and are stateful/order-dependent. `rnd()` is also sequential. Native float filters retain Filter FabJS's existing generator, while historic AFS/legacy filters use Filter Factory's 56-entry subtractive generator and `rst()` reset behavior. These constructs intentionally force CPU rendering.
+`get()`/`put()` cells are cleared at the start of every render and are stateful/order-dependent. `rnd()` is also sequential. Native float filters retain ChromaMeld RGBA's existing generator, while historic AFS/legacy filters use Filter Factory's 56-entry subtractive generator and `rst()` reset behavior. These constructs intentionally force CPU rendering.
 
 ## 13. WebGPU compatibility rule
 

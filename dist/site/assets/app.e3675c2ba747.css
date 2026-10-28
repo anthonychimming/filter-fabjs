@@ -54,7 +54,14 @@ button.danger:not(:disabled){border-color:rgba(255,100,124,.45);color:#ffb4c0}bu
 .active-filter-heading h2{margin:2px 0 0;color:var(--heading);font-size:19px;line-height:1.2;overflow-wrap:anywhere}
 .favorite-button{min-width:36px;padding:6px var(--space-2)}
 .active-filter-meta{display:flex;align-items:center;gap:6px;margin-top:5px;color:var(--info);font-size:11px;font-weight:650}
-.active-filter-description{margin:10px 0;color:var(--text);font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+.active-filter-details{margin:10px 0}
+.active-filter-details summary{display:flex;align-items:center;justify-content:space-between;gap:8px;list-style:none;min-height:32px;padding:6px 9px;border:1px solid var(--line2);border-radius:var(--radius-inset);background:var(--panel3);color:var(--text);font-size:12px;font-weight:650;cursor:pointer}
+.active-filter-details summary::-webkit-details-marker{display:none}
+.active-filter-details summary::after{content:'';width:7px;height:7px;flex:0 0 auto;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);transition:transform .16s ease}
+.active-filter-details[open] summary::after{transform:rotate(225deg)}
+.active-filter-details summary:hover{background:var(--surface-hover)}
+.active-filter-details summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.active-filter-description{margin:10px 0 2px;color:var(--text);font-size:12px;line-height:1.5;overflow-wrap:anywhere}
 .active-filter-section .browser-launcher{width:100%;height:38px;text-align:center}
 .adjust-section .section-body{padding:var(--space-4)}
 .control-label{overflow:hidden;text-overflow:ellipsis;font-size:12px;color:var(--text-strong)}
@@ -142,8 +149,8 @@ body[data-workspace-mode=explore] #renderInfo{display:none}
   .control-label{grid-column:2/-1}
   .filter-browser{height:100dvh}
   .filter-card-main{grid-template-columns:minmax(0,1fr) 38px}
-  .filter-card-preview{grid-template-columns:1fr;gap:5px}
-  .filter-thumbnail{width:100%;height:90px}
+  .filter-card-preview{grid-template-columns:52px minmax(0,1fr);gap:7px}
+  .filter-thumbnail{width:52px;height:52px}
   .result-tags{margin-left:0}
   .active-filter-heading{flex-wrap:wrap}
   .control-editor-dialog{width:calc(100vw - 16px)}
@@ -161,7 +168,7 @@ body[data-workspace-mode=explore] #renderInfo{display:none}
   .filter-browser button,.filter-choice button,.filter-browser .result-tags button,
   .library-head>[data-close],.control-widget .slider-value,.control-editor-fields input,
   .control-editor-fields select,.control-editor-heading select,summary{min-height:var(--touch-target)}
-  button.icon,.icon-link,.seed-randomize,.filter-card-favorite,.filter-card-download,.library-head>[data-close]{min-width:var(--touch-target)}
+  button.icon,.icon-link,.seed-randomize,.filter-card-favorite,.filter-card-download,.filter-card-delete,.library-head>[data-close]{min-width:var(--touch-target)}
   .filter-card-main{grid-template-columns:minmax(0,1fr) var(--touch-target)}
   input[type=range]{min-height:var(--touch-target);margin:0;cursor:pointer}
   .toggle-input{width:var(--touch-target);height:var(--touch-target)}
@@ -175,7 +182,12 @@ body[data-workspace-mode=explore] #renderInfo{display:none}
 @media(pointer:coarse) and (hover:none){.render-button kbd{display:none}}
 @media(hover:none){button:active{transform:none}}
 
-.filter-card-actions{display:grid;gap:5px}.filter-package-error{display:block;color:var(--bad);font-size:11px}
+.filter-card-main:has(.filter-card-delete){grid-template-columns:minmax(0,1fr) auto}
+.filter-card-actions:has(.filter-card-delete){display:flex;gap:5px}
+.filter-card-delete{width:38px;height:38px;padding:0;display:grid;place-items:center;color:var(--muted)}
+.filter-card-delete svg{width:17px;height:17px;display:block}
+.filter-card-delete:hover,.filter-card-delete:focus-visible{color:var(--bad);border-color:var(--bad)}
+.filter-package-error{display:block;color:var(--bad);font-size:11px}
 
 [data-online-notice]{font-size:12px;color:var(--muted);overflow-wrap:anywhere}[data-online-notice] button{margin-left:8px}
 /* Comparison controls stay in CSS pixels independently of image zoom. */
@@ -203,6 +215,18 @@ body[data-workspace-mode=explore] #renderInfo{display:none}
 .explore-menu-items.opens-above{top:auto;bottom:100%}
 .explore-menu-items button{display:block;text-align:left;width:100%;border:0;background:transparent}
 .snapshot-slots{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.snapshot-helper{font-size:12px;color:var(--muted);margin:0 0 var(--space-2)}
+.snapshot-slots button{min-width:0;padding:var(--space-2) var(--space-1);display:grid;grid-template-columns:auto auto;justify-content:center;align-items:center;column-gap:var(--space-1);row-gap:2px}
+.snapshot-slots .snapshot-label{grid-column:1/-1;font-size:11px;line-height:1.4}
+.snapshot-slots .snapshot-icon{font-size:12px}
+.snapshot-slots button.empty{color:var(--muted);border-color:var(--line)}
+.snapshot-slots button.active{background:var(--panel3);border-color:var(--control-border);box-shadow:inset 0 0 0 1px var(--control-border);color:var(--text-strong)}
+.snapshot-slots button.modified .snapshot-label{text-decoration:underline dotted;text-underline-offset:3px}
+.snapshots-section button:focus-visible,.explore-menu button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.snapshot-help{position:relative;margin-left:var(--space-2)}
+.snapshot-help button{display:grid;place-items:center;width:22px;height:22px;padding:0;font-size:12px;color:var(--muted)}
+.snapshot-tooltip{position:absolute;z-index:14;top:calc(100% + 4px);right:0;width:220px;max-width:calc(100vw - 40px);padding:var(--space-2);border:1px solid var(--line2);border-radius:var(--radius-control);background:var(--panel2);color:var(--text);font-size:12px;font-weight:400;white-space:normal;visibility:hidden;box-shadow:var(--shadow)}
+.snapshot-help:hover .snapshot-tooltip,.snapshot-help:focus-within .snapshot-tooltip{visibility:visible}
 .snapshot-status{font-size:12px;color:var(--muted);margin:7px 0 0;min-height:18px}
 .snapshots-section .explore-actions>.explore-menu:last-child{margin-left:auto}
 
@@ -260,6 +284,7 @@ html,body{overflow:hidden}
 
 /* Keep the Ko-fi action accessible when the preview toolbar must contract. */
 @media(max-width:1480px){.topbar .support-link{width:var(--control-height-md);padding:0}.topbar .support-label{display:none}}
+@media(pointer:coarse){.topbar .support-link{min-width:var(--touch-target);min-height:var(--touch-target)}}
 
 /* Edge affordance: 30px visual tab inside a 44 × 64px hit target. */
 .inspector-edge{position:fixed;left:var(--inspector-toggle-x,calc(100% - 44px));top:var(--inspector-toggle-y,50%);width:44px;height:64px;transform:translateY(-50%);z-index:41}
@@ -325,3 +350,252 @@ html,body{overflow:hidden}
 @media(max-width:560px){#viewLabel{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}}
 @media(forced-colors:active){.canvas-toolbar{border-color:ButtonText}.canvas-toolbar button[aria-pressed=true]{color:Highlight;border-color:Highlight;outline:2px solid Highlight}.canvas-toolbar button:disabled{color:GrayText}}
 @media(prefers-reduced-motion:reduce){.canvas-toolbar,.canvas-toolbar button{transition:none}}
+
+/* Filter Library discovery, results and actions share a bounded modal viewport. */
+.filter-browser .library-head{padding:8px 12px}
+.filter-browser .browser-tools{flex:0 1 auto;min-height:0;gap:6px;padding:8px 12px}
+.filter-browser .library-discovery{flex-wrap:nowrap;justify-content:space-between}
+.filter-browser .library-discovery label{flex-wrap:nowrap;white-space:nowrap}
+.filter-browser .library-discovery select{min-width:0;width:112px}
+.filter-browser .library-filters{min-width:0}
+.filter-browser .library-filters summary{cursor:pointer;min-height:40px;align-content:center}
+.filter-browser [data-restrictions]{color:var(--accent);font-size:11px;border:1px solid var(--line2);border-radius:var(--radius-inset);padding:2px 6px}
+.filter-browser .library-filter-fields{display:grid;gap:6px;padding:6px 0}
+.filter-browser .library-filter-fields .chips:empty{display:none}
+.filter-browser .browser-results-head{display:flex;flex:0 0 auto;align-items:center;justify-content:space-between;gap:6px;min-height:40px;padding:0 12px;border-bottom:1px solid var(--line);font-size:11px}
+.filter-browser .browser-pages{border:0;padding:0;gap:var(--space-2);font-size:11px}
+.filter-browser .browser-pages button{padding:0;display:grid;place-items:center;width:36px;height:36px;min-width:36px;min-height:36px;flex:0 0 auto}
+.filter-browser .browser-pages button svg{display:block;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+@media(pointer:coarse){.filter-browser .browser-pages button{width:44px;height:44px;min-width:44px;min-height:44px}}
+.filter-browser .filter-results{min-height:0;flex:1 1 0;overscroll-behavior:contain}
+.filter-browser .library-actions{flex-direction:row;align-items:center;padding:6px 12px calc(6px + env(safe-area-inset-bottom));gap:8px}
+.filter-browser .library-actions>div{display:flex;flex:0 0 auto;gap:6px}
+.filter-browser .library-actions>span{min-width:0}
+.filter-browser button:focus-visible,.filter-browser summary:focus-visible,.filter-browser input:focus-visible,.filter-browser select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.filter-browser [hidden]{display:none}
+@container library (max-width:920px){
+  .filter-browser .browser-tools{grid-template-columns:minmax(0,1fr) auto;align-items:center}
+  .filter-browser .library-search,.filter-browser .library-discovery,.filter-browser [data-online-notice],.filter-browser [data-error]{grid-column:1/-1}
+  .filter-browser [data-clear]{grid-column:2;grid-row:1;padding:0 6px;font-size:11px}
+  .filter-browser .library-search:has(+[data-clear]:not([hidden])){padding-right:100px}
+  .filter-browser .library-filters{grid-column:1;grid-row:3}
+  .filter-browser .library-filters[open]{grid-column:1/-1}
+  .filter-browser [data-reset]{grid-column:2;grid-row:3;font-size:11px;padding:0 6px}
+  .filter-browser .library-filters[open]~[data-reset]{grid-row:4}
+  .filter-browser .filter-card{padding:6px}
+  .filter-browser .filter-card-preview{grid-template-columns:56px minmax(0,1fr);gap:8px;min-height:62px}
+  .filter-browser .filter-thumbnail{width:56px;height:56px}
+  .filter-browser .filter-card-copy{padding:0;align-self:center}
+  .filter-browser .filter-card-name,.filter-browser .result-meta,.filter-browser .filter-excerpt{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;line-height:1.25}
+  .filter-browser .filter-card-name{margin-top:0;font-size:12px}
+  .filter-browser .result-tags{display:none}
+  .filter-browser .library-actions{justify-content:flex-end}
+  .filter-browser .library-actions>span{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .filter-browser .library-actions>div{width:100%}
+  .filter-browser .library-actions button{flex:1}
+}
+@media(max-width:360px){
+  .filter-browser .browser-results-head{padding:0 6px;gap:3px}
+  .filter-browser .browser-pages{gap:var(--space-2)}
+  .filter-browser .browser-pages button{font-size:11px;padding:0 4px}
+  .filter-browser .library-discovery select{width:96px}
+  .filter-browser .library-discovery{font-size:12px}
+  .filter-browser .filter-card-preview{grid-template-columns:48px minmax(0,1fr);gap:6px}
+  .filter-browser .filter-thumbnail{width:48px;height:48px}
+}
+/* Suppress competing inspector chrome without changing its state or lifecycle. */
+body:has(.filter-browser[open]) #inspector,body:has(.filter-browser[open]) #inspectorEdge,body:has(.filter-browser[open]) #inspectorBackdrop{opacity:0;pointer-events:none}
+@media(min-width:561px){
+  .filter-browser .browser-tools{grid-template-columns:minmax(0,1fr) auto}
+  .filter-browser .library-discovery{grid-column:1;grid-row:2;justify-content:flex-start;gap:18px}
+  .filter-browser .library-filters{grid-column:2;grid-row:2}
+  .filter-browser .library-filters[open]{grid-column:1/-1;grid-row:3}
+  .filter-browser [data-reset]{grid-column:2;grid-row:3}
+  .filter-browser .library-filters[open]~[data-reset]{grid-row:4}
+}
+
+@media(max-height:500px){
+  .filter-browser .library-head{padding:2px 12px}
+  .filter-browser .browser-tools{padding-top:4px;padding-bottom:4px;gap:4px}
+}
+@container library (max-width:920px){
+  .filter-browser .filter-card-main{grid-template-columns:minmax(0,1fr) auto}
+  .filter-browser .filter-card-actions{display:flex;gap:4px}
+  .filter-browser .filter-card-favorite,.filter-browser .filter-card-download,.filter-browser .filter-card-delete{width:40px;height:40px;min-height:40px}
+}
+
+/* Library presentation suspends inspector chrome without mutating its saved state. */
+.app[data-inspector-suspended=true]{grid-template-columns:minmax(0,1fr)}
+.app[data-inspector-suspended=true] .sidebar,.app[data-inspector-suspended=true] .inspector-resize,.app[data-inspector-suspended=true] .inspector-edge,.app[data-inspector-suspended=true] .inspector-backdrop{display:none}
+.app[data-library-layout=side] .preview-pane{margin-right:calc(var(--library-width) + 12px)}
+.filter-browser{container:library / inline-size}
+.filter-browser[data-layout]{position:fixed;inset:var(--library-top) 0 auto auto;height:var(--library-height);margin:0;border-right:0}
+.filter-browser[data-layout=side]{width:var(--library-width);border-radius:16px 0 0 16px}
+.filter-browser[data-layout=sheet]{width:100vw;border-radius:16px 16px 0 0}
+@container library (max-width:560px){
+  .filter-browser .browser-tools{grid-template-columns:minmax(0,1fr) auto}
+  .filter-browser .library-discovery{grid-column:1/-1;grid-row:2;justify-content:space-between;gap:6px}
+  .filter-browser .library-filters{grid-column:1;grid-row:3}
+  .filter-browser .library-filters[open]{grid-column:1/-1;grid-row:3}
+  .filter-browser [data-reset]{grid-column:2;grid-row:3}
+  .filter-browser .library-filters[open]~[data-reset]{grid-row:4}
+  .filter-browser .filter-card-preview{grid-template-columns:48px minmax(0,1fr);gap:6px}
+  .filter-browser .filter-thumbnail{width:48px;height:48px}
+  .filter-browser .browser-results-head{padding:0 6px;gap:3px}
+  .filter-browser .browser-pages{gap:var(--space-2)}
+  .filter-browser .browser-pages button{font-size:11px;padding:0 4px}
+}
+@media(max-height:500px){
+  .filter-browser .filter-card{padding:6px}
+  .filter-browser .filter-card-preview{grid-template-columns:56px minmax(0,1fr);gap:8px;min-height:62px}
+  .filter-browser .filter-thumbnail{width:56px;height:56px}
+  .filter-browser .filter-card-copy{padding:0;align-self:center}
+  .filter-browser .filter-card-name,.filter-browser .result-meta,.filter-browser .filter-excerpt{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;line-height:1.25}
+  .filter-browser .filter-card-name{font-size:12px}
+  .filter-browser .result-tags{display:none}
+}
+
+/* Explicit mobile image viewing keeps the native modal and transaction open. */
+.filter-browser .library-head>[data-image-view-toggle]{flex:0 0 auto;font-size:12px;padding:0 8px;min-height:40px}
+.filter-browser .library-head:has([data-image-view-toggle]:not([hidden])){gap:6px}
+.filter-browser .library-head:has([data-image-view-toggle]:not([hidden]))>div{flex:1;min-width:0}
+.filter-browser[data-image-view=true] .browser-tools,.filter-browser[data-image-view=true] .browser-results-head,.filter-browser[data-image-view=true] .filter-results{display:none}
+.app[data-library-image-view=true] .topbar,.app[data-library-image-view=true] .statusbar,.app[data-library-image-view=true] .canvas-toolbar{display:none}
+.app[data-library-image-view=true] .preview-pane{margin-bottom:var(--library-image-inset)}
+@media(pointer:coarse){.filter-browser .library-head>[data-image-view-toggle]{min-height:44px}}
+.app[data-library-image-view=true] .workspace{grid-template-rows:0 minmax(0,1fr) 0}
+.app[data-library-image-view=true] .preview-pane{grid-row:2}
+
+/* Library collection management; native backup dialogs sit above the preview. */
+.filter-browser .library-head{flex-wrap:wrap;gap:var(--space-2)}
+.filter-browser .library-head>div:first-child{flex:1;min-width:90px}
+.filter-browser .library-head>.library-manage{position:relative;flex:0 0 auto;min-width:0}
+.library-manage>button{font-size:12px;padding:0 8px;min-height:40px}
+.library-manage-menu{position:absolute;right:0;top:100%;z-index:4;min-width:174px;padding:8px;background:var(--panel2);border:1px solid var(--line2);border-radius:var(--radius-inset);box-shadow:0 6px 18px #0005}
+.library-manage-menu[hidden]{display:none}
+.library-manage-menu strong{display:block;font-size:12px;padding:6px}
+.library-manage-menu button{display:block;width:100%;text-align:left;margin-top:4px}
+.library-backup-status:empty{display:none}
+.library-backup-status{margin:0;font-size:12px;overflow-wrap:anywhere}
+.library-backup-dialog{max-height:calc(100dvh - 24px);max-width:calc(100vw - 24px);overflow:auto}
+.library-backup-dialog fieldset{border:1px solid var(--line2);padding:10px;min-width:0}
+.library-backup-dialog fieldset label{display:flex;align-items:center;gap:8px;margin:8px 0}
+.library-backup-dialog fieldset input{width:auto;margin:0;flex:0 0 auto}
+.library-backup-dialog p,.library-backup-dialog button{overflow-wrap:anywhere}
+@media(forced-colors:active){.library-manage-menu{border:1px solid ButtonText}}
+
+.browser-tools>.library-backup-status[role=status]{color:var(--good)}
+
+
+/* Night Circuit v1.1 — scoped UI consistency pass.
+ * Presentation only: renderer, formula and persistence semantics remain unchanged.
+ * Legacy foundation tokens and component class names stay available.
+ */
+:root{
+  --text-label:var(--text-strong);
+  --text-secondary:var(--muted);
+  --border-default:var(--line);
+  --focus-color:var(--accent);
+  --surface-selected:rgba(225,236,26,.06);
+  --icon-size:16px;
+  --icon-stroke:1.8;
+}
+/* Shared chrome: small controls, overlays and dialogs. */
+.modal-head{min-height:52px;gap:var(--space-2);background:var(--panel)}
+.modal-head strong{font-size:13px;line-height:1.4}
+.modal-head .icon,.filter-browser .library-head>[data-close]{width:var(--control-height-md);height:var(--control-height-md);min-width:var(--control-height-md);min-height:var(--control-height-md);display:grid;place-items:center;font-size:18px;line-height:1}
+.modal-body{padding:var(--space-5)}
+.control-editor-actions{gap:var(--space-2);padding:var(--space-4) var(--space-5);background:var(--panel2)}
+.control-editor-actions button,.filter-choice .filter-actions button{min-height:var(--control-height-md)}
+.filter-choice .modal-body{display:grid;gap:var(--space-3)}
+.filter-choice .modal-body h2{margin:0;padding-bottom:var(--space-3);border-bottom:1px solid var(--border-default);color:var(--heading);line-height:1.3}
+.filter-choice .modal-body>p{margin:0;line-height:1.55}
+.filter-choice .filter-actions{justify-content:flex-end;gap:var(--space-2);padding-top:var(--space-3);border-top:1px solid var(--border-default);margin-top:var(--space-2)}
+.filter-choice .filter-actions button{padding:var(--space-2) var(--space-4)}
+.filter-choice .filter-actions .danger{font-weight:700}
+
+/* Explore: one primary action per task. Opening the Library is navigation;
+ * Apply Filter remains the yellow committing action inside the drawer.
+ */
+.active-filter-section{border-color:var(--border-default)}
+.active-filter-heading{gap:var(--space-3)}
+.active-filter-heading h2{font-size:18px;line-height:1.25}
+.active-filter-meta{color:var(--text-secondary);gap:var(--space-2);flex-wrap:wrap}
+#activeFilterSource{color:var(--info)}
+#activeFilterStatus{color:var(--text-label)}
+.active-filter-section .browser-launcher{min-height:var(--control-height-md);height:auto;font-weight:800}
+.favorite-button{min-height:var(--control-height-md);border-color:var(--line2)}
+.favorite-button[aria-pressed=true]{color:var(--accent);background:var(--panel3);border-color:var(--control-border)}
+.active-filter-details summary{border-color:var(--line);background:var(--panel)}
+
+/* Parameters: quiet unused state, aligned lock / label / value.
+ * Do not confuse locked controls with disabled controls.
+ */
+.adjust-section .slider-grid{gap:var(--space-2)}
+.adjust-section .slider-row{min-height:var(--control-height-md);column-gap:var(--space-2)}
+.adjust-section .slider-row.control-unused{opacity:.58;filter:none}
+.adjust-section .control-label{font-size:12px;line-height:1.4;color:var(--text-label)}
+.adjust-section .control-readout{min-width:42px;font-variant-numeric:tabular-nums}
+.adjust-section .control-lock{border-radius:var(--radius-inset)}
+.adjust-section .control-lock[aria-pressed=true]{color:var(--accent);background:var(--panel3);border-color:var(--control-border)}
+.adjust-section .control-lock:focus-visible{outline:3px solid var(--focus-color);outline-offset:2px}
+
+/* Snapshot slots: stored, selected and edited remain separate states. */
+.snapshot-slots button{min-height:58px;border-radius:var(--radius-control);border-color:var(--line2);row-gap:3px;align-content:center}
+.snapshot-slots button.empty{background:var(--panel);border-color:var(--line);color:var(--text-secondary)}
+.snapshot-slots button:not(.empty) .snapshot-icon{color:var(--good)}
+.snapshot-slots button.active{background:var(--panel3);border-color:var(--control-border);box-shadow:inset 0 2px 0 var(--accent)}
+.snapshot-slots button.active .snapshot-icon{color:var(--accent)}
+.snapshot-slots button.modified{box-shadow:inset 0 2px 0 var(--accent2)}
+.snapshot-slots button.modified .snapshot-icon{color:var(--accent2)}
+.snapshot-slots button.modified .snapshot-label{text-decoration:none;color:var(--text-strong)}
+.snapshot-slots button.modified .snapshot-label::after{content:" · Edited";color:var(--text-strong);font-weight:650}
+.snapshot-status{font-size:12px;line-height:1.4}
+.snapshot-help button{width:30px;height:30px;min-width:30px;min-height:30px}
+.explore-menu-items{border-radius:var(--radius-control);padding:var(--space-1);border-color:var(--control-border);background:var(--panel2)}
+.explore-menu-items button{min-height:var(--control-height-md);border-radius:var(--radius-inset)}
+.explore-menu-items button:hover{background:var(--surface-hover)}
+/* Compact, right-anchored Locks commands stay inside the inspector gutter. */
+.explore-menu.locks-menu .explore-menu-items{left:auto;right:0;min-width:132px;width:max-content;max-width:min(148px,calc(100vw - 16px))}
+
+/* Library: neutral idle cards, explicit selected preview, compact icon action rail. */
+.filter-browser .library-head{min-height:52px;gap:var(--space-2);padding:var(--space-2) var(--space-4)}
+.filter-browser .browser-tools{border-color:var(--border-default)}
+.filter-browser .filter-card{padding:var(--space-2);border-radius:var(--radius-group);border-color:var(--line);background:var(--panel)}
+.filter-browser .filter-card[data-selected=true]{background:var(--surface-selected);border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.filter-browser .filter-card-main{grid-template-columns:minmax(0,1fr) auto;gap:var(--space-2);align-items:start}
+.filter-browser .filter-card-preview{border-radius:var(--radius-inset);outline-offset:2px}
+.filter-browser .filter-card-copy{padding:1px 0;min-width:0}
+.filter-browser .filter-card-name{font-size:12px;line-height:1.35;font-weight:750}
+.filter-browser .result-meta{font-size:11px;line-height:1.35;margin-top:2px}
+.filter-browser .filter-excerpt{font-size:12px;line-height:1.4;margin-top:3px}
+.filter-browser .filter-card-actions{display:flex;flex-direction:row;align-items:flex-start;gap:var(--space-1)}
+.filter-browser .filter-card-actions button{display:grid;place-items:center;width:var(--control-height-md);height:var(--control-height-md);min-width:var(--control-height-md);min-height:var(--control-height-md);padding:0;border-radius:var(--radius-control);font-size:16px;line-height:1}
+.filter-browser .filter-card-actions svg{display:block;width:var(--icon-size);height:var(--icon-size);stroke-width:var(--icon-stroke)}
+.filter-browser .filter-card-delete:not(:disabled):hover,.filter-browser .filter-card-delete:focus-visible{color:var(--bad);border-color:var(--bad)}
+.filter-browser .filter-card-favorite[aria-pressed=true]{color:var(--accent);background:var(--panel3)}
+.filter-browser .library-actions{border-color:var(--border-default);background:var(--panel2);gap:var(--space-2)}
+.filter-browser .library-actions button{min-height:var(--control-height-md)}
+.filter-browser .library-head>.library-manage>button{min-height:var(--control-height-md);border-radius:var(--radius-control)}
+.library-manage-menu{top:calc(100% + var(--space-1));padding:var(--space-2);background:var(--panel2);border-color:var(--control-border);border-radius:var(--radius-control)}
+.library-manage-menu strong{padding:var(--space-1) var(--space-2);color:var(--heading)}
+.library-manage-menu button{margin-top:var(--space-1);min-height:var(--control-height-md);border-radius:var(--radius-inset)}
+.library-manage-menu button:hover{background:var(--surface-hover)}
+.library-backup-dialog fieldset{border-color:var(--line);border-radius:var(--radius-group)}
+.library-backup-dialog .modal-head{min-height:52px}
+
+/* Wider drawers can afford genuinely useful two-line descriptions. */
+@container library (min-width:390px){
+  .filter-browser .filter-card-name{white-space:normal;overflow:visible;text-overflow:clip}
+  .filter-browser .filter-excerpt{display:-webkit-box;white-space:normal;overflow:hidden;text-overflow:ellipsis;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+}
+@media(pointer:coarse){
+  .modal-head .icon,.filter-browser .library-head>[data-close],.snapshot-help button,
+  .filter-browser .filter-card-actions button,.library-manage-menu button,
+  .explore-menu-items button,.filter-choice .filter-actions button{min-width:var(--touch-target);min-height:var(--touch-target)}
+  .filter-browser .filter-card-actions button{width:var(--touch-target);height:var(--touch-target)}
+  .snapshot-slots button{min-height:var(--touch-target)}
+}
+@media(prefers-reduced-motion:reduce){
+  .filter-browser .filter-card,.snapshot-slots button{transition:none}
+}

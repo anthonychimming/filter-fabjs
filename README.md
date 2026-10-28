@@ -1,12 +1,12 @@
-# Filter FabJS
+# ChromaMeld RGBA
 
 **A browser-based editor for creating and exploring procedural image filters.**
 
-[Launch Filter FabJS](https://anthonychimming.github.io/filter-fabjs/) · [Formula Reference](docs/FORMULA_REFERENCE.md) · [Changelog](CHANGELOG.md)
+[Launch ChromaMeld RGBA](https://anthonychimming.github.io/filter-fabjs/) · [Formula Reference](docs/FORMULA_REFERENCE.md) · [Changelog](CHANGELOG.md)
 
-![Filter FabJS interface showing an original and filtered image side by side](docs/assets/filter-fabjs-v2.9.1_2.jpg)
+![Historical Filter FabJS interface showing an original and filtered image side by side](docs/assets/filter-fabjs-v2.9.1_2.jpg)
 
-Filter FabJS uses mathematical expressions to transform the red, green, blue, and alpha channels of an image. It is inspired by Adobe Filter Factory and the open-source [Filter Foundry](https://github.com/danielmarschall/filter_foundry) project.
+ChromaMeld RGBA (formerly Filter FabJS) uses mathematical expressions to transform the red, green, blue, and alpha channels of an image. It is inspired by Adobe Filter Factory and the open-source [Filter Foundry](https://github.com/danielmarschall/filter_foundry) project.
 
 ## Features
 
@@ -55,4 +55,4 @@ Bug reports, compatibility findings, filter examples, and focused improvements a
 
 ## License
 
-Filter FabJS is distributed under the **GNU General Public License v2.0 or later**. See [LICENSE](LICENSE).
+ChromaMeld RGBA is distributed under the **GNU General Public License v2.0 or later**. See [LICENSE](LICENSE).
