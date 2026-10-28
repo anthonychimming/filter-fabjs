@@ -14,7 +14,7 @@ const standaloneHtml = fs.readFileSync(standalonePath, 'utf8');
 const cssReference = siteHtml.match(/href="\.\/assets\/(app\.[0-9a-f]{12}\.css)"/)?.[1];
 const jsReference = siteHtml.match(/src="\.\/assets\/(app\.[0-9a-f]{12}\.js)"/)?.[1];
 
-assert.match(siteHtml, /<link rel="icon" type="image\\/png" sizes="32x32" href="\\.\\/favicon\\.png">/, 'deployed HTML must declare the ChromaMeld favicon');
+assert.ok(siteHtml.includes('<link rel="icon" type="image/png" sizes="32x32" href="./favicon.png">'), 'deployed HTML must declare the ChromaMeld favicon');
 assert.deepEqual(fs.readFileSync('dist/site/favicon.png'), fs.readFileSync('assets/favicon.png'), 'deployed favicon must preserve the source PNG bytes');
 assert.ok(cssReference, 'deployed HTML must reference a fingerprinted CSS asset');
 assert.ok(jsReference, 'deployed HTML must reference a fingerprinted JavaScript asset');
