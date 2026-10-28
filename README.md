@@ -1,189 +1,58 @@
-# Filter FabJS — Procedural Image Filter Editor for the Web
+# Filter FabJS
 
-**Create custom image filters directly in your browser with mathematical expressions, real-time previews, WebGPU acceleration, and Filter Factory compatibility.**
+**A browser-based editor for creating and exploring procedural image filters.**
 
-**Current release: v2.9.5**
+[Launch Filter FabJS](https://anthonychimming.github.io/filter-fabjs/) · [Formula Reference](docs/FORMULA_REFERENCE.md) · [Changelog](CHANGELOG.md)
 
-**[▶ Launch Filter FabJS](https://anthonychimming.github.io/filter-fabjs/)**
+![Filter FabJS interface showing an original and filtered image side by side](docs/assets/filter-fabjs-v2.9.1_2.jpg)
 
-![Filter FabJS v2.9.1 interface showing a split Original/Filtered preview with the Iridescent Shift filter](docs/assets/filter-fabjs-v2.9.1_2.jpg)
+Filter FabJS uses mathematical expressions to transform the red, green, blue, and alpha channels of an image. It is inspired by Adobe Filter Factory and the open-source [Filter Foundry](https://github.com/danielmarschall/filter_foundry) project.
 
-Filter FabJS is an open-source procedural image filter editor inspired by Adobe Filter Factory and the open-source Filter Foundry project. It lets you build, edit, preview, organize, and share custom image effects without installing a desktop application.
+## Features
 
-Use four RGBA expressions to transform an image, expose creative parameters as controls, and combine sampling, gradients, procedural noise, fractals, masks, convolution, blending, and coordinate transforms. Compatible filters run through WebGPU, while unsupported or historic Filter Factory formulas automatically fall back to the CPU renderer.
+- Create filters with expressions, adjustable controls, and a live preview.
+- Explore 48 built-in filters, save custom filters locally, and browse the [Online Filter Library](https://github.com/anthonychimming/filter-fabjs-library).
+- Use image sampling, gradients, noise, fractals, masks, convolution, and blending in filter formulas.
+- Render compatible filters with WebGPU, with automatic CPU fallback when needed.
+- Import native JSON filters and supported historic Filter Factory / Filter Foundry `.afs` filters.
+- Export images as PNG, with the option to embed the active filter definition as metadata.
 
-## Highlights
+## Development
 
-- **Browser-native image processing** — load an image, apply or author filters, and export the result without a desktop install.
-- **Custom procedural filters** — write separate R, G, B, and Alpha expressions with live validation and preview rendering.
-- **WebGPU acceleration** — compatible filters compile to WGSL, with automatic CPU fallback when required.
-- **Filter Factory compatibility** — import historic Adobe Filter Factory / Filter Foundry `.afs` filters through the legacy compatibility path.
-- **48 built-in filters** — searchable by name, description, author, tags, and favorites.
-- **Online Filter Library** — browse additional filters, preview them on your current image, then apply, save, or download them.
-- **Maintainer Library Manager** — manage the official Online Library locally with filter lifecycle actions, validation and reviewed publication commits. See the [Library Manager guide](docs/LIBRARY_MANAGER.md).
-- **Artist-first controls** — filters can expose up to ten sliders, number fields, toggles, or seed controls with custom ranges and labels.
-- **Procedural graphics toolkit** — includes image sampling, transforms, gradients, palette ramps, Perlin/Worley noise, FBM, turbulence, fractals, analytic masks, signed-distance fields, convolution, and blend operations.
-- **Portable filter files** — import and export native Filter FabJS JSON filters.
-- **Filter-aware PNG export** — exported PNGs can carry the active Filter FabJS definition as embedded metadata while remaining ordinary PNG images.
-- **Local filter library** — save custom filters, organize them with tags and favorites, and search them alongside built-ins.
-- **Explore and Author workspaces** — use Explore for fast visual adjustment and Author for formulas, metadata, control definitions, and renderer diagnostics.
-- **Explore sessions** — lock parameters, choose a strength and mutate (including Random), reset to authored defaults, undo one bulk action, and compare four control-only snapshots. See [Explore controls](docs/explore-panel.md) for lifecycle and reset behavior.
+The project uses native JavaScript modules and has no npm package dependencies. A modern browser and Node.js are required. WebGPU support is optional; availability depends on the browser and device.
 
-## Inspector visibility
-
-Use the chevron at the image workspace's right edge to show the inspector, or the chevron beside the open panel to hide it. The yellow tab highlights the closed state. Desktop starts with a docked inspector at 1024px and wider; smaller layouts keep the existing overlay or bottom sheet, initially closed. A first-use "Explore filters" hint can be dismissed and stays dismissed after opening the panel or dismissing the hint. Discovery completion is stored separately as `ffw-inspector-discovered`; existing width and filter preferences are unchanged. If browser storage is unavailable, completion lasts for the current session.
-
-The tab supports keyboard activation and visible focus. On a phone sheet, a clear lane along its left edge keeps the tab away from authoring controls. Toggling changes layout only and preserves custom zoom.
-
-## How it works
-
-A Filter FabJS filter contains four mathematical expressions that define the output red, green, blue, and alpha channels.
-
-```text
-R: 255-r
-G: 255-g
-B: 255-b
-A: a
-```
-
-Expressions can reference source pixels, image coordinates, custom controls, gradients, noise fields, fractals, masks, sampling functions, and other image-processing operations.
-
-Native filters use floating-point math and a typed, renderer-neutral intermediate representation shared by the CPU and WebGPU renderers.
-
-For the complete formula language and compatibility rules, see:
-
-- **[Formula Reference](docs/FORMULA_REFERENCE.md)**
-- **[Filter FabJS Programming Guide](docs/Filter_FabJS_Programming_Guide_v2.4.7.pdf)**
-- **[Project Status](docs/PROJECT_STATUS.md)**
-
-## Filter Library
-
-The Filter Library brings **Built-in**, **My Filters**, and **Online** filters into one searchable interface.
-
-You can:
-
-- search names, descriptions, authors, and tags;
-- filter by source or favorites;
-- preview filters non-destructively on the current image;
-- apply or cancel a preview explicitly;
-- save imported or edited filters to My Filters;
-- browse additional filters from the separate [Filter FabJS Library](https://github.com/anthonychimming/filter-fabjs-library).
-
-See **[Filter Library documentation](docs/FILTER_LIBRARY.md)** for metadata, storage, identity, and portable export behavior.
-
-## Split preview comparison
-
-The floating canvas controls start in Filtered view. Select the eye (Show original) or split (Compare images) button to switch views; selecting the active button again returns to Filtered. Fit image reserves space for the controls, and the readout always shows the actual zoom percentage. The rail becomes a bottom group when the available canvas width is narrow.
-
-In Split mode, click or tap the displayed image, or drag the vertical divider or its circular handle, to compare Original (left) with Filtered (right). Use Left/Right to move by 1%, Shift+Left/Right by 5%, or Home/End to reach either edge. The position remains when switching preview modes and follows the displayed image during Fit, zoom, and resizing.
-
-## Portable PNG filters
-
-Filter FabJS can embed the current validated native filter definition inside an exported PNG using standard PNG metadata.
-
-When a Filter FabJS PNG is reopened, the app can detect the embedded filter and let you either import the filter or open only the image.
-
-This metadata is portable convenience data, not proof of authorship or authenticity, and some image editors or optimization services may remove it.
-
-## Run locally
-
-Requirements:
-
-- a modern browser;
-- Node.js;
-- WebGPU support for GPU rendering, where available.
-
-Start the development server:
+Start the local development server:
 
 ```bash
 npm run dev
 ```
 
-Then open:
+Open `http://localhost:8080`. Use localhost or HTTPS for WebGPU and clipboard APIs.
 
-```text
-http://localhost:8080
-```
-
-WebGPU and Clipboard APIs normally require HTTPS or `localhost`, so opening `index.html` directly is not the supported development workflow.
-
-## Verify and build
-
-Run the complete verification pipeline:
+Run the full verification pipeline:
 
 ```bash
 npm run verify
 ```
 
-Or run individual stages:
-
-```bash
-npm run check
-npm test
-npm run build
-```
-
-Build output:
-
-- `dist/site/` — deployable static site
-- `dist/filter-fabjs-v2.9.5.html` — standalone single-file build
-
-Startup immediately displays the built-in canvas demo, then attempts to load `./assets/demo-splash.png` as the real 960 × 640 RGBA source. The static-site build copies this image to `dist/site/assets/demo-splash.png`; its document-relative URL also works under a project subpath such as `/filter-fabjs/`. Missing, invalid, or slow assets quietly retain the built-in demo after a three-second timeout. Starting a user image request prevents a late splash from replacing it, and the splash does not reset filter edits or controls. The standalone HTML keeps the generated demo available offline and does not embed the PNG.
-
-The project currently has no npm package dependencies.
+Individual commands are available for syntax checks (`npm run check`), tests (`npm test`), and production builds (`npm run build`). The build produces a deployable static site in `dist/site/` and a standalone HTML file in `dist/`.
 
 ## Documentation
 
-Technical and authoring documentation lives under `docs/` rather than in this README.
-
-- **[Architecture](docs/ARCHITECTURE.md)** — renderer, compiler, IR, and application structure
-- **[Project Status](docs/PROJECT_STATUS.md)** — current implementation state and known boundaries
-- **[Formula Reference](docs/FORMULA_REFERENCE.md)** — syntax, variables, functions, controls, and renderer support
-- **[Programming Guide](docs/Filter_FabJS_Programming_Guide_v2.4.7.pdf)** — worked explanations and filter-authoring guidance
-- **[Analytic Shapes](docs/ANALYTIC_SHAPES.md)** — mask and coordinate conventions
-- **[Filter Library](docs/FILTER_LIBRARY.md)** — filter metadata, search, storage, and portable packages
-- **[Brand & Theme](docs/BRAND_THEME.md)** — visual system and UI tokens
-- **[Changelog](CHANGELOG.md)** — release history
+- [Formula Reference](docs/FORMULA_REFERENCE.md) — formula syntax, functions, and renderer support
+- [Programming Guide](docs/Filter_FabJS_Programming_Guide_v2.4.7.pdf) — filter authoring and examples
+- [Architecture](docs/ARCHITECTURE.md) — application structure, compiler, and renderers
+- [Project Status](docs/PROJECT_STATUS.md) — implementation details and known boundaries
+- [Filter Library](docs/FILTER_LIBRARY.md) — filter metadata, storage, and portable packages
+- [Library Manager](docs/LIBRARY_MANAGER.md) — maintenance of the Online Filter Library
+- [Analytic Shapes](docs/ANALYTIC_SHAPES.md) — mask and coordinate conventions
+- [Brand & Theme](docs/BRAND_THEME.md) — visual system and UI tokens
+- [Changelog](CHANGELOG.md) — release history
 
 ## Contributing
 
-Bug reports, compatibility findings, filter examples, performance observations, and focused improvement proposals are welcome.
-
-For rendering issues, include the browser version, operating system, GPU, selected renderer, filter or formulas involved, and reproducible steps when possible.
-
-See **[CONTRIBUTING.md](CONTRIBUTING.md)** for contribution guidance.
+Bug reports, compatibility findings, filter examples, and focused improvements are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidance.
 
 ## License
 
-Filter FabJS is distributed under the **GNU General Public License v2.0 or later**. See **[LICENSE](LICENSE)**.
-
-The project is inspired by the open-source [Filter Foundry](https://github.com/danielmarschall/filter_foundry) project and preserves the relevant attribution in the source.
-
-
-## My Filters backup and restore
-
-Open **Filter Library → Manage → Export backup** to prepare one JSON file containing
-all saved My Filters, including controls and their presentation, authoring metadata,
-valid saved timestamps, and associated favorites/personal tags. Source, search and
-paging do not limit export. **Import backup** uses a separate file picker and a review
-before any writes. Merge keeps existing records; choose **Keep both** (default) or
-**Skip conflicts**. Repeated imports skip identical records, including existing copies
-of same-ID conflicts. Imported filters are never automatically applied.
-
-This is separate from the toolbar's single-filter Import/Export. Images, thumbnails,
-built-in/Online favorites, drafts and Explore snapshots are excluded. An empty library
-has no download. Corrupt or unsupported local records/fields cause a specific failure;
-they are never silently omitted. Older records without timestamps keep them absent.
-Unknown fields are rejected, rather than claiming a full-fidelity backup after dropping them.
-
-Backup version 1 uses `filter-fabjs-library-backup`, at most 2,000 filters and 16 MiB
-of UTF-8 JSON (checked before parsing). Each document retains the native 256 KiB
-limit. The proposed collection plus custom preferences must fit a conservative 4 MiB
-UTF-16 storage budget; actual browser quotas/shared storage can still reject writes.
-Preferences are written to new-only keys first and the collection last. Failed writes
-remove only preferences created by that attempt. Storage is not transactional: an
-interrupted tab can leave orphan preference keys, and a last-millisecond cross-tab
-race remains possible. Occupied orphan keys are never reused. Changes since review
-abort the import. Library cards and counts refresh immediately after import while preserving its
-candidate and browsing context. The Author dropdown refresh waits until the Library
-preview session ends to keep the editor work intact.
+Filter FabJS is distributed under the **GNU General Public License v2.0 or later**. See [LICENSE](LICENSE).
