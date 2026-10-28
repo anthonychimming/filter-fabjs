@@ -117,9 +117,11 @@ const splashFetch = `const response=await fetchImpl(new URL('./assets/demo-splas
 if (!bundle.includes(splashFetch) || bundle.indexOf(splashFetch) !== bundle.lastIndexOf(splashFetch)) throw new Error('Standalone splash loader injection point not found exactly once');
 const embeddedSplash = `const blob=new Blob([Uint8Array.from(atob('${demoBytes.toString('base64')}'),byte=>byte.charCodeAt(0))],{type:'image/png'});checkTimeout();`;
 const safeBundle = bundle.replace(splashFetch, () => embeddedSplash).replace(/<\/script/gi, '<\\/script');
+const faviconBytes = await fs.readFile(path.join(root, 'assets', 'favicon.png'));
 const standalone = html
   // The hosted favicon is a physical file; omit its link from the fully self-contained HTML release.
   .replace('<link rel="icon" type="image/png" sizes="32x32" href="./favicon.png">', '')
+  .replace('<img src="./favicon.png" alt="" decoding="async">', () => `<img src="data:image/png;base64,${faviconBytes.toString('base64')}" alt="" decoding="async">`)
   .replace('<link rel="stylesheet" href="./styles/app.css">', () => `<style>\n${standaloneCss}\n</style>`)
   .replace('<script type="module" src="./src/main.js"></script>', () => `<script>\n${safeBundle}\n</script>`);
 
