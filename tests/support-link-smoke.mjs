@@ -5,7 +5,7 @@ const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf
 const html = read('index.html');
 const css = read('styles/app.css');
 const funding = read('.github/FUNDING.yml');
-const koFi = 'https://ko-fi.com/filterfabjs';
+const koFi = 'https://ko-fi.com/chromameld';
 
 const toolbarMatch = html.match(/<a id="supportLink"[^>]*>.*?<\/a>/s);
 assert.ok(toolbarMatch, 'Toolbar contains the Support action');
@@ -23,6 +23,6 @@ assert.ok(css.includes('.topbar .support-link:focus-visible'), 'Support control 
 assert.ok(css.includes('.topbar .support-heart{') && css.includes('color:var(--accent)'), 'Heart uses the branded accent color on the dark button');
 assert.ok(!css.includes('.topbar .support-logo{'), 'Old Ko-fi logo badge styles are removed');
 assert.ok(css.includes('.topbar .support-label{display:none}'), 'Compact toolbar layout retains icon');
-assert.match(funding, /^ko_fi:\s*filterfabjs\s*$/m, 'GitHub sponsors setting targets the Ko-fi page');
+assert.match(funding, /^ko_fi:\s*chromameld\s*$/m, 'GitHub sponsors setting targets the Ko-fi page');
 
 console.log('Ko-fi support link smoke checks passed');
