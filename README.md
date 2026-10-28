@@ -55,6 +55,10 @@ Individual commands are available for syntax checks (`npm run check`), tests (`n
 
 Bug reports, compatibility findings, filter examples, and focused improvements are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidance.
 
+## Support
+
+ChromaMeld RGBA is an independently developed, open-source project. If you find it useful and would like to support its continued development, you can [support ChromaMeld on Ko-fi](https://ko-fi.com/chromameld).
+
 ## License
 
 ChromaMeld RGBA is distributed under the **GNU General Public License v2.0 or later**. See [LICENSE](LICENSE).
