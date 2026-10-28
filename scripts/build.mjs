@@ -59,6 +59,8 @@ function fingerprint(source) {
 
 await fs.rm(path.join(root, 'dist'), { recursive: true, force: true });
 await fs.mkdir(path.join(root, 'dist', 'site', 'assets'), { recursive: true });
+// Ship a physical favicon for reliable browser discovery and caching.
+await fs.copyFile(path.join(root, 'assets', 'favicon.png'), path.join(root, 'dist', 'site', 'favicon.png'));
 const demoBytes = await fs.readFile(path.join(root, 'assets', 'demo-splash.png'));
 await fs.writeFile(path.join(root, 'dist', 'site', 'assets', 'demo-splash.png'), demoBytes);
 
