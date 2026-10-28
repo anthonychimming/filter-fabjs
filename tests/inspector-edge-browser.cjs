@@ -42,7 +42,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),cp=require('nod
  await page.setViewportSize({width:390,height:844});await geometry();assert.equal(await toggle.getAttribute('aria-expanded'),'false');await toggle.click();await page.setViewportSize({width:1440,height:900});await geometry();assert.equal(await toggle.getAttribute('aria-expanded'),'true');
  await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await toggle.evaluate(e=>getComputedStyle(e).transitionDuration),'0s');
  await page.setViewportSize({width:390,height:844});await page.goto('http://127.0.0.1:8107/dist/site/');await ready();await geometry();await toggle.click();await geometry();
- await page.goto('http://127.0.0.1:8107/dist/chromameld-rgba-v2.9.5.html');await ready();await geometry();await toggle.click();await geometry();
+ await page.goto('http://127.0.0.1:8107/dist/chromameld-rgba-v2.10.0.html');await ready();await geometry();await toggle.click();await geometry();
  assert.deepEqual(errors,[]);console.log('PASS: eight widths; edge geometry/hit targets; keyboard; compact dialogs; author edits; library; discovery persistence; Fit/manual zoom; no filter rerenders; resizing; reduced motion.');
  }finally{await browser?.close();server.kill();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

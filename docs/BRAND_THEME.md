@@ -24,7 +24,7 @@ ChromaMeld is the parent brand; ChromaMeld RGBA is the application. Night Circui
 
 ## Usage rules
 
-- Show the application version immediately after “ChromaMeld RGBA” in the Help heading (for example, “ChromaMeld RGBA v2.9.5 — Help”); keep the main brand subtitle unversioned.
+- Show the application version immediately after “ChromaMeld RGBA” in the Help heading (for example, “ChromaMeld RGBA v2.10.0 — Help”); keep the main brand subtitle unversioned.
 - Chartreuse is reserved for the primary action, keyboard focus, ranges, and render progress. It should not become a general decorative colour.
 - Magenta communicates an edited-but-not-rendered formula and supports the logo glow. It is not used for validation errors.
 - Cyan identifies technical renderer information, while red remains reserved for destructive and invalid states.

@@ -4,13 +4,13 @@ This file applies to the entire repository. It describes the current implementat
 
 ## Project overview
 
-ChromaMeld RGBA (formerly Filter FabJS) v2.9.5 is an open-source, browser-native procedural RGBA image-filter editor. Users write one expression for each of the red, green, blue, and alpha output channels. The application parses those expressions into a renderer-neutral typed IR, then executes compatible programs with WebGPU or uses a CPU Web Worker as the compatibility backend.
+ChromaMeld RGBA (formerly Filter FabJS) v2.10.0 is an open-source, browser-native procedural RGBA image-filter editor. Users write one expression for each of the red, green, blue, and alpha output channels. The application parses those expressions into a renderer-neutral typed IR, then executes compatible programs with WebGPU or uses a CPU Web Worker as the compatibility backend.
 
 Current user-facing capabilities include formula validation, ten filter controls, built-in and browser-local presets, image and clipboard workflows, native Filter FabJS JSON import/export, historic Filter Factory `.afs` import, render cancellation and progress, alpha-aware previews, and PNG export. Development uses native ES modules; the build produces both a fingerprinted static site and a standalone HTML file.
 
 The current release contracts are:
 
-- Application version: 2.9.5.
+- Application version: 2.10.0.
 - Native export format: Filter FabJS JSON version 2.
 - Native import formats: Filter FabJS JSON versions 1 and 2.
 - Typed IR version: 1.

@@ -1,6 +1,6 @@
 # ChromaMeld RGBA Formula Reference
 
-**Applies to ChromaMeld RGBA v2.9.5 · native filter format v2 · typed IR v1**
+**Applies to ChromaMeld RGBA v2.10.0 · native filter format v2 · typed IR v1**
 
 This is the compact, implementation-oriented reference for writing ChromaMeld RGBA formulas. For worked explanations and tutorials, see the [Filter FabJS Programming Guide (PDF)](Filter_FabJS_Programming_Guide_v2.4.7.pdf). For analytic mask details, see [ANALYTIC_SHAPES.md](ANALYTIC_SHAPES.md).
 

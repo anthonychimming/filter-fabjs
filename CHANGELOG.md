@@ -6,6 +6,12 @@
 - Validate bounded backups before writes; guard cross-tab changes and preserve the collection on quota failures. Backup dialogs preserve active preview and editing sessions.
 
 
+## 2.10.0
+
+- Rebrand the application as ChromaMeld RGBA while preserving legacy filter, PNG metadata, library and storage compatibility.
+- Embed the approved demo splash in the self-contained standalone HTML and retain the existing site asset path.
+
+
 ## 2.9.5
 
 - Replace the preview toolbar row with five floating canvas actions; adapt from a left rail to a bottom group based on available canvas width.
