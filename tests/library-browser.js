@@ -41,7 +41,10 @@ async function run(url){
     input('#filterName','Dropdown draft');await selectPreset('builtin:poster');await until(()=>$('#presetSelect').value==='builtin:poster'&&ready());assert(!$('.filter-choice[open]')&&$('#filterName').value==='Posterize','dropdown selection immediately replaces a dirty draft without a warning dialog');
     await selectPreset('builtin:pass');await until(()=>$('#presetSelect').value==='builtin:pass'&&ready());
     const observedBackend=win.FilterFabJS.getRendererDiagnostics()?.rendererId;
-    const initialProgram=JSON.stringify(win.FilterFabJS.getLastProgram()),canvas=$('#displayCanvas'),pixels=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;
+    const initialProgram=JSON.stringify(win.FilterFabJS.getLastProgram()),canvas=$('#displayCanvas'),canvasContext=canvas.getContext('2d');
+    // Prime Chromium readback before the baseline; exact later comparisons remain unchanged.
+    canvasContext.getImageData(0,0,canvas.width,canvas.height);
+    const pixels=canvasContext.getImageData(0,0,canvas.width,canvas.height).data;
     input('#newTag','  Test   Tag  ');$('#addTagBtn').click();assert($('#savedDocumentStatus').textContent==='Saved','built-in personal tags do not dirty the document');
     const exported=[],originalURL=win.URL.createObjectURL,originalClick=win.HTMLAnchorElement.prototype.click;win.URL.createObjectURL=blob=>{exported.push(blob);return originalURL.call(win.URL,blob);};win.HTMLAnchorElement.prototype.click=function(){};
     $('#exportFilterBtn').click();$('#exportFilterBtn').click();const firstExport=JSON.parse(await exported[0].text()),secondExport=JSON.parse(await exported[1].text());assert(firstExport.id===secondExport.id&&firstExport.id,'exports retain a portable custom ID');assert(firstExport.tags.includes('Test Tag')&&firstExport.tags.includes('Utility'),'built-in export includes supplied and personal tags');assert(!('favorite' in firstExport),'favorites are not exported');assert($('#savedDocumentStatus').textContent==='Saved','export does not alter saved status');win.URL.createObjectURL=originalURL;win.HTMLAnchorElement.prototype.click=originalClick;
@@ -111,7 +114,7 @@ async function run(url){
   }catch(error){output.textContent+=`FAIL ${error.stack}\n`;}
   finally{for(const key of Object.keys(localStorage).filter(key=>key==='ffw-custom-presets'||key.startsWith('ffw-entry-v1:')))localStorage.removeItem(key);for(const [key,value] of backup)localStorage.setItem(key,value);}
 }
-document.querySelector('#run').onclick=()=>run('../index.html');document.querySelector('#standalone').onclick=()=>run('../dist/filter-fabjs-v2.9.5.html');
+document.querySelector('#run').onclick=()=>run('../index.html');document.querySelector('#standalone').onclick=()=>run('../dist/chromameld-rgba-v2.9.5.html');
 
 async function inspectLayout(width,height){
   const frame=document.createElement('iframe');frame.style.width=`${width}px`;frame.style.height=`${height}px`;frame.src='../index.html';document.querySelector('#fixture').replaceChildren(frame);await new Promise(resolve=>frame.onload=resolve);

@@ -2,7 +2,7 @@ const {chromium}=require(process.env.FILTER_FAB_PLAYWRIGHT||'playwright');
 const assert=require('node:assert/strict'),fs=require('node:fs'),cp=require('node:child_process'),path=require('node:path'),{pathToFileURL}=require('node:url');
 const server=cp.spawn(process.execPath,['scripts/dev-server.mjs'],{env:{...process.env,PORT:'8131'},stdio:'ignore'});
 (async()=>{const browser=await chromium.launch({channel:'msedge',headless:true});try{
-for(const url of ['http://localhost:8131/index.html',pathToFileURL(path.resolve(`dist/filter-fabjs-v${JSON.parse(fs.readFileSync('package.json')).version}.html`)).href]){
+for(const url of ['http://localhost:8131/index.html',pathToFileURL(path.resolve(`dist/chromameld-rgba-v${JSON.parse(fs.readFileSync('package.json')).version}.html`)).href]){
  const context=await browser.newContext({viewport:{width:1366,height:768},acceptDownloads:true});const page=await context.newPage();
  await page.addInitScript(()=>{if(sessionStorage.getItem('delete-restore-fixture'))return;sessionStorage.setItem('delete-restore-fixture','1');localStorage.clear();localStorage.setItem('ffw-renderer','cpu');localStorage.setItem('ffw-custom-presets',JSON.stringify(Array.from({length:8},(_,i)=>({format:'filter-fab-js',version:2,id:'restore-'+i,name:'Saved '+i,formulas:['r','g','b','a']}))));});
  await page.route('https://anthonychimming.github.io/filter-fabjs-library/**',r=>r.abort());await page.goto(url);await page.waitForFunction(()=>window.FilterFabJS&&document.querySelector('#statusText').textContent==='Preview ready');await page.locator('#browseFiltersBtn').click();await page.locator('[data-source]').selectOption('custom');

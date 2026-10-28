@@ -59,7 +59,8 @@ function fingerprint(source) {
 
 await fs.rm(path.join(root, 'dist'), { recursive: true, force: true });
 await fs.mkdir(path.join(root, 'dist', 'site', 'assets'), { recursive: true });
-await fs.copyFile(path.join(root, 'assets', 'demo-splash.png'), path.join(root, 'dist', 'site', 'assets', 'demo-splash.png'));
+const demoBytes = await fs.readFile(path.join(root, 'assets', 'demo-splash.png'));
+await fs.writeFile(path.join(root, 'dist', 'site', 'assets', 'demo-splash.png'), demoBytes);
 
 const css = await fs.readFile(path.join(root, 'styles', 'app.css'), 'utf8');
 // Keep development URLs local, fingerprint site fonts, and embed standalone fonts.
@@ -97,7 +98,7 @@ const html = await fs.readFile(path.join(root, 'index.html'), 'utf8');
 const packageMetadata = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'));
 const cssFilename = `app.${fingerprint(siteCss)}.css`;
 const jsFilename = `app.${fingerprint(bundle)}.js`;
-const standaloneFilename = `filter-fabjs-v${packageMetadata.version}.html`;
+const standaloneFilename = `chromameld-rgba-v${packageMetadata.version}.html`;
 
 const siteHtml = html
   .replace('./styles/app.css', `./assets/${cssFilename}`)
@@ -107,7 +108,13 @@ await fs.writeFile(path.join(root, 'dist', 'site', 'index.html'), siteHtml);
 await fs.writeFile(path.join(root, 'dist', 'site', 'assets', cssFilename), siteCss);
 await fs.writeFile(path.join(root, 'dist', 'site', 'assets', jsFilename), bundle);
 
-const safeBundle = bundle.replace(/<\/script/gi, '<\\/script');
+// Embed only in the standalone loader. The normal site keeps its same-origin fetch.
+const splashFetch = `const response=await fetchImpl(new URL('./assets/demo-splash.png',baseURI),{signal:controller.signal,mode:'same-origin'});
+      checkTimeout();if(!response.ok)throw new Error('Demo image is unavailable');
+      const blob=await response.blob();checkTimeout();`;
+if (!bundle.includes(splashFetch) || bundle.indexOf(splashFetch) !== bundle.lastIndexOf(splashFetch)) throw new Error('Standalone splash loader injection point not found exactly once');
+const embeddedSplash = `const blob=new Blob([Uint8Array.from(atob('${demoBytes.toString('base64')}'),byte=>byte.charCodeAt(0))],{type:'image/png'});checkTimeout();`;
+const safeBundle = bundle.replace(splashFetch, () => embeddedSplash).replace(/<\/script/gi, '<\\/script');
 const standalone = html
   .replace('<link rel="stylesheet" href="./styles/app.css">', () => `<style>\n${standaloneCss}\n</style>`)
   .replace('<script type="module" src="./src/main.js"></script>', () => `<script>\n${safeBundle}\n</script>`);

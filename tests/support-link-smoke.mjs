@@ -12,7 +12,7 @@ assert.ok(toolbarMatch, 'Toolbar contains the Support action');
 assert.ok(toolbarMatch[0].includes(`href="${koFi}"`), 'Support action uses the correct Ko-fi URL');
 assert.ok(toolbarMatch[0].includes('target="_blank"'), 'Ko-fi opens in a new tab');
 assert.ok(toolbarMatch[0].includes('rel="noopener noreferrer"'), 'External link has safe rel attributes');
-assert.ok(toolbarMatch[0].includes('aria-label="Support Filter FabJS on Ko-fi"'), 'Icon-only layout remains accessible');
+assert.ok(toolbarMatch[0].includes('aria-label="Support ChromaMeld RGBA on Ko-fi"'), 'Icon-only layout remains accessible');
 assert.ok(toolbarMatch[0].includes('class="support-heart"'), 'Toolbar includes the decorative heart');
 assert.ok(/<svg[^>]*>\s*<path[^>]*\/>\s*<\/svg>/.test(toolbarMatch[0]), 'Support heart uses a crisp inline SVG');
 const githubIndex = html.indexOf('id="githubBtn"');
