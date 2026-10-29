@@ -128,6 +128,9 @@ assert.match(css, /textarea\.edited:not\(\.invalid\)[^{]*\{[^}]*196,41,163/i, 'e
 assert.match(css, /\.renderer-control span\{[^}]*var\(--info\)/i, 'renderer label must use the cyan technical accent');
 assert.match(css, /\*\{scrollbar-color:var\(--line2\) transparent;scrollbar-width:thin\}/, 'all scrollbars must use the branded Firefox colors');
 assert.match(css, /\*::-webkit-scrollbar-thumb\{background:var\(--line2\);[^}]*border-radius:999px\}/, 'all Chromium scrollbars must use the branded thumb color');
-assert.match(html, /id="githubBtn"[^>]*href="https:\/\/github\.com\/anthonychimming"/i, 'GitHub button must target the current profile URL');
+assert.match(html, /class="brand"[^>]*href="https:\/\/github\.com\/anthonychimming\/filter-fabjs"/i, 'ChromaMeld brand must link to the source repository');
+assert.match(html, /<button id="fullscreenBtn"[^>]*type="button"[^>]*aria-label="Enter fullscreen"[^>]*aria-pressed="false"/i, 'toolbar must expose an accessible fullscreen toggle');
+assert.match(html, /id="fullscreenIcon"[^>]*d="M8 3H3v5/, 'fullscreen button must use an expand icon');
+assert.match(css, /#fullscreenBtn svg\{fill:none;stroke:currentColor/, 'fullscreen icon must use the Night Circuit outline treatment');
 
 console.log('Brand theme smoke checks passed.');
