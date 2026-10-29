@@ -23,7 +23,7 @@ export function installLibraryBackupUI({dialog,onExportBackup,onImportBackup}){
     try{
       const prepared=await onExportBackup();if(operation!==generation||!dialog.open)return;const {modal,body,actions,close}=surface('Export My Filters backup');
       body.append(node('p',`${prepared.count} saved My Filters. Includes all saved filters, controls, authoring metadata, timestamps and My Filters favorites.`),node('p','Excludes built-in and Online favorites, images, thumbnails, unsaved drafts and Explore snapshots.'));
-      if(prepared.count){const download=button('Download backup',()=>{try{if(prepared.download()){status.setAttribute('role','status');status.textContent='Backup download started.';close();}else throw new Error('Backup download could not start. Try again.');}catch(error){feedback.textContent=error.message;}});download.className='primary';actions.append(download);}else body.append(node('p','There are no saved My Filters to back up.'));
+      if(prepared.count){const download=button('Download backup',async()=>{download.disabled=true;feedback.textContent='';try{const result=await prepared.download();if(result!=='cancelled'){status.setAttribute('role','status');status.textContent=result==='saved'?'Backup saved.':'Backup download started.';close();}}catch(error){feedback.textContent=`Backup export failed: ${error.message||'Could not save the file'}`;}finally{download.disabled=false;}});download.className='primary';actions.append(download);}else body.append(node('p','There are no saved My Filters to back up.'));
       const feedback=node('p');feedback.setAttribute('role','alert');body.append(feedback,actions);modal.showModal();
     }catch(error){if(operation!==generation)return;busy=false;report(error);}
   }

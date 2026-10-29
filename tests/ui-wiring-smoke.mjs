@@ -92,7 +92,7 @@ assert.match(initImageBody, /initializeRendererSource/, 'image initialization mu
 assert.ok(initImageBody.indexOf('initializeImagePreview')<initImageBody.indexOf('initializeRendererSource'), 'the source preview must be drawn before renderer initialization can delay or fail');
 assert.match(app, /async function exportPNG\(\)/, 'PNG export must use the asynchronous encoding path');
 assert.match(app, /encoded=await canvasBlob\(canvas,'image\/png'\)/, 'PNG export must encode the rendered pixels once');
-assert.match(app, /blob=await embedFilterFabMetadata\(encoded,envelope\)/, 'PNG export must embed the validated filter envelope without rerendering');
+assert.match(app, /embedFilterFabMetadata\(encoded,envelope\)/, 'PNG export must embed the validated filter envelope without rerendering');
 assert.match(app, /lastSuccessfulRenderSignature!==filterRenderSignature\(filter\)/, 'PNG export must reject stale render-affecting state');
 assert.match(app, /state\.lastSuccessfulRenderSignature=renderSignature;[\s\S]*?markPreviewCurrent\(\)/, 'only a successful render result may make PNG provenance current');
 assert.match(app, /function initImage\(data,width,height\)\{state\.renderId\+\+;[\s\S]*?state\.lastSuccessfulRenderSignature=null;/, 'a new source image must invalidate export provenance until its render succeeds');

@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import { saveExport } from '../src/io/save-export.js';
+const blob=new Blob(['payload'],{type:'application/json'});
+const options={name:'filter.json',type:'application/json',extension:'json',prepare:()=>blob,download:()=>{throw new Error('unexpected fallback');}};
+let calls=[],written;
+assert.equal(await saveExport({...options,picker:async settings=>{calls.push(settings);return{createWritable:async()=>({write:async value=>{written=value;},close:async()=>calls.push('close')})};}}),'saved');
+assert.equal(await written.text(),'payload');assert.equal(calls[0].suggestedName,'filter.json');assert.deepEqual(calls[0].types[0].accept,{'application/json':['.json']});assert.equal(calls[1],'close');
+let downloaded;assert.equal(await saveExport({...options,picker:null,download:(value,name)=>{downloaded=[value,name];}}),'downloaded');assert.deepEqual(downloaded,[blob,'filter.json']);
+let prepared=false;assert.equal(await saveExport({...options,prepare:()=>{prepared=true;return blob;},picker:async()=>{throw new DOMException('cancel','AbortError');}}),'cancelled');assert.equal(prepared,false);
+await assert.rejects(saveExport({...options,picker:async()=>({createWritable:async()=>{throw new Error('write failed');}})}),/write failed/);
+let aborted=false;await assert.rejects(saveExport({...options,picker:async()=>({createWritable:async()=>({write:async()=>{throw new Error('write failed');},abort:async()=>{aborted=true;}})})}),/write failed/);assert(aborted);
+await assert.rejects(saveExport({...options,picker:null,prepare:()=>{throw new Error('generation failed');}}),/generation failed/);
+console.log('Save export smoke tests passed');

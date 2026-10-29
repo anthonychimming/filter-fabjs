@@ -1,3 +1,4 @@
+import { saveExport } from '../io/save-export.js';
 import { LIBRARY_BACKUP_MAX_BYTES, readLibraryBackupSnapshot, createLibraryBackup, serializeLibraryBackup, parseAndValidateBackup, planLibraryMerge, commitLibraryMerge } from '../io/library-backup.js';
 import { createInspectorLayout } from '../ui/inspector-layout.js';
 import { createLibraryLayout } from '../ui/library-layout.js';
@@ -363,9 +364,12 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
     const session=librarySession;if(!session||session.downloads.has(entry.key))return false;
     const controller=new AbortController();session.downloads.set(entry.key,controller);
     try{
-      const result=await onlineLibrary.fetchPackage(entry,controller.signal);
-      if(librarySession!==session||controller.signal.aborted)return false;
-      return downloadBlob(new Blob([result.bytes],{type:'image/png'}),onlinePackageFilename(result.document.id));
+      const outcome=await saveFile(onlinePackageFilename(entry.remote.id),'image/png','png',async()=>{
+        const result=await onlineLibrary.fetchPackage(entry,controller.signal);
+        if(librarySession!==session||controller.signal.aborted)throw new DOMException('Download canceled','AbortError');
+        return new Blob([result.bytes],{type:'image/png'});
+      });
+      return outcome!=='cancelled';
     }catch(error){if(librarySession!==session||controller.signal.aborted)return false;throw error;}
     finally{session.downloads.delete(entry.key);}
   }
@@ -463,13 +467,30 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
   async function copyImageToClipboard(){if(state.isRendering)return;const ClipboardItemCtor=globalThis.ClipboardItem;if(!navigator.clipboard?.write||!ClipboardItemCtor){toast('Image copy is unavailable in this browser');return;}setStatus('Encoding RGBA PNG…','busy');try{const expected=alphaStats(state.filtered),blob=await canvasBlob(renderedImageCanvas(state.filtered,state.width,state.height),'image/png');await verifyPngAlpha(blob,expected);setStatus('Writing image to clipboard…','busy');await writePngClipboard(blob);if(expected.hasAlpha){setStatus(`Ready · PNG alpha ${expected.min}–${expected.max}`);toast('RGBA PNG copied · alpha preserved');}else{setStatus('Ready · copied image is opaque');toast('PNG copied · output has no transparent pixels');}}catch(error){console.error('Clipboard copy failed',error);setStatus('Clipboard copy unavailable','error');toast(error?.name==='NotAllowedError'?'Clipboard permission was blocked by the browser':`Copy failed: ${error.message||'clipboard unavailable'}`);}}
   async function pasteImageFromClipboard(){if(state.isRendering)return;if(!navigator.clipboard?.read){toast('Clipboard reading is unavailable. Press Ctrl/⌘+V instead.');return;}const requestId=++state.imageLoadId;setStatus('Reading clipboard…','busy');try{const items=await navigator.clipboard.read();if(requestId!==state.imageLoadId)return;for(const item of items){const types=Array.from(item.types||[]),type=['web image/png','image/png',...types.filter(value=>String(value).startsWith('image/'))].find(value=>types.includes(value));if(!type)continue;const raw=await item.getType(type);if(requestId!==state.imageLoadId)return;const mime=String(type).replace(/^web\s+/,'');const blob=String(raw.type||'').startsWith('image/')?raw:new Blob([raw],{type:mime});await loadImageFile(blob,{successMessage:'Image pasted from clipboard',requestId});return;}setStatus('Ready');toast('Clipboard does not contain an image');}catch(error){if(requestId!==state.imageLoadId)return;console.error('Clipboard paste failed',error);setStatus('Clipboard paste unavailable','error');toast(error?.name==='NotAllowedError'?'Clipboard permission was blocked. Press Ctrl/⌘+V instead.':`Paste failed: ${error.message||'clipboard unavailable'}`);}}
 
-  function triggerDownload(href,name,revoke=false){try{const anchor=document.createElement('a');anchor.href=href;anchor.download=name;anchor.rel='noopener';anchor.style.display='none';document.body.appendChild(anchor);anchor.click();setTimeout(()=>{anchor.remove();if(revoke)URL.revokeObjectURL(href);},10000);toast(`Download started: ${name}`);return true;}catch(error){if(revoke)URL.revokeObjectURL(href);console.error('Download failed',error);toast(`Download failed: ${error.message||'browser blocked the file'}`);return false;}}
-  function downloadBlob(blob,name){if(!(blob instanceof Blob)||!blob.size){toast('Nothing was generated to download');return false;}return triggerDownload(URL.createObjectURL(blob),name,true);}
-  async function exportPNG(){if(!state.filtered||!state.width||!state.height){toast('Load and render an image before exporting');return;}const filter=validatedCurrentFilter();if(!filter)return;if(state.lastSuccessfulRenderSignature!==filterRenderSignature(filter)){setStatus('Render the current filter changes before exporting.','error');toast('Render the current filter changes before exporting.');return;}setStatus('Encoding PNG…','busy');try{const canvas=renderedImageCanvas(state.filtered,state.width,state.height),name=slug($('#filterName').value||'filtered-image')+'.png',encoded=await canvasBlob(canvas,'image/png'),envelope=createFilterFabPngEnvelope(filter,'2.10.0'),blob=await embedFilterFabMetadata(encoded,envelope);if(downloadBlob(blob,name))setStatus('Ready');}catch(error){console.error('PNG export failed',error);setStatus('PNG export failed','error');toast(`PNG export failed: ${error.message}`);}}
+  function downloadBlob(blob,name){
+    const href=URL.createObjectURL(blob);let anchor;
+    try{anchor=document.createElement('a');anchor.href=href;anchor.download=name;anchor.rel='noopener';anchor.style.display='none';document.body.appendChild(anchor);anchor.click();setTimeout(()=>{anchor.remove();URL.revokeObjectURL(href);},10000);}
+    catch(error){anchor?.remove();URL.revokeObjectURL(href);throw error;}
+  }
+  async function saveFile(name,type,extension,prepare){
+    const result=await saveExport({name,type,extension,prepare,download:downloadBlob});
+    if(result==='saved')toast('File saved');else if(result==='downloaded')toast(`Download started: ${name}`);
+    return result;
+  }
+  async function exportPNG(){
+    if(!state.filtered||!state.width||!state.height){toast('Load and render an image before exporting');return;}
+    const filter=validatedCurrentFilter();if(!filter)return;
+    if(state.lastSuccessfulRenderSignature!==filterRenderSignature(filter)){setStatus('Render the current filter changes before exporting.','error');toast('Render the current filter changes before exporting.');return;}
+    const name=slug($('#filterName').value||'filtered-image')+'.png',pixels=state.filtered,width=state.width,height=state.height;
+    try{
+      const result=await saveFile(name,'image/png','png',async()=>{setStatus('Encoding PNG…','busy');const canvas=renderedImageCanvas(pixels,width,height),encoded=await canvasBlob(canvas,'image/png'),envelope=createFilterFabPngEnvelope(filter,'2.10.0');return embedFilterFabMetadata(encoded,envelope);});
+      setStatus('Ready');return result;
+    }catch(error){console.error('PNG export failed',error);setStatus('PNG export failed','error');toast(`PNG export failed: ${error.message||'Could not save the file'}`);}
+  }
   let backupCatalogPending=false;
   function prepareLibraryBackup(){
     const snapshot=readLibraryBackupSnapshot(localStorage),backup=createLibraryBackup(snapshot.records,snapshot.preferences,{appVersion:window.FilterFabJS.version,exportedAt:new Date().toISOString()}),text=serializeLibraryBackup(backup),now=new Date(),date=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-');
-    return{count:backup.filters.length,download:()=>downloadBlob(new Blob([text],{type:'application/json;charset=utf-8'}),`filter-fabjs-my-filters-${date}.json`)};
+    return{count:backup.filters.length,download:()=>saveFile(`filter-fabjs-my-filters-${date}.json`,'application/json','json',()=>new Blob([text],{type:'application/json;charset=utf-8'}))};
   }
   async function reviewLibraryBackup(file){
     if(file.size>LIBRARY_BACKUP_MAX_BYTES)throw new Error('Backup exceeds the 16 MiB UTF-8 limit');
@@ -485,7 +506,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
       return result;
     }};
   }
-  function exportFilter(){const filter=validatedCurrentFilter();if(!filter)return;if(!activeDocument.id)activeDocument.id=createCustomPresetId();filter.id=activeDocument.id;const base=slug(filter.name);try{downloadBlob(new Blob([JSON.stringify(filter,null,2)+'\n'],{type:'application/json;charset=utf-8'}),base+'.json');}catch(error){console.error('Filter export failed',error);toast(`Filter export failed: ${error.message}`);}}
+  async function exportFilter(){const filter=validatedCurrentFilter();if(!filter)return;if(!activeDocument.id)activeDocument.id=createCustomPresetId();filter.id=activeDocument.id;const name=slug(filter.name)+'.json';try{await saveFile(name,'application/json','json',()=>new Blob([JSON.stringify(filter,null,2)+'\n'],{type:'application/json;charset=utf-8'}));}catch(error){console.error('Filter export failed',error);toast(`Filter export failed: ${error.message||'Could not save the file'}`);}}
   function removeSavedFilterRecord(id){
     const {storageList}=library();
     if(!storageList.some(item=>item?.id===id))throw new Error('This filter was already deleted.');

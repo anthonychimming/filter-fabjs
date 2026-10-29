@@ -146,7 +146,7 @@ export function createFilterBrowser({launcher,getEntries,begin,preview,previewOn
     if(online&&downloadOnline){
       const download=browserButton(downloads.has(entry.key)?'…':'↓',async()=>{
         if(sessionEnding||downloads.has(entry.key))return;const epoch=sessionEpoch;downloads.add(entry.key);refresh();
-        try{await downloadOnline(entry);}catch(error){if(epoch===sessionEpoch)find('[data-error]').textContent='Could not download this filter. The package was unavailable or invalid.';}
+        try{await downloadOnline(entry);}catch(error){if(epoch===sessionEpoch)find('[data-error]').textContent=`Could not download this filter: ${error.message||'The package was unavailable or invalid.'}`;}
         finally{if(epoch===sessionEpoch){downloads.delete(entry.key);refresh();}}
       });
       download.className='filter-card-download';download.disabled=downloads.has(entry.key);download.setAttribute('aria-label',`Download PNG for ${entry.name}`);download.title=download.getAttribute('aria-label');download.setAttribute('aria-busy',String(download.disabled));download.dataset.entryKey=entry.key;download.dataset.entryAction='download';actions.append(download);
