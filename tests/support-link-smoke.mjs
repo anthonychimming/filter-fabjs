@@ -15,8 +15,8 @@ assert.ok(toolbarMatch[0].includes('rel="noopener noreferrer"'), 'External link 
 assert.ok(toolbarMatch[0].includes('aria-label="Support ChromaMeld RGBA on Ko-fi"'), 'Icon-only layout remains accessible');
 assert.ok(toolbarMatch[0].includes('class="support-heart"'), 'Toolbar includes the decorative heart');
 assert.ok(/<svg[^>]*>\s*<path[^>]*\/>\s*<\/svg>/.test(toolbarMatch[0]), 'Support heart uses a crisp inline SVG');
-const githubIndex = html.indexOf('id="githubBtn"');
-assert.ok(html.indexOf('id="supportLink"') < githubIndex, 'Support precedes GitHub');
+const fullscreenIndex = html.indexOf('id="fullscreenBtn"');
+assert.ok(fullscreenIndex > html.indexOf('id="supportLink"'), 'Support precedes the fullscreen toggle');
 assert.ok(html.includes(`support continued development on Ko-fi</a>`), 'Help dialog contains Ko-fi support link');
 assert.ok(html.includes(`href="${koFi}"`), 'Help link uses the correct Ko-fi URL');
 assert.ok(css.includes('.topbar .support-link:focus-visible'), 'Support control has keyboard focus styling');
