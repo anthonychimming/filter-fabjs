@@ -622,6 +622,24 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
     el.stage.addEventListener('drop',event=>{event.preventDefault();hideDrop();if(state.isRendering)return;openImageFile(event.dataTransfer?.files?.[0]);});
     document.addEventListener('dragend',hideDrop);
     window.addEventListener('blur',hideDrop);
+    const fullscreenBtn=$('#fullscreenBtn');
+    const fullscreenIcon=$('#fullscreenIcon');
+    const syncFullscreen=()=>{
+      const active=Boolean(document.fullscreenElement);
+      const label=active?'Exit fullscreen':'Enter fullscreen';
+      fullscreenBtn.setAttribute('aria-label',label);
+      fullscreenBtn.title=label;
+      fullscreenBtn.setAttribute('aria-pressed',String(active));
+      fullscreenIcon.setAttribute('d',active?'M3 8h5V3M21 8h-5V3M3 16h5v5M21 16h-5v5':'M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5');
+    };
+    fullscreenBtn.onclick=async()=>{
+      try{
+        if(document.fullscreenElement)await document.exitFullscreen();
+        else await document.documentElement.requestFullscreen();
+      }catch(error){console.warn('Fullscreen request failed:',error);}
+    };
+    document.addEventListener('fullscreenchange',syncFullscreen);
+    syncFullscreen();
     $('#helpBtn').onclick=()=>$('#helpDialog').showModal();
     $('#closeHelp').onclick=()=>$('#helpDialog').close();
     window.addEventListener('storage',event=>{if(event.key===null||event.key==='ffw-custom-presets'||event.key.startsWith(PREFERENCE_PREFIX)){
