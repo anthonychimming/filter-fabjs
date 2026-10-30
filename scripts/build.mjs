@@ -61,6 +61,8 @@ function fingerprint(source) {
 
 await fs.rm(path.join(root, 'dist'), { recursive: true, force: true });
 await fs.mkdir(path.join(root, 'dist', 'site', 'assets'), { recursive: true });
+// Preserve the Search Console ownership file at the Pages project root.
+await fs.copyFile(path.join(root, 'google4b5e942c4a34868d.html'), path.join(root, 'dist', 'site', 'google4b5e942c4a34868d.html'));
 // Ship a physical favicon for reliable browser discovery and caching.
 await fs.copyFile(path.join(root, 'assets', 'favicon.png'), path.join(root, 'dist', 'site', 'favicon.png'));
 const demoBytes = await fs.readFile(path.join(root, 'assets', 'demo-splash.png'));
