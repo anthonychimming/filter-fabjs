@@ -62,5 +62,3 @@ ChromaMeld RGBA is an independently developed, open-source project. If you find 
 ## License
 
 ChromaMeld RGBA is distributed under the **GNU General Public License v2.0 or later**. See [LICENSE](LICENSE).
-
-File exports open a Save As dialog when the browser supports it in the current context. Otherwise, files download using the browser’s download settings.
