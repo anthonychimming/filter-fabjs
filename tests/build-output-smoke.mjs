@@ -53,6 +53,8 @@ assert.equal(card.readUInt32BE(16), 1200); assert.equal(card.readUInt32BE(20), 6
 const standaloneHead = standaloneHtml.split('</head>')[0];
 assert.doesNotMatch(standaloneHead, /<link\s+rel="canonical"|<meta\s+(?:name|property)="(?:og|twitter):|anthonychimming\.github\.io\/filter-fabjs/i);
 
+assert.deepEqual(fs.readFileSync('dist/site/google4b5e942c4a34868d.html'), fs.readFileSync('google4b5e942c4a34868d.html'), 'Google verification file must be copied unchanged to the Pages root');
+
 const cssReference = siteHtml.match(/href="\.\/assets\/(app\.[0-9a-f]{12}\.css)"/)?.[1];
 const jsReference = siteHtml.match(/src="\.\/assets\/(app\.[0-9a-f]{12}\.js)"/)?.[1];
 
