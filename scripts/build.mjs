@@ -65,6 +65,7 @@ await fs.mkdir(path.join(root, 'dist', 'site', 'assets'), { recursive: true });
 await fs.copyFile(path.join(root, 'assets', 'favicon.png'), path.join(root, 'dist', 'site', 'favicon.png'));
 const demoBytes = await fs.readFile(path.join(root, 'assets', 'demo-splash.png'));
 await fs.writeFile(path.join(root, 'dist', 'site', 'assets', 'demo-splash.png'), demoBytes);
+await fs.copyFile(path.join(root, 'assets', 'social-card.png'), path.join(root, 'dist', 'site', 'assets', 'social-card.png'));
 
 const css = await fs.readFile(path.join(root, 'styles', 'app.css'), 'utf8');
 // Keep development URLs local, fingerprint site fonts, and embed standalone fonts.
@@ -104,7 +105,27 @@ const cssFilename = `app.${fingerprint(siteCss)}.css`;
 const jsFilename = `app.${fingerprint(bundle)}.js`;
 const standaloneFilename = `chromameld-rgba-v${packageMetadata.version}.html`;
 
+const publicUrl = 'https://anthonychimming.github.io/filter-fabjs/';
+const socialImage = new URL('assets/social-card.png', publicUrl).href;
+const escapeAttribute = value => value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+const socialTitle = 'ChromaMeld RGBA — Procedural Image Filter Editor';
+const socialDescription = 'Explore image effects and create your own with RGBA formulas. Free browser-based editor with WebGPU acceleration where supported.';
+const tags = [
+  `<link rel="canonical" href="${escapeAttribute(publicUrl)}">`,
+  ...Object.entries({
+    'og:type': 'website', 'og:site_name': 'ChromaMeld RGBA', 'og:title': socialTitle,
+    'og:description': socialDescription, 'og:url': publicUrl, 'og:image': socialImage,
+    'og:image:width': '1200', 'og:image:height': '630',
+    'og:image:alt': 'ChromaMeld RGBA procedural image filter editor',
+  }).map(([name, value]) => `<meta property="${name}" content="${escapeAttribute(value)}">`),
+  ...Object.entries({
+    'twitter:card': 'summary_large_image', 'twitter:title': socialTitle,
+    'twitter:description': socialDescription, 'twitter:image': socialImage,
+  }).map(([name, value]) => `<meta name="${name}" content="${escapeAttribute(value)}">`),
+].join('\n');
+if ((html.match(/<\/head>/g) || []).length !== 1) throw new Error('Expected exactly one head injection point');
 const siteHtml = html
+  .replace('</head>', `${tags}\n</head>`)
   .replace('./styles/app.css', `./assets/${cssFilename}`)
   .replace('<script type="module" src="./src/main.js"></script>', `<script src="./assets/${jsFilename}" defer></script>`);
 
