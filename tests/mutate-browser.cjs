@@ -7,7 +7,7 @@ const assert=require('node:assert/strict'),cp=require('node:child_process'),fs=r
  const context=await browser.newContext({viewport:{width,height},hasTouch:width<768});const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.addInitScript(()=>localStorage.setItem('ffw-renderer','cpu'));await page.route('https://anthonychimming.github.io/filter-fabjs-library/**',r=>r.abort());
  const ready=()=>page.waitForFunction(()=>window.FilterFabJS&&document.querySelector('#statusText').textContent==='Preview ready'&&!document.body.classList.contains('ui-locked'));
- await page.goto('http://127.0.0.1:8111/'+(standalone?'dist/chromameld-rgba-v2.10.0.html':''));await ready();
+ await page.goto('http://127.0.0.1:8111/'+(standalone?'dist/chromameld-rgba-v2.10.1.html':''));await ready();
  const toggle=page.locator('#inspectorToggle');if(await toggle.getAttribute('aria-expanded')==='false')await toggle.click();
  const strength=page.getByRole('combobox',{name:'Mutation strength'}),mutate=page.getByRole('button',{name:'Mutate',exact:true}),undo=page.locator('.adjust-section').getByRole('button',{name:'Undo',exact:true});
  assert.equal(await mutate.count(),1);assert.equal(await page.getByRole('button',{name:'Randomize',exact:true}).count(),0);assert.ok(await mutate.isDisabled());assert.equal(await strength.inputValue(),'Medium');

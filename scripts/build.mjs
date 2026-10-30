@@ -39,6 +39,7 @@ const order = [
   'src/ui/filter-browser.js',
   'src/ui/dom.js',
   'src/ui/canvas-view.js',
+  'src/ui/shortcuts.js',
   'src/ui/inspector-layout.js',
   'src/ui/library-layout.js',
   'src/ui/controls.js',

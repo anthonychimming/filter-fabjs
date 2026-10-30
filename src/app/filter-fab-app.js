@@ -1,3 +1,4 @@
+import { dispatchShortcut } from '../ui/shortcuts.js';
 import { saveExport } from '../io/save-export.js';
 import { LIBRARY_BACKUP_MAX_BYTES, readLibraryBackupSnapshot, createLibraryBackup, serializeLibraryBackup, parseAndValidateBackup, planLibraryMerge, commitLibraryMerge } from '../io/library-backup.js';
 import { createInspectorLayout } from '../ui/inspector-layout.js';
@@ -463,8 +464,8 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
     return result.action!=='cancel';
   }
 
-  function isEditableTarget(target){return target instanceof Element&&(target.matches('input,textarea,select,[contenteditable="true"]')||Boolean(target.closest('[contenteditable="true"]')));}
-  async function copyImageToClipboard(){if(state.isRendering)return;const ClipboardItemCtor=globalThis.ClipboardItem;if(!navigator.clipboard?.write||!ClipboardItemCtor){toast('Image copy is unavailable in this browser');return;}setStatus('Encoding RGBA PNG…','busy');try{const expected=alphaStats(state.filtered),blob=await canvasBlob(renderedImageCanvas(state.filtered,state.width,state.height),'image/png');await verifyPngAlpha(blob,expected);setStatus('Writing image to clipboard…','busy');await writePngClipboard(blob);if(expected.hasAlpha){setStatus(`Ready · PNG alpha ${expected.min}–${expected.max}`);toast('RGBA PNG copied · alpha preserved');}else{setStatus('Ready · copied image is opaque');toast('PNG copied · output has no transparent pixels');}}catch(error){console.error('Clipboard copy failed',error);setStatus('Clipboard copy unavailable','error');toast(error?.name==='NotAllowedError'?'Clipboard permission was blocked by the browser':`Copy failed: ${error.message||'clipboard unavailable'}`);}}
+  function isEditableTarget(target){return target instanceof Element&&(target.isContentEditable||Boolean(target.closest('input,textarea,select,[role="textbox"],[role="combobox"],[contenteditable]:not([contenteditable="false"])')));}
+  async function copyImageToClipboard(){if(state.isRendering)return;const ClipboardItemCtor=globalThis.ClipboardItem;if(!navigator.clipboard?.write||!ClipboardItemCtor){toast('Image copy is unavailable in this browser');return;}setStatus('Encoding RGBA PNG…','busy');try{const expected=alphaStats(state.filtered),blob=canvasBlob(renderedImageCanvas(state.filtered,state.width,state.height),'image/png').then(async value=>{await verifyPngAlpha(value,expected);return value;});setStatus('Writing image to clipboard…','busy');await writePngClipboard(blob);if(expected.hasAlpha){setStatus(`Ready · PNG alpha ${expected.min}–${expected.max}`);toast('RGBA PNG copied · alpha preserved');}else{setStatus('Ready · copied image is opaque');toast('PNG copied · output has no transparent pixels');}}catch(error){console.error('Clipboard copy failed',error);setStatus('Clipboard copy unavailable','error');toast(error?.name==='NotAllowedError'?'Clipboard permission was blocked by the browser':`Copy failed: ${error.message||'clipboard unavailable'}`);}}
   async function pasteImageFromClipboard(){if(state.isRendering)return;if(!navigator.clipboard?.read){toast('Clipboard reading is unavailable. Press Ctrl/⌘+V instead.');return;}const requestId=++state.imageLoadId;setStatus('Reading clipboard…','busy');try{const items=await navigator.clipboard.read();if(requestId!==state.imageLoadId)return;for(const item of items){const types=Array.from(item.types||[]),type=['web image/png','image/png',...types.filter(value=>String(value).startsWith('image/'))].find(value=>types.includes(value));if(!type)continue;const raw=await item.getType(type);if(requestId!==state.imageLoadId)return;const mime=String(type).replace(/^web\s+/,'');const blob=String(raw.type||'').startsWith('image/')?raw:new Blob([raw],{type:mime});await loadImageFile(blob,{successMessage:'Image pasted from clipboard',requestId});return;}setStatus('Ready');toast('Clipboard does not contain an image');}catch(error){if(requestId!==state.imageLoadId)return;console.error('Clipboard paste failed',error);setStatus('Clipboard paste unavailable','error');toast(error?.name==='NotAllowedError'?'Clipboard permission was blocked. Press Ctrl/⌘+V instead.':`Paste failed: ${error.message||'clipboard unavailable'}`);}}
 
   function downloadBlob(blob,name){
@@ -483,7 +484,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
     if(state.lastSuccessfulRenderSignature!==filterRenderSignature(filter)){setStatus('Render the current filter changes before exporting.','error');toast('Render the current filter changes before exporting.');return;}
     const name=slug($('#filterName').value||'filtered-image')+'.png',pixels=state.filtered,width=state.width,height=state.height;
     try{
-      const result=await saveFile(name,'image/png','png',async()=>{setStatus('Encoding PNG…','busy');const canvas=renderedImageCanvas(pixels,width,height),encoded=await canvasBlob(canvas,'image/png'),envelope=createFilterFabPngEnvelope(filter,'2.10.0');return embedFilterFabMetadata(encoded,envelope);});
+      const result=await saveFile(name,'image/png','png',async()=>{setStatus('Encoding PNG…','busy');const canvas=renderedImageCanvas(pixels,width,height),encoded=await canvasBlob(canvas,'image/png'),envelope=createFilterFabPngEnvelope(filter,'2.10.1');return embedFilterFabMetadata(encoded,envelope);});
       setStatus('Ready');return result;
     }catch(error){console.error('PNG export failed',error);setStatus('PNG export failed','error');toast(`PNG export failed: ${error.message||'Could not save the file'}`);}
   }
@@ -628,8 +629,11 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
       field.onblur=validatePendingFormulas;
       field.onkeydown=event=>{if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){event.preventDefault();render({focusInvalid:true});}};
     });
-    document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!document.querySelector('dialog[open]')&&state.isRendering){event.preventDefault();event.stopPropagation();cancelRender();return;}if((event.ctrlKey||event.metaKey)&&event.shiftKey&&event.key.toLowerCase()==='c'&&!state.isRendering&&!isEditableTarget(event.target)){event.preventDefault();copyImageToClipboard();}});
-    document.addEventListener('paste',event=>{if(state.isRendering||isEditableTarget(event.target)||document.querySelector('dialog[open]'))return;const image=imageFromClipboardData(event.clipboardData);if(!image)return;event.preventDefault();loadImageFile(image,{successMessage:'Image pasted from clipboard'});});
+    document.addEventListener('keydown',event=>{
+      if(event.key==='Escape'&&!document.querySelector('dialog[open]')&&state.isRendering){event.preventDefault();event.stopPropagation();cancelRender();return;}
+      dispatchShortcut(event,{blocked:state.isRendering||Boolean(librarySession)||Boolean(document.querySelector('dialog[open]')),editable:[event.target,document.activeElement,...(event.composedPath?.()||[])].some(isEditableTarget),selectedText:()=>{try{return Boolean(window.getSelection()?.toString());}catch{return true;}},hasImage:Boolean(state.source&&state.filtered&&state.width&&state.height),button:id=>document.getElementById(id),viewButton:view=>el.viewButtons.find(button=>button.dataset.view===view),restoreSnapshot:number=>!document.querySelector('[aria-modal="true"], :popover-open')&&exploreController?.restoreSnapshotByNumber(number)});
+    });
+    document.addEventListener('paste',event=>{if(state.isRendering||librarySession||isEditableTarget(event.target)||isEditableTarget(document.activeElement)||document.querySelector('dialog[open]'))return;const image=imageFromClipboardData(event.clipboardData);if(!image)return;event.preventDefault();loadImageFile(image,{successMessage:'Image pasted from clipboard'});});
     el.viewButtons.forEach(button=>button.onclick=()=>canvasView.toggleView(button.dataset.view));
     $('#zoomFit').onclick=canvasView.fitCanvas;
     $('#zoomIn').onclick=()=>canvasView.zoom(1.2);
@@ -649,7 +653,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
       const active=Boolean(document.fullscreenElement);
       const label=active?'Exit fullscreen':'Enter fullscreen';
       fullscreenBtn.setAttribute('aria-label',label);
-      fullscreenBtn.title=label;
+      fullscreenBtn.title=`${label} (F)`;
       fullscreenBtn.setAttribute('aria-pressed',String(active));
       fullscreenIcon.setAttribute('d',active?'M3 8h5V3M21 8h-5V3M3 16h5v5M21 16h-5v5':'M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5');
     };
@@ -670,7 +674,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
     window.addEventListener('beforeunload',()=>{libraryLayout?.destroy();inspectorLayout.destroy();if(librarySession)abortLibraryPackages(librarySession);onlineLibrary.dispose();thumbnailService.dispose();state.rendererManager?.dispose();});
   }
 
-  window.FilterFabJS=Object.freeze({version:'2.10.0',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getThumbnailDiagnostics:()=>thumbnailService.diagnostics(),getRendererPreference:()=>state.rendererPreference,getWorkspaceMode:()=>state.workspaceMode,getLibraryPreviewState:()=>({open:Boolean(librarySession),candidateKey:librarySession?.candidateEntry?.key||null,candidateRendered:Boolean(librarySession?.candidateRendered),activeKey:activeDocument.key,activeId:activeDocument.id,imported:activeDocument.imported,importSource:activeDocument.importSource,baseline:activeDocument.baseline,recordBaseline:activeDocument.recordBaseline})});
+  window.FilterFabJS=Object.freeze({version:'2.10.1',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getThumbnailDiagnostics:()=>thumbnailService.diagnostics(),getRendererPreference:()=>state.rendererPreference,getWorkspaceMode:()=>state.workspaceMode,getLibraryPreviewState:()=>({open:Boolean(librarySession),candidateKey:librarySession?.candidateEntry?.key||null,candidateRendered:Boolean(librarySession?.candidateRendered),activeKey:activeDocument.key,activeId:activeDocument.id,imported:activeDocument.imported,importSource:activeDocument.importSource,baseline:activeDocument.baseline,recordBaseline:activeDocument.recordBaseline})});
   controlsController.buildSliders();wire();const demo=demoImage();initImage(demo.data,demo.width,demo.height);applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');
   void replaceStartupDemo({state,initImage,canReplace:()=>!librarySession});
   return{state,render,applyFilter,loadImageFile,openImageFile};

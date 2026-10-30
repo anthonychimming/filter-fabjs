@@ -61,8 +61,8 @@ export async function verifyPngAlpha(blob,expected){
 }
 export function clipboardSupports(ClipboardItemCtor,type){if(typeof ClipboardItemCtor.supports!=='function')return type==='image/png'||type==='text/html';try{return ClipboardItemCtor.supports(type)}catch{return false}}
 export async function writePngClipboard(blob){
-  const ClipboardItemCtor=globalThis.ClipboardItem,representations={'image/png':blob};
-  if(clipboardSupports(ClipboardItemCtor,'web image/png'))representations['web image/png']=blob;
-  if(blob.size<=16*1024*1024&&clipboardSupports(ClipboardItemCtor,'text/html')){const dataURL=await blobDataURL(blob);representations['text/html']=new Blob([`<img src="${dataURL}" alt="">`],{type:'text/html'});}
-  try{await navigator.clipboard.write([new ClipboardItemCtor(representations)]);return Object.keys(representations)}catch(error){if(Object.keys(representations).length===1)throw error;await navigator.clipboard.write([new ClipboardItemCtor({'image/png':blob})]);return['image/png'];}
+  const ClipboardItemCtor=globalThis.ClipboardItem,png=Promise.resolve(blob),representations={'image/png':png};
+  if(clipboardSupports(ClipboardItemCtor,'web image/png'))representations['web image/png']=png;
+  if(clipboardSupports(ClipboardItemCtor,'text/html'))representations['text/html']=png.then(async value=>{if(value.size>16*1024*1024)throw new Error('PNG is too large for HTML clipboard representation');const dataURL=await blobDataURL(value);return new Blob([`<img src="${dataURL}" alt="">`],{type:'text/html'});});
+  try{await navigator.clipboard.write([new ClipboardItemCtor(representations)]);return Object.keys(representations)}catch(error){if(Object.keys(representations).length===1)throw error;await navigator.clipboard.write([new ClipboardItemCtor({'image/png':png})]);return['image/png'];}
 }

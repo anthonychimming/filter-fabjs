@@ -6,6 +6,11 @@
 - Validate bounded backups before writes; guard cross-tab changes and preserve the collection on quota failures. Backup dialogs preserve active preview and editing sessions.
 
 
+## 2.10.1
+
+- Add keyboard shortcuts for image and canvas actions, with context-aware image copying and existing paste handling.
+- Number Explore snapshot slots 1-4 and add guarded recall shortcuts while retaining internal snapshot IDs.
+
 ## 2.10.0
 
 - Rebrand the application as ChromaMeld RGBA while preserving legacy filter, PNG metadata, library and storage compatibility.

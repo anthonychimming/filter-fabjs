@@ -1,6 +1,8 @@
 import { controlStatesEqual, createExploreSession, exploreValues, commitExploreValues, saveExploreSnapshot } from '../app/explore-state.js';
 import { storageGet, storageSet } from '../core/utils.js';
 
+const SNAPSHOT_NUMBER_BY_ID=Object.freeze({A:'1',B:'2',C:'3',D:'4'});
+const SNAPSHOT_ID_BY_NUMBER=Object.freeze({'1':'A','2':'B','3':'C','4':'D'});
 const MUTATION_STRENGTHS=Object.freeze({Subtle:'Low',Medium:'Medium',Strong:'High',Random:'Random'});
 const MUTATION_STRENGTH_KEY='ffw-mutation-strength';
 
@@ -54,8 +56,19 @@ export function createExploreController({state,root,resetButton,syncControls,sch
   function manual(){snapshotFeedback='';state.explore.undo=null;refresh();}
   function saveSnapshot(slot){
     if(!Object.hasOwn(slots,slot))return;
-    if(state.explore.snapshots[slot]&&!confirmOverwrite(`Replace snapshot ${slot} with the current controls? The saved controls in ${slot} will be lost.`))return;
-    saveExploreSnapshot(state,slot);snapshotFeedback=`Snapshot ${slot} saved`;
+    if(state.explore.snapshots[slot]&&!confirmOverwrite(`Replace snapshot ${SNAPSHOT_NUMBER_BY_ID[slot]} with the current controls? The saved controls in ${SNAPSHOT_NUMBER_BY_ID[slot]} will be lost.`))return;
+    saveExploreSnapshot(state,slot);snapshotFeedback=`Snapshot ${SNAPSHOT_NUMBER_BY_ID[slot]} saved`;
+  }
+  function restoreSnapshot(slot,{notifyIfEmpty=true}={}){
+    if(!Object.hasOwn(slots,slot)||state.isRendering)return false;
+    const saved=state.explore.snapshots[slot];
+    if(!saved){if(notifyIfEmpty)toast(`Snapshot ${SNAPSHOT_NUMBER_BY_ID[slot]} is empty. Use Save current.`);return false;}
+    state.explore.active=slot;commit(saved,true,`Snapshot ${SNAPSHOT_NUMBER_BY_ID[slot]} restored`);return true;
+  }
+  function restoreSnapshotByNumber(number){
+    const slot=SNAPSHOT_ID_BY_NUMBER[number];
+    if(!slot||state.workspaceMode!=='explore'||state.isRendering||section.hidden||!state.usedControls.some(Boolean)||section.closest('[inert]')||menus.some(({panel})=>!panel.hidden))return false;
+    return restoreSnapshot(slot,{notifyIfEmpty:false});
   }
   function mutate(){
     if(state.isRendering||!state.usedControls.some((used,i)=>used&&!state.explore.locks[i]))return;
@@ -94,15 +107,15 @@ export function createExploreController({state,root,resetButton,syncControls,sch
   const helper=document.createElement('p');helper.className='snapshot-helper';helper.textContent='Save and restore filter variations.';body.append(helper);
   const row=document.createElement('div');row.className='snapshot-slots';body.append(row);
   for(const slot of ['A','B','C','D']){
-    const node=button(row,'',()=>{const saved=state.explore.snapshots[slot];if(!saved){toast(`Snapshot ${slot} is empty. Use Save current.`);return;}state.explore.active=slot;commit(saved,true,`Snapshot ${slot} restored`);});
+    const node=button(row,'',()=>restoreSnapshot(slot));node.setAttribute('aria-keyshortcuts',SNAPSHOT_NUMBER_BY_ID[slot]);
     const icon=document.createElement('span');icon.className='snapshot-icon';icon.setAttribute('aria-hidden','true');
-    const identifier=document.createElement('strong');identifier.textContent=slot;
+    const identifier=document.createElement('strong');identifier.textContent=SNAPSHOT_NUMBER_BY_ID[slot];
     const label=document.createElement('span');label.className='snapshot-label';node.append(icon,identifier,label);slots[slot]=node;
   }
   const status=document.createElement('p');status.className='snapshot-status';status.setAttribute('role','status');body.append(status);
   const toolbar=document.createElement('div');toolbar.className='explore-actions';body.append(toolbar);
   const saves=menu(toolbar,'Save current ▾');
-  for(const slot of Object.keys(slots))saveButtons[slot]=button(saves,`Save to ${slot}`,()=>saveSnapshot(slot));
+  for(const slot of Object.keys(slots))saveButtons[slot]=button(saves,`Save to ${SNAPSHOT_NUMBER_BY_ID[slot]}`,()=>saveSnapshot(slot));
   buttons.update=button(toolbar,'Update',()=>saveSnapshot(state.explore.active));
   const more=menu(toolbar,'•••',true);more.previousElementSibling.setAttribute('aria-label','Snapshot management');
   buttons.clear=button(more,'Clear active snapshot',()=>{state.explore.snapshots[state.explore.active]=null;state.explore.active=null;snapshotFeedback='';});
@@ -118,10 +131,10 @@ export function createExploreController({state,root,resetButton,syncControls,sch
     buttons.mutate.disabled=busy||!state.usedControls.some((used,i)=>used&&!session.locks[i]);
     buttons.undo.disabled=busy||!session.undo;buttons.clear.disabled=busy||!active;
     buttons.clearAll.disabled=busy||!Object.values(session.snapshots).some(Boolean);
-    buttons.clear.title=active?`Delete snapshot ${active}; current controls are kept`:'Select a saved snapshot to clear it';
+    buttons.clear.title=active?`Delete snapshot ${SNAPSHOT_NUMBER_BY_ID[active]}; current controls are kept`:'Select a saved snapshot to clear it';
     buttons.clearAll.title=Object.values(session.snapshots).some(Boolean)?'Delete all saved snapshots; current controls are kept':'No saved snapshots to clear';
-    buttons.update.hidden=!modified;buttons.update.textContent=`Update ${active||''}`;
-    const message=active?`${snapshotFeedback||`Snapshot ${active} selected`}${modified?' · modified':''}`:Object.values(session.snapshots).some(Boolean)?'No snapshot selected':'No snapshots saved';
+    buttons.update.hidden=!modified;buttons.update.textContent=`Update ${SNAPSHOT_NUMBER_BY_ID[active]||''}`;
+    const message=active?`${snapshotFeedback||`Snapshot ${SNAPSHOT_NUMBER_BY_ID[active]} selected`}${modified?' · modified':''}`:Object.values(session.snapshots).some(Boolean)?'No snapshot selected':'No snapshots saved';
     if(status.textContent!==message)status.textContent=message;
     for(const [slot,node] of Object.entries(slots)){
       const saved=session.snapshots[slot],selected=active===slot;
@@ -129,10 +142,10 @@ export function createExploreController({state,root,resetButton,syncControls,sch
       node.querySelector('.snapshot-label').textContent=selected?'Active':saved?'Saved':'Empty';
       node.classList.toggle('empty',!saved);node.classList.toggle('modified',Boolean(selected&&modified));
       node.classList.toggle('active',selected);node.setAttribute('aria-pressed',String(selected));
-      node.setAttribute('aria-label',`Snapshot ${slot}, ${selected?`selected${modified?', modified':''}`:saved?'saved':'empty'}`);
+      node.setAttribute('aria-label',`Snapshot ${SNAPSHOT_NUMBER_BY_ID[slot]}, ${selected?`selected${modified?', modified':''}`:saved?'saved':'empty'}`);
       node.setAttribute('aria-disabled',String(!saved||busy));node.disabled=busy;
-      node.title=saved?`Restore snapshot ${slot}${selected&&modified?' (working controls modified)':''}`:`Snapshot ${slot} is empty. Use Save current.`;
-      saveButtons[slot].textContent=`${saved?'Replace':'Save to'} ${slot} · ${saved?'Saved':'Empty'}`;
+      node.title=saved?`Restore snapshot ${SNAPSHOT_NUMBER_BY_ID[slot]} (shortcut ${SNAPSHOT_NUMBER_BY_ID[slot]})${selected&&modified?' (working controls modified)':''}`:`Snapshot ${SNAPSHOT_NUMBER_BY_ID[slot]} is empty. Use Save current.`;
+      saveButtons[slot].textContent=`${saved?'Replace':'Save to'} ${SNAPSHOT_NUMBER_BY_ID[slot]} · ${saved?'Saved':'Empty'}`;
     }
     if(busy)closeMenus();
   }
@@ -140,5 +153,5 @@ export function createExploreController({state,root,resetButton,syncControls,sch
   const reposition=event=>menus.forEach(({panel,trigger})=>{if(!panel.hidden&&event.target!==panel)positionMenu(panel,trigger);});
   document.addEventListener('scroll',reposition,true);document.defaultView.addEventListener('resize',reposition);
   document.addEventListener('keydown',event=>{if(event.key==='Escape'){const open=menus.find(item=>!item.panel.hidden);if(open){closeMenus();open.trigger.focus();event.preventDefault();}}});
-  refresh();return {refresh,reset,manual};
+  refresh();return {refresh,reset,manual,restoreSnapshotByNumber};
 }

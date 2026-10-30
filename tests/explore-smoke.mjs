@@ -125,17 +125,17 @@ try{
   assert.equal(slotButtons.length,4);
   const snapshotStatus=snapshotsSection.querySelector('.snapshot-status');
   assert.equal(snapshotStatus.textContent,'No snapshots saved');
-  for(const [i,node] of slotButtons.entries())assert.equal(node.getAttribute('aria-label'),`Snapshot ${'ABCD'[i]}, empty`);
+  for(const [i,node] of slotButtons.entries())assert.equal(node.getAttribute('aria-label'),`Snapshot ${i+1}, empty`);
   slotButtons[3].click();assert.equal(state.explore.active,null);assert.equal(renders,beforeVisibilityRenders);
   action('Lock all');assert.ok(state.usedControls.every((used,i)=>!used||state.explore.locks[i]));
   action('Invert locks');assert.ok(Object.values(state.explore.locks).every(v=>!v));action('Unlock all');
-  action('Save to A · Empty');const saved=[...state.controls];state.controls[0]++;view.manual();assert.deepEqual(state.explore.snapshots.A,saved);assert.ok(!find('Update A').hidden);
-  action('✓AActive',1);assert.deepEqual(state.controls,saved);state.controls[0]++;view.manual();assert.deepEqual(state.explore.snapshots.A,saved);
+  action('Save to 1 · Empty');const saved=[...state.controls];state.controls[0]++;view.manual();assert.deepEqual(state.explore.snapshots.A,saved);assert.ok(!find('Update 1').hidden);
+  action('✓1Active',1);assert.deepEqual(state.controls,saved);state.controls[0]++;view.manual();assert.deepEqual(state.explore.snapshots.A,saved);
   allowOverwrite=false;
-  action('Update A');assert.deepEqual(state.explore.snapshots.A,saved,'cancel preserves saved values');
-  assert.equal(confirmations.length,1);assert.match(confirmations[0],/Replace snapshot A/);
+  action('Update 1');assert.deepEqual(state.explore.snapshots.A,saved,'cancel preserves saved values');
+  assert.equal(confirmations.length,1);assert.match(confirmations[0],/Replace snapshot 1/);
   allowOverwrite=true;
-  action('Update A');assert.deepEqual(state.explore.snapshots.A,state.controls);assert.ok(find('Update A').hidden);
+  action('Update 1');assert.deepEqual(state.explore.snapshots.A,state.controls);assert.ok(find('Update 1').hidden);
   assert.equal(find('Randomize'),undefined,'there is no separate Randomize action');
   assert.equal(root.querySelectorAll('button').filter(node=>node.textContent==='Mutate').length,1);
   const strengthSelect=root.querySelector('select');
@@ -172,23 +172,30 @@ try{
   action('Mutate',1);action('Mutate',1);action('Mutate',1);assert.equal(strengthSelect.value,'Random');
   const beforeReset=[...state.controls];action('Lock all');action('Reset',1);assert.deepEqual(state.controls,defaults);action('Undo',1);assert.deepEqual(state.controls,beforeReset);
   action('Reset',1);view.manual();assert.equal(state.explore.undo,null);assert.ok(find('Undo').disabled);
-  for(const slot of ['B','C','D']){
-    action(`Save to ${slot} · Empty`);assert.equal(snapshotStatus.textContent,`Snapshot ${slot} saved`);
+  for(const [slot,number] of [['B','2'],['C','3'],['D','4']]){
+    action(`Save to ${number} · Empty`);assert.equal(snapshotStatus.textContent,`Snapshot ${number} saved`);
     const original=[...state.explore.snapshots[slot]],undo=state.explore.undo;
-    state.controls[0]++;view.manual();allowOverwrite=false;action(`Replace ${slot} · Saved`);
+    state.controls[0]++;view.manual();allowOverwrite=false;action(`Replace ${number} · Saved`);
     assert.deepEqual(state.explore.snapshots[slot],original);assert.equal(state.explore.undo,undo);
-    allowOverwrite=true;action(`Replace ${slot} · Saved`);assert.deepEqual(state.explore.snapshots[slot],state.controls);
+    allowOverwrite=true;action(`Replace ${number} · Saved`);assert.deepEqual(state.explore.snapshots[slot],state.controls);
   }
-  slotButtons[0].click();assert.equal(snapshotStatus.textContent,'Snapshot A restored');
-  assert.equal(slotButtons[0].getAttribute('aria-label'),'Snapshot A, selected');
+  state.workspaceMode='explore';
+  for(const [number,slot] of [['1','A'],['2','B']]){const before=renders;assert.equal(view.restoreSnapshotByNumber(number),true);assert.equal(renders,before+1);assert.equal(state.explore.active,slot);assert.deepEqual(state.controls,state.explore.snapshots[slot]);}
+  state.workspaceMode='author';assert.equal(view.restoreSnapshotByNumber('1'),false);state.workspaceMode='explore';
+  const priorUsed=[...state.usedControls];state.usedControls.fill(false);view.refresh();assert.equal(view.restoreSnapshotByNumber('1'),false);state.usedControls=priorUsed;view.refresh();
+  state.isRendering=true;assert.equal(view.restoreSnapshotByNumber('1'),false);state.isRendering=false;
+  const menuTrigger=find('Save current ▾');menuTrigger.click();assert.equal(view.restoreSnapshotByNumber('1'),false);menuTrigger.click();
+  slotButtons[0].click();assert.equal(snapshotStatus.textContent,'Snapshot 1 restored');
+  assert.equal(slotButtons[0].getAttribute('aria-label'),'Snapshot 1, selected');
   assert.deepEqual(state.controls,state.explore.snapshots.A);
   const working=[...state.controls];
   action('Clear active snapshot');assert.deepEqual(state.controls,working);
   action('Clear all snapshots');assert.deepEqual(state.controls,working);
   assert.equal(snapshotStatus.textContent,'No snapshots saved');
-  action('Save to A · Empty');
-  action('Save to B · Empty');action('Clear active snapshot');assert.equal(state.explore.snapshots.B,null);assert.ok(state.explore.snapshots.A);action('Clear all snapshots');assert.ok(Object.values(state.explore.snapshots).every(v=>v===null));
-  action('Save to C · Empty');state.source={};state.workspaceMode='author';view.refresh();assert.ok(state.explore.snapshots.C);
+  const beforeEmpty=renders,undoBefore=state.explore.undo;assert.equal(view.restoreSnapshotByNumber('3'),false);assert.equal(renders,beforeEmpty);assert.equal(state.explore.undo,undoBefore);assert.equal(state.explore.active,null);
+  action('Save to 1 · Empty');
+  action('Save to 2 · Empty');action('Clear active snapshot');assert.equal(state.explore.snapshots.B,null);assert.ok(state.explore.snapshots.A);action('Clear all snapshots');assert.ok(Object.values(state.explore.snapshots).every(v=>v===null));
+  action('Save to 3 · Empty');state.source={};state.workspaceMode='author';view.refresh();assert.ok(state.explore.snapshots.C);
   state.controls[0]++;view.reset({preserveDefaults:true});assert.deepEqual(state.explore.defaults,defaults,'formula changes must not drift the activation defaults');assert.equal(state.explore.snapshots.C,null);
   action('Reset to pass-through');assert.equal(pass,1);assert.equal(state.explore.active,null);assert.deepEqual(state.explore.locks,{});assert.equal(state.explore.strength,'Random','filter/session reset retains the independent preference');
   assert.equal(strengthSelect.value,'Random');

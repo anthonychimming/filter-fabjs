@@ -4,7 +4,7 @@ For local Add/Update/Unpublish/Republish workflows and reviewed publication comm
 see the [Library Manager guide](LIBRARY_MANAGER.md). The manager uses this publisher;
 the CLI and existing GitHub CI/Pages workflows remain available independently.
 
-ChromaMeld RGBA v2.10.0 retains native JSON v2 and Typed IR v1. Application releases
+ChromaMeld RGBA v2.10.1 retains native JSON v2 and Typed IR v1. Application releases
 and catalogue revisions are separate: publishing library content does not
 automatically change the app version. App release preparation coordinates
 package.json, interface/version documentation and the normal generated build.
