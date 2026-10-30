@@ -65,10 +65,18 @@ export function createExploreController({state,root,resetButton,syncControls,sch
     if(!saved){if(notifyIfEmpty)toast(`Snapshot ${SNAPSHOT_NUMBER_BY_ID[slot]} is empty. Use Save current.`);return false;}
     state.explore.active=slot;commit(saved,true,`Snapshot ${SNAPSHOT_NUMBER_BY_ID[slot]} restored`);return true;
   }
-  function restoreSnapshotByNumber(number){
+  function shortcutSlot(number){
     const slot=SNAPSHOT_ID_BY_NUMBER[number];
-    if(!slot||state.workspaceMode!=='explore'||state.isRendering||section.hidden||!state.usedControls.some(Boolean)||section.closest('[inert]')||menus.some(({panel})=>!panel.hidden))return false;
-    return restoreSnapshot(slot,{notifyIfEmpty:false});
+    if(!slot||state.workspaceMode!=='explore'||state.isRendering||section.hidden||!state.usedControls.some(Boolean)||section.closest('[inert]')||menus.some(({panel})=>!panel.hidden))return null;
+    return slot;
+  }
+  function restoreSnapshotByNumber(number){
+    const slot=shortcutSlot(number);
+    return slot?restoreSnapshot(slot,{notifyIfEmpty:false}):false;
+  }
+  function saveSnapshotByNumber(number){
+    const slot=shortcutSlot(number);if(!slot)return false;
+    saveSnapshot(slot);refresh();return true;
   }
   function mutate(){
     if(state.isRendering||!state.usedControls.some((used,i)=>used&&!state.explore.locks[i]))return;
@@ -144,7 +152,7 @@ export function createExploreController({state,root,resetButton,syncControls,sch
       node.classList.toggle('active',selected);node.setAttribute('aria-pressed',String(selected));
       node.setAttribute('aria-label',`Snapshot ${SNAPSHOT_NUMBER_BY_ID[slot]}, ${selected?`selected${modified?', modified':''}`:saved?'saved':'empty'}`);
       node.setAttribute('aria-disabled',String(!saved||busy));node.disabled=busy;
-      node.title=saved?`Restore snapshot ${SNAPSHOT_NUMBER_BY_ID[slot]} (shortcut ${SNAPSHOT_NUMBER_BY_ID[slot]})${selected&&modified?' (working controls modified)':''}`:`Snapshot ${SNAPSHOT_NUMBER_BY_ID[slot]} is empty. Use Save current.`;
+      node.title=saved?`Restore snapshot ${SNAPSHOT_NUMBER_BY_ID[slot]} (${SNAPSHOT_NUMBER_BY_ID[slot]}); save/replace (Shift+${SNAPSHOT_NUMBER_BY_ID[slot]})${selected&&modified?' · working controls modified':''}`:`Snapshot ${SNAPSHOT_NUMBER_BY_ID[slot]} is empty. Save with Shift+${SNAPSHOT_NUMBER_BY_ID[slot]} or Save current.`;
       saveButtons[slot].textContent=`${saved?'Replace':'Save to'} ${SNAPSHOT_NUMBER_BY_ID[slot]} · ${saved?'Saved':'Empty'}`;
     }
     if(busy)closeMenus();
@@ -153,5 +161,5 @@ export function createExploreController({state,root,resetButton,syncControls,sch
   const reposition=event=>menus.forEach(({panel,trigger})=>{if(!panel.hidden&&event.target!==panel)positionMenu(panel,trigger);});
   document.addEventListener('scroll',reposition,true);document.defaultView.addEventListener('resize',reposition);
   document.addEventListener('keydown',event=>{if(event.key==='Escape'){const open=menus.find(item=>!item.panel.hidden);if(open){closeMenus();open.trigger.focus();event.preventDefault();}}});
-  refresh();return {refresh,reset,manual,restoreSnapshotByNumber};
+  refresh();return {refresh,reset,manual,restoreSnapshotByNumber,saveSnapshotByNumber};
 }

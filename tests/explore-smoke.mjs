@@ -209,6 +209,20 @@ try{
   };
   assert.equal(reload(),'Random','reload restores preference');
   assert.equal(reload('Strong'),'Strong');assert.equal(reload('Chaos'),'Medium','invalid preferences use Medium');
+  state.workspaceMode='explore';view.reset();
+  for(const [number,slot] of [['1','A'],['2','B'],['3','C'],['4','D']]){
+    state.controls[0]=40+Number(number);const before=[...state.controls],beforeRenders=renders,priorUndo=state.explore.undo;
+    assert.equal(view.saveSnapshotByNumber(number),true);assert.deepEqual(state.explore.snapshots[slot],before);assert.equal(state.explore.active,slot);
+    assert.deepEqual(state.controls,before);assert.equal(state.explore.undo,priorUndo);assert.equal(renders,beforeRenders);assert.equal(snapshotStatus.textContent,`Snapshot ${number} saved`);
+    assert.match(slotButtons[Number(number)-1].title,new RegExp(`Shift\\+${number}`));
+  }
+  const previous=state.explore.snapshots.A.slice(),shortcutWorking=[...state.controls],shortcutActive=state.explore.active,shortcutUndo=state.explore.undo,beforeSaveRenders=renders,beforeConfirm=confirmations.length;
+  allowOverwrite=false;assert.equal(view.saveSnapshotByNumber('1'),true);assert.equal(confirmations.length,beforeConfirm+1);assert.deepEqual(state.explore.snapshots.A,previous);assert.deepEqual(state.controls,shortcutWorking);assert.equal(state.explore.active,shortcutActive);assert.equal(state.explore.undo,shortcutUndo);assert.equal(renders,beforeSaveRenders);
+  allowOverwrite=true;assert.equal(view.saveSnapshotByNumber('1'),true);assert.deepEqual(state.explore.snapshots.A,shortcutWorking);assert.equal(state.explore.active,'A');assert.equal(renders,beforeSaveRenders);
+  state.workspaceMode='author';assert.equal(view.saveSnapshotByNumber('1'),false);state.workspaceMode='explore';
+  state.isRendering=true;assert.equal(view.saveSnapshotByNumber('1'),false);state.isRendering=false;
+  const usedBefore=[...state.usedControls];state.usedControls.fill(false);view.refresh();assert.equal(view.saveSnapshotByNumber('1'),false);state.usedControls=usedBefore;view.refresh();
+  menuTrigger.click();assert.equal(view.saveSnapshotByNumber('1'),false);menuTrigger.click();assert.equal(view.saveSnapshotByNumber('5'),false);
   assert.ok(syncs>0);
 }finally{Math.random=originalRandom;dom.restore();}
 console.log('Explore state and UI action smoke tests passed.');

@@ -24,3 +24,9 @@ let restored=[];context.restoreSnapshot=key=>{restored.push(key);return key==='1
 assert.deepEqual(send('1'),[true,true]);assert.deepEqual(send('2'),[true,true]);assert.deepEqual(send('3'),[false,false]);
 for(const opts of [{ctrlKey:true},{metaKey:true},{altKey:true},{shiftKey:true},{repeat:true},{isComposing:true},{defaultPrevented:true}]){const count=restored.length;assert.deepEqual(send('1',opts),[false,false]);assert.equal(restored.length,count);}
 context.editable=true;assert.deepEqual(send('1'),[false,false]);context.editable=false;context.blocked=true;assert.deepEqual(send('1'),[false,false]);context.blocked=false;
+
+let saves=[];context.saveSnapshot=number=>{saves.push(number);return true;};
+for(const [key,code,number] of [['!','Digit1','1'],['@','Digit2','2'],['#','Digit3','3'],['$','Digit4','4']]){const count=restored.length;assert.deepEqual(send(key,{shiftKey:true,code}),[true,true]);assert.equal(saves.at(-1),number);assert.equal(restored.length,count);}
+for(const options of [{shiftKey:true,code:'Numpad1'},{shiftKey:true,code:'KeyA'},{shiftKey:true,code:'Digit1',repeat:true},{shiftKey:true,code:'Digit1',ctrlKey:true},{shiftKey:true,code:'Digit1',metaKey:true},{shiftKey:true,code:'Digit1',altKey:true},{shiftKey:true,code:'Digit1',isComposing:true},{shiftKey:true,code:'Digit1',defaultPrevented:true}]){const count=saves.length;assert.deepEqual(send('!',options),[false,false]);assert.equal(saves.length,count);}
+for(const field of ['blocked','editable']){context[field]=true;const count=saves.length;assert.deepEqual(send('!',{shiftKey:true,code:'Digit1'}),[false,false]);assert.equal(saves.length,count);context[field]=false;}
+context.saveSnapshot=()=>false;assert.deepEqual(send('!',{shiftKey:true,code:'Digit1'}),[false,false]);

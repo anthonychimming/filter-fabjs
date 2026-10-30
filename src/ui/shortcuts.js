@@ -3,6 +3,10 @@ export function dispatchShortcut(event,context){
   if(event.defaultPrevented||event.isComposing||event.keyCode===229||event.altKey||context.blocked||context.editable)return false;
   const key=event.key.toLowerCase(),mod=event.ctrlKey||event.metaKey;
   if(event.ctrlKey&&event.metaKey)return false;
+  if(!mod&&event.shiftKey&&!event.repeat&&/^Digit[1-4]$/.test(event.code||'')){
+    if(context.saveSnapshot?.(event.code.slice(-1))){event.preventDefault();return true;}
+    return false;
+  }
   if(!mod&&!event.shiftKey&&!event.repeat&&['1','2','3','4'].includes(key)){
     if(context.restoreSnapshot?.(key)){event.preventDefault();return true;}
     return false;
