@@ -11,6 +11,48 @@ const siteHtml = fs.readFileSync('dist/site/index.html', 'utf8');
 const standalonePath = `dist/chromameld-rgba-v${packageMetadata.version}.html`;
 const standaloneHtml = fs.readFileSync(standalonePath, 'utf8');
 
+const title = 'ChromaMeld RGBA — Free Procedural Image Filter Editor';
+const description = 'Create and explore procedural image filters in your browser. Customize RGBA formulas, preview effects, and export PNGs with optional WebGPU acceleration.';
+const url = 'https://anthonychimming.github.io/filter-fabjs/';
+const image = `${url}assets/social-card.png`;
+const socialTitle = 'ChromaMeld RGBA — Procedural Image Filter Editor';
+const socialDescription = 'Explore image effects and create your own with RGBA formulas. Free browser-based editor with WebGPU acceleration where supported.';
+for (const html of [siteHtml, standaloneHtml]) {
+  const head = html.split('</head>')[0];
+  assert.equal((head.match(/<title>/g) || []).length, 1);
+  assert.ok(head.includes(`<title>${title}</title>`));
+  assert.equal((head.match(/<meta name="description"/g) || []).length, 1);
+  assert.ok(head.includes(`<meta name="description" content="${description}">`));
+  assert.equal((html.match(/<h1\b/g) || []).length, 1);
+  assert.match(html, /<h1 class="brand-title">ChromaMeld RGBA<\/h1>/);
+  assert.doesNotMatch(head, /noindex|name="keywords"|twitter:(?:site|creator)/i);
+}
+const head = siteHtml.split('</head>')[0];
+assert.equal((head.match(/<link rel="canonical"/g) || []).length, 1);
+assert.ok(head.includes(`<link rel="canonical" href="${url}">`));
+const metadata = {
+  'og:type': 'website', 'og:site_name': 'ChromaMeld RGBA', 'og:title': socialTitle,
+  'og:description': socialDescription, 'og:url': url, 'og:image': image,
+  'og:image:width': '1200', 'og:image:height': '630',
+  'og:image:alt': 'ChromaMeld RGBA procedural image filter editor',
+  'twitter:card': 'summary_large_image', 'twitter:title': socialTitle,
+  'twitter:description': socialDescription, 'twitter:image': image,
+};
+for (const [key, value] of Object.entries(metadata)) {
+  const attr = key.startsWith('og:') ? 'property' : 'name';
+  const matches = [...head.matchAll(new RegExp(`<meta ${attr}="${key}" content="([^"]*)">`, 'g'))];
+  assert.equal(matches.length, 1, `${key} must occur exactly once with safely quoted content`);
+  assert.equal(matches[0][1], value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;'));
+}
+assert.equal(new URL(image).pathname, '/filter-fabjs/assets/social-card.png');
+const card = fs.readFileSync('assets/social-card.png');
+assert.deepEqual(fs.readFileSync('dist/site/assets/social-card.png'), card);
+assert.deepEqual(card.subarray(0, 8), Buffer.from([137,80,78,71,13,10,26,10]));
+assert.equal(card.toString('ascii', 12, 16), 'IHDR');
+assert.equal(card.readUInt32BE(16), 1200); assert.equal(card.readUInt32BE(20), 630);
+const standaloneHead = standaloneHtml.split('</head>')[0];
+assert.doesNotMatch(standaloneHead, /<link\s+rel="canonical"|<meta\s+(?:name|property)="(?:og|twitter):|anthonychimming\.github\.io\/filter-fabjs/i);
+
 const cssReference = siteHtml.match(/href="\.\/assets\/(app\.[0-9a-f]{12}\.css)"/)?.[1];
 const jsReference = siteHtml.match(/src="\.\/assets\/(app\.[0-9a-f]{12}\.js)"/)?.[1];
 
@@ -97,7 +139,7 @@ assert.match(deployedJavaScript, /getRendererDiagnostics/, 'deployed JavaScript 
 assert.match(deployedJavaScript, /filter-fab-js\/png/, 'deployed JavaScript must bundle the PNG metadata envelope schema');
 assert.match(deployedJavaScript, /function embedFilterFabMetadata/, 'deployed JavaScript must bundle the PNG metadata codec');
 
-assert.ok(standaloneHtml.includes('<title>ChromaMeld RGBA — Procedural Image &amp; Effects Editor</title>'), 'standalone title must use the product name');
+assert.ok(standaloneHtml.includes('<title>ChromaMeld RGBA — Free Procedural Image Filter Editor</title>'), 'standalone title must use the product name');
 assert.doesNotMatch(standaloneHtml, /<link[^>]+href=|<script[^>]+src=|type="module"/, 'standalone build must not depend on external CSS or JavaScript');
 assert.match(standaloneHtml, /filter-fab-js\/png/, 'standalone build must contain the PNG metadata carrier');
 
