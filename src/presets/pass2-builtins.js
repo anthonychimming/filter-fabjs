@@ -1276,73 +1276,73 @@ export const pass2PresetDefinitions=[
     "controls": [
       {
         "label": "Shadow R",
-        "value": 14,
+        "value": 42,
         "ui": {
-          "widget": "number",
+          "widget": "slider",
           "displayMin": 0,
           "displayMax": 255,
           "step": 1,
-          "format": "integer",
+          "format": "number",
           "unit": ""
         }
       },
       {
         "label": "Shadow G",
-        "value": 12,
+        "value": 18,
         "ui": {
-          "widget": "number",
+          "widget": "slider",
           "displayMin": 0,
           "displayMax": 255,
           "step": 1,
-          "format": "integer",
+          "format": "number",
           "unit": ""
         }
       },
       {
         "label": "Shadow B",
-        "value": 18,
+        "value": 40,
         "ui": {
-          "widget": "number",
+          "widget": "slider",
           "displayMin": 0,
           "displayMax": 255,
           "step": 1,
-          "format": "integer",
+          "format": "number",
           "unit": ""
         }
       },
       {
         "label": "Highlight R",
-        "value": 255,
+        "value": 231,
         "ui": {
-          "widget": "number",
+          "widget": "slider",
           "displayMin": 0,
           "displayMax": 255,
           "step": 1,
-          "format": "integer",
+          "format": "number",
           "unit": ""
         }
       },
       {
         "label": "Highlight G",
-        "value": 48,
+        "value": 64,
         "ui": {
-          "widget": "number",
+          "widget": "slider",
           "displayMin": 0,
           "displayMax": 255,
           "step": 1,
-          "format": "integer",
+          "format": "number",
           "unit": ""
         }
       },
       {
         "label": "Highlight B",
-        "value": 72,
+        "value": 64,
         "ui": {
-          "widget": "number",
+          "widget": "slider",
           "displayMin": 0,
           "displayMax": 255,
           "step": 1,
-          "format": "integer",
+          "format": "number",
           "unit": ""
         }
       },
@@ -1360,7 +1360,7 @@ export const pass2PresetDefinitions=[
       },
       {
         "label": "Black Point",
-        "value": 24.094488188976378,
+        "value": 38.1496062992126,
         "ui": {
           "widget": "slider",
           "displayMin": 0,
@@ -1372,7 +1372,7 @@ export const pass2PresetDefinitions=[
       },
       {
         "label": "White Point",
-        "value": 228.89763779527559,
+        "value": 136.53543307086616,
         "ui": {
           "widget": "slider",
           "displayMin": 128,
@@ -1557,7 +1557,7 @@ export const pass2PresetDefinitions=[
     "controls": [
       {
         "label": "Shadow Hue",
-        "value": 244.375,
+        "value": 121.83333333333334,
         "ui": {
           "widget": "slider",
           "displayMin": 0,
@@ -1569,7 +1569,7 @@ export const pass2PresetDefinitions=[
       },
       {
         "label": "Mid A Hue",
-        "value": 247.91666666666666,
+        "value": 201.875,
         "ui": {
           "widget": "slider",
           "displayMin": 0,
@@ -1581,7 +1581,7 @@ export const pass2PresetDefinitions=[
       },
       {
         "label": "Mid B Hue",
-        "value": 19.833333333333332,
+        "value": 53.125,
         "ui": {
           "widget": "slider",
           "displayMin": 0,
@@ -1593,7 +1593,7 @@ export const pass2PresetDefinitions=[
       },
       {
         "label": "Highlight Hue",
-        "value": 31.875,
+        "value": 186.29166666666666,
         "ui": {
           "widget": "slider",
           "displayMin": 0,
@@ -1617,7 +1617,7 @@ export const pass2PresetDefinitions=[
       },
       {
         "label": "Contrast",
-        "value": 63.75,
+        "value": 47.175,
         "ui": {
           "widget": "slider",
           "displayMin": 50,
@@ -1641,7 +1641,7 @@ export const pass2PresetDefinitions=[
       },
       {
         "label": "White Point",
-        "value": 255,
+        "value": 214.84251968503935,
         "ui": {
           "widget": "slider",
           "displayMin": 128,
@@ -1653,7 +1653,7 @@ export const pass2PresetDefinitions=[
       },
       {
         "label": "Saturation",
-        "value": 216.75,
+        "value": 186.15,
         "ui": {
           "widget": "slider",
           "displayMin": 0,
@@ -1697,7 +1697,7 @@ export const pass2PresetDefinitions=[
     "controls": [
       {
         "label": "Dot Scale",
-        "value": 51,
+        "value": 22.666666666666668,
         "ui": {
           "widget": "slider",
           "displayMin": 3,
@@ -1709,7 +1709,7 @@ export const pass2PresetDefinitions=[
       },
       {
         "label": "Screen Rotation",
-        "value": 23.90625,
+        "value": 30.87890625,
         "ui": {
           "widget": "slider",
           "displayMin": 0,
@@ -1721,7 +1721,7 @@ export const pass2PresetDefinitions=[
       },
       {
         "label": "Contrast",
-        "value": 89.25,
+        "value": 76.50000000000001,
         "ui": {
           "widget": "slider",
           "displayMin": 0.5,
@@ -1769,7 +1769,7 @@ export const pass2PresetDefinitions=[
       },
       {
         "label": "Paper Tone",
-        "value": 229.5,
+        "value": 255,
         "ui": {
           "widget": "slider",
           "displayMin": 185,

@@ -72,6 +72,19 @@ for(const preset of presets){
   program.metadata.controlMask.forEach((used,index)=>{if(used)assert.ok(preset.controls[index]?.ui,`${preset.name} control ${index+1} must include UI metadata`)});
   preset.controls.forEach((control,index)=>assert.doesNotThrow(()=>validateControlUI(control.ui),`${preset.name} control ${index+1} must have valid UI metadata`));
 }
+// Revised built-in controls must retain their normalized defaults and widget types.
+for (const [id, expectedValues, expectedWidgets] of [
+  ["halftone-print", [22.666666666666668,30.87890625,76.50000000000001,141.66666666666669,63.75,0,255,85,72.85714285714285,255], ["slider","slider","slider","slider","slider","toggle","slider","slider","slider","slider"]],
+  ["duotone-gradient-map", [42,18,40,231,64,64,127.5,38.1496062992126,136.53543307086616,255], ["slider","slider","slider","slider","slider","slider","slider","slider","slider","slider"]],
+  ["gradient-map-studio", [121.83333333333334,201.875,53.125,186.29166666666666,127.5,47.175,0,214.84251968503935,186.15,255], ["slider","slider","slider","slider","slider","slider","slider","slider","slider","slider"]],
+]) {
+  const preset = presets.find(entry=>entry.id===id);
+  assert.ok(preset, `${id} must remain a built-in filter`);
+  assert.deepEqual(preset.controls.map(control=>control.value),expectedValues,`${id} control defaults must match the approved revisions`);
+  assert.deepEqual(preset.controls.map(control=>control.ui.widget),expectedWidgets,`${id} widget types must match the approved revisions`);
+}
+assert.ok(presets.find(entry=>entry.id==='duotone-gradient-map').controls.slice(0,6).every(control=>control.ui.format==='number'),'Duotone RGB sliders must retain numeric formatting');
+
 for(const id of ['analoggrain','fractalclouds','warped-sdf-bloom-contour'])assert.ok(presets.find(preset=>preset.id===id).controls.some(control=>control.ui.widget==='seed'),`${id} must expose its deterministic seed with the seed widget`);
 assert.deepEqual(presets.find(preset=>preset.id==='swirl').controls[0].ui,{widget:'slider',displayMin:-91.4,displayMax:91.4,step:0.1,format:'number',unit:'°'},'remaining rotation controls must be presented in degrees');
 
