@@ -135,7 +135,7 @@ assert.doesNotThrow(()=>assertCpuRenderBudget(maximalProgram,64,64),'the CPU bud
 const largeImageCpuLimitedBuiltins=new Set([
   'c64multicolorbitmap','linearprismecho','spectraltearglitch','vhstrackingglitch',
   'radialecho','softmeshgradient','chromatic-glass','fractal-contours','halftone-print',
-  'instant-print-frame','iridescent-shift','mandelbrotjuliaatlas','futuristic-sci-fi-glitch-photo','photoshop-watercolor'
+  'iridescent-shift','mandelbrotjuliaatlas','futuristic-sci-fi-glitch-photo','photoshop-watercolor'
 ]);
 for(const preset of presets){
   const program=compileFilterProgram(preset.f.map(formula=>new Parser(formula).parse()));

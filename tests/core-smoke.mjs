@@ -15,7 +15,7 @@ for (const preset of presets) {
   assert.equal(typeof preset.description,'string',`${preset.name} must include filter-level description metadata`);
   assert.ok(preset.description.trim(),`${preset.name} must include a useful description`);
   assert.ok(preset.description.length<=FILTER_DESCRIPTION_MAX_LENGTH,`${preset.name} description must stay within the native metadata limit`);
-  assert.equal(preset.author,'Anthony Chimming',`${preset.name} must carry the built-in author attribution`);
+  assert.equal(preset.author,preset.id==='uniform-rounded-inset-border'?'ChromaMeld':'Anthony Chimming',`${preset.name} must carry the built-in author attribution`);
   assert.equal(formulas.length, 4, `${preset.name} must have four formulas`);
   const program = compileFilterProgram(formulas.map(formula => new Parser(formula).parse()));
   assert.equal(program.outputs.length, 4);
@@ -25,6 +25,13 @@ for (const preset of presets) {
 }
 
 assert.equal(presets.length, 48, 'pass-three catalog must remove eight presets and add four');
+const roundedInset=presets.find(preset=>preset.id==='uniform-rounded-inset-border');
+assert.ok(roundedInset,'new rounded inset border built-in must be present');
+assert.equal(roundedInset.name,'Uniform Rounded Inset Border');
+assert.equal(roundedInset.author,'ChromaMeld');
+assert.equal(roundedInset.f.length,4);
+assert.deepEqual(roundedInset.controls.slice(0,7).map(control=>control.label),['Border Thickness','Corner Radius','Inner Edge Softness','Red','Green','Blue','Alpha']);
+assert.equal(presets.some(preset=>preset.id==='instant-print-frame'),false,'retired Instant Print Frame must be absent');
 assert.equal(gpuCompatible, presets.length, 'every native built-in must compile for WebGPU after Phase 3.5');
 assert.equal(cpuFallback, 0, 'native built-ins must not require CPU fallback');
 assert.equal(gpuCompatible + cpuFallback, presets.length);
@@ -168,7 +175,7 @@ const pass2Builtins=new Map([
   ['fractal-contours','Fractal Contour Designer'],
   ['gradient-map-studio','Gradient Map Studio'],
   ['halftone-print','Halftone Print'],
-  ['instant-print-frame','Instant Print Frame'],
+  ['uniform-rounded-inset-border','Uniform Rounded Inset Border'],
   ['iridescent-shift','Iridescent Shift'],
   ['juno','Juno'],
   ['mandelbrotjuliaatlas','Mandelbrot / Julia Atlas'],

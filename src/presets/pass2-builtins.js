@@ -1824,143 +1824,142 @@ export const pass2PresetDefinitions=[
     ]
   },
   {
-    "id": "instant-print-frame",
-    "name": "Instant Print Frame",
-    "description": "Builds a more realistic classic instant-film print inside the current canvas: narrow side/top borders, a deeper bottom margin, neutral-to-warm off-white paper with fine multi-scale texture, subtle directional paper shading, restrained opening/outer-edge depth, and a gentle adjustable instant-film response inside the photo area. The source is cover-fitted into the opening with smooth sampling while preserving aspect ratio and allowing Crop X/Y repositioning plus Photo Zoom. Paper Tone shifts the border stock from clean white toward a warmer aged cream. Set Film Character to 0% for an ungraded source. Paper remains opaque while source alpha is preserved inside the photo opening.",
-    "author": "Anthony Chimming",
+    "id": "uniform-rounded-inset-border",
+    "name": "Uniform Rounded Inset Border",
+    "description": "Adds an evenly thick border just inside the original image bounds without resizing the canvas. A pixel-distance rounded-rectangle field keeps the stroke width consistent on straight sides and curved corners. Border Thickness sets the inward stroke width; Corner Radius rounds both the border and the image crop, capped to fit the image; Inner Edge Softness feathers only the border’s inner edge into the source image; the outside silhouette retains a fixed one-pixel antialias and does not soften as the control increases. Independent Red, Green, Blue and Alpha controls define the border material. The border uses source-over RGBA compositing, preserving transparent source pixels in the opening and cutting outside rounded corners to transparency. At zero border alpha, corner cropping remains active. Thickness and radius are clamped to the available source dimensions.",
+    "author": "ChromaMeld",
     "tags": [
-      "Retro",
-      "Print",
-      "Film",
-      "Utility"
+      "Utility",
+      "Shapes",
+      "Color"
     ],
     "controls": [
       {
-        "label": "Side Border",
-        "value": 25.5,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 4,
-          "displayMax": 14,
-          "step": 0.5,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Top Border",
-        "value": 56.666666666666664,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 3,
-          "displayMax": 12,
-          "step": 0.5,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Bottom Border",
-        "value": 57.95454545454545,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 16,
-          "displayMax": 38,
-          "step": 1,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Photo Zoom",
-        "value": 12.75,
-        "ui": {
-          "widget": "slider",
-          "displayMin": 100,
-          "displayMax": 140,
-          "step": 1,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Crop X",
-        "value": 127.5,
-        "ui": {
-          "widget": "slider",
-          "displayMin": -100,
-          "displayMax": 100,
-          "step": 1,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Crop Y",
-        "value": 127.5,
-        "ui": {
-          "widget": "slider",
-          "displayMin": -100,
-          "displayMax": 100,
-          "step": 1,
-          "format": "number",
-          "unit": "%"
-        }
-      },
-      {
-        "label": "Paper Tone",
-        "value": 114.75,
+        "label": "Border Thickness",
+        "value": 19.921875,
         "ui": {
           "widget": "slider",
           "displayMin": 0,
-          "displayMax": 100,
+          "displayMax": 256,
           "step": 1,
           "format": "number",
-          "unit": "%"
+          "unit": "px"
         }
       },
       {
-        "label": "Paper Texture",
-        "value": 63.75,
+        "label": "Corner Radius",
+        "value": 15.9375,
         "ui": {
           "widget": "slider",
           "displayMin": 0,
-          "displayMax": 8,
-          "step": 0.5,
+          "displayMax": 512,
+          "step": 1,
           "format": "number",
+          "unit": "px"
+        }
+      },
+      {
+        "label": "Inner Edge Softness",
+        "value": 10.625,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 24,
+          "step": 0.25,
+          "format": "number",
+          "unit": "px"
+        }
+      },
+      {
+        "label": "Red",
+        "value": 255,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "integer",
           "unit": ""
         }
       },
       {
-        "label": "Opening Depth",
-        "value": 85,
+        "label": "Green",
+        "value": 255,
         "ui": {
           "widget": "slider",
           "displayMin": 0,
-          "displayMax": 18,
+          "displayMax": 255,
+          "step": 1,
+          "format": "integer",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Blue",
+        "value": 255,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "integer",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Alpha",
+        "value": 255,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "integer",
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 8",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
           "step": 1,
           "format": "number",
           "unit": ""
         }
       },
       {
-        "label": "Film Character",
-        "value": 89.25,
+        "label": "Control 9",
+        "value": 128,
         "ui": {
           "widget": "slider",
           "displayMin": 0,
-          "displayMax": 100,
+          "displayMax": 255,
           "step": 1,
           "format": "number",
-          "unit": "%"
+          "unit": ""
+        }
+      },
+      {
+        "label": "Control 10",
+        "value": 128,
+        "ui": {
+          "widget": "slider",
+          "displayMin": 0,
+          "displayMax": 255,
+          "step": 1,
+          "format": "number",
+          "unit": ""
         }
       }
     ],
     "f": [
-      "lerp(clamp(248+val(6,0,1)*9+((hash2(x,y,731)-0.5)*0.35+(valueNoise(x,y,max(min(X,Y)*0.09,24),1973)-0.5)*0.65)*val(7,0,8)+(0.5-linearGrad(x,y,0,0,X,Y))*1.4-sdfOutline(sdfBox(x,y,X/2,Y*(0.5+(val(1,3,12)-val(2,16,38))/200),X*(1-2*val(0,4,14)/100),Y*(1-(val(1,3,12)+val(2,16,38))/100),0),max(min(X,Y)*0.006,2),clamp(min(X,Y)*0.0015,0.75,2))*val(8,0,18)-sdfOutline(sdfBox(x,y,X/2,Y/2,max(X-2,1),max(Y-2,1),0),max(min(X,Y)*0.007,2),clamp(min(X,Y)*0.0015,0.75,2))*4,0,255),clamp(srcLinear((X/2+val(4,-100,100)/100*max(0,X/2-(X*(1-2*val(0,4,14)/100)/2)/(max((1-2*val(0,4,14)/100),(1-(val(1,3,12)+val(2,16,38))/100))*val(3,100,140)/100)))+(x-X/2)/(max((1-2*val(0,4,14)/100),(1-(val(1,3,12)+val(2,16,38))/100))*val(3,100,140)/100),(Y/2+val(5,-100,100)/100*max(0,Y/2-(Y*(1-(val(1,3,12)+val(2,16,38))/100)/2)/(max((1-2*val(0,4,14)/100),(1-(val(1,3,12)+val(2,16,38))/100))*val(3,100,140)/100)))+(y-(Y*(0.5+(val(1,3,12)-val(2,16,38))/200)))/(max((1-2*val(0,4,14)/100),(1-(val(1,3,12)+val(2,16,38))/100))*val(3,100,140)/100),0)*(1-val(9,0,0.04))+val(9,0,4.2),0,255),box(x,y,X/2,Y*(0.5+(val(1,3,12)-val(2,16,38))/200),X*(1-2*val(0,4,14)/100),Y*(1-(val(1,3,12)+val(2,16,38))/100),0,clamp(min(X,Y)*0.001,0.75,2)))",
-      "lerp(clamp(247+val(6,0,1)*5+((hash2(x,y,731)-0.5)*0.35+(valueNoise(x,y,max(min(X,Y)*0.09,24),1973)-0.5)*0.65)*val(7,0,8)+(0.5-linearGrad(x,y,0,0,X,Y))*1.4-sdfOutline(sdfBox(x,y,X/2,Y*(0.5+(val(1,3,12)-val(2,16,38))/200),X*(1-2*val(0,4,14)/100),Y*(1-(val(1,3,12)+val(2,16,38))/100),0),max(min(X,Y)*0.006,2),clamp(min(X,Y)*0.0015,0.75,2))*val(8,0,18)-sdfOutline(sdfBox(x,y,X/2,Y/2,max(X-2,1),max(Y-2,1),0),max(min(X,Y)*0.007,2),clamp(min(X,Y)*0.0015,0.75,2))*4,0,255),clamp(srcLinear((X/2+val(4,-100,100)/100*max(0,X/2-(X*(1-2*val(0,4,14)/100)/2)/(max((1-2*val(0,4,14)/100),(1-(val(1,3,12)+val(2,16,38))/100))*val(3,100,140)/100)))+(x-X/2)/(max((1-2*val(0,4,14)/100),(1-(val(1,3,12)+val(2,16,38))/100))*val(3,100,140)/100),(Y/2+val(5,-100,100)/100*max(0,Y/2-(Y*(1-(val(1,3,12)+val(2,16,38))/100)/2)/(max((1-2*val(0,4,14)/100),(1-(val(1,3,12)+val(2,16,38))/100))*val(3,100,140)/100)))+(y-(Y*(0.5+(val(1,3,12)-val(2,16,38))/200)))/(max((1-2*val(0,4,14)/100),(1-(val(1,3,12)+val(2,16,38))/100))*val(3,100,140)/100),1)*(1-val(9,0,0.05))+val(9,0,4),0,255),box(x,y,X/2,Y*(0.5+(val(1,3,12)-val(2,16,38))/200),X*(1-2*val(0,4,14)/100),Y*(1-(val(1,3,12)+val(2,16,38))/100),0,clamp(min(X,Y)*0.001,0.75,2)))",
-      "lerp(clamp(246-val(6,0,1)*12+((hash2(x,y,731)-0.5)*0.35+(valueNoise(x,y,max(min(X,Y)*0.09,24),1973)-0.5)*0.65)*val(7,0,8)+(0.5-linearGrad(x,y,0,0,X,Y))*1.4-sdfOutline(sdfBox(x,y,X/2,Y*(0.5+(val(1,3,12)-val(2,16,38))/200),X*(1-2*val(0,4,14)/100),Y*(1-(val(1,3,12)+val(2,16,38))/100),0),max(min(X,Y)*0.006,2),clamp(min(X,Y)*0.0015,0.75,2))*val(8,0,18)-sdfOutline(sdfBox(x,y,X/2,Y/2,max(X-2,1),max(Y-2,1),0),max(min(X,Y)*0.007,2),clamp(min(X,Y)*0.0015,0.75,2))*4,0,255),clamp(srcLinear((X/2+val(4,-100,100)/100*max(0,X/2-(X*(1-2*val(0,4,14)/100)/2)/(max((1-2*val(0,4,14)/100),(1-(val(1,3,12)+val(2,16,38))/100))*val(3,100,140)/100)))+(x-X/2)/(max((1-2*val(0,4,14)/100),(1-(val(1,3,12)+val(2,16,38))/100))*val(3,100,140)/100),(Y/2+val(5,-100,100)/100*max(0,Y/2-(Y*(1-(val(1,3,12)+val(2,16,38))/100)/2)/(max((1-2*val(0,4,14)/100),(1-(val(1,3,12)+val(2,16,38))/100))*val(3,100,140)/100)))+(y-(Y*(0.5+(val(1,3,12)-val(2,16,38))/200)))/(max((1-2*val(0,4,14)/100),(1-(val(1,3,12)+val(2,16,38))/100))*val(3,100,140)/100),2)*(1-val(9,0,0.07))+val(9,0,3.6),0,255),box(x,y,X/2,Y*(0.5+(val(1,3,12)-val(2,16,38))/200),X*(1-2*val(0,4,14)/100),Y*(1-(val(1,3,12)+val(2,16,38))/100),0,clamp(min(X,Y)*0.001,0.75,2)))",
-      "lerp(255,srcLinear((X/2+val(4,-100,100)/100*max(0,X/2-(X*(1-2*val(0,4,14)/100)/2)/(max((1-2*val(0,4,14)/100),(1-(val(1,3,12)+val(2,16,38))/100))*val(3,100,140)/100)))+(x-X/2)/(max((1-2*val(0,4,14)/100),(1-(val(1,3,12)+val(2,16,38))/100))*val(3,100,140)/100),(Y/2+val(5,-100,100)/100*max(0,Y/2-(Y*(1-(val(1,3,12)+val(2,16,38))/100)/2)/(max((1-2*val(0,4,14)/100),(1-(val(1,3,12)+val(2,16,38))/100))*val(3,100,140)/100)))+(y-(Y*(0.5+(val(1,3,12)-val(2,16,38))/200)))/(max((1-2*val(0,4,14)/100),(1-(val(1,3,12)+val(2,16,38))/100))*val(3,100,140)/100),3),box(x,y,X/2,Y*(0.5+(val(1,3,12)-val(2,16,38))/200),X*(1-2*val(0,4,14)/100),Y*(1-(val(1,3,12)+val(2,16,38))/100),0,clamp(min(X,Y)*0.001,0.75,2)))"
+      "(r+(ctl(3)-r)*ctl(6)*(min(val(0,0,256),min(X,Y)/2)>0?smoothstep(-min(val(0,0,256),min(X,Y)/2)-max(1,val(2,0,24)),-min(val(0,0,256),min(X,Y)/2),(sdfBox(x,y,(X-1)/2,(Y-1)/2,X-2*min(val(1,0,512),min(X,Y)/2),Y-2*min(val(1,0,512),min(X,Y)/2),0)-min(val(1,0,512),min(X,Y)/2))):0)/max(0.0001,a+(255-a)*ctl(6)*(min(val(0,0,256),min(X,Y)/2)>0?smoothstep(-min(val(0,0,256),min(X,Y)/2)-max(1,val(2,0,24)),-min(val(0,0,256),min(X,Y)/2),(sdfBox(x,y,(X-1)/2,(Y-1)/2,X-2*min(val(1,0,512),min(X,Y)/2),Y-2*min(val(1,0,512),min(X,Y)/2),0)-min(val(1,0,512),min(X,Y)/2))):0)/255))",
+      "(g+(ctl(4)-g)*ctl(6)*(min(val(0,0,256),min(X,Y)/2)>0?smoothstep(-min(val(0,0,256),min(X,Y)/2)-max(1,val(2,0,24)),-min(val(0,0,256),min(X,Y)/2),(sdfBox(x,y,(X-1)/2,(Y-1)/2,X-2*min(val(1,0,512),min(X,Y)/2),Y-2*min(val(1,0,512),min(X,Y)/2),0)-min(val(1,0,512),min(X,Y)/2))):0)/max(0.0001,a+(255-a)*ctl(6)*(min(val(0,0,256),min(X,Y)/2)>0?smoothstep(-min(val(0,0,256),min(X,Y)/2)-max(1,val(2,0,24)),-min(val(0,0,256),min(X,Y)/2),(sdfBox(x,y,(X-1)/2,(Y-1)/2,X-2*min(val(1,0,512),min(X,Y)/2),Y-2*min(val(1,0,512),min(X,Y)/2),0)-min(val(1,0,512),min(X,Y)/2))):0)/255))",
+      "(b+(ctl(5)-b)*ctl(6)*(min(val(0,0,256),min(X,Y)/2)>0?smoothstep(-min(val(0,0,256),min(X,Y)/2)-max(1,val(2,0,24)),-min(val(0,0,256),min(X,Y)/2),(sdfBox(x,y,(X-1)/2,(Y-1)/2,X-2*min(val(1,0,512),min(X,Y)/2),Y-2*min(val(1,0,512),min(X,Y)/2),0)-min(val(1,0,512),min(X,Y)/2))):0)/max(0.0001,a+(255-a)*ctl(6)*(min(val(0,0,256),min(X,Y)/2)>0?smoothstep(-min(val(0,0,256),min(X,Y)/2)-max(1,val(2,0,24)),-min(val(0,0,256),min(X,Y)/2),(sdfBox(x,y,(X-1)/2,(Y-1)/2,X-2*min(val(1,0,512),min(X,Y)/2),Y-2*min(val(1,0,512),min(X,Y)/2),0)-min(val(1,0,512),min(X,Y)/2))):0)/255))",
+      "((1-smoothstep(-0.5,0.5,(sdfBox(x,y,(X-1)/2,(Y-1)/2,X-2*min(val(1,0,512),min(X,Y)/2),Y-2*min(val(1,0,512),min(X,Y)/2),0)-min(val(1,0,512),min(X,Y)/2))))*(a+(255-a)*ctl(6)*(min(val(0,0,256),min(X,Y)/2)>0?smoothstep(-min(val(0,0,256),min(X,Y)/2)-max(1,val(2,0,24)),-min(val(0,0,256),min(X,Y)/2),(sdfBox(x,y,(X-1)/2,(Y-1)/2,X-2*min(val(1,0,512),min(X,Y)/2),Y-2*min(val(1,0,512),min(X,Y)/2),0)-min(val(1,0,512),min(X,Y)/2))):0)/255))"
     ]
   },
   {
