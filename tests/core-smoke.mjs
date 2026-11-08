@@ -175,7 +175,7 @@ const pass2Builtins=new Map([
   ['fractal-contours','Fractal Contour Designer'],
   ['gradient-map-studio','Gradient Map Studio'],
   ['halftone-print','Halftone Print'],
-  ['instant-print-frame','Instant Print Frame'],
+  ['uniform-rounded-inset-border','Uniform Rounded Inset Border'],
   ['iridescent-shift','Iridescent Shift'],
   ['juno','Juno'],
   ['mandelbrotjuliaatlas','Mandelbrot / Julia Atlas'],
