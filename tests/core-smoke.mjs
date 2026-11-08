@@ -15,7 +15,7 @@ for (const preset of presets) {
   assert.equal(typeof preset.description,'string',`${preset.name} must include filter-level description metadata`);
   assert.ok(preset.description.trim(),`${preset.name} must include a useful description`);
   assert.ok(preset.description.length<=FILTER_DESCRIPTION_MAX_LENGTH,`${preset.name} description must stay within the native metadata limit`);
-  assert.equal(preset.author,'Anthony Chimming',`${preset.name} must carry the built-in author attribution`);
+  assert.equal(preset.author,preset.id==='uniform-rounded-inset-border'?'ChromaMeld':'Anthony Chimming',`${preset.name} must carry the built-in author attribution`);
   assert.equal(formulas.length, 4, `${preset.name} must have four formulas`);
   const program = compileFilterProgram(formulas.map(formula => new Parser(formula).parse()));
   assert.equal(program.outputs.length, 4);
