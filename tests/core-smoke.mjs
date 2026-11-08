@@ -25,6 +25,13 @@ for (const preset of presets) {
 }
 
 assert.equal(presets.length, 48, 'pass-three catalog must remove eight presets and add four');
+const roundedInset=presets.find(preset=>preset.id==='uniform-rounded-inset-border');
+assert.ok(roundedInset,'new rounded inset border built-in must be present');
+assert.equal(roundedInset.name,'Uniform Rounded Inset Border');
+assert.equal(roundedInset.author,'ChromaMeld');
+assert.equal(roundedInset.f.length,4);
+assert.deepEqual(roundedInset.controls.slice(0,7).map(control=>control.label),['Border Thickness','Corner Radius','Inner Edge Softness','Red','Green','Blue','Alpha']);
+assert.equal(presets.some(preset=>preset.id==='instant-print-frame'),false,'retired Instant Print Frame must be absent');
 assert.equal(gpuCompatible, presets.length, 'every native built-in must compile for WebGPU after Phase 3.5');
 assert.equal(cpuFallback, 0, 'native built-ins must not require CPU fallback');
 assert.equal(gpuCompatible + cpuFallback, presets.length);
