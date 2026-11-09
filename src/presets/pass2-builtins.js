@@ -149,8 +149,10 @@ export const pass2PresetDefinitions=[
     "author": "Anthony Chimming",
     "tags": [
       "Retro",
+      "Pixelate",
       "Pixel Art",
-      "Monochrome"
+      "Monochrome",
+      "Dither"
     ],
     "controls": [
       {
@@ -429,9 +431,9 @@ export const pass2PresetDefinitions=[
     "author": "Anthony Chimming",
     "tags": [
       "Distortion",
+      "Echo",
       "Radial",
-      "Motion",
-      "Photography"
+      "Motion"
     ],
     "controls": [
       {
@@ -571,7 +573,7 @@ export const pass2PresetDefinitions=[
       "Gradient",
       "Procedural",
       "Color",
-      "Utility"
+      "Background"
     ],
     "controls": [
       {
@@ -848,9 +850,10 @@ export const pass2PresetDefinitions=[
     "author": "Anthony Chimming",
     "tags": [
       "Distortion",
+      "Refraction",
       "Color",
-      "Texture",
-      "Procedural"
+      "Procedural",
+      "Texture"
     ],
     "controls": [
       {
@@ -1270,8 +1273,7 @@ export const pass2PresetDefinitions=[
       "Color",
       "Gradient",
       "Tone",
-      "Duotone",
-      "Print"
+      "Duotone"
     ],
     "controls": [
       {
@@ -1411,7 +1413,7 @@ export const pass2PresetDefinitions=[
       "Fractal",
       "Procedural",
       "Pattern",
-      "Print",
+      "Line Art",
       "Texture"
     ],
     "controls": [
@@ -1552,7 +1554,7 @@ export const pass2PresetDefinitions=[
       "Color",
       "Gradient",
       "Tone",
-      "Utility"
+      "Palette"
     ],
     "controls": [
       {
@@ -1829,9 +1831,10 @@ export const pass2PresetDefinitions=[
     "description": "Adds an evenly thick border just inside the original image bounds without resizing the canvas. A pixel-distance rounded-rectangle field keeps the stroke width consistent on straight sides and curved corners. Border Thickness sets the inward stroke width; Corner Radius rounds both the border and the image crop, capped to fit the image; Inner Edge Softness feathers only the border’s inner edge into the source image; the outside silhouette retains a fixed one-pixel antialias and does not soften as the control increases. Independent Red, Green, Blue and Alpha controls define the border material. The border uses source-over RGBA compositing, preserving transparent source pixels in the opening and cutting outside rounded corners to transparency. At zero border alpha, corner cropping remains active. Thickness and radius are clamped to the available source dimensions.",
     "author": "ChromaMeld",
     "tags": [
-      "Utility",
+      "Border",
+      "Frame",
       "Shapes",
-      "Color"
+      "Utility"
     ],
     "controls": [
       {
@@ -1970,8 +1973,8 @@ export const pass2PresetDefinitions=[
     "tags": [
       "Color",
       "Gradient",
+      "Holographic",
       "Procedural",
-      "Portrait",
       "Texture"
     ],
     "controls": [
@@ -2390,7 +2393,8 @@ export const pass2PresetDefinitions=[
     "tags": [
       "Color",
       "Gradient",
-      "Portrait",
+      "Radial",
+      "Glow",
       "Procedural"
     ],
     "controls": [
@@ -2530,8 +2534,7 @@ export const pass2PresetDefinitions=[
     "tags": [
       "Color",
       "Monochrome",
-      "Utility",
-      "Tone"
+      "Utility"
     ],
     "controls": [
       {
@@ -2672,7 +2675,7 @@ export const pass2PresetDefinitions=[
       "Monochrome",
       "Distortion",
       "Color",
-      "Texture"
+      "Sci-Fi"
     ],
     "controls": [
       {

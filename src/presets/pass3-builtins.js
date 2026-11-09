@@ -12,6 +12,7 @@ export const pass3PresetDefinitions=[
       "Procedural",
       "Distortion",
       "Pattern",
+      "Radial",
       "Color"
     ],
     "controls": [
@@ -151,7 +152,8 @@ export const pass3PresetDefinitions=[
     "tags": [
       "Distortion",
       "Pattern",
-      "Shapes"
+      "Radial",
+      "Symmetry"
     ],
     "controls": [
       {
@@ -431,7 +433,7 @@ export const pass3PresetDefinitions=[
       "Shapes",
       "Procedural",
       "Print",
-      "Retro"
+      "Background"
     ],
     "controls": [
       {

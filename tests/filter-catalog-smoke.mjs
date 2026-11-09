@@ -7,6 +7,12 @@ import { presets } from '../src/presets/builtins.js';
 
 const memory=()=>{const data=new Map();return{getItem:key=>data.get(key)??null,setItem:(key,value)=>data.set(key,value),removeItem:key=>data.delete(key)};};
 const base={format:'filter-fab-js',version:2,name:'Retro Print',description:'Portraits',author:'André',id:'preset-one',tags:['Retro','Black & white'],formulas:['r','g','b','a']};
+// Built-in metadata uses a deliberately tighter discovery budget than portable user tags.
+for(const preset of presets){
+  assert.ok(Array.isArray(preset.tags)&&preset.tags.length>=1&&preset.tags.length<=5,`${preset.id}: built-in filters must have 1–5 tags`);
+  assert.deepEqual(normalizeTags(preset.tags),preset.tags,`${preset.id}: built-in tags must be canonical and unique`);
+}
+
 assert.deepEqual(normalizeTags([' Retro ','retro','Re\u0301tro','Rétro','two   words','a,b']),['Retro','Rétro','two words','a,b']);
 assert.notEqual(tagKey('retro'),tagKey('rétro'));
 assert.equal(normalizeTags(['😀'.repeat(32)])[0].length,64);
