@@ -150,8 +150,9 @@ export const contributedPresetDefinitions=[
     "author": "",
     "tags": [
       "Distortion",
+      "Echo",
       "Color",
-      "Blur"
+      "Motion"
     ],
     "controls": [
       {
