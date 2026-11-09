@@ -599,3 +599,5 @@ body:has(.filter-browser[open]) #inspector,body:has(.filter-browser[open]) #insp
 @media(prefers-reduced-motion:reduce){
   .filter-browser .filter-card,.snapshot-slots button{transition:none}
 }
+
+.canvas-stage[data-panning] { cursor: grabbing; }

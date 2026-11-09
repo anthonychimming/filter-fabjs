@@ -6,6 +6,11 @@
 - Validate bounded backups before writes; guard cross-tab changes and preserve the collection on quota failures. Backup dialogs preserve active preview and editing sessions.
 
 
+## 2.10.2
+
+- Add cursor-anchored wheel zoom and middle-button drag panning to the image canvas.
+- Document mouse navigation while preserving Fit and keyboard controls.
+
 ## 2.10.1
 
 - Add keyboard shortcuts for image and canvas actions, with context-aware image copying and existing paste handling.
