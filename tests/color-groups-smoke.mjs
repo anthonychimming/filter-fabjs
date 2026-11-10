@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { presets } from '../src/presets/builtins.js';
 import { normalizeColorGroups, reconcileTogglePreservation } from '../src/core/controls.js';
 import { validateNativeFilter, detectFilterFormat } from '../src/io/filter-format.js';
 import { groupLockState, toggleGroupLocks } from '../src/ui/controls.js';
@@ -55,4 +56,25 @@ saveExploreSnapshot(lockedSession,'A');commitExploreValues(lockedSession,[1,2,3]
 commitExploreValues(lockedSession,lockedSession.explore.snapshots.A);assert.equal(groupLockState(lockedSession.explore.locks,[0,1,2]),'true');
 commitExploreValues(lockedSession,lockedSession.explore.defaults);assert.equal(groupLockState(lockedSession.explore.locks,[0,1,2]),'true');
 assert.equal(groupLockState(createExploreSession([10,20,30]).locks,[0,1,2]),'false');
+
+// Built-in RGB metadata must remain a presentation-only mapping to existing controls.
+const expectedBuiltinGroups={
+  'sierpinskifractal':[g('Foreground Colour',3,4,5)],
+  'duotone-gradient-map':[g('Shadow Colour',0,1,2),g('Highlight Colour',3,4,5)],
+  'uniform-rounded-inset-border':[g('Border Colour',3,4,5)],
+  'selective-color-isolate':[g('Target Colour',0,1,2)],
+  'versatile-stripes':[g('Stripe Colour',4,5,6),g('Background Colour',7,8,9)]
+};
+for(const preset of presets){
+  const expected=expectedBuiltinGroups[preset.id]||[];
+  assert.deepEqual(normalizeColorGroups(preset.colorGroups),expected,`${preset.id}: RGB groups`);
+  for(const group of expected){
+    for(const index of Object.values(group.channels)){
+      assert.ok(preset.controls[index],`${preset.id}: missing grouped control ${index}`);
+      assert.equal(preset.controls[index].ui.displayMin,0,`${preset.id}: RGB min`);
+      assert.equal(preset.controls[index].ui.displayMax,255,`${preset.id}: RGB max`);
+    }
+  }
+}
+
 console.log('Color groups, storage, backup, snapshots and group locks passed.');
