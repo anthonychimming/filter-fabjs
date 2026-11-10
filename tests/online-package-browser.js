@@ -28,11 +28,13 @@ window.packageFixtureFetch=async(url,options)=>{
 const standalone=new URLSearchParams(location.search).has('standalone'),html=await(await fetch(new URL(standalone?'dist/chromameld-rgba-v2.10.3.html':'index.html',root))).text();
 const options=`{${savedMode?'onlineStorage:parent.packageFixtureStorage,':manual?'':'onlineStorage:null,'}onlineManifestUrl:${JSON.stringify(new URL('tests/fixtures/online-library/catalogue.json',root).href)},onlineFetchImpl:(...args)=>parent.packageFixtureFetch(...args)}`;
 frame.srcdoc=html.replace('<head>',`<head><base href="${root.href}">`).replace(standalone?'initFilterFabApp();':'<script type="module" src="./src/main.js"></script>',standalone?`window.fixtureApp=initFilterFabApp(${options});`:`<script type="module">import {initFilterFabApp} from './src/app/filter-fab-app.js';window.fixtureApp=initFilterFabApp(${options});</script>`);
-const until=async(test,label='condition')=>{const end=Date.now()+15000;while(!test()){if(Date.now()>end)throw new Error(`Timed out: ${label}`);await new Promise(resolve=>setTimeout(resolve,20));}};
+const until=async(test,label='condition')=>{const end=Date.now()+15000;while(!test()){if(Date.now()>end)throw new Error(`Timed out: ${typeof label==='function'?label():label}`);await new Promise(resolve=>setTimeout(resolve,20));}};
 await until(()=>frame.contentWindow.fixtureApp&&!frame.contentWindow.fixtureApp.state.isRendering,'app startup');run.disabled=false;output.textContent=manual?'Ready for manual QA. Open Filter Library → Source → Online. Downloads are real files; favorites and explicit saves use localhost browser storage.':'Ready';
 run.onclick=async()=>{
   run.disabled=true;output.textContent='';const win=frame.contentWindow,doc=frame.contentDocument,app=win.fixtureApp,api=win.FilterFabJS,$=s=>doc.querySelector(s);
   if(new URLSearchParams(location.search).has('cpu'))app.state.rendererPreference='cpu';
+  // Synthetic clicks have no user activation; exercise the download fallback.
+  win.showSaveFilePicker=undefined;
   const assert=(condition,label)=>{if(!condition)throw new Error(label);output.textContent+=`PASS ${label}\n`;};
   const change=(s,value)=>{const node=$(s);node.value=value;node.dispatchEvent(new win.Event('change'));};
   const search=value=>{const node=$('[data-search]');node.value=value;node.dispatchEvent(new win.Event('input'));};
@@ -40,12 +42,14 @@ run.onclick=async()=>{
   const snapshot=()=>JSON.stringify({identity:api.getLibraryPreviewState(),formulas:['R','G','B','A'].map(c=>$('#formula'+c).value),controls:app.state.controls,labels:app.state.labels,controlUIs:app.state.controlUIs,colorGroups:app.state.colorGroups,pending:app.state.hasPendingFormulaChanges,name:$('#filterName').value,program:api.getLastProgram(),diagnostics:api.getRendererDiagnostics(),pixels:Array.from(app.state.filtered),status:$('#statusText').textContent,formulaStatus:$('#formulaEditStatus').textContent});
   const pixels=()=>Array.from(app.state.filtered),equal=(a,b)=>a.length===b.length&&a.every((v,i)=>v===b[i]);
   const open=async()=>{$('#browseFiltersBtn').click();await until(()=>$('.filter-browser').open);$('[data-reset]').click();};
-  const close=async(action='cancel')=>{$(`[data-${action}]`).click();await until(()=>!$('.filter-browser').open);};
+  const closeEvent=()=>new Promise((resolve,reject)=>{const dialog=$('.filter-browser'),timer=setTimeout(()=>{dialog.removeEventListener('close',done);reject(new Error('Timed out waiting for library close event'));},15000);function done(){clearTimeout(timer);resolve();}dialog.addEventListener('close',done,{once:true});});
+  const close=async(action='cancel')=>{const closed=closeEvent();$(`[data-${action}]`).click();await closed;};
+  const escape=async()=>{const closed=closeEvent();$('.filter-browser').dispatchEvent(new win.Event('cancel',{cancelable:true}));await closed;};
   const preview=async id=>{source();await until(()=>row(id));action(id).click();await until(()=>api.getLibraryPreviewState().candidateKey===`online:${id}`&&api.getLibraryPreviewState().candidateRendered&&!$('[data-apply]').disabled,id);};
   const local=async name=>{change('[data-source]','builtin');search(name);$('.filter-results [data-entry-action="preview"]').click();await until(()=>api.getLibraryPreviewState().candidateRendered&&!$('[data-apply]').disabled);search('');};
   const heldAliases=new Map();
   const release=id=>{id=heldAliases.get(id)||id;const resolve=holds.get(id);holds.delete(id);resolve();};
-  const hold=async originalId=>{const id=cold.shift();heldAliases.set(originalId,id);holds.set(id,null);source();await until(()=>row(id));action(id).click();await until(()=>typeof holds.get(id)==='function');};
+  const hold=async originalId=>{const id=cold.shift();heldAliases.set(originalId,id);holds.set(id,null);source();await until(()=>row(id),`row for held package ${id}`);const button=action(id);button.click();await until(()=>typeof holds.get(id)==='function',()=>`held preview ${id}; button disabled=${button.disabled}; requests=${requests.map(item=>item.url).join(', ')}; error=${$('[data-error]').textContent}`);};
   const settle=()=>new Promise(resolve=>setTimeout(resolve,150));
   const savedLibrary=localStorage.getItem('ffw-custom-presets'),prefKey='ffw-entry-v1:online:'+a.id,savedPref=localStorage.getItem(prefKey),prefBKey='ffw-entry-v1:online:'+b.id,savedPrefB=localStorage.getItem(prefBKey);
   const originalCreate=win.URL.createObjectURL,originalRevoke=win.URL.revokeObjectURL,originalClick=win.HTMLAnchorElement.prototype.click;
@@ -62,7 +66,7 @@ run.onclick=async()=>{
       for(const [first,second] of [[rgbDocs[0],rgbDocs[2]],[rgbDocs[1],b],[rgbDocs[0],rgbDocs[1]],[rgbDocs[2],rgbDocs[0]]]){
         for(const exit of ['cancel','escape','apply']){
           const before=snapshot();await open();await preview(first.id);check(first);const firstMask=[...app.state.usedControls];await preview(second.id);check(second);if(first===rgbDocs[0]&&second===rgbDocs[2])assert(JSON.stringify(firstMask)===JSON.stringify(app.state.usedControls)&&firstMask.every(Boolean),'grouped and ungrouped fixtures use identical ten-control masks');
-          if(exit==='escape'){$('.filter-browser').dispatchEvent(new win.Event('cancel',{cancelable:true}));await until(()=>!$('.filter-browser').open);}else await close(exit);
+          if(exit==='escape'){await escape();}else await close(exit);
           if(exit==='apply'){assert(api.getLibraryPreviewState().activeId===second.id,`Apply commits ${second.name}`);check(second);}else assert(snapshot()===before,`${exit} restores working filter and pixels`);
         }
       }
@@ -84,7 +88,7 @@ run.onclick=async()=>{
     action(a.id,'favorite').click();assert(requests.length===1&&!api.getLibraryPreviewState().candidateKey,'Favorite never fetches or previews a package');
     // Capture download bytes without letting this test save files on the user's disk.
     let downloads=[],revoked=[];win.URL.createObjectURL=blob=>{const url=originalCreate.call(win.URL,blob);if(blob.type==='image/png')downloads.push({blob,url});return url;};win.URL.revokeObjectURL=url=>{revoked.push(url);originalRevoke.call(win.URL,url);};win.HTMLAnchorElement.prototype.click=function(){downloads.at(-1).name=this.download;};
-    holds.set(a.id,null);action(a.id,'download').click();await until(()=>typeof holds.get(a.id)==='function');const count=requests.length;action(a.id,'download').click();assert(requests.length===count,'double Download has one concurrent package request');release(a.id);
+    holds.set(a.id,null);action(a.id,'download').click();await until(()=>typeof holds.get(a.id)==='function',()=>`held download ${a.id}; requests: ${requests.map(item=>item.url).join(', ')}; error: ${$('[data-error]').textContent}`);const count=requests.length;action(a.id,'download').click();assert(requests.length===count,'double Download has one concurrent package request');release(a.id);
     await until(()=>downloads.length===1&&downloads[0].name);assert(equal(new Uint8Array(await downloads[0].blob.arrayBuffer()),packages.get(a.id))&&downloads[0].name===`filterfab-${a.id}.png`,'Download preserves exact original PNG bytes and safe filename');
     const downloadedImage=await win.createImageBitmap(downloads[0].blob);assert(downloadedImage.width===1&&downloadedImage.height===1,'Downloaded fixture remains a decodable PNG image');downloadedImage.close();
     assert(!api.getLibraryPreviewState().candidateKey&&$('[data-apply]').disabled&&equal(pixels(),baseline)&&localStorage.getItem('ffw-custom-presets')===savedLibrary,'Download does not preview, enable Apply, or install');
@@ -98,7 +102,7 @@ run.onclick=async()=>{
     await close();assert(snapshot()===original,'Cancel restores exact identity, formulas, controls, pixels, status and diagnostics');
     for(const exit of ['close','cancel','escape']){
       await open();source();await until(()=>row(a.id));const beforeHit=requests.length;action(a.id).click();
-      if(exit==='escape'){$('.filter-browser').dispatchEvent(new win.Event('cancel',{cancelable:true}));await until(()=>!$('.filter-browser').open);}else await close(exit);
+      if(exit==='escape'){await escape();}else await close(exit);
       await settle();assert(requests.length===beforeHit&&snapshot()===original,`${exit} invalidates a pending cache hit and restores exact state`);
     }
     // Cached A is cancelled by a cold network candidate before the hit can render.
@@ -107,7 +111,7 @@ run.onclick=async()=>{
     await open();await hold(a.id);const aborted=requests.at(-1).signal;await preview(b.id);const winner=snapshot();release(a.id);await settle();assert(aborted.aborted&&snapshot()===winner,'late A cannot overwrite B');await close();assert(snapshot()===original,'Cancel restores original after rapid Online selection');
     for(const exit of ['close','cancel','escape']){
       await open();await hold(a.id);const signal=requests.at(-1).signal;
-      if(exit==='escape'){$('.filter-browser').dispatchEvent(new win.Event('cancel',{cancelable:true}));await until(()=>!$('.filter-browser').open);}else await close(exit);
+      if(exit==='escape'){await escape();}else await close(exit);
       release(a.id);await settle();assert(signal.aborted&&snapshot()===original,`${exit} aborts fetch and ignores late completion`);
     }
     await open();await hold(a.id);await app.loadImageFile(new win.File([sourceBlob],'replacement.png',{type:'image/png'}));await until(()=>!app.state.isRendering);const replacement=snapshot();release(a.id);await settle();assert(!api.getLibraryPreviewState().open&&snapshot()===replacement,'source replacement invalidates package result and session');
@@ -132,7 +136,7 @@ run.onclick=async()=>{
     await until(()=>revoked.includes(downloads[0].url),'download URL revocation');assert(true,'Download object URL is revoked');
     output.textContent+='Stage 3/4 browser checks passed.\n';
   }catch(error){output.textContent+=`FAIL ${error.stack}\n`;}
-  finally{
+  finally{for(const resolve of holds.values())if(typeof resolve==='function')resolve();holds.clear();
     win.URL.createObjectURL=originalCreate;win.URL.revokeObjectURL=originalRevoke;win.HTMLAnchorElement.prototype.click=originalClick;
     if(savedPref===null)localStorage.removeItem(prefKey);else localStorage.setItem(prefKey,savedPref);
     if(savedPrefB===null)localStorage.removeItem(prefBKey);else localStorage.setItem(prefBKey,savedPrefB);
