@@ -1,0 +1,162 @@
+{
+  "format": "filter-fab-js",
+  "version": 2,
+  "id": "polka-dot-pattern",
+  "tags": [
+    "Pattern",
+    "Procedural",
+    "Shapes",
+    "Pop Art",
+    "Print"
+  ],
+  "mathMode": "float",
+  "name": "Polka Dot Pattern",
+  "description": "Generates a two-colour staggered polka-dot field with independent dot size, column gap, row gap, and row offset. Row Offset runs from a straight grid at 0% to the classic half-drop layout at 50%. Six RGB controls set the dot and background colours. Defaults are tuned more closely to the supplied hot-pink/yellow reference: about 104 px dots on a 200 px column pitch and 161 px row pitch, with a 50% half-drop offset. The pattern replaces source RGB while preserving source alpha.",
+  "author": "ChromaMeld",
+  "formulas": [
+    "lerp(ctl(7),ctl(4),circle(repeat(x+(val(0,8,200)+val(1,0,200))*0.65+(floor((y+(val(0,8,200)+val(2,0,200))*0.35)/(val(0,8,200)+val(2,0,200)))%2)*(val(0,8,200)+val(1,0,200))*val(3,0,0.5),val(0,8,200)+val(1,0,200)),repeat(y+(val(0,8,200)+val(2,0,200))*0.35,val(0,8,200)+val(2,0,200)),(val(0,8,200)+val(1,0,200))/2,(val(0,8,200)+val(2,0,200))/2,val(0,8,200)/2,1))",
+    "lerp(ctl(8),ctl(5),circle(repeat(x+(val(0,8,200)+val(1,0,200))*0.65+(floor((y+(val(0,8,200)+val(2,0,200))*0.35)/(val(0,8,200)+val(2,0,200)))%2)*(val(0,8,200)+val(1,0,200))*val(3,0,0.5),val(0,8,200)+val(1,0,200)),repeat(y+(val(0,8,200)+val(2,0,200))*0.35,val(0,8,200)+val(2,0,200)),(val(0,8,200)+val(1,0,200))/2,(val(0,8,200)+val(2,0,200))/2,val(0,8,200)/2,1))",
+    "lerp(ctl(9),ctl(6),circle(repeat(x+(val(0,8,200)+val(1,0,200))*0.65+(floor((y+(val(0,8,200)+val(2,0,200))*0.35)/(val(0,8,200)+val(2,0,200)))%2)*(val(0,8,200)+val(1,0,200))*val(3,0,0.5),val(0,8,200)+val(1,0,200)),repeat(y+(val(0,8,200)+val(2,0,200))*0.35,val(0,8,200)+val(2,0,200)),(val(0,8,200)+val(1,0,200))/2,(val(0,8,200)+val(2,0,200))/2,val(0,8,200)/2,1))",
+    "a"
+  ],
+  "controls": [
+    {
+      "label": "Dot Diameter",
+      "value": 62.421875,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 8,
+        "displayMax": 200,
+        "step": 1,
+        "format": "integer",
+        "unit": "px"
+      }
+    },
+    {
+      "label": "Column Gap",
+      "value": 93.075,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 200,
+        "step": 1,
+        "format": "integer",
+        "unit": "px"
+      }
+    },
+    {
+      "label": "Row Gap",
+      "value": 90.52499999999999,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 200,
+        "step": 1,
+        "format": "integer",
+        "unit": "px"
+      }
+    },
+    {
+      "label": "Row Offset",
+      "value": 255,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 50,
+        "step": 1,
+        "format": "integer",
+        "unit": "%"
+      }
+    },
+    {
+      "label": "Dot Red",
+      "value": 255,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "integer",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Dot Green",
+      "value": 204,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "integer",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Dot Blue",
+      "value": 0,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "integer",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Background Red",
+      "value": 255,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "integer",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Background Green",
+      "value": 51,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "integer",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Background Blue",
+      "value": 154,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "integer",
+        "unit": ""
+      }
+    }
+  ],
+  "colorGroups": [
+    {
+      "label": "Dot Colour",
+      "channels": {
+        "red": 4,
+        "green": 5,
+        "blue": 6
+      }
+    },
+    {
+      "label": "Background Colour",
+      "channels": {
+        "red": 7,
+        "green": 8,
+        "blue": 9
+      }
+    }
+  ]
+}
