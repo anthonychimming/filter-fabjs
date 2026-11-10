@@ -1,0 +1,161 @@
+{
+  "format": "filter-fab-js",
+  "version": 2,
+  "id": "concentric-circles",
+  "tags": [
+    "Pattern",
+    "Radial",
+    "Shapes",
+    "Procedural"
+  ],
+  "mathMode": "float",
+  "name": "Concentric Circles",
+  "description": "Generates clean concentric ring bands with independent foreground and background colours. Ring Width and Gap Width control the radial rhythm; Center X and Center Y can move the origin well beyond the canvas for cropped arcs and off-centre poster compositions. Edges are softly anti-aliased while remaining visually crisp.",
+  "author": "ChromaMeld",
+  "formulas": [
+    "ctl(7)+(ctl(4)-ctl(7))*(max(1-smoothstep(val(0,4,160)-0.75,val(0,4,160)+0.75,repeat(c2m(x-val(2,-50,150)*X/100,y-val(3,-50,150)*Y/100),(val(0,4,160)+val(1,4,160)))),smoothstep((val(0,4,160)+val(1,4,160))-1.5,(val(0,4,160)+val(1,4,160)),repeat(c2m(x-val(2,-50,150)*X/100,y-val(3,-50,150)*Y/100),(val(0,4,160)+val(1,4,160))))))",
+    "ctl(8)+(ctl(5)-ctl(8))*(max(1-smoothstep(val(0,4,160)-0.75,val(0,4,160)+0.75,repeat(c2m(x-val(2,-50,150)*X/100,y-val(3,-50,150)*Y/100),(val(0,4,160)+val(1,4,160)))),smoothstep((val(0,4,160)+val(1,4,160))-1.5,(val(0,4,160)+val(1,4,160)),repeat(c2m(x-val(2,-50,150)*X/100,y-val(3,-50,150)*Y/100),(val(0,4,160)+val(1,4,160))))))",
+    "ctl(9)+(ctl(6)-ctl(9))*(max(1-smoothstep(val(0,4,160)-0.75,val(0,4,160)+0.75,repeat(c2m(x-val(2,-50,150)*X/100,y-val(3,-50,150)*Y/100),(val(0,4,160)+val(1,4,160)))),smoothstep((val(0,4,160)+val(1,4,160))-1.5,(val(0,4,160)+val(1,4,160)),repeat(c2m(x-val(2,-50,150)*X/100,y-val(3,-50,150)*Y/100),(val(0,4,160)+val(1,4,160))))))",
+    "a"
+  ],
+  "controls": [
+    {
+      "label": "Ring Width",
+      "value": 49.03846153846154,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 4,
+        "displayMax": 160,
+        "step": 1,
+        "format": "integer",
+        "unit": "px"
+      }
+    },
+    {
+      "label": "Gap Width",
+      "value": 49.03846153846154,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 4,
+        "displayMax": 160,
+        "step": 1,
+        "format": "integer",
+        "unit": "px"
+      }
+    },
+    {
+      "label": "Center X",
+      "value": 127.5,
+      "ui": {
+        "widget": "slider",
+        "displayMin": -50,
+        "displayMax": 150,
+        "step": 1,
+        "format": "integer",
+        "unit": "%"
+      }
+    },
+    {
+      "label": "Center Y",
+      "value": 127.5,
+      "ui": {
+        "widget": "slider",
+        "displayMin": -50,
+        "displayMax": 150,
+        "step": 1,
+        "format": "integer",
+        "unit": "%"
+      }
+    },
+    {
+      "label": "Ring Red",
+      "value": 252,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "integer",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Ring Green",
+      "value": 128,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "integer",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Ring Blue",
+      "value": 182,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "integer",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Background Red",
+      "value": 243,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "integer",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Background Green",
+      "value": 231,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "integer",
+        "unit": ""
+      }
+    },
+    {
+      "label": "Background Blue",
+      "value": 155,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 255,
+        "step": 1,
+        "format": "integer",
+        "unit": ""
+      }
+    }
+  ],
+  "colorGroups": [
+    {
+      "label": "Ring Colour",
+      "channels": {
+        "red": 4,
+        "green": 5,
+        "blue": 6
+      }
+    },
+    {
+      "label": "Background Colour",
+      "channels": {
+        "red": 7,
+        "green": 8,
+        "blue": 9
+      }
+    }
+  ]
+}

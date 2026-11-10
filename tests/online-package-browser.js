@@ -5,6 +5,9 @@ const root=new URL('../',location.href),frame=document.querySelector('#app'),out
 const parameters=new URLSearchParams(location.search),manual=parameters.has('manual'),savedMode=parameters.has('saved');
 const a=packageFixtureDocument,b={...a,id:'fixture-online-b',name:'Online B',author:'Beatrice',description:'Invert green on your current image.',tags:['Colour','Cool'],formulas:['r','255-g','b','a']},bad={...a,id:'fixture-online-bad',name:'Online Broken'};
 const packages=new Map([[a.id,await packageFixtureBytes(a)],[b.id,await packageFixtureBytes(b)]]),manifest={schema:'filter-fab-js/library',schemaVersion:1,libraryVersion:1,filters:[a,b,bad].map(document=>({...packageFixtureMetadata(document),preview:{url:document===bad?'intentionally-missing.png':document===b?'wave.png':'colour.png',width:128,height:128}}))};
+// Native definitions from the online revisions exercise real presentation transitions.
+const rgbDocs=parameters.has('rgbRegression')?await Promise.all(['concentric-circles','polka-dot-pattern','studded-brick-mosaic'].map(async id=>await(await fetch(new URL(`tests/fixtures/rgb-preview/${id}.json`,root))).json())):[];
+for(const doc of rgbDocs){packages.set(doc.id,await packageFixtureBytes(doc));manifest.filters.push({...packageFixtureMetadata(doc),preview:{url:'colour.png',width:128,height:128},revision:doc.id==='concentric-circles'?4:doc.id==='polka-dot-pattern'?3:1});}
 // Cold aliases exercise real network races even after the main packages are cached.
 const cold=[];
 if(!manual)for(let i=0;i<8;i++){const document={...a,id:`fixture-cold-${i}`,name:`Cold race ${i}`};cold.push(document.id);packages.set(document.id,await packageFixtureBytes(document));manifest.filters.push(packageFixtureMetadata(document));}
@@ -34,7 +37,7 @@ run.onclick=async()=>{
   const change=(s,value)=>{const node=$(s);node.value=value;node.dispatchEvent(new win.Event('change'));};
   const search=value=>{const node=$('[data-search]');node.value=value;node.dispatchEvent(new win.Event('input'));};
   const source=()=>change('[data-source]',parameters.has('all')?'all':'online'),row=id=>$(`[data-entry-key="online:${id}"]`),action=(id,kind='preview')=>row(id).querySelector(`[data-entry-action="${kind}"]`);
-  const snapshot=()=>JSON.stringify({identity:api.getLibraryPreviewState(),formulas:['R','G','B','A'].map(c=>$('#formula'+c).value),controls:app.state.controls,labels:app.state.labels,controlUIs:app.state.controlUIs,pending:app.state.hasPendingFormulaChanges,name:$('#filterName').value,program:api.getLastProgram(),diagnostics:api.getRendererDiagnostics(),pixels:Array.from(app.state.filtered),status:$('#statusText').textContent,formulaStatus:$('#formulaEditStatus').textContent});
+  const snapshot=()=>JSON.stringify({identity:api.getLibraryPreviewState(),formulas:['R','G','B','A'].map(c=>$('#formula'+c).value),controls:app.state.controls,labels:app.state.labels,controlUIs:app.state.controlUIs,colorGroups:app.state.colorGroups,pending:app.state.hasPendingFormulaChanges,name:$('#filterName').value,program:api.getLastProgram(),diagnostics:api.getRendererDiagnostics(),pixels:Array.from(app.state.filtered),status:$('#statusText').textContent,formulaStatus:$('#formulaEditStatus').textContent});
   const pixels=()=>Array.from(app.state.filtered),equal=(a,b)=>a.length===b.length&&a.every((v,i)=>v===b[i]);
   const open=async()=>{$('#browseFiltersBtn').click();await until(()=>$('.filter-browser').open);$('[data-reset]').click();};
   const close=async(action='cancel')=>{$(`[data-${action}]`).click();await until(()=>!$('.filter-browser').open);};
@@ -54,6 +57,17 @@ run.onclick=async()=>{
     $('#formulaR').value='r + 1';$('#formulaR').dispatchEvent(new win.Event('input',{bubbles:true}));
     await new Promise(resolve=>setTimeout(resolve,300));
     const baseline=pixels(),original=snapshot();
+    if(parameters.has('rgbRegression')){
+      const check=definition=>{assert(JSON.stringify(app.state.colorGroups)===JSON.stringify(definition.colorGroups||[]),`${definition.name} group state`);assert(JSON.stringify([...doc.querySelectorAll('#sliderGrid .color-group-label')].map(x=>x.textContent))===JSON.stringify((definition.colorGroups||[]).map(g=>g.label)),`${definition.name} group rows`);for(const [index,control] of (definition.controls||[]).entries())assert(app.state.controls[index]===control.value&&app.state.labels[index]===control.label,`${definition.name} control ${index}`);};
+      for(const [first,second] of [[rgbDocs[0],rgbDocs[2]],[rgbDocs[1],b],[rgbDocs[0],rgbDocs[1]],[rgbDocs[2],rgbDocs[0]]]){
+        for(const exit of ['cancel','escape','apply']){
+          const before=snapshot();await open();await preview(first.id);check(first);const firstMask=[...app.state.usedControls];await preview(second.id);check(second);if(first===rgbDocs[0]&&second===rgbDocs[2])assert(JSON.stringify(firstMask)===JSON.stringify(app.state.usedControls)&&firstMask.every(Boolean),'grouped and ungrouped fixtures use identical ten-control masks');
+          if(exit==='escape'){$('.filter-browser').dispatchEvent(new win.Event('cancel',{cancelable:true}));await until(()=>!$('.filter-browser').open);}else await close(exit);
+          if(exit==='apply'){assert(api.getLibraryPreviewState().activeId===second.id,`Apply commits ${second.name}`);check(second);}else assert(snapshot()===before,`${exit} restores working filter and pixels`);
+        }
+      }
+      output.textContent+='RGB regression passed.\n';return;
+    }
     if(savedMode){
       await open();assert(requests.length===1,'opening All starts saved catalogue refresh');source();
       assert(row(a.id)&&$('[data-online-message]').textContent.includes('Showing saved catalogue'),'saved cards appear while refresh is pending');

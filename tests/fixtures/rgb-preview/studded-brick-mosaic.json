@@ -1,0 +1,144 @@
+{
+  "format": "filter-fab-js",
+  "version": 2,
+  "id": "studded-brick-mosaic",
+  "tags": [
+    "Pixelate",
+    "Mosaic",
+    "Pattern",
+    "Texture",
+    "Procedural"
+  ],
+  "mathMode": "float",
+  "name": "Studded Brick Mosaic",
+  "description": "Turns the source into a studded square-tile mosaic. Each tile samples the source at its centre, optionally reduces the per-channel colour levels, then adds dark seams, directional tile-edge bevels, and raised circular studs with a soft highlight and cast shadow. Tile Size, Stud Diameter, Stud Relief, Light Angle, seam controls, Tile Bevel, Edge Softness, Color Levels, and Effect Mix tune the result.",
+  "author": "ChromaMeld",
+  "formulas": [
+    "lerp(c,clamp((round(srcLinear((floor(x/val(0,8,128))*val(0,8,128)+val(0,8,128)/2),(floor(y/val(0,8,128))*val(0,8,128)+val(0,8,128)/2),z)*(val(8,2,16)-1)/255)*255/max(1,(val(8,2,16)-1)))*(1-grid(x,y,val(0,8,128),val(0,8,128),min(val(4,0,6),max(0.5,val(0,8,128)*0.22)),min(val(7,0,3),min(max(0.35,val(0,8,128)*0.04),(val(0,8,128)*val(1,0.20,0.44))*0.30)))*val(5,0,0.40))+(grid(x-r2x(val(3,0,1024),1)*min(2,max(0.4,val(0,8,128)*0.025)),y-r2y(val(3,0,1024),1)*min(2,max(0.4,val(0,8,128)*0.025)),val(0,8,128),val(0,8,128),min(val(4,0,6),max(0.5,val(0,8,128)*0.22)),min(val(7,0,3),min(max(0.35,val(0,8,128)*0.04),(val(0,8,128)*val(1,0.20,0.44))*0.30)))-grid(x+r2x(val(3,0,1024),1)*min(2,max(0.4,val(0,8,128)*0.025)),y+r2y(val(3,0,1024),1)*min(2,max(0.4,val(0,8,128)*0.025)),val(0,8,128),val(0,8,128),min(val(4,0,6),max(0.5,val(0,8,128)*0.22)),min(val(7,0,3),min(max(0.35,val(0,8,128)*0.04),(val(0,8,128)*val(1,0.20,0.44))*0.30))))*val(6,0,24)*0.50+circle(x,y,(floor(x/val(0,8,128))*val(0,8,128)+val(0,8,128)/2),(floor(y/val(0,8,128))*val(0,8,128)+val(0,8,128)/2),(val(0,8,128)*val(1,0.20,0.44)),min(val(7,0,3),min(max(0.35,val(0,8,128)*0.04),(val(0,8,128)*val(1,0.20,0.44))*0.30)))*val(2,0,50)*(0.02+clamp((((x-(floor(x/val(0,8,128))*val(0,8,128)+val(0,8,128)/2))*r2x(val(3,0,1024),1)+(y-(floor(y/val(0,8,128))*val(0,8,128)+val(0,8,128)/2))*r2y(val(3,0,1024),1))/max(1,(val(0,8,128)*val(1,0.20,0.44)))),-1,1)*0.05)+clamp(circle(x,y,(floor(x/val(0,8,128))*val(0,8,128)+val(0,8,128)/2),(floor(y/val(0,8,128))*val(0,8,128)+val(0,8,128)/2),(val(0,8,128)*val(1,0.20,0.44)),min(val(7,0,3),min(max(0.35,val(0,8,128)*0.04),(val(0,8,128)*val(1,0.20,0.44))*0.30)))-circle(x,y,(floor(x/val(0,8,128))*val(0,8,128)+val(0,8,128)/2)-r2x(val(3,0,1024),1)*min(val(0,8,128)*0.09,max(0.35,val(2,0,50)*0.19)),(floor(y/val(0,8,128))*val(0,8,128)+val(0,8,128)/2)-r2y(val(3,0,1024),1)*min(val(0,8,128)*0.09,max(0.35,val(2,0,50)*0.19)),(val(0,8,128)*val(1,0.20,0.44)),min((val(0,8,128)*val(1,0.20,0.44))*0.35,min(val(7,0,3),min(max(0.35,val(0,8,128)*0.04),(val(0,8,128)*val(1,0.20,0.44))*0.30))+min(4,val(7,0,3)*4))),0,1)*val(2,0,50)*0.42-clamp(circle(x,y,(floor(x/val(0,8,128))*val(0,8,128)+val(0,8,128)/2)-r2x(val(3,0,1024),1)*min(val(0,8,128)*0.09,max(0.35,val(2,0,50)*0.19)),(floor(y/val(0,8,128))*val(0,8,128)+val(0,8,128)/2)-r2y(val(3,0,1024),1)*min(val(0,8,128)*0.09,max(0.35,val(2,0,50)*0.19)),(val(0,8,128)*val(1,0.20,0.44)),min((val(0,8,128)*val(1,0.20,0.44))*0.35,min(val(7,0,3),min(max(0.35,val(0,8,128)*0.04),(val(0,8,128)*val(1,0.20,0.44))*0.30))+min(4,val(7,0,3)*4)))-circle(x,y,(floor(x/val(0,8,128))*val(0,8,128)+val(0,8,128)/2),(floor(y/val(0,8,128))*val(0,8,128)+val(0,8,128)/2),(val(0,8,128)*val(1,0.20,0.44)),min(val(7,0,3),min(max(0.35,val(0,8,128)*0.04),(val(0,8,128)*val(1,0.20,0.44))*0.30))),0,1)*val(2,0,50)*1.45,0,255),ctl(9))",
+    "lerp(c,clamp((round(srcLinear((floor(x/val(0,8,128))*val(0,8,128)+val(0,8,128)/2),(floor(y/val(0,8,128))*val(0,8,128)+val(0,8,128)/2),z)*(val(8,2,16)-1)/255)*255/max(1,(val(8,2,16)-1)))*(1-grid(x,y,val(0,8,128),val(0,8,128),min(val(4,0,6),max(0.5,val(0,8,128)*0.22)),min(val(7,0,3),min(max(0.35,val(0,8,128)*0.04),(val(0,8,128)*val(1,0.20,0.44))*0.30)))*val(5,0,0.40))+(grid(x-r2x(val(3,0,1024),1)*min(2,max(0.4,val(0,8,128)*0.025)),y-r2y(val(3,0,1024),1)*min(2,max(0.4,val(0,8,128)*0.025)),val(0,8,128),val(0,8,128),min(val(4,0,6),max(0.5,val(0,8,128)*0.22)),min(val(7,0,3),min(max(0.35,val(0,8,128)*0.04),(val(0,8,128)*val(1,0.20,0.44))*0.30)))-grid(x+r2x(val(3,0,1024),1)*min(2,max(0.4,val(0,8,128)*0.025)),y+r2y(val(3,0,1024),1)*min(2,max(0.4,val(0,8,128)*0.025)),val(0,8,128),val(0,8,128),min(val(4,0,6),max(0.5,val(0,8,128)*0.22)),min(val(7,0,3),min(max(0.35,val(0,8,128)*0.04),(val(0,8,128)*val(1,0.20,0.44))*0.30))))*val(6,0,24)*0.50+circle(x,y,(floor(x/val(0,8,128))*val(0,8,128)+val(0,8,128)/2),(floor(y/val(0,8,128))*val(0,8,128)+val(0,8,128)/2),(val(0,8,128)*val(1,0.20,0.44)),min(val(7,0,3),min(max(0.35,val(0,8,128)*0.04),(val(0,8,128)*val(1,0.20,0.44))*0.30)))*val(2,0,50)*(0.02+clamp((((x-(floor(x/val(0,8,128))*val(0,8,128)+val(0,8,128)/2))*r2x(val(3,0,1024),1)+(y-(floor(y/val(0,8,128))*val(0,8,128)+val(0,8,128)/2))*r2y(val(3,0,1024),1))/max(1,(val(0,8,128)*val(1,0.20,0.44)))),-1,1)*0.05)+clamp(circle(x,y,(floor(x/val(0,8,128))*val(0,8,128)+val(0,8,128)/2),(floor(y/val(0,8,128))*val(0,8,128)+val(0,8,128)/2),(val(0,8,128)*val(1,0.20,0.44)),min(val(7,0,3),min(max(0.35,val(0,8,128)*0.04),(val(0,8,128)*val(1,0.20,0.44))*0.30)))-circle(x,y,(floor(x/val(0,8,128))*val(0,8,128)+val(0,8,128)/2)-r2x(val(3,0,1024),1)*min(val(0,8,128)*0.09,max(0.35,val(2,0,50)*0.19)),(floor(y/val(0,8,128))*val(0,8,128)+val(0,8,128)/2)-r2y(val(3,0,1024),1)*min(val(0,8,128)*0.09,max(0.35,val(2,0,50)*0.19)),(val(0,8,128)*val(1,0.20,0.44)),min((val(0,8,128)*val(1,0.20,0.44))*0.35,min(val(7,0,3),min(max(0.35,val(0,8,128)*0.04),(val(0,8,128)*val(1,0.20,0.44))*0.30))+min(4,val(7,0,3)*4))),0,1)*val(2,0,50)*0.42-clamp(circle(x,y,(floor(x/val(0,8,128))*val(0,8,128)+val(0,8,128)/2)-r2x(val(3,0,1024),1)*min(val(0,8,128)*0.09,max(0.35,val(2,0,50)*0.19)),(floor(y/val(0,8,128))*val(0,8,128)+val(0,8,128)/2)-r2y(val(3,0,1024),1)*min(val(0,8,128)*0.09,max(0.35,val(2,0,50)*0.19)),(val(0,8,128)*val(1,0.20,0.44)),min((val(0,8,128)*val(1,0.20,0.44))*0.35,min(val(7,0,3),min(max(0.35,val(0,8,128)*0.04),(val(0,8,128)*val(1,0.20,0.44))*0.30))+min(4,val(7,0,3)*4)))-circle(x,y,(floor(x/val(0,8,128))*val(0,8,128)+val(0,8,128)/2),(floor(y/val(0,8,128))*val(0,8,128)+val(0,8,128)/2),(val(0,8,128)*val(1,0.20,0.44)),min(val(7,0,3),min(max(0.35,val(0,8,128)*0.04),(val(0,8,128)*val(1,0.20,0.44))*0.30))),0,1)*val(2,0,50)*1.45,0,255),ctl(9))",
+    "lerp(c,clamp((round(srcLinear((floor(x/val(0,8,128))*val(0,8,128)+val(0,8,128)/2),(floor(y/val(0,8,128))*val(0,8,128)+val(0,8,128)/2),z)*(val(8,2,16)-1)/255)*255/max(1,(val(8,2,16)-1)))*(1-grid(x,y,val(0,8,128),val(0,8,128),min(val(4,0,6),max(0.5,val(0,8,128)*0.22)),min(val(7,0,3),min(max(0.35,val(0,8,128)*0.04),(val(0,8,128)*val(1,0.20,0.44))*0.30)))*val(5,0,0.40))+(grid(x-r2x(val(3,0,1024),1)*min(2,max(0.4,val(0,8,128)*0.025)),y-r2y(val(3,0,1024),1)*min(2,max(0.4,val(0,8,128)*0.025)),val(0,8,128),val(0,8,128),min(val(4,0,6),max(0.5,val(0,8,128)*0.22)),min(val(7,0,3),min(max(0.35,val(0,8,128)*0.04),(val(0,8,128)*val(1,0.20,0.44))*0.30)))-grid(x+r2x(val(3,0,1024),1)*min(2,max(0.4,val(0,8,128)*0.025)),y+r2y(val(3,0,1024),1)*min(2,max(0.4,val(0,8,128)*0.025)),val(0,8,128),val(0,8,128),min(val(4,0,6),max(0.5,val(0,8,128)*0.22)),min(val(7,0,3),min(max(0.35,val(0,8,128)*0.04),(val(0,8,128)*val(1,0.20,0.44))*0.30))))*val(6,0,24)*0.50+circle(x,y,(floor(x/val(0,8,128))*val(0,8,128)+val(0,8,128)/2),(floor(y/val(0,8,128))*val(0,8,128)+val(0,8,128)/2),(val(0,8,128)*val(1,0.20,0.44)),min(val(7,0,3),min(max(0.35,val(0,8,128)*0.04),(val(0,8,128)*val(1,0.20,0.44))*0.30)))*val(2,0,50)*(0.02+clamp((((x-(floor(x/val(0,8,128))*val(0,8,128)+val(0,8,128)/2))*r2x(val(3,0,1024),1)+(y-(floor(y/val(0,8,128))*val(0,8,128)+val(0,8,128)/2))*r2y(val(3,0,1024),1))/max(1,(val(0,8,128)*val(1,0.20,0.44)))),-1,1)*0.05)+clamp(circle(x,y,(floor(x/val(0,8,128))*val(0,8,128)+val(0,8,128)/2),(floor(y/val(0,8,128))*val(0,8,128)+val(0,8,128)/2),(val(0,8,128)*val(1,0.20,0.44)),min(val(7,0,3),min(max(0.35,val(0,8,128)*0.04),(val(0,8,128)*val(1,0.20,0.44))*0.30)))-circle(x,y,(floor(x/val(0,8,128))*val(0,8,128)+val(0,8,128)/2)-r2x(val(3,0,1024),1)*min(val(0,8,128)*0.09,max(0.35,val(2,0,50)*0.19)),(floor(y/val(0,8,128))*val(0,8,128)+val(0,8,128)/2)-r2y(val(3,0,1024),1)*min(val(0,8,128)*0.09,max(0.35,val(2,0,50)*0.19)),(val(0,8,128)*val(1,0.20,0.44)),min((val(0,8,128)*val(1,0.20,0.44))*0.35,min(val(7,0,3),min(max(0.35,val(0,8,128)*0.04),(val(0,8,128)*val(1,0.20,0.44))*0.30))+min(4,val(7,0,3)*4))),0,1)*val(2,0,50)*0.42-clamp(circle(x,y,(floor(x/val(0,8,128))*val(0,8,128)+val(0,8,128)/2)-r2x(val(3,0,1024),1)*min(val(0,8,128)*0.09,max(0.35,val(2,0,50)*0.19)),(floor(y/val(0,8,128))*val(0,8,128)+val(0,8,128)/2)-r2y(val(3,0,1024),1)*min(val(0,8,128)*0.09,max(0.35,val(2,0,50)*0.19)),(val(0,8,128)*val(1,0.20,0.44)),min((val(0,8,128)*val(1,0.20,0.44))*0.35,min(val(7,0,3),min(max(0.35,val(0,8,128)*0.04),(val(0,8,128)*val(1,0.20,0.44))*0.30))+min(4,val(7,0,3)*4)))-circle(x,y,(floor(x/val(0,8,128))*val(0,8,128)+val(0,8,128)/2),(floor(y/val(0,8,128))*val(0,8,128)+val(0,8,128)/2),(val(0,8,128)*val(1,0.20,0.44)),min(val(7,0,3),min(max(0.35,val(0,8,128)*0.04),(val(0,8,128)*val(1,0.20,0.44))*0.30))),0,1)*val(2,0,50)*1.45,0,255),ctl(9))",
+    "a"
+  ],
+  "controls": [
+    {
+      "label": "Tile Size",
+      "value": 36.125,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 8,
+        "displayMax": 128,
+        "step": 1,
+        "format": "integer",
+        "unit": "px"
+      }
+    },
+    {
+      "label": "Stud Diameter",
+      "value": 69.0625,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 40,
+        "displayMax": 88,
+        "step": 1,
+        "format": "integer",
+        "unit": "%"
+      }
+    },
+    {
+      "label": "Stud Relief",
+      "value": 122.39999999999999,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 50,
+        "step": 1,
+        "format": "number",
+        "unit": "levels"
+      }
+    },
+    {
+      "label": "Light Angle",
+      "value": 159.375,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 360,
+        "step": 1,
+        "format": "integer",
+        "unit": "°"
+      }
+    },
+    {
+      "label": "Seam Width",
+      "value": 59.49999999999999,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 6,
+        "step": 0.1,
+        "format": "number",
+        "unit": "px"
+      }
+    },
+    {
+      "label": "Seam Darkness",
+      "value": 76.5,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 40,
+        "step": 1,
+        "format": "integer",
+        "unit": "%"
+      }
+    },
+    {
+      "label": "Tile Bevel",
+      "value": 74.375,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 24,
+        "step": 1,
+        "format": "number",
+        "unit": "levels"
+      }
+    },
+    {
+      "label": "Edge Softness",
+      "value": 59.49999999999999,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 3,
+        "step": 0.1,
+        "format": "number",
+        "unit": "px"
+      }
+    },
+    {
+      "label": "Color Levels",
+      "value": 109.28571428571428,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 2,
+        "displayMax": 16,
+        "step": 1,
+        "format": "integer",
+        "unit": "levels"
+      }
+    },
+    {
+      "label": "Effect Mix",
+      "value": 255,
+      "ui": {
+        "widget": "slider",
+        "displayMin": 0,
+        "displayMax": 100,
+        "step": 1,
+        "format": "integer",
+        "unit": "%"
+      }
+    }
+  ]
+}
