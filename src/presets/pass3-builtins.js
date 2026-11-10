@@ -425,6 +425,24 @@ export const pass3PresetDefinitions=[
   },
   {
     "id": "versatile-stripes",
+    "colorGroups": [
+      {
+        "label": "Stripe Colour",
+        "channels": {
+          "red": 4,
+          "green": 5,
+          "blue": 6
+        }
+      },
+      {
+        "label": "Background Colour",
+        "channels": {
+          "red": 7,
+          "green": 8,
+          "blue": 9
+        }
+      }
+    ],
     "name": "Versatile Stripes",
     "description": "Creates crisp repeating two-colour stripes with independent stripe and background colours. Stripe Width and Gap Width range from fine pinstripes to broad bands; Angle rotates the pattern from -180° to 180°, and Offset shifts the stripe phase in either direction. Designed for posters, packaging, textiles, retro graphics, and layout backgrounds.",
     "author": "Anthony Chimming",

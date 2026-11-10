@@ -1266,6 +1266,24 @@ export const pass2PresetDefinitions=[
   },
   {
     "id": "duotone-gradient-map",
+    "colorGroups": [
+      {
+        "label": "Shadow Colour",
+        "channels": {
+          "red": 0,
+          "green": 1,
+          "blue": 2
+        }
+      },
+      {
+        "label": "Highlight Colour",
+        "channels": {
+          "red": 3,
+          "green": 4,
+          "blue": 5
+        }
+      }
+    ],
     "name": "Duotone Gradient Map",
     "description": "Maps source luminance between adjustable black and white points, reshapes midtones with a bias control, and applies a four-stop ramp derived from shadow and highlight RGB colours. Effect Mix blends the grade with the source.",
     "author": "Anthony Chimming",
@@ -1827,6 +1845,16 @@ export const pass2PresetDefinitions=[
   },
   {
     "id": "uniform-rounded-inset-border",
+    "colorGroups": [
+      {
+        "label": "Border Colour",
+        "channels": {
+          "red": 3,
+          "green": 4,
+          "blue": 5
+        }
+      }
+    ],
     "name": "Uniform Rounded Inset Border",
     "description": "Adds an evenly thick border just inside the original image bounds without resizing the canvas. A pixel-distance rounded-rectangle field keeps the stroke width consistent on straight sides and curved corners. Border Thickness sets the inward stroke width; Corner Radius rounds both the border and the image crop, capped to fit the image; Inner Edge Softness feathers only the border’s inner edge into the source image; the outside silhouette retains a fixed one-pixel antialias and does not soften as the control increases. Independent Red, Green, Blue and Alpha controls define the border material. The border uses source-over RGBA compositing, preserving transparent source pixels in the opening and cutting outside rounded corners to transparency. At zero border alpha, corner cropping remains active. Thickness and radius are clamped to the available source dimensions.",
     "author": "ChromaMeld",
@@ -2528,6 +2556,16 @@ export const pass2PresetDefinitions=[
   },
   {
     "id": "selective-color-isolate",
+    "colorGroups": [
+      {
+        "label": "Target Colour",
+        "channels": {
+          "red": 0,
+          "green": 1,
+          "blue": 2
+        }
+      }
+    ],
     "name": "Selective Color Isolate",
     "description": "Isolates a chosen colour family while converting the rest of the image to monochrome. The selector compares normalized opponent-chroma direction, so tints and shaded versions of the target colour stay selected more reliably than simple RGB chromaticity matching. Minimum Saturation suppresses neutral spill and an automatic deep-shadow gate reduces dark chroma noise. Use Target Red/Green/Blue to choose the accent colour, Tolerance and Edge Softness to shape the selection, Mono Contrast/Brightness for the background, Color Boost for the retained colour, and Effect Mix for the final strength. Best suited to distinctly coloured subjects rather than neutral grey/white isolation.",
     "author": "Anthony Chimming",
