@@ -131,8 +131,8 @@ assert.match(app, /getRendererDiagnostics:\(\)=>state\.lastRendererDiagnostics/,
 assert.match(controls, /input\.oninput=\(\)=>\{updateCanonical\(index,input\.value\)/, 'range input must map displayed values back to canonical state continuously');
 assert.match(controls, /input\.onchange=\(\)=>scheduleRender\(\)/, 'range control must render only after the edit is committed');
 assert.match(html, /id="controlEditorLabel"[^>]+maxlength="80"/, 'control labels must stay within the serialized metadata limit');
-assert.match(controls, /CONTROL_DEFINITIONS\.filter\(definition=>state\.usedControls\[definition\.index\]\)/, 'Explore must render only control definitions used by the current program');
-assert.match(controls, /el\.controlsEmpty\.hidden=active\.length>0/, 'filters without controls must expose the compact empty state');
+assert.match(controls, /!members\.has\(index\)&&state\.usedControls\[index\]/, 'Explore must render ungrouped controls only when used by the current program');
+assert.match(controls, /el\.controlsEmpty\.hidden=state\.usedControls\.some\(Boolean\)/, 'filters without controls must expose the compact empty state');
 assert.match(html, /id="editControlsBtn"[^>]*>Edit controls</, 'the Controls header must expose the authoring action');
 assert.match(html, /id="editControlsDialog"[^>]+aria-labelledby="controlEditorTitle"/, 'control metadata must be authored in a dedicated accessible dialog');
 for(const widget of ['slider','number','toggle','seed'])assert.match(html,new RegExp(`<option value="${widget}">`),`the editor must expose the ${widget} widget`);

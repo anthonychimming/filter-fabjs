@@ -18,7 +18,7 @@ import { createOnlinePackageCache, onlinePackageFilename } from '../io/filter-li
 import { readOnlineLibraryCache, writeOnlineLibraryCache } from '../io/filter-library-cache.js';
 import { createFilterBrowser, chooseFilterAction } from '../ui/filter-browser.js';
 import { $, $$, clamp, debounce, storageGet, storageSet, escapeHtml, slug } from '../core/utils.js';
-import { CONTROL_COUNT, CONTROL_DEFINITIONS, cloneControlUI, defaultControlLabels, defaultControlUIs, defaultControlValues, normalizeControlUI, normalizeToggleRaw } from '../core/controls.js';
+import { CONTROL_COUNT, CONTROL_DEFINITIONS, cloneControlUI, defaultControlLabels, defaultControlUIs, defaultControlValues, normalizeControlUI, normalizeToggleRaw, normalizeColorGroups } from '../core/controls.js';
 import { Parser } from '../core/formula-language.js';
 import { IR_VERSION, compileFilterProgram } from '../core/ir.js';
 import { workerProgram } from '../renderers/cpu-worker-source.js';
@@ -146,7 +146,7 @@ export function createOnlineLibrarySession({manifestUrl=DEFAULT_ONLINE_LIBRARY_M
 
 export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIFEST_URL,onlineFetchImpl=globalThis.fetch,onlineStorage=()=>globalThis.localStorage}={}){
   const {el,ctx}=getDom();
-  const state={source:null,filtered:null,width:0,height:0,view:'filtered',workspaceMode:'explore',split:50,zoom:'fit',zoomLevel:1,controls:defaultControlValues(),labels:defaultControlLabels(),controlUIs:defaultControlUIs(),renderId:0,imageLoadId:0,filterLoadId:0,rendererManager:null,rendererPreference:storageGet('ffw-renderer','auto'),lastProgram:null,lastProgramKey:null,lastSuccessfulRenderSignature:null,lastWGSL:null,lastGpuAnalysis:null,lastRendererDiagnostics:null,isRendering:false,usedControls:Array(CONTROL_COUNT).fill(false),legacyMath:false,hasPendingFormulaChanges:false,focusSnapshot:null};
+  const state={source:null,filtered:null,width:0,height:0,view:'filtered',workspaceMode:'explore',split:50,zoom:'fit',zoomLevel:1,controls:defaultControlValues(),labels:defaultControlLabels(),controlUIs:defaultControlUIs(),preserveToggleValues:Array(CONTROL_COUNT).fill(false),colorGroups:[],renderId:0,imageLoadId:0,filterLoadId:0,rendererManager:null,rendererPreference:storageGet('ffw-renderer','auto'),lastProgram:null,lastProgramKey:null,lastSuccessfulRenderSignature:null,lastWGSL:null,lastGpuAnalysis:null,lastRendererDiagnostics:null,isRendering:false,usedControls:Array(CONTROL_COUNT).fill(false),legacyMath:false,hasPendingFormulaChanges:false,focusSnapshot:null};
   const canvasView=createCanvasView({state,el,ctx,canInteract:()=>!librarySession&&!document.querySelector('dialog[open]')});
   const inspectorLayout=createInspectorLayout();
   let exploreController;
@@ -166,7 +166,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
   function toast(text){el.toast.textContent=text;el.toast.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.toast.classList.remove('show'),1800);}
   const interactiveNodes=()=>Array.from(document.querySelectorAll('button,input,select,textarea'));
   function updatePresetDeleteState(){const custom=activeDocument.key?.startsWith('custom:');el.deletePreset.disabled=state.isRendering||!custom;el.deletePreset.title=custom?'Delete current saved filter':'Load a saved custom filter to delete';}
-  function applyInteractionLocks(){interactiveNodes().forEach(node=>{if(node.matches('#inspectorToggle,#inspectorClose,#inspectorExpand')||(librarySession&&node.closest('.filter-browser,.library-backup-dialog')))return;node.disabled=state.isRendering;});$$('.slider-row',$('#sliderGrid')).forEach(row=>{const index=Number(row.dataset.controlIndex),unused=!state.usedControls[index];row.classList.toggle('control-unused',unused);row.setAttribute('aria-disabled',String(state.isRendering||unused));row.title=unused?'Unused — not referenced by any channel formula':'';$$('button,input,select',row).forEach(node=>{node.disabled=state.isRendering||unused;});});updatePresetDeleteState();exploreController?.refresh();}
+  function applyInteractionLocks(){interactiveNodes().forEach(node=>{if(node.matches('#inspectorToggle,#inspectorClose,#inspectorExpand')||(librarySession&&node.closest('.filter-browser,.library-backup-dialog')))return;node.disabled=state.isRendering;});$$('.slider-row',$('#sliderGrid')).forEach(row=>{const index=Number(row.dataset.controlIndex),unused=!state.usedControls[index];row.classList.toggle('control-unused',unused);row.setAttribute('aria-disabled',String(state.isRendering||unused));row.title=unused?'Unused — not referenced by any channel formula':'';$$('button,input,select',row).forEach(node=>{node.disabled=state.isRendering||unused;});});$$('.color-group',$('#sliderGrid')).forEach(row=>{const group=state.colorGroups[Number(row.dataset.groupIndex)],unused=Object.values(group.channels).some(index=>!state.usedControls[index]);row.querySelectorAll('.color-picker,.color-hex').forEach(node=>{node.disabled=state.isRendering||unused;});});updatePresetDeleteState();exploreController?.refresh();}
   function captureFocus(){const node=document.activeElement;if(!(node instanceof Element)||node===document.body||!node.matches('button,input,select,textarea'))return null;const snapshot={node};if(typeof node.selectionStart==='number'){snapshot.start=node.selectionStart;snapshot.end=node.selectionEnd;snapshot.direction=node.selectionDirection;}return snapshot;}
   function restoreFocus(snapshot){if(!snapshot?.node?.isConnected||snapshot.node.disabled)return;requestAnimationFrame(()=>{if(!snapshot.node.isConnected||snapshot.node.disabled)return;snapshot.node.focus({preventScroll:true});if(typeof snapshot.start==='number'&&typeof snapshot.node.setSelectionRange==='function')snapshot.node.setSelectionRange(snapshot.start,snapshot.end,snapshot.direction||'none');});}
   function setFormulaEditStatus(kind,text){el.renderBtn.classList.toggle('primary',kind==='pending');el.formulaEditStatus.dataset.state=kind;if(el.formulaEditStatus.textContent!==text)el.formulaEditStatus.textContent=text;}
@@ -242,7 +242,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
     prepareFilter(definition);
     applyFilter(definition,entry.key);if(state.isRendering)state.focusSnapshot={node:focusTarget};return true;
   }
-  function currentFilter(){return{format:'filter-fab-js',version:2,...(activeDocument.id?{id:activeDocument.id}:{}),tags:effectiveTags(),mathMode:state.legacyMath?'legacy':'float',name:$('#filterName').value.trim().slice(0,120)||'Untitled Filter',description:el.description.value.trim().slice(0,FILTER_DESCRIPTION_MAX_LENGTH),author:$('#filterAuthor').value.trim().slice(0,120),formulas:el.formulas.map(field=>field.value.trim()),controls:state.controls.map((value,index)=>({label:String(state.labels[index]??'').slice(0,80)||`Control ${index+1}`,value,ui:cloneControlUI(state.controlUIs[index])}))};}
+  function currentFilter(){return{format:'filter-fab-js',version:2,...(activeDocument.id?{id:activeDocument.id}:{}),tags:effectiveTags(),mathMode:state.legacyMath?'legacy':'float',name:$('#filterName').value.trim().slice(0,120)||'Untitled Filter',description:el.description.value.trim().slice(0,FILTER_DESCRIPTION_MAX_LENGTH),author:$('#filterAuthor').value.trim().slice(0,120),formulas:el.formulas.map(field=>field.value.trim()),...(state.colorGroups.length?{colorGroups:normalizeColorGroups(state.colorGroups)}:{}),controls:state.controls.map((value,index)=>({label:String(state.labels[index]??'').slice(0,80)||`Control ${index+1}`,value,ui:cloneControlUI(state.controlUIs[index]),...(state.controlUIs[index].widget==='toggle'&&state.preserveToggleValues[index]?{preserveToggleValue:true}:{})}))};}
   function prepareFilter(input){
     if(!input||typeof input!=='object'||Array.isArray(input))throw new Error('Filter definition must be an object');
     const inputAsts=getValidatedFormulaAsts(input),definition=inputAsts?input:input.format==='filter-fab-js'?validateNativeFilter(input):input,mathMode=definition.mathMode??'float';
@@ -250,25 +250,28 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
     const legacyMath=mathMode==='legacy',formulas=definition.formulas||definition.f;
     if(!Array.isArray(formulas)||formulas.length!==4||formulas.some(formula=>typeof formula!=='string'||!formula.trim()))throw new Error('Filter definition must contain exactly four formulas');
     const normalizedFormulas=formulas.map(formula=>formula.trim()),astList=inputAsts||getValidatedFormulaAsts(definition)||normalizedFormulas.map(formula=>new Parser(formula).parse()),program=compileFilterProgram(astList,{legacyMath});
-    let rawValues,rawLabels,rawUIs;
+    let rawValues,rawLabels,rawUIs,rawPreserve;
     if(definition.controls!==undefined){
       if(!Array.isArray(definition.controls)||definition.controls.length>CONTROL_COUNT)throw new Error(`Filter definition may contain at most ${CONTROL_COUNT} controls`);
       rawValues=definition.controls.map((control,index)=>{if(typeof control==='number')return control;if(!control||typeof control!=='object'||Array.isArray(control))throw new Error(`Control ${index+1} is malformed`);return control.value});
       rawLabels=definition.controls.map((control,index)=>typeof control==='number'?`Control ${index+1}`:control.label);
       rawUIs=definition.controls.map(control=>typeof control==='number'?undefined:control.ui);
+      rawPreserve=definition.controls.map(control=>typeof control==='object'&&control!==null&&control.preserveToggleValue===true);
     }else{
       rawValues=definition.values??[];rawLabels=definition.labels??[];
-      rawUIs=definition.controlUIs??definition.uis??[];
+      rawUIs=definition.controlUIs??definition.uis??[];rawPreserve=[];
       if(!Array.isArray(rawValues)||!Array.isArray(rawLabels)||rawValues.length>CONTROL_COUNT||rawLabels.length>CONTROL_COUNT)throw new Error(`Filter definition may contain at most ${CONTROL_COUNT} controls`);
       if(!Array.isArray(rawUIs)||rawUIs.length>CONTROL_COUNT)throw new Error(`Filter definition may contain at most ${CONTROL_COUNT} control presentations`);
     }
     const controlUIs=CONTROL_DEFINITIONS.map((definition,index)=>normalizeControlUI(rawUIs[index]));
-    const controls=CONTROL_DEFINITIONS.map((definition,index)=>{const value=rawValues[index]??definition.defaultValue;if(typeof value!=='number'||!Number.isFinite(value))throw new Error(`Control ${index+1} must be a finite number`);const canonical=clamp(value,0,255);return controlUIs[index].widget==='toggle'?normalizeToggleRaw(canonical):canonical});
+    const preserveToggleValues=CONTROL_DEFINITIONS.map((_,index)=>controlUIs[index].widget==='toggle'&&rawPreserve[index]===true);
+    const groupedChannels=new Set(normalizeColorGroups(definition.colorGroups).flatMap(group=>Object.values(group.channels)));
+    const controls=CONTROL_DEFINITIONS.map((definition,index)=>{const value=rawValues[index]??definition.defaultValue;if(typeof value!=='number'||!Number.isFinite(value))throw new Error(`Control ${index+1} must be a finite number`);const canonical=clamp(value,0,255);return controlUIs[index].widget==='toggle'&&!groupedChannels.has(index)&&!preserveToggleValues[index]?normalizeToggleRaw(canonical):canonical});
     const labels=CONTROL_DEFINITIONS.map((definition,index)=>{const value=rawLabels[index]??definition.defaultLabel;if(typeof value!=='string')throw new Error(`Control ${index+1} label must be a string`);const label=value.trim();if(label.length>80)throw new Error(`Control ${index+1} label exceeds 80 characters`);return label||definition.defaultLabel});
     if(definition.name!==undefined&&typeof definition.name!=='string')throw new Error('Filter name must be a string');if(definition.description!==undefined&&typeof definition.description!=='string')throw new Error('Filter description must be a string');if(definition.author!==undefined&&typeof definition.author!=='string')throw new Error('Filter author must be a string');
     const name=String(definition.name??'').trim()||'Untitled Filter',description=String(definition.description??'').trim(),author=String(definition.author??'').trim();if(name.length>120||author.length>120)throw new Error('Filter name and author are limited to 120 characters');if(description.length>FILTER_DESCRIPTION_MAX_LENGTH)throw new Error(`Filter description exceeds ${FILTER_DESCRIPTION_MAX_LENGTH} characters`);
     const tags=normalizeTags(definition.tags),id=definition.format==='filter-factory-afs'?undefined:validatePortableId(definition.id);
-    return{tags,id,legacyMath,formulas:normalizedFormulas,controls,labels,controlUIs,name,description,author,program};
+    return{tags,id,legacyMath,formulas:normalizedFormulas,controls,labels,controlUIs,preserveToggleValues,colorGroups:normalizeColorGroups(definition.colorGroups),name,description,author,program};
   }
   function requestLibraryThumbnail(entry,callback,priority=0){
     if(entry.source==='online')return;
@@ -278,7 +281,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
     }catch(error){callback({state:'failed',error});return{cached:false};}
   }
   function applyPreparedPresentation(next){
-    state.legacyMath=next.legacyMath;el.formulas.forEach((field,index)=>field.value=next.formulas[index]);state.controls=[...next.controls];state.labels=[...next.labels];state.controlUIs=next.controlUIs.map(cloneControlUI);state.lastProgram=next.program;state.lastProgramKey=currentProgramKey();$('#filterName').value=next.name;el.description.value=next.description;$('#filterAuthor').value=next.author;controlsController.updateControlUsage(next.program);controlsController.syncSliders();
+    state.legacyMath=next.legacyMath;el.formulas.forEach((field,index)=>field.value=next.formulas[index]);state.controls=[...next.controls];state.labels=[...next.labels];state.controlUIs=next.controlUIs.map(cloneControlUI);state.preserveToggleValues=[...next.preserveToggleValues];state.colorGroups=normalizeColorGroups(next.colorGroups);state.lastProgram=next.program;state.lastProgramKey=currentProgramKey();$('#filterName').value=next.name;el.description.value=next.description;$('#filterAuthor').value=next.author;controlsController.updateControlUsage(next.program);controlsController.syncSliders();
   }
   function commitActiveDocument(next,definition,selection,{importSource=selection?null:'file'}={}){
     exploreController?.reset();controlsController.syncSliders();
@@ -292,7 +295,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
     return{
       activeDocument:{...activeDocument,tags:[...activeDocument.tags]},
       presentation:{
-        legacyMath:state.legacyMath,controls:[...state.controls],labels:[...state.labels],controlUIs:state.controlUIs.map(cloneControlUI),lastProgram:state.lastProgram,lastProgramKey:state.lastProgramKey,lastSuccessfulRenderSignature:state.lastSuccessfulRenderSignature,lastWGSL:state.lastWGSL,lastGpuAnalysis:state.lastGpuAnalysis,lastRendererDiagnostics:state.lastRendererDiagnostics,filtered:state.filtered,usedControls:[...state.usedControls],hasPendingFormulaChanges:state.hasPendingFormulaChanges,
+        legacyMath:state.legacyMath,controls:[...state.controls],labels:[...state.labels],controlUIs:state.controlUIs.map(cloneControlUI),preserveToggleValues:[...state.preserveToggleValues],colorGroups:normalizeColorGroups(state.colorGroups),lastProgram:state.lastProgram,lastProgramKey:state.lastProgramKey,lastSuccessfulRenderSignature:state.lastSuccessfulRenderSignature,lastWGSL:state.lastWGSL,lastGpuAnalysis:state.lastGpuAnalysis,lastRendererDiagnostics:state.lastRendererDiagnostics,filtered:state.filtered,usedControls:[...state.usedControls],hasPendingFormulaChanges:state.hasPendingFormulaChanges,
         name:$('#filterName').value,description:el.description.value,author:$('#filterAuthor').value,
         formulas:el.formulas.map(field=>{const box=field.closest('.formula'),icon=$('.formula-state',box),error=$('.formula-error',box);return{value:field.value,className:field.className,invalid:field.getAttribute('aria-invalid'),iconClassName:icon.className,iconText:icon.textContent,errorClassName:error.className,errorText:error.textContent};})
       },
@@ -301,7 +304,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
   }
   function restoreLibraryWorkingState(snapshot){
     const saved=snapshot.presentation;Object.assign(activeDocument,snapshot.activeDocument);activeDocument.tags=[...snapshot.activeDocument.tags];
-    state.legacyMath=saved.legacyMath;state.controls=[...saved.controls];state.labels=[...saved.labels];state.controlUIs=saved.controlUIs.map(cloneControlUI);state.lastProgram=saved.lastProgram;state.lastProgramKey=saved.lastProgramKey;state.lastSuccessfulRenderSignature=saved.lastSuccessfulRenderSignature;state.lastWGSL=saved.lastWGSL;state.lastGpuAnalysis=saved.lastGpuAnalysis;state.lastRendererDiagnostics=saved.lastRendererDiagnostics;state.filtered=saved.filtered;state.usedControls=[...saved.usedControls];state.hasPendingFormulaChanges=saved.hasPendingFormulaChanges;
+    state.legacyMath=saved.legacyMath;state.controls=[...saved.controls];state.labels=[...saved.labels];state.controlUIs=saved.controlUIs.map(cloneControlUI);state.preserveToggleValues=[...saved.preserveToggleValues];state.colorGroups=normalizeColorGroups(saved.colorGroups);state.lastProgram=saved.lastProgram;state.lastProgramKey=saved.lastProgramKey;state.lastSuccessfulRenderSignature=saved.lastSuccessfulRenderSignature;state.lastWGSL=saved.lastWGSL;state.lastGpuAnalysis=saved.lastGpuAnalysis;state.lastRendererDiagnostics=saved.lastRendererDiagnostics;state.filtered=saved.filtered;state.usedControls=[...saved.usedControls];state.hasPendingFormulaChanges=saved.hasPendingFormulaChanges;
     $('#filterName').value=saved.name;el.description.value=saved.description;$('#filterAuthor').value=saved.author;
     saved.formulas.forEach((formula,index)=>{const field=el.formulas[index],box=field.closest('.formula'),icon=$('.formula-state',box),error=$('.formula-error',box);field.value=formula.value;field.className=formula.className;if(formula.invalid===null)field.removeAttribute('aria-invalid');else field.setAttribute('aria-invalid',formula.invalid);icon.className=formula.iconClassName;icon.textContent=formula.iconText;error.className=formula.errorClassName;error.textContent=formula.errorText;});
     controlsController.syncSliders();refreshTags();updateDocumentHeader({forceSelection:true});
@@ -484,7 +487,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
     if(state.lastSuccessfulRenderSignature!==filterRenderSignature(filter)){setStatus('Render the current filter changes before exporting.','error');toast('Render the current filter changes before exporting.');return;}
     const name=slug($('#filterName').value||'filtered-image')+'.png',pixels=state.filtered,width=state.width,height=state.height;
     try{
-      const result=await saveFile(name,'image/png','png',async()=>{setStatus('Encoding PNG…','busy');const canvas=renderedImageCanvas(pixels,width,height),encoded=await canvasBlob(canvas,'image/png'),envelope=createFilterFabPngEnvelope(filter,'2.10.2');return embedFilterFabMetadata(encoded,envelope);});
+      const result=await saveFile(name,'image/png','png',async()=>{setStatus('Encoding PNG…','busy');const canvas=renderedImageCanvas(pixels,width,height),encoded=await canvasBlob(canvas,'image/png'),envelope=createFilterFabPngEnvelope(filter,'2.10.3');return embedFilterFabMetadata(encoded,envelope);});
       setStatus('Ready');return result;
     }catch(error){console.error('PNG export failed',error);setStatus('PNG export failed','error');toast(`PNG export failed: ${error.message||'Could not save the file'}`);}
   }
@@ -674,7 +677,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
     window.addEventListener('beforeunload',()=>{libraryLayout?.destroy();inspectorLayout.destroy();if(librarySession)abortLibraryPackages(librarySession);onlineLibrary.dispose();thumbnailService.dispose();state.rendererManager?.dispose();});
   }
 
-  window.FilterFabJS=Object.freeze({version:'2.10.2',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getThumbnailDiagnostics:()=>thumbnailService.diagnostics(),getRendererPreference:()=>state.rendererPreference,getWorkspaceMode:()=>state.workspaceMode,getLibraryPreviewState:()=>({open:Boolean(librarySession),candidateKey:librarySession?.candidateEntry?.key||null,candidateRendered:Boolean(librarySession?.candidateRendered),activeKey:activeDocument.key,activeId:activeDocument.id,imported:activeDocument.imported,importSource:activeDocument.importSource,baseline:activeDocument.baseline,recordBaseline:activeDocument.recordBaseline})});
+  window.FilterFabJS=Object.freeze({version:'2.10.3',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getThumbnailDiagnostics:()=>thumbnailService.diagnostics(),getRendererPreference:()=>state.rendererPreference,getWorkspaceMode:()=>state.workspaceMode,getLibraryPreviewState:()=>({open:Boolean(librarySession),candidateKey:librarySession?.candidateEntry?.key||null,candidateRendered:Boolean(librarySession?.candidateRendered),activeKey:activeDocument.key,activeId:activeDocument.id,imported:activeDocument.imported,importSource:activeDocument.importSource,baseline:activeDocument.baseline,recordBaseline:activeDocument.recordBaseline})});
   controlsController.buildSliders();wire();const demo=demoImage();initImage(demo.data,demo.width,demo.height);applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');
   void replaceStartupDemo({state,initImage,canReplace:()=>!librarySession});
   return{state,render,applyFilter,loadImageFile,openImageFile};

@@ -601,3 +601,27 @@ body:has(.filter-browser[open]) #inspector,body:has(.filter-browser[open]) #insp
 }
 
 .canvas-stage[data-panning] { cursor: grabbing; }
+
+.color-group{border:1px solid var(--line);border-radius:var(--radius-group);padding:var(--space-2);min-width:0}.color-group-heading{display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap}.color-group-label{flex:1 1 100px;overflow-wrap:anywhere}.color-picker{width:44px;height:36px;padding:2px;border:1px solid var(--line);border-radius:var(--radius-control);background:var(--panel2)}.color-hex{width:11ch;min-height:36px;font-family:var(--font-code)}.color-expand{min-height:36px}.color-channels{margin-top:var(--space-2)}.color-error{color:var(--bad);font-size:12px}.color-group-editor{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:var(--space-2);margin:var(--space-2) 0;border:1px solid var(--line);border-radius:var(--radius-group)}.color-group-editor label{display:grid;gap:var(--space-1)}.color-group-editor input,.color-group-editor select,.color-group-editor button{min-width:0;min-height:36px}@media(pointer:coarse){.color-picker,.color-hex,.color-expand,.color-group-editor input,.color-group-editor select,.color-group-editor button{min-height:44px}}
+
+/* Keep the editor body scrollable within the viewport, including its RGB fields. */
+.control-editor-dialog[open]{display:grid;grid-template-rows:auto minmax(0,1fr) auto;max-height:calc(100dvh - 32px);overflow:hidden}
+.control-editor-body{min-height:0;max-height:none;grid-template-rows:minmax(0,1fr)}
+.control-editor-detail,.control-editor-list{min-height:0}
+@media(max-width:720px){.control-editor-body{grid-template-rows:auto auto;overflow:auto}.control-editor-detail{overflow:visible}}
+
+/* Compact color controls align with the other rows in Adjust. */
+.color-group{border:0;padding:0;min-width:0}.color-group-heading{display:grid;grid-template-columns:minmax(0,1fr) 36px minmax(88px,10ch) 30px;gap:var(--space-2);min-height:var(--control-height-md);align-items:center}.color-group-label{font-size:12px;min-width:0}.color-picker{width:36px;height:30px}.color-hex{box-sizing:border-box;width:100%;min-width:0;min-height:30px;padding:4px;font-size:12px}.color-expand{width:30px;min-height:30px;padding:0;font-size:14px}.color-channels{margin:var(--space-2) 0 0}.color-error:empty{display:none}@media(pointer:coarse){.color-group-heading{grid-template-columns:minmax(0,1fr) 44px minmax(88px,10ch) 44px}.color-picker{width:44px;height:44px}.color-hex,.color-expand{min-height:44px}.color-expand{width:44px}}
+
+/* Visually separate expanded RGB channels from adjacent controls. */
+.color-channels:not([hidden]){margin:var(--space-2) 0 var(--space-2);padding:var(--space-2);border:1px solid var(--line);border-radius:var(--radius-group);background:var(--panel)}
+.color-channels .slider-row + .slider-row{margin-top:var(--space-1)}
+
+/* Align group labels with control labels after the lock-button column. */
+.color-group-heading{padding-left:calc(30px + var(--space-2))}
+
+/* RGB group lock occupies the same leading column as individual locks. */
+.color-group-heading{padding-left:0;grid-template-columns:30px minmax(0,1fr) 36px minmax(88px,10ch) 30px}
+.group-lock{position:relative}.group-lock[aria-pressed=mixed]{color:var(--accent);background:var(--panel3);border-color:var(--control-border)}
+.group-lock.mixed::after{content:"";position:absolute;right:0;bottom:1px;width:8px;height:3px;border:1px solid var(--panel2);border-radius:2px;background:currentColor}
+@media(pointer:coarse){.color-group-heading{grid-template-columns:30px minmax(0,1fr) 44px minmax(88px,10ch) 44px}.group-lock{min-width:44px;min-height:44px;margin-left:-7px}}

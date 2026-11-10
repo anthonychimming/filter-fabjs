@@ -6,6 +6,11 @@
 - Validate bounded backups before writes; guard cross-tab changes and preserve the collection on quota failures. Backup dialogs preserve active preview and editing sessions.
 
 
+## 2.10.3
+
+- Add author-configured RGB color groups with a native color picker, hex entry, expandable channel controls, and a group lock that uses existing mutation locks.
+- Preserve color groups and fractional grouped-toggle values in native filters and My Filters backups; improve control editor scrolling and accessibility.
+
 ## 2.10.2
 
 - Add cursor-anchored wheel zoom and middle-button drag panning to the image canvas.

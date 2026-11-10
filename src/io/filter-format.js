@@ -5,7 +5,7 @@
  */
 import { normalizeTags, validatePortableId } from '../core/filter-metadata.js';
 import { clamp } from '../core/utils.js';
-import { CONTROL_COUNT, CONTROL_DEFINITIONS, cloneControlUI, normalizeControlUI } from '../core/controls.js';
+import { CONTROL_COUNT, CONTROL_DEFINITIONS, cloneControlUI, normalizeControlUI, normalizeColorGroups } from '../core/controls.js';
 import { FORMULA_LIMITS, Parser } from '../core/formula-language.js';
 
 export const FILTER_FILE_MAX_BYTES=256*1024;
@@ -35,13 +35,14 @@ export function getValidatedFormulaAsts(filter){return validatedFormulaAsts.get(
 function controlValue(value,index){if(typeof value!=='number'||!Number.isFinite(value))throw new Error(`Native filter control ${index+1} must be a finite number`);return clamp(value,0,255)}
 function controlLabel(value,index){if(value===undefined||value===null||value==='')return`Control ${index+1}`;if(typeof value!=='string')throw new Error(`Native filter control ${index+1} label must be a string`);const label=value.trim();if(label.length>80)throw new Error(`Native filter control ${index+1} label exceeds 80 characters`);return label||`Control ${index+1}`}
 function normalizeNativeControls(data){
+  const grouped=new Set(normalizeColorGroups(data.colorGroups).flatMap(group=>Object.values(group.channels)));
   if(data.controls!==undefined){
     if(!Array.isArray(data.controls)||data.controls.length>CONTROL_COUNT)throw new Error(`Native filter controls must be an array of at most ${CONTROL_COUNT} entries`);
     const controls=data.controls.map((control,index)=>{
       if(typeof control==='number')return{label:`Control ${index+1}`,value:controlValue(control,index),ui:cloneControlUI()};
       if(!control||typeof control!=='object'||Array.isArray(control))throw new Error(`Native filter control ${index+1} must be a number or object`);
-      const ui=normalizeControlUI(control.ui),value=ui.widget==='toggle'?(controlValue(control.value,index)<127.5?0:255):controlValue(control.value,index);
-      return{label:controlLabel(control.label,index),value,ui};
+      const ui=normalizeControlUI(control.ui),preserveToggleValue=ui.widget==='toggle'&&control.preserveToggleValue===true,value=ui.widget==='toggle'&&!grouped.has(index)&&!preserveToggleValue?(controlValue(control.value,index)<127.5?0:255):controlValue(control.value,index);
+      return{label:controlLabel(control.label,index),value,ui,...(preserveToggleValue?{preserveToggleValue:true}:{})};
     });
     while(controls.length<CONTROL_COUNT){const definition=CONTROL_DEFINITIONS[controls.length];controls.push({label:definition.defaultLabel,value:definition.defaultValue,ui:cloneControlUI()});}
     return controls;
@@ -58,6 +59,7 @@ export function validateNativeFilter(data){
   if(data.mathMode!==undefined&&!['float','legacy'].includes(data.mathMode))throw new Error('Native filter mathMode must be “float” or “legacy”');
   const formulas=validatedFormulas(Array.isArray(data.formulas)?data.formulas:data.f);
   const result={format:'filter-fab-js',version:data.version,...(data.id===undefined?{}:{id:validatePortableId(data.id)}),tags:normalizeTags(data.tags),mathMode:data.mathMode??(data.version===1?'legacy':'float'),name:boundedString(data.name,'name',120,'Untitled Filter'),description:boundedString(data.description,'description',FILTER_DESCRIPTION_MAX_LENGTH),author:boundedString(data.author,'author',120),formulas:formulas.normalized,controls:normalizeNativeControls(data)};
+  const colorGroups=normalizeColorGroups(data.colorGroups);if(colorGroups.length)result.colorGroups=colorGroups;
   validatedFormulaAsts.set(result,formulas.asts);return result;
 }
 export function cleanAFSFormula(group){

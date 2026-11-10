@@ -14,10 +14,10 @@ function backupObject(value,label){if(!value||typeof value!=='object'||Array.isA
 function backupFields(value,allowed,label){backupObject(value,label);for(const key of Object.keys(value))if(!allowed.includes(key))throw new Error(`${label}: unsupported field “${key}”; data was preserved`);}
 function backupTimestamp(value,label){if(value===undefined)return undefined;if(typeof value!=='string'||value.length>40||!/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/.test(value)||!Number.isFinite(Date.parse(value))||new Date(value).toISOString().slice(0,19)!==value.slice(0,19))throw new Error(`${label} must be a valid UTC timestamp`);return value;}
 function backupDocument(value){
-  backupFields(value,['format','version','id','name','author','description','tags','mathMode','formulas','controls','f','values','labels'],'Filter document');
+  backupFields(value,['format','version','id','name','author','description','tags','mathMode','formulas','controls','colorGroups','f','values','labels'],'Filter document');
   if(!validatePortableId(value.id))throw new Error('Every saved filter needs a portable id');
   if(backupBytes(JSON.stringify(value))>FILTER_FILE_MAX_BYTES)throw new Error('Filter document exceeds 256 KiB');
-  for(const control of value.controls||[]){if(typeof control==='number'&&(control<0||control>255))throw new Error('Control value is outside 0–255');if(typeof control==='object'&&control){backupFields(control,['label','value','ui'],'Control');if(control.ui!==undefined){backupFields(control.ui,['widget','displayMin','displayMax','step','format','unit'],'Control UI');validateControlUI(control.ui);}if(control.value<0||control.value>255)throw new Error('Control value is outside 0–255');}}
+  for(const control of value.controls||[]){if(typeof control==='number'&&(control<0||control>255))throw new Error('Control value is outside 0–255');if(typeof control==='object'&&control){backupFields(control,['label','value','ui','preserveToggleValue'],'Control');if(control.preserveToggleValue!==undefined&&typeof control.preserveToggleValue!=='boolean')throw new Error('Invalid toggle preservation marker');if(control.ui!==undefined){backupFields(control.ui,['widget','displayMin','displayMax','step','format','unit'],'Control UI');validateControlUI(control.ui);}if(control.value<0||control.value>255)throw new Error('Control value is outside 0–255');}}
   for(const number of value.values||[])if(number<0||number>255)throw new Error('Control value is outside 0–255');
   const document=validateNativeFilter(value);return{...document,version:2};
 }

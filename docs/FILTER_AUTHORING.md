@@ -806,3 +806,14 @@ The goal is not to maximize formula complexity. Prefer the smallest expression t
 Native JSON v2 accepts optional `id` (1–80 ASCII letters, digits, underscores or hyphens) and `tags` (at most 20 strings, each 1–32 Unicode code points). Tags normalize NFC, outer/repeated whitespace, and case-insensitive identity; punctuation and accents remain meaningful. Control/format characters are rejected. Missing tags normalize to an empty array. Invalid IDs/tags fail before editor mutation. Favorites are local preferences and never exported.
 
 IDs and tags round-trip in v2.7.0. Earlier v2.6.7 readers still accept the known rendering fields but discard these new fields on re-export. Built-in export allocates a portable custom ID and includes supplied plus personal tags; exporting does not save a library record. See [Filter library](FILTER_LIBRARY.md) for identity and storage behavior.
+
+
+### RGB color groups
+
+In **Edit controls**, add a color group with a label and three distinct control indices. Groups must not share controls. Use channels whose canonical values directly represent red, green and blue; formula multipliers and offsets may make the swatch differ from the rendered result. Expand a group to access its original controls. The group editor is available when all three channels are used by the formulas. Locks continue to affect mutation rather than direct editing.
+
+Native version 2 JSON can carry optional presentation metadata such as `"colorGroups": [{"label":"Glow Color","channels":{"red":0,"green":2,"blue":5}}]`. Labels are limited to 80 Unicode characters, indices range from 0 to 9, and at most three non-overlapping groups are accepted. Invalid groups are skipped without removing controls. Display clamps and rounds canonical values to bytes; simply viewing or opening the picker does not change fractional values. Committing a color writes byte values. The picker is supplied by the browser and its appearance and cancellation behavior vary by platform. Historic AFS has no field for this metadata. The earlier v2.10.1 reader at commit 1937737 discards RGB grouping when it reads a filter; other older readers have not been verified.
+
+If a group containing a toggle is removed while its canonical value is non-binary, the exported control carries `"preserveToggleValue": true` so this value survives reload. The toggle still switches to 0 or 255 when directly operated. The v2.10.1 reader at commit 1937737 ignores this marker and normalizes the value; other older versions may do the same, so keep a copy of the original when exchanging files with older versions.
+
+The group lock controls the existing locks for its three channels. A dash indicates a mixture of locked and unlocked channels; activating it locks all three. Locks protect channels from Mutate while manual edits remain available. Locks are part of the Explore session, not saved filter metadata.

@@ -47,6 +47,9 @@ export function writeLibraryRecord(storage,normalize,filter,{targetId=null,expec
   if(targetId&&(index<0||JSON.stringify(storageList[index])!==expected))throw new Error('This filter changed in another tab. Review the current record before updating.');
   if(!targetId&&index>=0)throw new Error('An existing filter has this ID.');
   const now=new Date().toISOString(),record={...(targetId?storageList[index]:{}),...filter,createdAt:targetId?storageList[index].createdAt||now:now,updatedAt:now};
+  // Optional presentation metadata is part of the filter document, so an
+  // omitted group must replace (not inherit) an older saved group.
+  if(!Object.hasOwn(filter,'colorGroups'))delete record.colorGroups;
   if(targetId)storageList[index]=record;else storageList.push(record);
   storage.setItem('ffw-custom-presets',JSON.stringify(storageList));return record;
 }

@@ -62,3 +62,29 @@ export function randomSeedDisplay(ui=DEFAULT_CONTROL_UI,random=Math.random){
 export const defaultControlValues=()=>CONTROL_DEFINITIONS.map(definition=>definition.defaultValue);
 export const defaultControlLabels=()=>CONTROL_DEFINITIONS.map(definition=>definition.defaultLabel);
 export const defaultControlUIs=()=>CONTROL_DEFINITIONS.map(()=>cloneControlUI());
+
+// Presentation metadata only. Invalid entries never invalidate the controls.
+export function normalizeColorGroups(value){
+  if(!Array.isArray(value))return [];
+  const groups=[],used=new Set();
+  // Bound work even for programmatic callers; file input has a separate size limit.
+  for(const item of value.slice(0, CONTROL_COUNT)){
+    if(!item||typeof item!=='object'||Array.isArray(item)||typeof item.label!=='string')continue;
+    const label=item.label.trim();
+    if(!label||[...label].length>80||/[\p{Cc}\p{Cf}]/u.test(label))continue;
+    const c=item.channels;if(!c||typeof c!=='object'||Array.isArray(c))continue;
+    const channels=[c.red,c.green,c.blue];
+    if(channels.some(i=>!Number.isInteger(i)||i<0||i>=CONTROL_COUNT||used.has(i))||new Set(channels).size!==3)continue;
+    channels.forEach(i=>used.add(i));
+    groups.push({label,channels:{red:c.red,green:c.green,blue:c.blue}});
+    if(groups.length===Math.floor(CONTROL_COUNT/3))break;
+  }
+  return groups;
+}
+
+// Keep a non-binary canonical toggle value when its RGB group is removed.
+export function reconcileTogglePreservation(uis,values,previousFlags,oldGroups,newGroups){
+  const oldChannels=new Set(normalizeColorGroups(oldGroups).flatMap(group=>Object.values(group.channels)));
+  const newChannels=new Set(normalizeColorGroups(newGroups).flatMap(group=>Object.values(group.channels)));
+  return uis.map((ui,index)=>ui.widget==='toggle'&&(Boolean(previousFlags?.[index])||(oldChannels.has(index)&&!newChannels.has(index)&&values[index]!==normalizeToggleRaw(values[index]))));
+}

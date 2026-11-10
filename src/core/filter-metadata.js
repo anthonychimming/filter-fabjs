@@ -18,5 +18,5 @@ export function normalizeTags(tags=[]){
 }
 export function searchText(value){return String(value??'').normalize('NFD').replace(/\p{M}/gu,'').toLowerCase().trim().replace(/\s+/gu,' ');}
 export function portableContent(filter){
-  return JSON.stringify([filter.name,filter.author||'',filter.description||'',normalizeTags(filter.tags).map(tagKey).sort(),filter.mathMode,filter.formulas,filter.controls]);
+  return JSON.stringify([filter.name,filter.author||'',filter.description||'',normalizeTags(filter.tags).map(tagKey).sort(),filter.mathMode,filter.formulas,filter.controls,filter.colorGroups||[]]);
 }
