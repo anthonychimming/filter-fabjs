@@ -148,6 +148,7 @@ npm run dev
 npm run check
 npm test
 npm run build
+npm run verify:fast
 npm run verify
 ```
 
@@ -155,18 +156,18 @@ npm run verify
 - `npm run check` syntax-checks JavaScript under `src/` and `scripts/`.
 - `npm test` runs the Node smoke suites for core behavior, WGSL, both renderers, renderer management, analytic shapes, canvas behavior, UI wiring, and theme rules.
 - `npm run build` recreates `dist/`, producing `dist/site/` with fingerprinted assets and `dist/chromameld-rgba-v<version>.html` as a standalone release.
-- `npm run verify` runs syntax checks, Node tests, the production build, and build-output smoke validation. This is the standard completion command.
+- `npm run verify` runs syntax checks, Node tests, the production build, and build-output smoke validation.
 - Hardware CPU/WebGPU pixel parity is optional and browser-based: run the dev server and open `http://localhost:8080/tests/webgpu-parity.html` on a WebGPU-capable system.
 
-Before considering a repository change complete, run:
+## Verification Policy
 
-```bash
-npm run verify
-```
+- For routine development, run `npm run verify:fast` after changes and focused tests relevant to the modified components when appropriate.
+- For Library Manager Git operations, also run `npm run test:integration`. Do not routinely run the expensive Windows Git integration suites for unrelated changes.
+- For UI interaction changes, run relevant browser tests when available.
+- `npm run verify` remains the authoritative full verification suite and runs through GitHub Actions for pull requests. Never claim full verification passed based solely on `verify:fast`.
+- Report tests that passed, failed, were skipped, or were not run, including environment-specific or pre-existing failures. Do not claim hardware WebGPU parity unless the browser parity suite was actually run on WebGPU hardware.
 
-Report every failure, including environment-specific or pre-existing failures. Do not claim hardware WebGPU parity unless the browser parity suite was actually run on WebGPU hardware.
-
-Add or update focused regression tests for behavioral fixes. Prefer the narrowest relevant smoke test while developing, then run the full verification workflow. Changes involving shared CPU/GPU operations should test parser/IR behavior, WGSL compatibility/code generation, CPU semantics, and parity where practical. Import changes need malformed, oversized, boundary, and backward-compatibility cases.
+Add or update focused regression tests for behavioral fixes. Changes involving shared CPU/GPU operations should test parser/IR behavior, WGSL compatibility/code generation, CPU semantics, and parity where practical. Import changes need malformed, oversized, boundary, and backward-compatibility cases.
 
 ## Change discipline
 
@@ -184,3 +185,4 @@ Add or update focused regression tests for behavioral fixes. Prefer the narrowes
 12. Do not hand-edit generated `dist/` output. Modify source files and let the normal build process regenerate it. Do not include generated output in a change unless the request or repository release workflow explicitly requires it.
 
 When uncertain whether a change affects formula, file-format, renderer, or legacy behavior, treat it as compatibility-sensitive and stop to investigate or request explicit direction.
+
