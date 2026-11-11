@@ -31,28 +31,6 @@ npm run dev
 
 Open `http://localhost:8080`. Use localhost or HTTPS for WebGPU and clipboard APIs.
 
-For routine development, run the fast verification pipeline:
-
-```bash
-npm run verify:fast
-```
-
-It runs syntax checks, 41 smoke scripts, the production build and build-output checks. It excludes only the two Git-intensive Library Manager suites. Run those separately with `npm run test:integration` when validating Library Manager Git integration. `npm run test:fast` runs only the fast tests.
-
-For complete release and pull request verification, run:
-
-```bash
-npm run verify
-```
-
-Fast verification does not replace this full quality gate; `npm test` also runs all 43 smoke scripts. Individual commands are available for syntax checks (`npm run check`) and production builds (`npm run build`). The build produces a deployable static site in `dist/site/` and a standalone HTML file in `dist/`.
-
-### Verification timing
-
-One Windows measurement (Windows 11 build 26200, Node 22.17.0, Git 2.41.0.windows.1) ran `verify:fast` in 26.85 seconds, including 16.61 seconds for tests; a separate `npm run build` took 1.45 seconds. Both exited successfully. The two excluded suites still take substantially longer on Windows: the [PR #33](https://github.com/anthonychimming/filter-fabjs/pull/33) validated sync run took 661.6 seconds, and prior manager-suite measurements were roughly 10–14 minutes. They use thousands of real Git subprocesses.
-
-For context, the [PR #33 Linux CI run](https://github.com/anthonychimming/filter-fabjs/actions/runs/42920289386) on hosted Ubuntu 26.04.1, Node 22.23.4 and Git 2.56.0 recorded approximately 12.4 seconds for the manager suite and 11.5 seconds for sync (from log timestamps). These are equivalent individual suites, but different machines, Git and Node versions, and environments; the difference cannot be attributed to the OS alone. The Linux launcher smoke test itself reports a platform-specific skip.
-
 ## Documentation
 
 - [Formula Reference](docs/FORMULA_REFERENCE.md) — formula syntax, functions, and renderer support
