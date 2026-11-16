@@ -6,6 +6,10 @@
 - Validate bounded backups before writes; guard cross-tab changes and preserve the collection on quota failures. Backup dialogs preserve active preview and editing sessions.
 
 
+## 2.11.1
+
+- Restore Online filter favorites and clarify Active Filter status.
+
 ## 2.11.0
 
 - Add public links for built-in and Online filters with published defaults.

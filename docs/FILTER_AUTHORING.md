@@ -1,6 +1,6 @@
 # Filter FabJS Filter Authoring Guide
 
-**Applies to ChromaMeld RGBA v2.11.0**
+**Applies to ChromaMeld RGBA v2.11.1**
 
 This guide is for designing new Filter FabJS filters efficiently and with predictable CPU/WebGPU behavior. It assumes the formula syntax in [FORMULA_REFERENCE.md](FORMULA_REFERENCE.md).
 
