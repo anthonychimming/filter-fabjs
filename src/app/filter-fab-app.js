@@ -161,14 +161,21 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
     const copyHidden=!activePublicFilterRef||Boolean(librarySession);
     $('#copyFilterLinkBtn').hidden=copyHidden;$('#copyFilterLinkHelp').hidden=copyHidden;
     if(librarySession)$('#copyFilterLinkFallback').hidden=true;
-    $('#filterRouteNotice').hidden=!pendingRoute?.failed;
-    $('#retryFilterRoute').hidden=Boolean(pendingRoute?.invalid);
+    const issue=Boolean(pendingRoute?.failed||pendingRoute?.cancelled);
+    $('#filterRouteNotice').hidden=!pendingRoute||Boolean(pendingRoute.waiting);
+    $('#filterRouteMessage').textContent=pendingRoute?.cancelled?'Filter link loading cancelled.':pendingRoute?.failed?'Filter unavailable.':'Opening filter link…';
+    $('#cancelFilterRoute').hidden=issue;$('#retryFilterRoute').hidden=!issue||Boolean(pendingRoute?.invalid);$('#browseFilterRoute').hidden=!issue;
   }
   function commitPublicRef(ref){
     routeGeneration++;pendingRoute=null;activePublicFilterRef=ref?.source==='builtin'&&ref.id==='pass'?null:ref;
     $('#copyFilterLinkFallback').hidden=true;
     if(location.protocol==='http:'||location.protocol==='https:')history.replaceState(history.state,'',updateFilterUrl(new URL(location.href),activePublicFilterRef));
     updatePublicUi();
+  }
+  function cancelPendingRoute(){
+    if(!pendingRoute||pendingRoute.failed||pendingRoute.cancelled)return false;
+    routeGeneration++;if(routeSession&&librarySession===routeSession)invalidateLibraryForReplacement();routeSession=null;
+    pendingRoute.waiting=false;pendingRoute.cancelled=true;updatePublicUi();return true;
   }
   function refForEntry(entry){return entry&&['builtin','online'].includes(entry.source)?{source:entry.source,id:entry.key.slice(entry.source.length+1)}:null;}
 
@@ -207,7 +214,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
   function compileCurrentProgram(){const key=currentProgramKey();if(state.lastProgram&&state.lastProgramKey===key)return state.lastProgram;const astList=el.formulas.map(field=>new Parser(field.value).parse());return compileFilterProgram(astList,{legacyMath:state.legacyMath});}
   const scheduleRender=debounce(()=>{if(!state.hasPendingFormulaChanges)render();},110);
   const scheduleFormulaValidation=debounce(validatePendingFormulas,220);
-  controlsController=createControlsController({state,el,scheduleRender,applyInteractionLocks,compileCurrentProgram,onManualChange:()=>exploreController?.manual(),onSchemaChange:()=>exploreController?.reset()});
+  controlsController=createControlsController({state,el,scheduleRender,applyInteractionLocks,compileCurrentProgram,onManualChange:()=>{const needsRestore=Boolean(routeSession&&librarySession===routeSession),values=needsRestore?[...state.controls]:null;if(cancelPendingRoute()&&needsRestore){state.controls=values;controlsController.syncSliders();}exploreController?.manual();},onSchemaChange:()=>exploreController?.reset()});
 
   function library(){return readLibrary(localStorage,normalizeCustomPresetList);}
   function organizationError(error){browser?.showError(error.message||'Browser storage is unavailable');setStatus(error.message||'Browser storage is unavailable','error');toast(error.message||'Browser storage is unavailable');}
@@ -330,7 +337,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
     el.renderBtn.classList.toggle('primary',snapshot.ui.formulaState==='pending');el.formulaEditStatus.dataset.state=snapshot.ui.formulaState;el.formulaEditStatus.textContent=snapshot.ui.formulaText;el.statusDot.className=snapshot.ui.statusClass;el.statusText.textContent=snapshot.ui.statusText;el.renderInfo.textContent=snapshot.ui.renderInfo;el.rendererDiagnostics.dataset.state=snapshot.ui.rendererDiagnosticsState;el.rendererDiagnostics.textContent=snapshot.ui.rendererDiagnosticsText;el.rendererDiagnostics.title=snapshot.ui.rendererDiagnosticsTitle;el.rendererReason.textContent=snapshot.ui.rendererDiagnosticsTitle;el.rendererSummary.dataset.state=snapshot.ui.rendererSummaryState;el.rendererSummary.textContent=snapshot.ui.rendererSummaryText;el.rendererSummary.title=snapshot.ui.rendererSummaryTitle;canvasView.drawView();
   }
   async function beginLibrarySession({route=false}={}){
-    if(!route&&pendingRoute){routeGeneration++;if(routeSession)invalidateLibraryForReplacement();}
+    if(!route&&routeSession&&librarySession===routeSession){routeGeneration++;pendingRoute.waiting=true;invalidateLibraryForReplacement();routeSession=null;updatePublicUi();}
     if(librarySession)return true;
     if(state.isRendering)throw new Error('Wait for the current render to finish before opening the library.');
     canvasView.endMiddleGesture();librarySession={originalWorkingDocument:captureLibraryWorkingState(),candidateEntry:null,candidateDefinition:null,candidatePrepared:null,candidateRendered:false,requestId:0,packageController:null,rollback:null,stopping:null,downloads:new Map()};thumbnailService.open();updatePublicUi();return true;
@@ -402,7 +409,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
     await stopLibraryCandidate(session);
     await thumbnailService.close();
     if(state.isRendering)await cancelRender({silent:true});
-    if(librarySession!==session||requestId!==session.requestId)return false;librarySession=null;restoreLibraryWorkingState(session.originalWorkingDocument);updatePublicUi();return true;
+    if(librarySession!==session||requestId!==session.requestId)return false;librarySession=null;restoreLibraryWorkingState(session.originalWorkingDocument);updatePublicUi();if(pendingRoute?.waiting)setTimeout(()=>{if(pendingRoute?.waiting&&!pendingRoute.failed&&!pendingRoute.cancelled&&!librarySession){pendingRoute.waiting=false;void resolveRequestedRoute();}},0);return true;
   }
   async function applyLibraryCandidate(){
     const session=librarySession;if(!session?.candidateEntry||!session.candidatePrepared||!session.candidateRendered)throw new Error('Choose a successfully rendered candidate first.');
@@ -480,7 +487,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
     context.fillStyle='#f6efc4';for(let i=0;i<16;i++)context.fillRect(705+i*8,395,i%4===0?4:2,112);context.fillStyle='#cdddb7';context.font='14px system-ui';context.fillText('COLOR  /  TONE  /  ALPHA  /  DETAIL',110,546);
     return context.getImageData(0,0,width,height);
   }
-  async function loadImageFile(file,{successMessage='Image loaded',requestId=null}={}){const loadId=requestId??++state.imageLoadId;if(!file||!String(file.type||'').startsWith('image/')){toast('Choose a valid image file');return false;}let bitmap=null;setStatus('Loading image…','busy');try{bitmap=await createImageBitmap(file);if(loadId!==state.imageLoadId)return false;const maximum=1800,scale=Math.min(1,maximum/Math.max(bitmap.width,bitmap.height)),width=Math.max(1,Math.round(bitmap.width*scale)),height=Math.max(1,Math.round(bitmap.height*scale)),canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const context=canvas.getContext('2d',{willReadFrequently:true});if(!context)throw new Error('Canvas image loading is unavailable');context.drawImage(bitmap,0,0,width,height);const pixels=context.getImageData(0,0,width,height).data;if(loadId!==state.imageLoadId)return false;initImage(pixels,width,height);toast(scale<1?`${successMessage} · resized to 1800 px`:successMessage);return true;}catch(error){if(loadId!==state.imageLoadId)return false;setStatus('Could not load image','error');toast(error.message||'Could not load image');return false;}finally{bitmap?.close?.();}}
+  async function loadImageFile(file,{successMessage='Image loaded',requestId=null}={}){const loadId=requestId??++state.imageLoadId;if(!file||!String(file.type||'').startsWith('image/')){toast('Choose a valid image file');return false;}let bitmap=null;setStatus('Loading image…','busy');try{bitmap=await createImageBitmap(file);if(loadId!==state.imageLoadId)return false;const maximum=1800,scale=Math.min(1,maximum/Math.max(bitmap.width,bitmap.height)),width=Math.max(1,Math.round(bitmap.width*scale)),height=Math.max(1,Math.round(bitmap.height*scale)),canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const context=canvas.getContext('2d',{willReadFrequently:true});if(!context)throw new Error('Canvas image loading is unavailable');context.drawImage(bitmap,0,0,width,height);const pixels=context.getImageData(0,0,width,height).data;if(loadId!==state.imageLoadId)return false;cancelPendingRoute();initImage(pixels,width,height);toast(scale<1?`${successMessage} · resized to 1800 px`:successMessage);return true;}catch(error){if(loadId!==state.imageLoadId)return false;setStatus('Could not load image','error');toast(error.message||'Could not load image');return false;}finally{bitmap?.close?.();}}
   async function openImageFile(file){
     if(!file)return false;const requestId=++state.imageLoadId;
     const result=await routeImageFileWithMetadata(file,{chooseAction:async({title,detail,choices})=>(await chooseFilterAction(title,choices,{detail})).action,openImage:image=>requestId===state.imageLoadId?loadImageFile(image,{requestId}):false,importFilter:async filter=>{if(requestId!==state.imageLoadId)return false;if(state.isRendering)await cancelRender();if(requestId!==state.imageLoadId)return false;applyFilter(filter,null,{importSource:'png'});toast('Filter imported from PNG');return true;}});
@@ -507,7 +514,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
     if(state.lastSuccessfulRenderSignature!==filterRenderSignature(filter)){setStatus('Render the current filter changes before exporting.','error');toast('Render the current filter changes before exporting.');return;}
     const name=slug($('#filterName').value||'filtered-image')+'.png',pixels=state.filtered,width=state.width,height=state.height;
     try{
-      const result=await saveFile(name,'image/png','png',async()=>{setStatus('Encoding PNG…','busy');const canvas=renderedImageCanvas(pixels,width,height),encoded=await canvasBlob(canvas,'image/png'),envelope=createFilterFabPngEnvelope(filter,'2.10.3');return embedFilterFabMetadata(encoded,envelope);});
+      const result=await saveFile(name,'image/png','png',async()=>{setStatus('Encoding PNG…','busy');const canvas=renderedImageCanvas(pixels,width,height),encoded=await canvasBlob(canvas,'image/png'),envelope=createFilterFabPngEnvelope(filter,'2.11.0');return embedFilterFabMetadata(encoded,envelope);});
       setStatus('Ready');return result;
     }catch(error){console.error('PNG export failed',error);setStatus('PNG export failed','error');toast(`PNG export failed: ${error.message||'Could not save the file'}`);}
   }
@@ -602,13 +609,15 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
 
   async function resolveRequestedRoute(){
     const request=pendingRoute;if(!request||request.invalid)return;
-    const generation=++routeGeneration;request.failed=false;updatePublicUi();
+    const generation=++routeGeneration;request.failed=false;request.cancelled=false;request.waiting=false;updatePublicUi();
     const current=()=>generation===routeGeneration&&pendingRoute===request;
     try{
       if(request.source==='online'){await onlineLibrary.load({retry:true});if(!current())return;}
       const entry=request.source==='online'?onlineLibrary.getEntries().find(item=>item.key===`online:${request.id}`):catalog().find(item=>item.key===`builtin:${request.id}`);
       if(!entry)throw new Error('Filter is unavailable');
+      if(librarySession&&!routeSession){request.waiting=true;updatePublicUi();return;}
       if(state.isRendering)await cancelRender({silent:true});if(!current())return;
+      if(librarySession&&!routeSession){request.waiting=true;updatePublicUi();return;}
       await beginLibrarySession({route:true});routeSession=librarySession;
       if(!current())return;
       if(!await previewLibraryCandidate(entry)||!current())return;
@@ -621,11 +630,9 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
   }
   function wire(){
     $('#copyFilterLinkBtn').onclick=async()=>{if(!activePublicFilterRef||librarySession)return;const url=publicFilterUrl(activePublicFilterRef);try{if(!navigator.clipboard?.writeText)throw new Error('Clipboard unavailable');await navigator.clipboard.writeText(url);toast('Filter link copied');}catch{const fallback=$('#copyFilterLinkFallback'),input=$('#copyFilterLinkText');fallback.hidden=false;input.value=url;input.focus();input.select();}};
+    $('#cancelFilterRoute').onclick=()=>cancelPendingRoute();
     $('#retryFilterRoute').onclick=()=>void resolveRequestedRoute();
     $('#browseFilterRoute').onclick=()=>el.searchFilters.click();
-    const cancelPendingForInteraction=event=>{if(!pendingRoute||pendingRoute.failed||event.target.closest('#filterRouteNotice'))return;routeGeneration++;if(routeSession&&librarySession===routeSession)invalidateLibraryForReplacement();routeSession=null;pendingRoute.failed=true;updatePublicUi();};
-    document.addEventListener('pointerdown',cancelPendingForInteraction,true);
-    document.addEventListener('keydown',cancelPendingForInteraction,true);
 
     const modeButtons=$$('#workspaceMode [role="tab"]'),modePanels=$$('[data-mode-panel]');
     function setWorkspaceMode(mode){if(!['explore','author'].includes(mode)||mode===state.workspaceMode)return;state.workspaceMode=mode;document.body.dataset.workspaceMode=mode;modeButtons.forEach(button=>{const selected=button.dataset.workspaceMode===mode;button.setAttribute('aria-selected',String(selected));button.tabIndex=selected?0:-1;});modePanels.forEach(panel=>panel.hidden=panel.dataset.modePanel!==mode);}
@@ -663,6 +670,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
     $('#editControlsDialog').addEventListener('close',updateDocumentHeader);
     el.formulas.forEach(field=>{
       field.oninput=()=>{
+        const value=field.value;cancelPendingRoute();field.value=value;
         const box=field.closest('.formula'),icon=$('.formula-state',box),errorElement=$('.formula-error',box);
         field.classList.remove('invalid');
         field.setAttribute('aria-invalid','false');
@@ -679,6 +687,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
       field.onkeydown=event=>{if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){event.preventDefault();render({focusInvalid:true});}};
     });
     document.addEventListener('keydown',event=>{
+      if(event.key==='Escape'&&!document.querySelector('dialog[open]')&&state.isRendering&&routeSession&&cancelPendingRoute()){event.preventDefault();event.stopPropagation();return;}
       if(event.key==='Escape'&&!document.querySelector('dialog[open]')&&state.isRendering){event.preventDefault();event.stopPropagation();cancelRender();return;}
       dispatchShortcut(event,{blocked:state.isRendering||Boolean(librarySession)||Boolean(document.querySelector('dialog[open]')),editable:[event.target,document.activeElement,...(event.composedPath?.()||[])].some(isEditableTarget),selectedText:()=>{try{return Boolean(window.getSelection()?.toString());}catch{return true;}},hasImage:Boolean(state.source&&state.filtered&&state.width&&state.height),button:id=>document.getElementById(id),viewButton:view=>el.viewButtons.find(button=>button.dataset.view===view),restoreSnapshot:number=>!document.querySelector('[aria-modal="true"], :popover-open')&&exploreController?.restoreSnapshotByNumber(number),saveSnapshot:number=>!document.querySelector('[aria-modal="true"], :popover-open')&&exploreController?.saveSnapshotByNumber(number)});
     });
@@ -723,7 +732,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
     window.addEventListener('beforeunload',()=>{libraryLayout?.destroy();inspectorLayout.destroy();if(librarySession)abortLibraryPackages(librarySession);onlineLibrary.dispose();thumbnailService.dispose();state.rendererManager?.dispose();});
   }
 
-  window.FilterFabJS=Object.freeze({version:'2.10.3',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getThumbnailDiagnostics:()=>thumbnailService.diagnostics(),getRendererPreference:()=>state.rendererPreference,getWorkspaceMode:()=>state.workspaceMode,getLibraryPreviewState:()=>({open:Boolean(librarySession),candidateKey:librarySession?.candidateEntry?.key||null,candidateRendered:Boolean(librarySession?.candidateRendered),activeKey:activeDocument.key,activeId:activeDocument.id,imported:activeDocument.imported,importSource:activeDocument.importSource,baseline:activeDocument.baseline,recordBaseline:activeDocument.recordBaseline})});
+  window.FilterFabJS=Object.freeze({version:'2.11.0',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getThumbnailDiagnostics:()=>thumbnailService.diagnostics(),getRendererPreference:()=>state.rendererPreference,getWorkspaceMode:()=>state.workspaceMode,getLibraryPreviewState:()=>({open:Boolean(librarySession),candidateKey:librarySession?.candidateEntry?.key||null,candidateRendered:Boolean(librarySession?.candidateRendered),activeKey:activeDocument.key,activeId:activeDocument.id,imported:activeDocument.imported,importSource:activeDocument.importSource,baseline:activeDocument.baseline,recordBaseline:activeDocument.recordBaseline})});
   controlsController.buildSliders();wire();const demo=demoImage();initImage(demo.data,demo.width,demo.height);applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');bootstrapping=false;
   const initialGeneration=routeGeneration;
   void replaceStartupDemo({state,initImage,canReplace:()=>!librarySession&&initialGeneration===routeGeneration}).then(()=>{if(initialGeneration!==routeGeneration)return;if(pendingRoute?.invalid){pendingRoute.failed=true;updatePublicUi();}else if(pendingRoute)void resolveRequestedRoute();});

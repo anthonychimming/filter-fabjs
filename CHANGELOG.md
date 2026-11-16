@@ -6,6 +6,10 @@
 - Validate bounded backups before writes; guard cross-tab changes and preserve the collection on quota failures. Backup dialogs preserve active preview and editing sessions.
 
 
+## 2.11.0
+
+- Add public links for built-in and Online filters with published defaults.
+
 ## 2.10.3
 
 - Add author-configured RGB color groups with a native color picker, hex entry, expandable channel controls, and a group lock that uses existing mutation locks.
