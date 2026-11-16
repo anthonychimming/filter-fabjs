@@ -625,3 +625,10 @@ body:has(.filter-browser[open]) #inspector,body:has(.filter-browser[open]) #insp
 .group-lock{position:relative}.group-lock[aria-pressed=mixed]{color:var(--accent);background:var(--panel3);border-color:var(--control-border)}
 .group-lock.mixed::after{content:"";position:absolute;right:0;bottom:1px;width:8px;height:3px;border:1px solid var(--panel2);border-radius:2px;background:currentColor}
 @media(pointer:coarse){.color-group-heading{grid-template-columns:30px minmax(0,1fr) 44px minmax(88px,10ch) 44px}.group-lock{min-width:44px;min-height:44px;margin-left:-7px}}
+
+.active-filter-actions{display:flex;flex-wrap:wrap;gap:var(--space-2)}
+#copyFilterLinkBtn{min-height:var(--control-height-md)}
+.active-filter-link-help{color:var(--text-secondary);font-size:12px;margin:var(--space-2) 0}
+#filterRouteNotice,#copyFilterLinkFallback{margin-block:var(--space-2)}
+#copyFilterLinkText{width:100%}
+@media(pointer:coarse){#copyFilterLinkBtn{min-height:var(--touch-target)}}

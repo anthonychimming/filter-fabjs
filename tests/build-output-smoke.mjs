@@ -10,6 +10,10 @@ const packageMetadata = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 const siteHtml = fs.readFileSync('dist/site/index.html', 'utf8');
 const standalonePath = `dist/chromameld-rgba-v${packageMetadata.version}.html`;
 const standaloneHtml = fs.readFileSync(standalonePath, 'utf8');
+assert.equal(packageMetadata.version, '2.11.0');
+assert.ok(siteHtml.includes('ChromaMeld RGBA v2.11.0 — Help'));
+assert.ok(standaloneHtml.includes('ChromaMeld RGBA v2.11.0 — Help'));
+assert.ok(standaloneHtml.includes("version:'2.11.0'"));
 
 const title = 'ChromaMeld RGBA — Free Procedural Image Filter Editor';
 const description = 'Create and explore procedural image filters in your browser. Customize RGBA formulas, preview effects, and export PNGs with optional WebGPU acceleration.';
@@ -18,6 +22,7 @@ const image = `${url}assets/social-card.png`;
 const socialTitle = 'ChromaMeld RGBA — Procedural Image Filter Editor';
 const socialDescription = 'Explore image effects and create your own with RGBA formulas. Free browser-based editor with WebGPU acceleration where supported.';
 for (const html of [siteHtml, standaloneHtml]) {
+  for (const id of ['copyFilterLinkBtn', 'copyFilterLinkText', 'filterRouteNotice']) assert.equal((html.match(new RegExp(`id="${id}"`, 'g')) || []).length, 1, `${id} must be unique`);
   const head = html.split('</head>')[0];
   assert.equal((head.match(/<title>/g) || []).length, 1);
   assert.ok(head.includes(`<title>${title}</title>`));

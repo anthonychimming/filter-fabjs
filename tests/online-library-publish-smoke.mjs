@@ -70,5 +70,5 @@ try{
   console.log('Publishing registry/native/PNG validation, exact-byte deterministic build, runtime compatibility, revision/version/history and Git-base checks passed.');
 }finally{
   // mkdtemp supplies an absolute path inside the OS test temp directory.
-  assert.equal(path.dirname(sandbox),await fs.realpath(os.tmpdir()));assert.match(path.basename(sandbox),/^filter-fab-publish-/);await fs.rm(sandbox,{recursive:true,force:true});
+  const realSandbox=await fs.realpath(sandbox);assert.equal(path.dirname(realSandbox),await fs.realpath(os.tmpdir()));assert.match(path.basename(realSandbox),/^filter-fab-publish-/);await fs.rm(realSandbox,{recursive:true,force:true});
 }

@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {parseFilterRoute,serializeFilterRef,updateFilterUrl,publicFilterUrl} from '../src/app/filter-permalinks.js';
+const amber={source:'builtin',id:'amberfilm'};
+assert.deepEqual(parseFilterRoute(new URL('https://example.test/?filter=builtin.amberfilm')),amber);
+assert.equal(serializeFilterRef(amber),'builtin.amberfilm');
+assert.deepEqual(parseFilterRoute(new URLSearchParams('filter=online.foo-1')), {source:'online',id:'foo-1'});
+assert.deepEqual(parseFilterRoute(new URL('https://example.test/?bad%ZZ=1&filter=builtin.amberfilm')),amber);
+assert.notDeepEqual(parseFilterRoute(new URLSearchParams('filter=builtin.same')),parseFilterRoute(new URLSearchParams('filter=online.same')));
+for(const value of ['', 'foo.x', 'builtin.', 'builtin.x.y', 'online.'+'x'.repeat(81), 'builtin.%ZZ', 'builtin.%FF'])assert.throws(()=>parseFilterRoute(new URL(`https://example.test/?filter=${value}`)));
+assert.throws(()=>parseFilterRoute(new URL('https://example.test/?filter=builtin.x&filter=online.x')));
+assert.equal(updateFilterUrl(new URL('https://example.test/app?x=1&filter=online.x#part'),amber).href,'https://example.test/app?x=1&filter=builtin.amberfilm#part');
+assert.equal(updateFilterUrl(new URL('https://example.test/?filter=builtin.x'),{source:'builtin',id:'pass'}).href,'https://example.test/');
+assert.equal(publicFilterUrl(amber),'https://anthonychimming.github.io/filter-fabjs/?filter=builtin.amberfilm');
+console.log('filter permalink tests passed');
