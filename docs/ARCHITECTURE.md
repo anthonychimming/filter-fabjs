@@ -1,6 +1,6 @@
 # Architecture
 
-ChromaMeld RGBA v2.11.0 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
+ChromaMeld RGBA v2.11.1 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
 
 ```text
 Formula text
