@@ -78,7 +78,7 @@ assert.match(app,/state\.imageLoadId\+\+;el\.imageInput\.click\(\)/,'opening the
 assert.match(app,/const requestId=\+\+state\.imageLoadId;setStatus\('Reading clipboard/,'clipboard reads must supersede startup before the asynchronous permission/read step');
 assert.match(app,/loadImageFile\(blob,\{successMessage:'Image pasted from clipboard',requestId\}\)/,'clipboard decoding must retain the original request generation');
 assert.match(app,/const loadId=requestId\?\?\+\+state\.imageLoadId;if\(!file/,'even failed user image loads must supersede startup');
-assert.match(app,/applyFilter\(presets.find\(preset=>preset.id==='pass'\),'builtin:pass'\);\s*void replaceStartupDemo/,'startup must install its fallback and initial filter before asynchronous substitution');
+assert.match(app,/applyFilter\(presets.find\(preset=>preset.id==='pass'\),'builtin:pass'\);bootstrapping=false;[\s\S]*?void replaceStartupDemo/,'startup must install its fallback and initial filter before asynchronous substitution');
 assert.match(app,/canReplace:\(\)=>!librarySession/,'startup must not invalidate an active filter-library preview');
 assert.match(app, /requestId===state\.imageLoadId\?loadImageFile\(image,\{requestId\}\):false/, 'metadata choices must not revive a stale image request');
 assert.match(app, /if\(loadId!==state\.imageLoadId\)return false/, 'stale image decodes must be discarded');

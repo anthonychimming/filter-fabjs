@@ -18,6 +18,7 @@ const image = `${url}assets/social-card.png`;
 const socialTitle = 'ChromaMeld RGBA — Procedural Image Filter Editor';
 const socialDescription = 'Explore image effects and create your own with RGBA formulas. Free browser-based editor with WebGPU acceleration where supported.';
 for (const html of [siteHtml, standaloneHtml]) {
+  for (const id of ['copyFilterLinkBtn', 'copyFilterLinkText', 'filterRouteNotice']) assert.equal((html.match(new RegExp(`id="${id}"`, 'g')) || []).length, 1, `${id} must be unique`);
   const head = html.split('</head>')[0];
   assert.equal((head.match(/<title>/g) || []).length, 1);
   assert.ok(head.includes(`<title>${title}</title>`));

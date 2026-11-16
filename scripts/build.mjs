@@ -1,3 +1,4 @@
+import { PUBLIC_APP_URL } from '../src/app/filter-permalinks.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
@@ -34,6 +35,7 @@ const order = [
   'src/io/filter-library-client.js',
   'src/io/filter-library-package.js',
   'src/app/filter-catalog.js',
+  'src/app/filter-permalinks.js',
   'src/io/library-backup.js',
   'src/ui/library-backup.js',
   'src/ui/filter-browser.js',
@@ -107,7 +109,7 @@ const cssFilename = `app.${fingerprint(siteCss)}.css`;
 const jsFilename = `app.${fingerprint(bundle)}.js`;
 const standaloneFilename = `chromameld-rgba-v${packageMetadata.version}.html`;
 
-const publicUrl = 'https://anthonychimming.github.io/filter-fabjs/';
+const publicUrl = PUBLIC_APP_URL;
 const socialImage = new URL('assets/social-card.png', publicUrl).href;
 const escapeAttribute = value => value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 const socialTitle = 'ChromaMeld RGBA — Procedural Image Filter Editor';

@@ -1,3 +1,4 @@
+import { parseFilterRoute, updateFilterUrl, publicFilterUrl } from './filter-permalinks.js';
 import { dispatchShortcut } from '../ui/shortcuts.js';
 import { saveExport } from '../io/save-export.js';
 import { LIBRARY_BACKUP_MAX_BYTES, readLibraryBackupSnapshot, createLibraryBackup, serializeLibraryBackup, parseAndValidateBackup, planLibraryMerge, commitLibraryMerge } from '../io/library-backup.js';
@@ -154,6 +155,23 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
   let controlsController,browser,libraryLayout,catalogCache=null,librarySession=null;
   const onlineLibrary=createOnlineLibrarySession({manifestUrl:onlineManifestUrl,fetchImpl:onlineFetchImpl,storage:onlineStorage,preference,onChange:()=>browser?.refreshOnline()});
   const activeDocument={key:null,id:undefined,tags:[],baseline:null,recordBaseline:null,imported:false,importSource:null};
+  let activePublicFilterRef=null,pendingRoute=null,routeGeneration=0,routeSession=null,bootstrapping=true;
+  try{pendingRoute=parseFilterRoute(new URL(location.href));}catch{pendingRoute={invalid:true};}
+  function updatePublicUi(){
+    const copyHidden=!activePublicFilterRef||Boolean(librarySession);
+    $('#copyFilterLinkBtn').hidden=copyHidden;$('#copyFilterLinkHelp').hidden=copyHidden;
+    if(librarySession)$('#copyFilterLinkFallback').hidden=true;
+    $('#filterRouteNotice').hidden=!pendingRoute?.failed;
+    $('#retryFilterRoute').hidden=Boolean(pendingRoute?.invalid);
+  }
+  function commitPublicRef(ref){
+    routeGeneration++;pendingRoute=null;activePublicFilterRef=ref?.source==='builtin'&&ref.id==='pass'?null:ref;
+    $('#copyFilterLinkFallback').hidden=true;
+    if(location.protocol==='http:'||location.protocol==='https:')history.replaceState(history.state,'',updateFilterUrl(new URL(location.href),activePublicFilterRef));
+    updatePublicUi();
+  }
+  function refForEntry(entry){return entry&&['builtin','online'].includes(entry.source)?{source:entry.source,id:entry.key.slice(entry.source.length+1)}:null;}
+
 
   const rendererFactories={
     cpu:()=>new CpuRenderer(workerProgram),
@@ -202,6 +220,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
   function isDirty(){return activeDocument.imported||!activeDocument.key||documentSnapshot()!==activeDocument.baseline;}
   function updateActiveFilterSummary(status){
     const previewEntry=librarySession?.candidateEntry,name=$('#filterName').value.trim()||'Untitled Filter',key=previewEntry?.key||activeDocument.key,source=previewEntry?(previewEntry.source==='online'?'Online preview':previewEntry.source==='builtin'?'Built-in preview':'My Filter preview'):key?.startsWith('builtin:')?'Built-in':key?.startsWith('custom:')?'My Filter':'Unsaved',description=el.description.value.trim();
+    updatePublicUi();
     el.activeFilterName.textContent=name;el.activeFilterSource.textContent=source;el.activeFilterStatus.textContent=status;el.activeFilterDescription.textContent=description||'No description provided.';
     if(!key||previewEntry){el.activeFavorite.hidden=Boolean(previewEntry)||!key;el.activeFavorite.setAttribute('aria-pressed','false');return;}
     const favorite=preference(key).favorite;el.activeFavorite.hidden=false;el.activeFavorite.setAttribute('aria-pressed',String(favorite));el.activeFavorite.textContent=favorite?'★ Favorited':'☆ Favorite';el.activeFavorite.setAttribute('aria-label',`${favorite?'Remove':'Add'} ${name} ${favorite?'from':'to'} favorites`);
@@ -288,7 +307,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
     activeDocument.key=selection||null;activeDocument.id=selection?.startsWith('builtin:')?undefined:next.id;activeDocument.tags=[...next.tags];activeDocument.imported=!selection;activeDocument.importSource=selection?null:importSource;activeDocument.recordBaseline=selection?.startsWith('custom:')?JSON.stringify(definition):null;activeDocument.baseline=documentSnapshot();
   }
   function applyFilter(definition,selection,{importSource=selection?null:'file'}={}){
-    const next=prepareFilter(definition);invalidateLibraryForReplacement();applyPreparedPresentation(next);commitActiveDocument(next,definition,selection,{importSource});refreshTags();updateDocumentHeader({forceSelection:true});markFormulaPending();render();
+    const next=prepareFilter(definition);invalidateLibraryForReplacement();applyPreparedPresentation(next);commitActiveDocument(next,definition,selection,{importSource});if(!bootstrapping)commitPublicRef(selection?.startsWith('builtin:')?{source:'builtin',id:selection.slice(8)}:null);refreshTags();updateDocumentHeader({forceSelection:true});markFormulaPending();render();
   }
 
   function captureLibraryWorkingState(){
@@ -310,10 +329,11 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
     controlsController.syncSliders();refreshTags();updateDocumentHeader({forceSelection:true});
     el.renderBtn.classList.toggle('primary',snapshot.ui.formulaState==='pending');el.formulaEditStatus.dataset.state=snapshot.ui.formulaState;el.formulaEditStatus.textContent=snapshot.ui.formulaText;el.statusDot.className=snapshot.ui.statusClass;el.statusText.textContent=snapshot.ui.statusText;el.renderInfo.textContent=snapshot.ui.renderInfo;el.rendererDiagnostics.dataset.state=snapshot.ui.rendererDiagnosticsState;el.rendererDiagnostics.textContent=snapshot.ui.rendererDiagnosticsText;el.rendererDiagnostics.title=snapshot.ui.rendererDiagnosticsTitle;el.rendererReason.textContent=snapshot.ui.rendererDiagnosticsTitle;el.rendererSummary.dataset.state=snapshot.ui.rendererSummaryState;el.rendererSummary.textContent=snapshot.ui.rendererSummaryText;el.rendererSummary.title=snapshot.ui.rendererSummaryTitle;canvasView.drawView();
   }
-  async function beginLibrarySession(){
+  async function beginLibrarySession({route=false}={}){
+    if(!route&&pendingRoute){routeGeneration++;if(routeSession)invalidateLibraryForReplacement();}
     if(librarySession)return true;
     if(state.isRendering)throw new Error('Wait for the current render to finish before opening the library.');
-    canvasView.endMiddleGesture();librarySession={originalWorkingDocument:captureLibraryWorkingState(),candidateEntry:null,candidateDefinition:null,candidatePrepared:null,candidateRendered:false,requestId:0,packageController:null,rollback:null,stopping:null,downloads:new Map()};thumbnailService.open();return true;
+    canvasView.endMiddleGesture();librarySession={originalWorkingDocument:captureLibraryWorkingState(),candidateEntry:null,candidateDefinition:null,candidatePrepared:null,candidateRendered:false,requestId:0,packageController:null,rollback:null,stopping:null,downloads:new Map()};thumbnailService.open();updatePublicUi();return true;
   }
   async function previewLibraryEntry(entry){
     if(entry.source==='online')return false;
@@ -382,7 +402,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
     await stopLibraryCandidate(session);
     await thumbnailService.close();
     if(state.isRendering)await cancelRender({silent:true});
-    if(librarySession!==session||requestId!==session.requestId)return false;librarySession=null;restoreLibraryWorkingState(session.originalWorkingDocument);return true;
+    if(librarySession!==session||requestId!==session.requestId)return false;librarySession=null;restoreLibraryWorkingState(session.originalWorkingDocument);updatePublicUi();return true;
   }
   async function applyLibraryCandidate(){
     const session=librarySession;if(!session?.candidateEntry||!session.candidatePrepared||!session.candidateRendered)throw new Error('Choose a successfully rendered candidate first.');
@@ -390,7 +410,7 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
       const current=resolveCatalogDefinition(session.candidateEntry);if(!current)throw new Error('This filter was deleted in another tab.');if(JSON.stringify(current)!==JSON.stringify(session.candidateDefinition))throw new Error('This filter changed in another tab. Preview the updated filter before applying it.');
     }
     const requestId=++session.requestId;abortLibraryPackages(session);await thumbnailService.close();if(librarySession!==session||requestId!==session.requestId)return false;librarySession=null;
-    const online=session.candidateEntry.source==='online';commitActiveDocument(session.candidatePrepared,session.candidateDefinition,online?null:session.candidateEntry.key,{importSource:online?'online':null});refreshTags();updateDocumentHeader({forceSelection:true});toast(`${session.candidatePrepared.name} applied`);return true;
+    const online=session.candidateEntry.source==='online';commitActiveDocument(session.candidatePrepared,session.candidateDefinition,online?null:session.candidateEntry.key,{importSource:online?'online':null});commitPublicRef(refForEntry(session.candidateEntry));refreshTags();updateDocumentHeader({forceSelection:true});toast(`${session.candidatePrepared.name} applied`);return true;
   }
 
   function compileAll({cache=true}={}){const key=currentProgramKey();if(cache&&state.lastProgram&&state.lastProgramKey===key){controlsController.updateControlUsage(state.lastProgram);updateRendererDiagnostics(state.lastProgram);return state.lastProgram}const astList=[];let ok=true;el.formulas.forEach(field=>{const box=field.closest('.formula'),icon=$('.formula-state',box),errorElement=$('.formula-error',box);try{astList.push(new Parser(field.value).parse());field.classList.remove('invalid');field.setAttribute('aria-invalid','false');icon.textContent=field.classList.contains('edited')?'•':'✓';icon.classList.remove('bad');icon.classList.toggle('pending',field.classList.contains('edited'));errorElement.textContent='';errorElement.classList.remove('show');}catch(error){ok=false;astList.push(null);field.classList.add('invalid');field.setAttribute('aria-invalid','true');icon.textContent='!';icon.classList.remove('pending');icon.classList.add('bad');errorElement.textContent=`${error.message} at character ${(error.pos??0)+1}`;errorElement.classList.add('show');}});if(!ok){controlsController.updateControlUsage(null);clearRendererDiagnostics('GPU diagnostics unavailable','Fix formula errors to inspect renderer eligibility.');return null;}try{const program=compileFilterProgram(astList,{legacyMath:state.legacyMath});if(cache){state.lastProgram=program;state.lastProgramKey=key}controlsController.updateControlUsage(program);updateRendererDiagnostics(program);return program;}catch(error){console.error('IR compilation failed',error);setStatus(`Compiler error: ${error.message}`,'error');controlsController.updateControlUsage(null);clearRendererDiagnostics('GPU diagnostics unavailable',error.message);return null;}}
@@ -578,9 +598,35 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
       const record=writeLibraryRecord(localStorage,normalizeCustomPresetList,filter,{targetId,expected});adoptSaved(record);toast('Filter saved in this browser');return true;
     }catch(error){organizationError(error);await chooseFilterAction('Could not save filter',[['cancel','Keep editing']],{detail:error.message});return false;}
   }
-  function adoptSaved(record){if(activeDocument.key!==`custom:${record.id}`||!controlStatesEqual(state.controls,state.explore.defaults)){exploreController.reset();controlsController.syncSliders();}activeDocument.key=`custom:${record.id}`;activeDocument.id=record.id;activeDocument.tags=normalizeTags(record.tags);activeDocument.imported=false;activeDocument.importSource=null;activeDocument.recordBaseline=JSON.stringify(record);$('#filterName').value=record.name;activeDocument.baseline=documentSnapshot();refreshTags();populatePresets();}
+  function adoptSaved(record){commitPublicRef(null);if(activeDocument.key!==`custom:${record.id}`||!controlStatesEqual(state.controls,state.explore.defaults)){exploreController.reset();controlsController.syncSliders();}activeDocument.key=`custom:${record.id}`;activeDocument.id=record.id;activeDocument.tags=normalizeTags(record.tags);activeDocument.imported=false;activeDocument.importSource=null;activeDocument.recordBaseline=JSON.stringify(record);$('#filterName').value=record.name;activeDocument.baseline=documentSnapshot();refreshTags();populatePresets();}
 
+  async function resolveRequestedRoute(){
+    const request=pendingRoute;if(!request||request.invalid)return;
+    const generation=++routeGeneration;request.failed=false;updatePublicUi();
+    const current=()=>generation===routeGeneration&&pendingRoute===request;
+    try{
+      if(request.source==='online'){await onlineLibrary.load({retry:true});if(!current())return;}
+      const entry=request.source==='online'?onlineLibrary.getEntries().find(item=>item.key===`online:${request.id}`):catalog().find(item=>item.key===`builtin:${request.id}`);
+      if(!entry)throw new Error('Filter is unavailable');
+      if(state.isRendering)await cancelRender({silent:true});if(!current())return;
+      await beginLibrarySession({route:true});routeSession=librarySession;
+      if(!current())return;
+      if(!await previewLibraryCandidate(entry)||!current())return;
+      await applyLibraryCandidate();routeSession=null;
+    }catch(error){
+      if(!current())return;
+      if(routeSession&&librarySession===routeSession)await cancelLibrarySession();routeSession=null;
+      if(!current())return;request.failed=true;updatePublicUi();
+    }
+  }
   function wire(){
+    $('#copyFilterLinkBtn').onclick=async()=>{if(!activePublicFilterRef||librarySession)return;const url=publicFilterUrl(activePublicFilterRef);try{if(!navigator.clipboard?.writeText)throw new Error('Clipboard unavailable');await navigator.clipboard.writeText(url);toast('Filter link copied');}catch{const fallback=$('#copyFilterLinkFallback'),input=$('#copyFilterLinkText');fallback.hidden=false;input.value=url;input.focus();input.select();}};
+    $('#retryFilterRoute').onclick=()=>void resolveRequestedRoute();
+    $('#browseFilterRoute').onclick=()=>el.searchFilters.click();
+    const cancelPendingForInteraction=event=>{if(!pendingRoute||pendingRoute.failed||event.target.closest('#filterRouteNotice'))return;routeGeneration++;if(routeSession&&librarySession===routeSession)invalidateLibraryForReplacement();routeSession=null;pendingRoute.failed=true;updatePublicUi();};
+    document.addEventListener('pointerdown',cancelPendingForInteraction,true);
+    document.addEventListener('keydown',cancelPendingForInteraction,true);
+
     const modeButtons=$$('#workspaceMode [role="tab"]'),modePanels=$$('[data-mode-panel]');
     function setWorkspaceMode(mode){if(!['explore','author'].includes(mode)||mode===state.workspaceMode)return;state.workspaceMode=mode;document.body.dataset.workspaceMode=mode;modeButtons.forEach(button=>{const selected=button.dataset.workspaceMode===mode;button.setAttribute('aria-selected',String(selected));button.tabIndex=selected?0:-1;});modePanels.forEach(panel=>panel.hidden=panel.dataset.modePanel!==mode);}
     modeButtons.forEach(button=>{button.onclick=()=>setWorkspaceMode(button.dataset.workspaceMode);button.onkeydown=event=>{const index=modeButtons.indexOf(button),offset=event.key==='ArrowRight'?1:event.key==='ArrowLeft'?-1:0,target=event.key==='Home'?0:event.key==='End'?modeButtons.length-1:offset?(index+offset+modeButtons.length)%modeButtons.length:-1;if(target<0)return;event.preventDefault();setWorkspaceMode(modeButtons[target].dataset.workspaceMode);modeButtons[target].focus();};});
@@ -678,7 +724,8 @@ export function initFilterFabApp({onlineManifestUrl=DEFAULT_ONLINE_LIBRARY_MANIF
   }
 
   window.FilterFabJS=Object.freeze({version:'2.10.3',irVersion:IR_VERSION,getLastProgram:()=>state.lastProgram?JSON.parse(JSON.stringify(state.lastProgram)):null,getLastWGSL:()=>state.lastWGSL,getWebGPUAnalysis:()=>state.lastGpuAnalysis?JSON.parse(JSON.stringify(state.lastGpuAnalysis)):null,getRendererDiagnostics:()=>state.lastRendererDiagnostics?JSON.parse(JSON.stringify(state.lastRendererDiagnostics)):null,getThumbnailDiagnostics:()=>thumbnailService.diagnostics(),getRendererPreference:()=>state.rendererPreference,getWorkspaceMode:()=>state.workspaceMode,getLibraryPreviewState:()=>({open:Boolean(librarySession),candidateKey:librarySession?.candidateEntry?.key||null,candidateRendered:Boolean(librarySession?.candidateRendered),activeKey:activeDocument.key,activeId:activeDocument.id,imported:activeDocument.imported,importSource:activeDocument.importSource,baseline:activeDocument.baseline,recordBaseline:activeDocument.recordBaseline})});
-  controlsController.buildSliders();wire();const demo=demoImage();initImage(demo.data,demo.width,demo.height);applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');
-  void replaceStartupDemo({state,initImage,canReplace:()=>!librarySession});
+  controlsController.buildSliders();wire();const demo=demoImage();initImage(demo.data,demo.width,demo.height);applyFilter(presets.find(preset=>preset.id==='pass'),'builtin:pass');bootstrapping=false;
+  const initialGeneration=routeGeneration;
+  void replaceStartupDemo({state,initImage,canReplace:()=>!librarySession&&initialGeneration===routeGeneration}).then(()=>{if(initialGeneration!==routeGeneration)return;if(pendingRoute?.invalid){pendingRoute.failed=true;updatePublicUi();}else if(pendingRoute)void resolveRequestedRoute();});
   return{state,render,applyFilter,loadImageFile,openImageFile};
 }

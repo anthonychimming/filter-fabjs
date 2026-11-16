@@ -10,6 +10,7 @@ const tests = [
   "tests/control-definitions-smoke.mjs",
   "tests/color-groups-smoke.mjs",
   "tests/explore-smoke.mjs",
+  "tests/filter-permalinks-smoke.mjs",
   "tests/app-workflows-smoke.mjs",
   "tests/png-metadata-smoke.mjs",
   "tests/wgsl-compiler-smoke.mjs",

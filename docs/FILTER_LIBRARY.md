@@ -186,3 +186,7 @@ race remains possible. Occupied orphan keys are never reused. Changes since revi
 abort the import. Library cards and counts refresh immediately after import while preserving its
 candidate and browsing context. The Author dropdown refresh waits until the Library
 preview session ends to keep the editor work intact.
+
+## Public filter links
+
+Use **Copy link** on an active built-in or Online filter to share its current published definition. The link opens in ChromaMeld RGBA with authored defaults and the demo image; it does not include your image, edits, or local My Filters. Online filters may change as the catalogue is updated. If a linked filter is unavailable, retry or browse the Library.
