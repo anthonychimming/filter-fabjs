@@ -56,7 +56,7 @@ One downsized immutable source is prepared for each loaded image with a maximum 
 
 Completed pixel buffers use a 48-entry LRU cache. Keys contain the source revision, thumbnail dimensions, and the same math-mode/formula/control render signature used for main render provenance. Formula, control, math-mode, and source changes therefore miss or invalidate the cache; name, author, description, tags, favorites, search, source label, and sort order do not. The cache remains in memory only and is retained across library close for the current source.
 
-Results are paged at 50 entries. Pagination is hidden when the complete result set fits on one page.
+Results are paged at 50 entries. Multi-page results have navigation above the list and a Previous/Next row with the result range after the last card. Either pager starts the new page at the top of the results. The bottom controls focus the first available preview button on the new page without selecting it.
 
 Tags normalize to NFC, trim outer whitespace, collapse internal whitespace, and compare by lowercase identity. They retain their readable label. Each document accepts up to 20 tags of 1–32 Unicode code points. Control and format characters are rejected. Existing-tag suggestions are searchable and bounded to 50.
 
@@ -110,7 +110,7 @@ Run `npm run dev` and open `http://localhost:8080/tests/online-package-browser.h
 - WebGPU and forced-CPU rendering were exercised in the browser; both produced real lazy card thumbnails. Coarse-pointer emulation, physical touch, and screen-reader speech were not tested.
 - The same fixture retains the bounded 1,000-entry performance projection. One generated-standalone run in local Chromium 152 observed a 30.4 ms opening and 12.8 ms p95 query-plus-layout time; timings are local observations, not cross-device guarantees.
 - At the v2.8.7 checkpoint, the catalog contained 52 built-ins, all attributed to Anthony Chimming and all compiling as WebGPU-compatible in the automated suite.
-- The current build is `dist/chromameld-rgba-v2.11.1.html`. Direct `file://` behavior can vary by browser security policy, so localhost remains the supported test path.
+- The current build is `dist/chromameld-rgba-v2.11.2.html`. Direct `file://` behavior can vary by browser security policy, so localhost remains the supported test path.
 
 Run the complete verification workflow with:
 
