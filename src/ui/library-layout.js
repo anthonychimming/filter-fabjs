@@ -6,7 +6,7 @@ export function libraryPresentation(width,height){
 
 export function createLibraryLayout({dialog,inspectorLayout,canvasView,document:doc=globalThis.document,window:win=globalThis.window}){
   const app=doc.querySelector('.app'),workspace=doc.querySelector('.workspace'),stage=doc.getElementById('canvasStage'),head=workspace.querySelector('.topbar'),status=workspace.querySelector('.statusbar');
-  const imageToggle=dialog.querySelector('[data-image-view-toggle]'),libraryHead=dialog.querySelector('.library-head'),actions=dialog.querySelector('.library-actions'),results=dialog.querySelector('.filter-results'),tools=dialog.querySelector('.browser-tools');
+  const imageToggle=dialog.querySelector('[data-image-view-toggle]'),libraryHead=dialog.querySelector('.library-head'),actions=dialog.querySelector('.library-actions'),results=dialog.querySelector('.browser-results-scroll'),tools=dialog.querySelector('.browser-tools');
   let saved=null,resume=null,observer=null,frame=null,imageRequested=false,browsingScroll=null;
   function sync(){
     if(!saved)return;

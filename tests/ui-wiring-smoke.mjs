@@ -178,8 +178,8 @@ assert.match(filterBrowser,/id="filterBrowserTitle">Filter Library</,'filter bro
 assert.match(filterBrowser,/data-cancel>Cancel<[\s\S]*?data-apply disabled>Apply Filter</,'the library exposes explicit Cancel and disabled-until-preview Apply actions');
 assert.match(filterBrowser,/data-entry-action='preview'|dataset\.entryAction='preview'/,'filter cards use a non-committing preview action');
 assert.match(filterBrowser,/dialog\.addEventListener\('cancel',[\s\S]*?cancelAndClose/,'Escape must use the same restoration path as Cancel');
-assert.match(filterBrowser,/pages\.hidden=results\.length<=PAGE_SIZE/,'single-page result sets must hide pagination');
-assert.match(filterBrowser,/new IntersectionObserver\([\s\S]*?root:list,rootMargin:THUMBNAIL_ROOT_MARGIN/, 'visible and near-visible cards must drive thumbnail requests');
+assert.match(filterBrowser,/\[data-pages\].*\.hidden=.*\[data-pages-bottom\].*\.hidden=pageCount===1/,'single-page result sets must hide pagination');
+assert.match(filterBrowser,/new IntersectionObserver\([\s\S]*?root:resultsScroll,rootMargin:THUMBNAIL_ROOT_MARGIN/, 'visible and near-visible cards must drive thumbnail requests');
 assert.match(filterBrowser,/rows\.slice\(0,THUMBNAIL_FALLBACK_COUNT\)/, 'browsers without IntersectionObserver must receive a bounded fallback batch');
 assert.doesNotMatch(filterBrowser,/swatchHue|--swatch-hue/, 'decorative color swatches must no longer represent filter output');
 assert.match(filterBrowser,/filter-thumbnail-image/, 'real thumbnail pixels must render into decorative card canvases');

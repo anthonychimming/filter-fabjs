@@ -2,7 +2,7 @@ const frame=document.querySelector('#app'),output=document.querySelector('#resul
 let requests=0,failNext=true;
 window.fixtureFetch=async(url,options)=>{requests++;if(failNext){failNext=false;return new Response('Fixture unavailable',{status:503});}return fetch(url,options);};
 const standalone=new URLSearchParams(location.search).has('standalone');
-const html=await(await fetch(new URL(standalone?'dist/chromameld-rgba-v2.11.1.html':'index.html',root))).text();
+const html=await(await fetch(new URL(standalone?'dist/chromameld-rgba-v2.11.2.html':'index.html',root))).text();
 const options=`{onlineStorage:null,onlineManifestUrl:${JSON.stringify(manifestUrl)},onlineFetchImpl:(...args)=>parent.fixtureFetch(...args)}`;
 frame.srcdoc=html.replace('<head>',`<head><base href="${root.href}">`).replace(standalone?'initFilterFabApp();':'<script type="module" src="./src/main.js"></script>',standalone?`initFilterFabApp(${options});`:`<script type="module">import {initFilterFabApp} from './src/app/filter-fab-app.js';initFilterFabApp(${options});</script>`);
 const until=async test=>{const end=Date.now()+15000;while(!test()){if(Date.now()>end)throw new Error('Fixture timed out');await new Promise(resolve=>setTimeout(resolve,30));}};
@@ -29,7 +29,7 @@ document.querySelector('#run').onclick=async()=>{
     assert(doc.querySelectorAll('.filter-card').length===localCount&&!$('.filter-library-empty'),'All failure retains local cards');
     change('[data-source]','online');assert($('.filter-library-empty')?.textContent.includes('Could not reach')&&requests===1,'Online-only error remains dedicated');
     change('[data-source]','all');$('[data-online-retry]').click();
-    const focused=$('.filter-card-favorite'),focusKey=focused.dataset.entryKey,list=$('.filter-results');focused.focus({preventScroll:true});list.scrollTop=100;const previousScroll=list.scrollTop;
+    const focused=$('.filter-card-favorite'),focusKey=focused.dataset.entryKey,list=$('.browser-results-scroll');focused.focus({preventScroll:true});list.scrollTop=100;const previousScroll=list.scrollTop;
     await until(()=>$('[data-online-notice]').hidden);
     assert(requests===2,'Retry from All loads controlled fixture without packages');
     assert(doc.activeElement.dataset.entryKey===focusKey&&doc.activeElement.dataset.entryAction==='favorite','All async merge restores focused card action');

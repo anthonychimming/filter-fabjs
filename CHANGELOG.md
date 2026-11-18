@@ -6,6 +6,11 @@
 - Validate bounded backups before writes; guard cross-tab changes and preserve the collection on quota failures. Backup dialogs preserve active preview and editing sessions.
 
 
+## 2.11.2
+
+- Add Previous and Next controls with a result range below each page of Filter Library results.
+- Announce page changes, keep keyboard focus in the Library during catalogue refreshes, and restore the page and scroll position when returning from View Image.
+
 ## 2.11.1
 
 - Restore Online filter favorites and clarify Active Filter status.

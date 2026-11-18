@@ -116,14 +116,14 @@ async function run(url){
   }catch(error){output.textContent+=`FAIL ${error.stack}\n`;}
   finally{for(const key of Object.keys(localStorage).filter(key=>key==='ffw-custom-presets'||key.startsWith('ffw-entry-v1:')))localStorage.removeItem(key);for(const [key,value] of backup)localStorage.setItem(key,value);}
 }
-document.querySelector('#run').onclick=()=>run('../index.html');document.querySelector('#standalone').onclick=()=>run('../dist/chromameld-rgba-v2.11.1.html');
+document.querySelector('#run').onclick=()=>run('../index.html');document.querySelector('#standalone').onclick=()=>run('../dist/chromameld-rgba-v2.11.2.html');
 
 async function inspectLayout(width,height){
   const frame=document.createElement('iframe');frame.style.width=`${width}px`;frame.style.height=`${height}px`;frame.src='../index.html';document.querySelector('#fixture').replaceChildren(frame);await new Promise(resolve=>frame.onload=resolve);
   const doc=frame.contentDocument;await until(()=>frame.contentWindow.FilterFabJS&&!doc.body.classList.contains('ui-locked'));doc.querySelector('#browseFiltersBtn').click();await until(()=>doc.querySelector('.filter-browser[open]'));
   output.textContent=`Layout viewport ${doc.documentElement.clientWidth} × ${doc.documentElement.clientHeight} CSS px\n`;
   const dialog=doc.querySelector('.filter-browser'),bounds=dialog.getBoundingClientRect();assert(bounds.left>=0&&bounds.right<=width&&bounds.top>=0&&bounds.bottom<=height,'dialog remains inside viewport');
-  for(const selector of ['[data-close]','[data-search]','[data-reset]','.filter-results','.library-actions']){dialog.querySelector(selector).scrollIntoView({block:'nearest'});const box=dialog.querySelector(selector).getBoundingClientRect();assert(box.top>=bounds.top-1&&box.bottom<=bounds.bottom+1,`${selector} remains reachable`);}assert(dialog.querySelector('.browser-pages').hidden,'single-page layout keeps pagination hidden');
+  for(const selector of ['[data-close]','[data-search]','[data-reset]','.browser-results-scroll','.library-actions']){dialog.querySelector(selector).scrollIntoView({block:'nearest'});const box=dialog.querySelector(selector).getBoundingClientRect();assert(box.top>=bounds.top-1&&box.bottom<=bounds.bottom+1,`${selector} remains reachable`);}assert(dialog.querySelector('.browser-pages').hidden,'single-page layout keeps pagination hidden');
 }
 document.querySelector('#narrow').onclick=()=>inspectLayout(320,800).catch(error=>output.textContent+=`FAIL ${error.message}`);
 document.querySelector('#zoom').onclick=()=>inspectLayout(640,360).catch(error=>output.textContent+=`FAIL ${error.message}`);

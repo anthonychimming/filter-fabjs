@@ -4,7 +4,7 @@ Implemented against `main`, HEAD `42067cb` (v2.9.5). No commit, push, merge or d
 
 ## Baseline and structure
 
-The native modal is a 520px desktop drawer, a 76dvh bottom sheet below 920px, and full height below 560px or at short heights. The header, discovery controls, pagination and footer consume space outside the results. They are flex siblings, not sticky rows. `.filter-results` is the scrolling `ul` and remains the `IntersectionObserver` root with a 180px preload margin. Discovery has its own overflow when expanded. Native dialog cancellation invokes the explicit restoration path; backdrop clicks do not close it. Desktop opens with Search focused and close returns focus to the launcher.
+The native modal is a 520px desktop drawer, a 76dvh bottom sheet below 920px, and full height below 560px or at short heights. The header, discovery controls, top pagination and footer sit outside the results scroller. The `.browser-results-scroll` wrapper contains the semantic results list and bottom pager and serves as the `IntersectionObserver` root with a 180px preload margin. Discovery has its own overflow when expanded. Native dialog cancellation invokes the explicit restoration path; backdrop clicks do not close it. Desktop opens with Search focused and close returns focus to the launcher.
 
 Old compact rows reserved large thumbnails, wrapped metadata and tags, and switched to full-width 90px thumbnails below 560px. A stacked footer and separately reserved pagination further reduced browsing space. At 778 × 622 the available dialog height was 472.72px: 268.13px above results, 82.14px below, leaving 122.45px of results and no complete card.
 
