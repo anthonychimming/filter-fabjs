@@ -79,4 +79,4 @@ The new native-float-only `sdfRoundedBox()` uses pixel coordinates, full width/h
 sdfOutline(sdfRoundedBox(x,y,X/2,Y/2,X-32,Y-32,16,0),3,1)*255
 ```
 
-The CPU helper returns positive `1e20` on nonfinite input/intermediates. The GPU uses conservative, dimension-aware producer admission and may fall back to CPU for unproved or out-of-range inputs; the existing CPU work budget still applies. See [Formula Reference](FORMULA_REFERENCE.md) and [Gate 3 hard-edge numerical review criterion](GATE3_HARD_EDGE_ACCEPTANCE_POLICY.md). This function is not in the currently public v2.11.2 build.
+The CPU helper returns positive `1e20` on nonfinite input/intermediates. The GPU uses conservative, dimension-aware producer admission and may fall back to CPU for unproved or out-of-range inputs; the existing CPU work budget still applies. See [Formula Reference](FORMULA_REFERENCE.md) and [Gate 3 hard-edge numerical review criterion](../GATE3_HARD_EDGE_ACCEPTANCE_POLICY.md). This function is not in the currently public v2.11.2 build.
