@@ -357,7 +357,7 @@ sdfFill(sdfRoundedBox(x,y,X/2,Y/2,X-32,Y-32,18,val(0,0,256)))*255
 
 The CPU helper returns the positive finite sentinel `1e20` if an evaluated input or an intermediate is nonfinite. This is **outside-like**, not a universally empty result under negation or signed-distance subtraction. The GPU analyzer admits this function only when its argument producers can be shown finite and bounded; it may refuse geometry exceeding the supported envelope or invalid contributing controls. Auto mode then uses the existing CPU fallback, subject to its work budget.
 
-WebGPU uses f32 arithmetic and the Worker uses JavaScript numbers. At extremely close hard-fill boundaries their **0/255 classifications may differ**, even when the scalar distance satisfies the accepted numerical bounds. The Gate 3 [hard-edge review policy](GATE3_HARD_EDGE_ACCEPTANCE_POLICY.md) defines the test-only one-local-f32-ULP criterion; it does **not** add a runtime epsilon or change `sdfFill()`/`sdfBox()`. `sdfRoundedBox()` is **native-float-only** and is rejected in historic AFS/legacy integer mode.
+WebGPU uses f32 arithmetic and the Worker uses JavaScript numbers. At extremely close hard-fill boundaries their **0/255 classifications may differ**, even when the scalar distance satisfies the accepted numerical bounds. The Gate 3 [hard-edge review policy](../GATE3_HARD_EDGE_ACCEPTANCE_POLICY.md) defines the test-only one-local-f32-ULP criterion; it does **not** add a runtime epsilon or change `sdfFill()`/`sdfBox()`. `sdfRoundedBox()` is **native-float-only** and is rejected in historic AFS/legacy integer mode.
 
 ## 11. Blend functions
 
