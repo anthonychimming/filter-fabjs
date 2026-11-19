@@ -54,6 +54,15 @@ The Phase 3.5 WebGPU subset covers supported deterministic stateless operations:
 
 The CPU renderer remains the compatibility backend for legacy integer-mode AFS filters, bitwise/shift/comma expressions, and operations with sequential or shared mutable state (`rnd()`, `rst()`, `get()`, and `put()`).
 
+### Pending additive scalar intrinsics — Gate 4 staging
+
+`sdfRoundedBox()` and `hue1024()` are unreleased native-float additions. Both keep the existing parser-to-typed-IR v1-to-renderer pipeline and native JSON v2 format; neither is available in historic legacy math mode. All other functions retain their current behavior.
+
+Numerical eligibility remains the authority of `WGSLCompiler.analyze()`, not IR metadata. The rounded-box producer check uses effective source dimensions, validated contributing controls, bounded finite argument producers and dimension-scoped compatibility cache entries. Direct GPU plan use must reject stale admission when dimensions or contributing control validity change, even if the shader pipeline is warm. Hue admission is independent of dimensions and only admits conservatively proven encoded-byte producers. Unsupported expressions retain explicit CPU fallback and the existing work budget; no new general-purpose numeric proof system is introduced.
+
+The rounded-box CPU helper uses a positive finite `1e20` nonfinite sentinel. The GPU uses f32 precision, and CPU/GPU hard coverage may differ at extremely close boundaries. The accepted [Gate 3 hard-edge criterion](GATE3_HARD_EDGE_ACCEPTANCE_POLICY.md) is a **test review policy**, not a runtime change to `sdfFill()` or older SDF helpers. The full suite and physical Intel Iris Xe testing were performed on the separate accepted runtime branch; this documentation-only staging branch does not itself contain the new functions.
+
+
 ## Filter library
 
 `core/filter-metadata.js` owns bounded tags, portable identity validation, and metadata comparison. `app/filter-catalog.js` projects metadata, searches/ranks cached catalog entries, persists per-entry local preferences, and checks target baselines before ID-based writes. `ui/filter-browser.js` owns the visual drawer, search/cards, lazy visibility observation, and action dialogs. The app owns the temporary library session: it snapshots the working presentation, rendered pixels, active saved/imported identity, saved-content baseline, and source-record baseline before any candidate is shown. Candidate presentation and rendering reuse normal validation and renderer-generation protection but do not commit identity or persistence. Apply promotes the prepared candidate; Cancel restores the snapshot without rerendering.
