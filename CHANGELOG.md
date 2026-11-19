@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Pending code integration:** add native-float `sdfRoundedBox()` (rounded-rectangle signed pixel distance) and `hue1024()` (encoded RGB hue in 1024 angle units) to CPU Worker and WebGPU. These APIs are not present in the public v2.11.2 release.
+- Add bounded, conservative WebGPU producer admission for the new calls, with dimension-aware geometry cache decisions, contributing-control checks and explicit CPU fallback; retain the 3-billion-unit CPU work guard.
+- Document the validated Intel Iris Xe hardware results, including f32/f64 near-boundary hard-fill differences covered by the [Gate 3 review criterion](docs/GATE3_HARD_EDGE_ACCEPTANCE_POLICY.md). Preserve existing SDF, AFS, JSON v2, typed IR v1 and filter-library behavior.
+- Do not migrate existing built-in or Online Library formulas; older app versions cannot read formulas containing the new function names.
+
+
 - Add Filter Library Manage menu with full My Filters JSON backup and reviewed merge-only restore, favorites, deterministic conflict copies and repeat-import deduplication.
 - Validate bounded backups before writes; guard cross-tab changes and preserve the collection on quota failures. Backup dialogs preserve active preview and editing sessions.
 
