@@ -124,7 +124,7 @@ For hardware parity, run `npm run dev` and open `http://localhost:8080/tests/web
 - CPU and GPU floating-point implementations may have small numerical differences.
 - Historic Filter Factory behavior is not guaranteed to be bit-exact for every edge case.
 - Clipboard interoperability depends on the browser and receiving application.
-- Display ranges are linear; logarithmic curves, enums, colour controls, grouping, conditional visibility, and control reordering are not part of v2.10.1.
+- Display-range mapping remains linear; logarithmic response curves, general-purpose enums, conditional visibility, and arbitrary control reordering are not documented current capabilities. Since v2.10.3, author-configured RGB color groups provide a color picker, hex entry, expandable channel controls, and a group lock using existing mutation locks.
 
 ## Explore and Author workspace
 
@@ -132,11 +132,13 @@ The inspector opens in Explore, where the active filter summary, Open Filter Lib
 
 ## Filter Library and organization (2.9.0)
 
-The unified browser offers All local (default), Built-in, My Filters and Online. Online uses the separate published catalogue, initially five filters at libraryVersion 2. Online cards show standardized Samples; selecting one previews against the current image. Apply creates an imported unsaved filter, Save creates an independent My Filter, and Download PNG returns the portable package. Favorites never install filters. Last-known-good catalogue metadata survives reload, validated packages are reused in the page session, and failed requests offer Retry without discarding good metadata. See [Filter Library](FILTER_LIBRARY.md) for cache boundaries and error handling.
+The unified browser offers All, All local, Built-in, My Filters and Online, with All as the opening default. Online uses the separate published catalogue, initially five filters at libraryVersion 2. Online cards show standardized Samples; selecting one previews against the current image. Apply creates an imported unsaved filter, Save creates an independent My Filter, and Download PNG returns the portable package. Favorites never install filters. Last-known-good catalogue metadata survives reload, validated packages are reused in the page session, and failed requests offer Retry without discarding good metadata. See [Filter Library](FILTER_LIBRARY.md) for cache boundaries and error handling.
+
+Since v2.11.2, multi-page result sets expose explicit Previous and Next controls with a result range; page changes are announced, focus remains in the Library, and View Image/Back to Filters restores page and scroll position. Since v2.11.0, built-in and Online filters also support public links to published defaults.
 
 Open Filter Library presents visual cards in a canvas-visible desktop drawer and a narrow-screen bottom sheet. Text search, source/favorite/tag restrictions, A–Z/relevance order, and bounded 50-entry paging remain available; pagination is omitted when one page is sufficient. Visible and near-visible local cards progressively replace neutral placeholders with real source-based filter thumbnails. The isolated thumbnail renderer uses one 160-pixel-class source, concurrency one, main-render suspension, generation guards, and a render-semantic 48-entry LRU; thumbnail failures remain local to their cards. Card selection separately validates and renders the authoritative main-canvas candidate while leaving the saved/imported identity, dirty baselines, and browser storage unchanged. Apply Filter commits the selected candidate. Cancel, Close, or Escape cancels stale rendering and restores the exact opening editor/pixel snapshot. The compact filter dropdown remains available in Author as an intentional direct-switch mechanism and retains its existing immediate replacement semantics.
 
-All 48 built-ins carry curated tags and identify Anthony Chimming as author. Custom tags are portable; favorites and built-in personal additions persist locally by stable namespaced ID and remain separate actions that do not preview a card. Import and reset continue to replace the current draft immediately without an unsaved-changes warning. Deleting a custom filter immediately rebuilds both the dropdown and library catalog. ID-based save/copy decisions, explicit imported drafts, source-baseline conflict checks, and failure feedback remain in place. See [FILTER_LIBRARY.md](FILTER_LIBRARY.md) for the validation record and remaining limitations.
+All 48 built-ins carry curated tags and identify Anthony Chimming as author in the current built-in source (`BUILTIN_AUTHOR` in `src/presets/builtins.js`); this is distinct from authorship metadata in the separately published Online Filter Library. Custom tags are portable; favorites and built-in personal additions persist locally by stable namespaced ID and remain separate actions that do not preview a card. Import and reset continue to replace the current draft immediately without an unsaved-changes warning. Deleting a custom filter immediately rebuilds both the dropdown and library catalog. ID-based save/copy decisions, explicit imported drafts, source-baseline conflict checks, and failure feedback remain in place. See [FILTER_LIBRARY.md](FILTER_LIBRARY.md) for the validation record and remaining limitations.
 
 ## Stage B conditional optimization (2.8.5b)
 
@@ -147,7 +149,9 @@ Expensive GPU ternaries now emit scoped `if/else`, including nested branch and l
 The compiler now shares eligible deterministic, channel-independent expensive call subtrees required unconditionally in multiple output channels. It preserves Stage B guards, CPU budgeting, fallback, IR v1, native formats, and the single-pass renderer. All 18 Stage C browser fixtures match CPU and unshared GPU output; the historical Stage C full-suite hardware result was 82/86 with the four baseline discrepancies documented in Stage B. The current v2.9.0 reference gate is 84/85 as recorded above. Paired heavy-region GPU measurements show a benefit on the tested backend; timings remain observational. See [Stage C report](FRACTAL_STAGE_C.md).
 
 
-## My Filters backup and restore
+## My Filters backup and restore (unreleased in current changelog)
+
+This workflow is present in the current repository tree but appears under **Unreleased** in `CHANGELOG.md`; verify the deployed site before describing it as publicly available.
 
 Open **Filter Library → Manage → Export backup** to prepare one JSON file containing
 all saved My Filters, including controls and their presentation, authoring metadata,
