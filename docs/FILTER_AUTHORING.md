@@ -1,6 +1,6 @@
 # Filter FabJS Filter Authoring Guide
 
-**Applies to ChromaMeld RGBA v2.11.2**
+**Applies to ChromaMeld RGBA v2.12.0**
 
 This guide is for designing new Filter FabJS filters efficiently and with predictable CPU/WebGPU behavior. It assumes the formula syntax in [FORMULA_REFERENCE.md](FORMULA_REFERENCE.md).
 
@@ -818,9 +818,9 @@ If a group containing a toggle is removed while its canonical value is non-binar
 
 The group lock controls the existing locks for its three channels. A dash indicates a mixture of locked and unlocked channels; activating it locks all three. Locks protect channels from Mutate while manual edits remain available. Locks are part of the Explore session, not saved filter metadata.
 
-## Pending native-float intrinsics — Gate 4 staging
+## Native-float intrinsics — v2.12.0
 
-Two additional scalar functions have passed controlled Intel Iris Xe hardware validation but are **not available in public v2.11.2**. Wait for the first release containing them before publishing a dependent built-in or Online Library filter. Native JSON remains v2; older readers reject unknown function names instead of silently substituting behavior.
+These two scalar functions require ChromaMeld RGBA **v2.12.0**. Intel Iris Xe hardware validation passed under the documented numerical policy. Wait until the v2.12.0 reader is deployed before publishing a dependent built-in or Online Library filter. Native JSON remains v2; older readers reject unknown function names instead of silently substituting behavior.
 
 **Rounded-box distance:** `sdfRoundedBox(x,y,cx,cy,width,height,radius,rotation)` returns signed pixel distance (negative inside). Convert to a mask explicitly, and account for the function's conservative WebGPU finite-producer rule.
 

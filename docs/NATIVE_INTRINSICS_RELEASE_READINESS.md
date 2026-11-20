@@ -1,12 +1,12 @@
-# Native procedural intrinsics — release readiness (unreleased)
+# Native procedural intrinsics — v2.12.0 release readiness
 
-**Status:** Unreleased combined Gate 4 candidate. Both functions passed Gate 3 under the documented numerical policy on a physical Intel Iris Xe. Neither function is present on public `main` v2.11.2. Do not merge or deploy without the final integration checks and explicit release approval.
+**Status:** v2.12.0 release candidate, unmerged and undeployed. Both functions passed Gate 3 under the documented numerical policy on a physical Intel Iris Xe. Public `main` remains v2.11.2 until the merge/deployment are separately authorized.
 
 ## Scope and versioning
 
 - Add native-float scalar `sdfRoundedBox(x,y,cx,cy,width,height,radius,rotation)` and `hue1024(r,g,b)` to the existing four-channel expression language.
 - Preserve native filter JSON **v2**, typed IR **v1**, historic AFS/legacy math, renderer interfaces, installed libraries and existing built-in/Online Library filter definitions.
-- These functions have **not yet received an introducedVersion**. Assign the first released app version when the integrated build is approved. As of v2.11.2, these identifiers are unknown and importing a dependent native filter fails validation. Format v2 compatibility does not imply support for future function names.
+- The minimum compatible app reader is **v2.12.0**. The prior v2.11.2 reader rejects either identifier; do not add a serialized `introducedVersion` field to native JSON v2. Format v2 compatibility does not imply support for future function names.
 - A minor v2.x release is appropriate; do **not** present this change as a Phase 4 graph-engine upgrade or native format v3.
 
 ## Authoring and API
@@ -27,9 +27,9 @@
 
 ## Release integration checks (must be performed on the combined runtime + docs branch)
 
-1. Starting from accepted local `fix/gate3r-parity` tip `63b63878a6676a4939176fd1fc6d7cd789c61a47`, apply the documentation changes from the isolated Gate 4 staging branch. **Do not replace or rebase away the accepted runtime corrections**. Record the final combined SHA.
+1. Review the remote release-candidate branch against the audited v2.11.2 baseline and the accepted Gate 4 patch. Confirm the exact 28 reviewed source blob hashes remain identical and record the final candidate SHA.
 2. Verify parser arities 8/3; native-only mode guard; Worker/WGSL implementations; direct WebGPU numeric admission and cache/source-swap behavior; unchanged CPU work limit; no built-in or online formula migrations.
-3. Test that every new documentation example parses/compiles in the final build. Confirm the canonical functions and their `introducedVersion` in docs and release notes reflect the actual first shipped app version.
+3. Test that every new documentation example parses/compiles in the final build. Confirm user-facing documentation identifies v2.12.0 as the minimum reader; do not change native JSON/typed IR format versions or introduce serialized version fields.
 4. Run both dedicated suites, fresh `npm run verify`, build-output checks and representative browser regressions on the **combined** commit. Confirm existing v1/v2 JSON, PNG metadata and historic `.afs` roundtrips remain unchanged.
 5. Retest an older compatible reader's handling of a new-function file and Online Library preview/apply failure. Ensure an error is explicit and the previous preview/active document is retained; do not publish new-name filters until consumers can update.
 6. Confirm the Gate 3 acceptance policy and evidence can be found in the repository. Record the known pre-existing Mandelbrot browser-parity failure separately; it was identical on Gate 3 baseline/remediation and is **not** a new-intrinsic regression.
@@ -40,8 +40,8 @@
 - Audited app baseline: `a83b9e819f62dd1a1f8194ae51f69f6a4312ebc6` (v2.11.2).
 - Gate 2B: `b63f144f3cfb12a34fa60eea92a887de7308176b`; Gate 2C: `83c2677fa37ba07af5cfdf320ae935c400fa9aac`.
 - Gate 3R tested runtime commit: `7e57c540de69d4c8bac7a2a7ad5034de5c670326`; final acceptance documentation tip: `63b63878a6676a4939176fd1fc6d7cd789c61a47`.
-- `GATE3_FINAL_ACCEPTANCE_REPORT.md` and `Gate3-final-acceptance-evidence.zip` were supplied for Gate 4 review. Tests reported a full `npm run verify` PASS and physical hardware evidence; **the documentation staging branch alone has not run runtime regression suites**.
+- `GATE3_FINAL_ACCEPTANCE_REPORT.md` and `Gate3-final-acceptance-evidence.zip` were supplied for Gate 4 review. Tests reported a full `npm run verify` PASS and physical hardware evidence; **the accepted combined Gate 4 code underwent full regression tests; the new v2.12.0 metadata commit still requires fresh verification**.
 
 ## Release decision
 
-**Not release-ready solely by creating this documentation.** Release approval requires a clean combined source branch, full verification on that combined SHA, a documented minimum app version and explicit authorization to merge and publish.
+**Release candidate only.** Approval to merge/publish requires a clean combined v2.12.0 branch, fresh verification on its final SHA, a reviewed PR and explicit authorization to merge and deploy.

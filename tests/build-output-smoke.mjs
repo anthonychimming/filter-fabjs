@@ -10,10 +10,10 @@ const packageMetadata = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 const siteHtml = fs.readFileSync('dist/site/index.html', 'utf8');
 const standalonePath = `dist/chromameld-rgba-v${packageMetadata.version}.html`;
 const standaloneHtml = fs.readFileSync(standalonePath, 'utf8');
-assert.equal(packageMetadata.version, '2.11.2');
-assert.ok(siteHtml.includes('ChromaMeld RGBA v2.11.2 — Help'));
-assert.ok(standaloneHtml.includes('ChromaMeld RGBA v2.11.2 — Help'));
-assert.ok(standaloneHtml.includes("version:'2.11.2'"));
+assert.equal(packageMetadata.version, '2.12.0');
+assert.ok(siteHtml.includes('ChromaMeld RGBA v2.12.0 — Help'));
+assert.ok(standaloneHtml.includes('ChromaMeld RGBA v2.12.0 — Help'));
+assert.ok(standaloneHtml.includes("version:'2.12.0'"));
 
 const title = 'ChromaMeld RGBA — Free Procedural Image Filter Editor';
 const description = 'Create and explore procedural image filters in your browser. Customize RGBA formulas, preview effects, and export PNGs with optional WebGPU acceleration.';

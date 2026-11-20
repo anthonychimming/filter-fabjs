@@ -1,6 +1,6 @@
 # Architecture
 
-ChromaMeld RGBA v2.11.2 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
+ChromaMeld RGBA v2.12.0 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
 
 ```text
 Formula text
@@ -54,9 +54,9 @@ The Phase 3.5 WebGPU subset covers supported deterministic stateless operations:
 
 The CPU renderer remains the compatibility backend for legacy integer-mode AFS filters, bitwise/shift/comma expressions, and operations with sequential or shared mutable state (`rnd()`, `rst()`, `get()`, and `put()`).
 
-### Pending additive scalar intrinsics — Gate 4 staging
+### Native-float scalar intrinsics — v2.12.0
 
-`sdfRoundedBox()` and `hue1024()` are unreleased native-float additions. Both keep the existing parser-to-typed-IR v1-to-renderer pipeline and native JSON v2 format; neither is available in historic legacy math mode. All other functions retain their current behavior.
+`sdfRoundedBox()` and `hue1024()` are additive native-float functions introduced in v2.12.0. Both keep the existing parser-to-typed-IR v1-to-renderer pipeline and native JSON v2 format; neither is available in historic legacy math mode. All other functions retain their current behavior.
 
 Numerical eligibility remains the authority of `WGSLCompiler.analyze()`, not IR metadata. The rounded-box producer check uses effective source dimensions, validated contributing controls, bounded finite argument producers and dimension-scoped compatibility cache entries. Direct GPU plan use must reject stale admission when dimensions or contributing control validity change, even if the shader pipeline is warm. Hue admission is independent of dimensions and only admits conservatively proven encoded-byte producers. Unsupported expressions retain explicit CPU fallback and the existing work budget; no new general-purpose numeric proof system is introduced.
 
@@ -165,7 +165,7 @@ The separate `filter-fabjs-library` repository supplies the static feed. The mai
 
 ## Development branch · native rounded-box distance
 
-The minimum reader is the first future application release containing this branch. Stock v2.11.2 rejects the name. The numeric release identifier remains unassigned until release qualification. Do not distribute filters that depend on the function to older readers.
+The minimum reader is v2.12.0. Stock v2.11.2 rejects the name. Do not distribute filters that depend on the function to older readers.
 
 `sdfRoundedBox(x,y,cx,cy,width,height,radius,rotation)` returns a scalar signed distance in pixels in native float mode. Extents are full dimensions. Their signs and the radius sign are ignored, and the radius cannot exceed the smaller half-extent. Positive rotation is clockwise, with 1,024 units per turn. Zero-area shapes keep their valid segment or point boundary. The Worker returns +0 for a valid zero and positive finite 1e20 for invalid inputs or nonfinite arithmetic. An ordinary hard fill treats the sentinel as outside; negation and other downstream composition can change that interpretation.
 
