@@ -90,9 +90,9 @@ Automatic CPU fallback is a core compatibility guarantee. Never remove it, hide 
 
 ## Built-in presets
 
-`src/presets/builtins.js` exports data definitions containing an id, display name, eight control values, eight labels, and four formulas. The application sorts them for display, validates and compiles them through the same public formula pipeline, and keeps custom presets separately in browser storage.
+`src/presets/builtins.js` assembles built-in definitions (including contributed and later preset groups). Native built-ins have four channel formulas and normalized control definitions for the ten-control engine, including optional presentation metadata. The application validates and compiles them through the same formula pipeline and keeps custom presets separately in browser storage.
 
-There are currently 28 native built-ins, and all are expected to pass WebGPU compatibility analysis. Do not add preset-specific renderer flags or bypass parser/IR validation. A new or changed built-in must compile as a four-channel native float program, use valid controls, remain CPU/GPU compatible unless explicitly approved otherwise, and receive focused test coverage.
+There are currently 48 native built-ins, and all are expected to pass WebGPU compatibility analysis. Do not add preset-specific renderer flags or bypass parser/IR validation. A new or changed built-in must compile as a four-channel native float program, use valid controls, remain CPU/GPU compatible unless explicitly approved otherwise, and receive focused test coverage.
 
 The compatibility storage keys `ffw-renderer` and `ffw-custom-presets` must be preserved unless an explicit migration is designed and approved.
 
@@ -106,7 +106,7 @@ Treat every imported filter, formula, metadata field, image, and clipboard paylo
 - Exactly four non-empty formula strings, each subject to parser resource limits.
 - Native JSON must be an object with `format: "filter-fab-js"` and version 1 or 2.
 - Native v1 defaults to legacy math; native v2 defaults to float math. Both may specify only `float` or `legacy`.
-- At most eight controls. Values must be finite numbers from 0 through 255; labels are bounded to 80 characters.
+- At most ten native controls (older eight-control files are normalized with defaults). Values must be finite numbers from 0 through 255; labels are bounded to 80 characters. Optional per-control `ui` metadata and native `colorGroups` are validated and normalized; consult `src/core/controls.js` and `src/io/filter-format.js` for the current schema.
 - Names and authors are strings bounded to 120 characters.
 - AFS input must have a supported `%RGB` header, at least eight control lines, and four formulas reconstructed by the current grouping algorithm. That algorithm takes the first four non-empty separated groups when at least four exist, or otherwise accumulates lines using parenthesis depth. AFS controls are parsed with `Number.parseInt`, clamped to 0-255, and formulas use the same parser budgets.
 - BOM and line-ending normalization, multiline AFS reconstruction, and historic `\\r`/`\\n` continuation handling are compatibility behavior.
@@ -133,11 +133,9 @@ Correctness and backward compatibility take priority over refactoring. Preserve,
 
 Behavior-preserving modularization is acceptable only when it is necessary for the requested task and covered by existing or new tests. Do not combine semantic changes with broad cleanup.
 
-## Future architectural direction
+## Current execution boundary
 
-The currently implemented execution unit is one four-output typed-IR program: the CPU backend evaluates it in one worker render, while the WebGPU backend uses one compute dispatch. The repository source and checked-in documentation do not currently contain a pass graph, node editor, material-output model, persisted graph schema, or detailed design for those systems.
-
-Pass graphs, a node editor, and material outputs are stated future direction for Codex work, not current capabilities. Do not invent their data model or preemptively refactor the current engine for them during unrelated work. When such work is explicitly requested, begin with a scoped design grounded in the renderer-neutral compiler boundary and preserve the existing four-channel formula path, JSON/AFS compatibility, validation limits, cancellation behavior, and automatic CPU fallback. Any new persisted or imported graph/material representation requires explicit versioning, validation, resource limits, compatibility tests, and a migration strategy before implementation.
+The implemented execution unit is one four-output typed-IR program: the CPU backend evaluates the program in one worker render, while WebGPU renders it with one compute dispatch. Do not infer support for multiple chained passes or intermediate-image processing from the current renderer-neutral interface. Avoid speculative architectural refactors during unrelated work. Any explicitly approved future execution-model change must preserve established formula, JSON/AFS, validation, cancellation, diagnostic, and CPU-fallback contracts, with separately reviewed persistence and compatibility requirements.
 
 ## Development workflow
 
