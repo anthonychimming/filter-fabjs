@@ -1,6 +1,6 @@
 # Filter FabJS Filter Authoring Guide
 
-**Applies to ChromaMeld RGBA v2.11.2**
+**Applies to ChromaMeld RGBA v2.12.0**
 
 This guide is for designing new Filter FabJS filters efficiently and with predictable CPU/WebGPU behavior. It assumes the formula syntax in [FORMULA_REFERENCE.md](FORMULA_REFERENCE.md).
 
@@ -817,3 +817,23 @@ Native version 2 JSON can carry optional presentation metadata such as `"colorGr
 If a group containing a toggle is removed while its canonical value is non-binary, the exported control carries `"preserveToggleValue": true` so this value survives reload. The toggle still switches to 0 or 255 when directly operated. The v2.10.1 reader at commit 1937737 ignores this marker and normalizes the value; other older versions may do the same, so keep a copy of the original when exchanging files with older versions.
 
 The group lock controls the existing locks for its three channels. A dash indicates a mixture of locked and unlocked channels; activating it locks all three. Locks protect channels from Mutate while manual edits remain available. Locks are part of the Explore session, not saved filter metadata.
+
+## Native-float intrinsics — v2.12.0
+
+These two scalar functions require ChromaMeld RGBA **v2.12.0**. Intel Iris Xe hardware validation passed under the documented numerical policy. Wait until the v2.12.0 reader is deployed before publishing a dependent built-in or Online Library filter. Native JSON remains v2; older readers reject unknown function names instead of silently substituting behavior.
+
+**Rounded-box distance:** `sdfRoundedBox(x,y,cx,cy,width,height,radius,rotation)` returns signed pixel distance (negative inside). Convert to a mask explicitly, and account for the function's conservative WebGPU finite-producer rule.
+
+```text
+sdfFill(sdfRoundedBox(x,y,X/2,Y/2,X-32,Y-32,18,0))*255
+```
+
+**Hue angle:** `hue1024(r,g,b)` returns the wrapped encoded-RGB hue in `0..1024` angle units, with a half-open upper bound. RGB arguments are clamped to 0–255 on CPU. Exact gray and nonfinite inputs return red hue (`+0`), which can activate red-selection masks. For legacy six-sector formulas, the unit-preserving substitution is `(hue1024(r,g,b)*6/1024)`, **not** bare `hue1024(r,g,b)`.
+
+```text
+floor(hue1024(r,g,b)*6/1024)
+```
+
+**GPU limitation:** Hue WebGPU eligibility currently requires provably encoded-byte arguments, such as direct `r/g/b`, integral byte literals or safe nested min/max/clamp; arbitrary calculated fractional inputs may run on CPU. Rounded-box GPU eligibility depends on provable finite geometry, effective source dimensions and required controls. In Auto mode an unsupported producer falls back to the Worker, which may refuse large programs under the 3-billion-unit work budget.
+
+**Hard-edge caveat:** f32 GPU and f64 Worker computations can produce opposite 0/255 classifications very near an SDF boundary. This is documented and measured rather than hidden by a runtime epsilon. See [Gate 3 hard-edge criterion](../GATE3_HARD_EDGE_ACCEPTANCE_POLICY.md). Preserve historic `.afs` legacy math; both new functions are rejected there. Do not automatically rewrite existing built-in or online filters.

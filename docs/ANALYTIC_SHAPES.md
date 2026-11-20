@@ -43,6 +43,7 @@ For reusable boolean geometry and smooth joins, Phase 3.5C exposes signed-distan
 | `sdfLine(x,y,ax,ay,bx,by,width)` | Signed distance to a stroked line segment. |
 | `sdfCircle(x,y,cx,cy,radius)` | Signed distance to a circle. |
 | `sdfBox(x,y,cx,cy,width,height,rotation)` | Signed distance to a rotated rectangle. |
+| `sdfRoundedBox(x,y,cx,cy,width,height,radius,rotation)` | **v2.12.0:** signed distance to a rounded, rotated rectangle; radius is clamped to the smaller half-extent. |
 | `sdfUnion(a,b)` | Exact union. |
 | `sdfIntersect(a,b)` | Exact intersection. |
 | `sdfSubtract(a,b)` | Remove `b` from `a`. |
@@ -69,3 +70,13 @@ sdfFill(
 Domain warping remains ordinary coordinate composition. For example, pass noise-offset `x` and `y` expressions into an SDF primitive before composing the field. The built-in **Warped SDF Contour Vortex** demonstrates coordinate warping without adding loops, mutable state, intermediate textures, or another execution model.
 
 The built-in **Sierpiński Fractal** uses `sierpinski()` for genuine repeated structure. **Warped SDF Contour Vortex** demonstrates distance-field contours with deterministic coordinate warping. Both remain stateless and GPU-compatible.
+
+## Rounded-box behavior — v2.12.0
+
+The new native-float-only `sdfRoundedBox()` uses pixel coordinates, full width/height, a corner radius, and 1024 angle units per turn. A radius of `0` is geometrically equivalent to `sdfBox()`, but f32 GPU rounding can change hard-fill coverage at an extremely close boundary. Zero width or height has no area interior. Convert distances to masks with `sdfFill()` or `sdfOutline()`; neither existing helper has changed.
+
+```text
+sdfOutline(sdfRoundedBox(x,y,X/2,Y/2,X-32,Y-32,16,0),3,1)*255
+```
+
+The CPU helper returns positive `1e20` on nonfinite input/intermediates. The GPU uses conservative, dimension-aware producer admission and may fall back to CPU for unproved or out-of-range inputs; the existing CPU work budget still applies. See [Formula Reference](FORMULA_REFERENCE.md) and [Gate 3 hard-edge numerical review criterion](../GATE3_HARD_EDGE_ACCEPTANCE_POLICY.md). This function requires a v2.12.0 reader; older v2.11.2 releases do not recognize it.

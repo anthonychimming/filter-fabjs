@@ -5,6 +5,7 @@ import { presets } from '../src/presets/builtins.js';
 import { CpuRenderer } from '../src/renderers/cpu-renderer.js';
 import { workerProgram } from '../src/renderers/cpu-worker-source.js';
 import { WebGpuRenderer } from '../src/renderers/webgpu-renderer.js';
+import { checkProceduralBoundaries } from './procedural-hard-boundaries.js';
 import { fractalParityFixtures, fractalWorkloads, conditionalFractalFixtures, conditionalFractalWorkloads } from './fractal-fixtures.js';
 
 const summary = document.querySelector('#summary');
@@ -92,6 +93,8 @@ async function run() {
   const gpu = new WebGpuRenderer();
   let passed = 0;
   try {
+    await checkProceduralBoundaries(cpu, gpu);
+    passed++;
     await Promise.all([
       cpu.setSource(source, width, height),
       gpu.setSource(source, width, height)
@@ -126,7 +129,7 @@ async function run() {
     cpu.dispose();
     gpu.dispose();
   }
-  const fixtureCount=fixtures.length+benchmarkFixtures.length,ok = passed === fixtureCount;
+  const fixtureCount=fixtures.length+benchmarkFixtures.length+1,ok = passed === fixtureCount;
   summary.className = ok ? 'pass' : 'fail';
   summary.textContent = `${passed}/${fixtureCount} fixtures passed on actual WebGPU hardware.`;
 }

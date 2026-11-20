@@ -3,7 +3,7 @@
  * Modular source extracted from v2.0.7; modular architecture v2.1.0.
  * Licensed GPL-2.0-or-later. See LICENSE and README.md.
  */
-import { WGSLCompiler, WGSLCompileError } from '../gpu/wgsl-compiler.js';
+import { usesRoundedBox, invalidControlMask, snapshotControls, NumericAdmissionError, WGSLCompiler, WGSLCompileError } from '../gpu/wgsl-compiler.js';
 import { CONTROL_COUNT, DEFAULT_CONTROL_VALUE } from '../core/controls.js';
 import { WEBGPU_CONTROL_SLOT_COUNT, WEBGPU_PARAMS_BYTES } from '../gpu/params-layout.js';
 import { RendererBackend, RenderCancelledError } from './renderer-backend.js';
@@ -40,18 +40,23 @@ export class WebGpuRenderer extends RendererBackend{
   clearPipelineCache(){this.pipelineCache.clear();this.pipelineCacheBytes=0}
   cachedPipeline(key){const entry=this.pipelineCache.get(key);if(!entry)return null;this.pipelineCache.delete(key);this.pipelineCache.set(key,entry);return entry}
   rememberPipeline(plan,pipeline,deviceGeneration=this.deviceGeneration){const prior=this.pipelineCache.get(plan.key);if(prior){this.pipelineCache.delete(plan.key);this.pipelineCacheBytes-=prior.cacheBytes}const cacheBytes=pipelineEntryBytes(plan);if(cacheBytes>MAX_PIPELINE_CACHE_BYTES)return;this.pipelineCache.set(plan.key,{plan,pipeline,deviceGeneration,cacheBytes});this.pipelineCacheBytes+=cacheBytes;while(this.pipelineCache.size>MAX_PIPELINES||this.pipelineCacheBytes>MAX_PIPELINE_CACHE_BYTES){const oldestKey=this.pipelineCache.keys().next().value,oldest=this.pipelineCache.get(oldestKey);this.pipelineCache.delete(oldestKey);this.pipelineCacheBytes-=oldest.cacheBytes}}
-  planFor(program,analysis){const key=WGSLCompiler.key(program),entry=this.cachedPipeline(key);return entry?.plan||WGSLCompiler.compile(program,analysis)}
+  planFor(program,analysis,controls){
+    if(usesRoundedBox(program)||program?.metadata?.functions?.includes('hue1024')){
+      analysis=WGSLCompiler.analyze(program,{width:this.width,height:this.height,invalidControls:invalidControlMask(controls)});
+      if(!analysis.compatible)throw new NumericAdmissionError('GPU subset: '+analysis.blockers.join(', '));
+    }
+    const key=WGSLCompiler.key(program),entry=this.cachedPipeline(key);return entry?.plan||WGSLCompiler.compile(program,analysis)}
   async pipelineFor(plan){
     const cached=this.cachedPipeline(plan.key);if(cached?.pipeline&&cached.deviceGeneration===this.deviceGeneration&&this.device)return cached.pipeline;const device=await this.ensureDevice(),generation=this.deviceGeneration;device.pushErrorScope('validation');let pipeline,pipelineError=null,validationError=null;
     try{const module=device.createShaderModule({label:'Filter FabJS generated WGSL',code:plan.code});const info=await module.getCompilationInfo?.();const failures=info?.messages?.filter(message=>message.type==='error')||[];if(failures.length)throw new WGSLCompileError(failures.map(message=>`${message.lineNum}:${message.linePos} ${message.message}`).join('\n'));pipeline=device.createComputePipelineAsync?await device.createComputePipelineAsync({label:'Filter FabJS compute pipeline',layout:'auto',compute:{module,entryPoint:'main'}}):device.createComputePipeline({label:'Filter FabJS compute pipeline',layout:'auto',compute:{module,entryPoint:'main'}})}catch(error){pipelineError=error}
     try{validationError=await device.popErrorScope()}catch(error){if(!pipelineError)pipelineError=error}
     if(device!==this.device||generation!==this.deviceGeneration)throw new RenderCancelledError('WebGPU device changed during pipeline creation');if(pipelineError?.name==='WGSLCompileError')throw pipelineError;if(validationError)throw new WebGPUValidationError(validationError.message);if(pipelineError)throw pipelineError;this.rememberPipeline(plan,pipeline,generation);return pipeline;
   }
-  render(args){const token=this.cancelVersion,job=this.operationQueue.then(()=>this.performRender(args,token));this.operationQueue=job.catch(()=>{});return job}
+  render(args){if(usesRoundedBox(args.program))args={...args,controls:snapshotControls(args.controls)};const token=this.cancelVersion,job=this.operationQueue.then(()=>this.performRender(args,token));this.operationQueue=job.catch(()=>{});return job}
   async performRender({program,controls,onProgress,webgpuAnalysis},token){
     this.assertGeneration(token);if(!this.source||!this.width||!this.height)throw new Error('WebGPU source is not initialized');const start=performance.now();this.active=true;
     try{
-      const plan=this.planFor(program,webgpuAnalysis);this.lastShader=plan.code;this.onCompile?.({wgsl:plan.code,analysis:plan.analysis});const device=await this.ensureSourceBuffers(token);if(token!==this.cancelVersion||device!==this.device)throw new RenderCancelledError();const pipeline=await this.pipelineFor(plan);if(token!==this.cancelVersion||device!==this.device)throw new RenderCancelledError();
+      const plan=this.planFor(program,webgpuAnalysis,controls);this.lastShader=plan.code;this.onCompile?.({wgsl:plan.code,analysis:plan.analysis});const device=await this.ensureSourceBuffers(token);if(token!==this.cancelVersion||device!==this.device)throw new RenderCancelledError();const pipeline=await this.pipelineFor(plan);if(token!==this.cancelVersion||device!==this.device)throw new RenderCancelledError();
       const sourceBuffer=this.sourceBuffer,outputBuffer=this.outputBuffer,readbackBuffer=this.readbackBuffer,paramsBuffer=this.paramsBuffer;if(!sourceBuffer||!outputBuffer||!readbackBuffer||!paramsBuffer)throw new Error('WebGPU source buffers were lost before dispatch');if(readbackBuffer.mapState==='mapped')readbackBuffer.unmap();this.writeParams(device,paramsBuffer,0,this.height,controls);
       const bindGroup=device.createBindGroup({layout:pipeline.getBindGroupLayout(0),entries:[{binding:0,resource:{buffer:sourceBuffer}},{binding:1,resource:{buffer:outputBuffer}},{binding:2,resource:{buffer:paramsBuffer}}]}),encoder=device.createCommandEncoder({label:'Filter FabJS GPU frame'}),pass=encoder.beginComputePass();pass.setPipeline(pipeline);pass.setBindGroup(0,bindGroup);pass.dispatchWorkgroups(Math.ceil(this.width/8),Math.ceil(this.height/8));pass.end();encoder.copyBufferToBuffer(outputBuffer,0,readbackBuffer,0,this.width*this.height*4);device.queue.submit([encoder.finish()]);
       try{await readbackBuffer.mapAsync(GPUMapMode.READ,0,this.width*this.height*4)}catch(error){if(token!==this.cancelVersion||device!==this.device)throw new RenderCancelledError();throw error}if(token!==this.cancelVersion||device!==this.device){try{if(readbackBuffer.mapState==='mapped')readbackBuffer.unmap()}catch{}throw new RenderCancelledError()}let raw;try{raw=readbackBuffer.getMappedRange(0,this.width*this.height*4).slice(0)}finally{if(readbackBuffer.mapState==='mapped')readbackBuffer.unmap()}onProgress?.({row:this.height,total:this.height,pct:100});return{pixels:new Uint8ClampedArray(raw),ms:performance.now()-start,backend:this.id,label:this.label};

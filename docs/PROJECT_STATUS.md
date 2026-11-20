@@ -4,7 +4,7 @@ This document describes the implementation currently present in the public repos
 
 ## Release
 
-- Application version: **2.11.2**
+- Application version: **2.12.0** (release candidate; public deployment pending)
 - Native filter format: **version 2**
 - Typed IR: **version 1**
 - Development layout: native ES modules
@@ -44,6 +44,12 @@ The current formula engine includes:
 - Finite-depth Sierpiński masks with coherent barycentric child folding and feathered outer and internal edges.
 - Several blend modes.
 - Legacy Filter Factory functions used by imported AFS filters.
+
+### v2.12.0 native-float procedural intrinsics
+
+The v2.12.0 candidate adds `sdfRoundedBox(x,y,cx,cy,width,height,radius,rotation)` for rounded-rectangle signed pixel distances and `hue1024(r,g,b)` for encoded-RGB hue in 1024 angle units. Both are rejected in legacy integer/AFS mode. The public minimum reader for saved formulas using these identifiers will be **v2.12.0** once deployed; v2.11.2 rejects them. The native file format remains v2 and typed IR remains v1. Existing built-in and Online Library formulas are unchanged.
+
+The GPU uses conservative finite-producer rules for the new functions, dimension-dependent rounded-box checks, contributing-control validity checks, and an explicit CPU fallback subject to the existing work budget. The physical Intel Iris Xe results satisfy the [Gate 3 numerical acceptance criterion](../GATE3_HARD_EDGE_ACCEPTANCE_POLICY.md), which allows only separately recorded extremely near-boundary hard-edge differences within both accuracy bounds. One adapter does not guarantee universal GPU parity or performance gains.
 
 ## WebGPU compatibility
 

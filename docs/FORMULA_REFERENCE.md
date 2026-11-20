@@ -1,10 +1,12 @@
 # ChromaMeld RGBA Formula Reference
 
-**Applies to ChromaMeld RGBA v2.11.2 · native filter format v2 · typed IR v1**
+**Applies to ChromaMeld RGBA v2.12.0 · native filter format v2 · typed IR v1**
 
 This is the compact, implementation-oriented reference for writing ChromaMeld RGBA formulas. For worked explanations and tutorials, see the [Filter FabJS Programming Guide (PDF)](Filter_FabJS_Programming_Guide_v2.4.7.pdf). For analytic mask details, see [ANALYTIC_SHAPES.md](ANALYTIC_SHAPES.md).
 
 The shipping parser in `src/core/formula-language.js`, CPU evaluator in `src/renderers/cpu-worker-source.js`, and WebGPU compiler in `src/gpu/wgsl-compiler.js` are the implementation source of truth.
+
+**Version compatibility:** `sdfRoundedBox()` and `hue1024()` require the **v2.12.0** reader. The public v2.11.2 application does not recognize them; do not distribute dependent filters until v2.12.0 has been deployed. Native JSON remains v2 and typed IR remains v1.
 
 ## 1. Formula model
 
@@ -208,6 +210,21 @@ For unit direction vectors, use radius `1`:
 x+r2x(val(0,0,1024),1)*20
 ```
 
+### Encoded RGB hue — introduced in v2.12.0
+
+`hue1024(r,g,b)` returns an angle in **[0,1024)**, where red is 0, yellow is 1024/6, green is 1024/3, cyan is 512, blue is 2048/3, and magenta is 2560/3. Arguments are encoded RGB values (normally 0–255); the function clamps each finite input to 0–255 and preserves fractional values. Exact grayscale and any nonfinite input return **positive zero**. Equal maxima resolve red first, then green, then blue. Gray and invalid inputs therefore represent red hue rather than a special “no hue” code.
+
+Use `hue1024(r,g,b)` for a continuous cyclic hue coordinate. To replace an existing six-sector calculation **without changing its units**, use `(hue1024(r,g,b)*6/1024)`. For byte RGB inputs, the admitted GPU implementation was exhaustively tested with `floor(hue1024(r,g,b)*6/1024)` on Intel Iris Xe; arbitrary fractional upstream calculations do not have the same GPU-admission guarantee.
+
+```text
+R: hue1024(r,g,b)/1024*255
+G: g
+B: b
+A: a
+```
+
+The WebGPU analyzer admits only proven byte producers for hue arguments: source `r/g/b`, integral 0–255 constants, or recursively safe `min`, `max` and `clamp` constructions. Other native-float producers remain valid for CPU execution but may receive an explicit GPU fallback reason. `hue1024()` is **not available in historic AFS/legacy integer mode**.
+
 ## 8. Noise, fractals, and procedural fields
 
 These deterministic functions return normalized values in approximately `0..1` and are WebGPU-compatible.
@@ -304,6 +321,7 @@ Signed-distance primitives return pixel distances rather than masks: values are 
 | `sdfLine(x,y,ax,ay,bx,by,width)` | Distance to a stroked line segment; `width` is the full stroke width |
 | `sdfCircle(x,y,cx,cy,radius)` | Distance to a filled circle |
 | `sdfBox(x,y,cx,cy,width,height,rotation)` | Distance to a rotated rectangle; rotation uses 1024 units/turn |
+| `sdfRoundedBox(x,y,cx,cy,width,height,radius,rotation)` | **v2.12.0** native-float rounded-rectangle signed distance; pixels, 1024 units/turn |
 | `sdfUnion(a,b)` | Exact union: `min(a,b)` |
 | `sdfIntersect(a,b)` | Exact intersection: `max(a,b)` |
 | `sdfSubtract(a,b)` | Remove field `b` from field `a`: `max(a,-b)` |
@@ -328,6 +346,18 @@ sdfFill(
   1
 )*255
 ```
+
+#### Rounded-box signed distance — introduced in v2.12.0
+
+`sdfRoundedBox(x,y,cx,cy,width,height,radius,rotation)` returns **distance in pixels**, not a mask. Coordinates and dimensions use pixels; rotation uses **1024 units per turn**. Negative width, height and radius are treated as absolute values, and radius is clamped to half the smaller extent. Radius 0 is geometrically equivalent to `sdfBox()`; a zero dimension produces a line-segment/point degeneracy without area interior. A mathematically exact boundary returns zero; `sdfFill()` covers distances ≤0.
+
+```text
+sdfFill(sdfRoundedBox(x,y,X/2,Y/2,X-32,Y-32,18,val(0,0,256)))*255
+```
+
+The CPU helper returns the positive finite sentinel `1e20` if an evaluated input or an intermediate is nonfinite. This is **outside-like**, not a universally empty result under negation or signed-distance subtraction. The GPU analyzer admits this function only when its argument producers can be shown finite and bounded; it may refuse geometry exceeding the supported envelope or invalid contributing controls. Auto mode then uses the existing CPU fallback, subject to its work budget.
+
+WebGPU uses f32 arithmetic and the Worker uses JavaScript numbers. At extremely close hard-fill boundaries their **0/255 classifications may differ**, even when the scalar distance satisfies the accepted numerical bounds. The Gate 3 [hard-edge review policy](../GATE3_HARD_EDGE_ACCEPTANCE_POLICY.md) defines the test-only one-local-f32-ULP criterion; it does **not** add a runtime epsilon or change `sdfFill()`/`sdfBox()`. `sdfRoundedBox()` is **native-float-only** and is rejected in historic AFS/legacy integer mode.
 
 ## 11. Blend functions
 
@@ -380,6 +410,8 @@ WebGPU rejects:
 - bitwise operators and shifts;
 - unary `~`;
 - comma sequencing.
+
+The v2.12.0 `sdfRoundedBox()` and `hue1024()` additions have additional conservative finite-producer rules on WebGPU, even when surrounding operations are generally supported. Invalid/unknown producers explicitly fall back to CPU, and the existing image-scaled CPU work budget still applies.
 
 In **Auto** mode, unsupported formulas fall back to the CPU Worker.
 

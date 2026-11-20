@@ -20,6 +20,8 @@ const tests = [
   "tests/webgpu-renderer-smoke.mjs",
   "tests/renderer-manager-smoke.mjs",
   "tests/analytic-shapes-smoke.mjs",
+  "tests/sdf-rounded-box-smoke.mjs",
+  "tests/hue1024-smoke.mjs",
   "tests/canvas-view-smoke.mjs",
   "tests/canvas-navigation-smoke.mjs",
   "tests/thumbnail-service-smoke.mjs",

@@ -3,7 +3,7 @@
  * Modular source extracted from v2.0.7; modular architecture v2.1.0.
  * Licensed GPL-2.0-or-later. See LICENSE and README.md.
  */
-import { WGSLCompiler } from '../gpu/wgsl-compiler.js';
+import { WGSLCompiler, usesRoundedBox, invalidControlMask, snapshotControls, NumericAdmissionError } from '../gpu/wgsl-compiler.js';
 import { RenderCancelledError } from './renderer-backend.js';
 import { WebGpuRenderer } from './webgpu-renderer.js';
 
@@ -28,9 +28,11 @@ export class RendererManager{
   async syncSource(id,renderer){const source=this.source,width=this.width,height=this.height,version=this.sourceVersion;await renderer.setSource(source,width,height);if(version===this.sourceVersion)this.instanceVersions.set(id,version)}
   async get(id){let renderer=this.instances.get(id);if(!renderer){const factory=this.factories[id];if(!factory)throw new Error(`Unknown renderer backend “${id}”`);renderer=factory();this.instances.set(id,renderer)}while(this.source&&this.instanceVersions.get(id)!==this.sourceVersion){let sync=this.syncPromises.get(id);if(!sync){sync={version:this.sourceVersion,promise:this.syncSource(id,renderer)};this.syncPromises.set(id,sync)}try{await sync.promise}catch(error){if(sync.version===this.sourceVersion)throw error}finally{if(this.syncPromises.get(id)===sync)this.syncPromises.delete(id)}}return renderer}
   programKey(program){return WGSLCompiler.key(program)}
-  analyze(program){const key=this.programKey(program),cached=this.analysisCache.get(key);if(cached){this.analysisCache.delete(key);this.analysisCache.set(key,cached);return cached}const analysis=WGSLCompiler.analyze(program),bytes=analysisEntryBytes(key,analysis);if(bytes<=MAX_ANALYSIS_CACHE_BYTES){this.analysisCache.set(key,analysis);this.analysisCacheBytes+=bytes;while(this.analysisCache.size>MAX_ANALYSES||this.analysisCacheBytes>MAX_ANALYSIS_CACHE_BYTES){const oldestKey=this.analysisCache.keys().next().value,oldest=this.analysisCache.get(oldestKey);this.analysisCache.delete(oldestKey);this.analysisCacheBytes-=analysisEntryBytes(oldestKey,oldest)}}return analysis}
-  diagnose(program,preference='auto'){
-    const analysis=this.analyze(program),gpuReason=!analysis.compatible?`GPU subset: ${analysis.blockers.slice(0,3).join(', ')}`:WebGpuRenderer.unavailableReason()||this.gpuFailure(program),gpuEligible=!gpuReason,forcedCpu=preference==='cpu';
+  analyze(program,controls){
+    const scoped=usesRoundedBox(program),context=scoped?{width:this.width,height:this.height,invalidControls:invalidControlMask(controls)}:undefined;
+    const key=(scoped?context.width+'x'+context.height+'/'+context.invalidControls+'|':'')+this.programKey(program),cached=this.analysisCache.get(key);if(cached){this.analysisCache.delete(key);this.analysisCache.set(key,cached);return cached}const analysis=WGSLCompiler.analyze(program,context),bytes=analysisEntryBytes(key,analysis);if(bytes<=MAX_ANALYSIS_CACHE_BYTES){this.analysisCache.set(key,analysis);this.analysisCacheBytes+=bytes;while(this.analysisCache.size>MAX_ANALYSES||this.analysisCacheBytes>MAX_ANALYSIS_CACHE_BYTES){const oldestKey=this.analysisCache.keys().next().value,oldest=this.analysisCache.get(oldestKey);this.analysisCache.delete(oldestKey);this.analysisCacheBytes-=analysisEntryBytes(oldestKey,oldest)}}return analysis}
+  diagnose(program,preference='auto',controls){
+    const analysis=this.analyze(program,controls),gpuReason=!analysis.compatible?`GPU subset: ${analysis.blockers.slice(0,3).join(', ')}`:WebGpuRenderer.unavailableReason()||this.gpuFailure(program),gpuEligible=!gpuReason,forcedCpu=preference==='cpu';
     return{analysis,preference,rendererId:forcedCpu||!gpuEligible?'cpu':'webgpu',mode:forcedCpu?'cpu-selected':gpuEligible?'gpu-eligible':'cpu-fallback',gpuCompatible:analysis.compatible,gpuEligible,gpuReason,operationCount:Number(program?.metadata?.nodeCount)||0,passes:1};
   }
   gpuFailure(program){
@@ -48,16 +50,21 @@ export class RendererManager{
   assertCurrent(isCurrent){if(typeof isCurrent==='function'&&!isCurrent())throw new RenderCancelledError()}
   throwIfCancelled(error,isCurrent){if(error?.name==='RenderCancelledError')throw error;this.assertCurrent(isCurrent)}
   progressHandler(onProgress,isCurrent){return message=>{if(typeof isCurrent==='function'&&!isCurrent())return;onProgress?.(message)}}
-  async select(program,preference='auto',isCurrent){
-    const diagnostic=this.diagnose(program,preference),analysis=diagnostic.analysis;
+  async select(program,preference='auto',isCurrent,controls){
+    const diagnostic=this.diagnose(program,preference,controls),analysis=diagnostic.analysis;
     if(preference==='cpu'){const renderer=await this.get('cpu');this.assertCurrent(isCurrent);this.active=renderer;return{renderer,analysis,fallbackReason:''}}
     let reason=diagnostic.gpuReason;
     if(!reason){try{const renderer=await this.get('webgpu');this.assertCurrent(isCurrent);this.active=renderer;return{renderer,analysis,fallbackReason:''}}catch(error){this.throwIfCancelled(error,isCurrent);console.warn('WebGPU initialization failed; using CPU',error);reason=error.message||'WebGPU initialization failed'}}
     const renderer=await this.get('cpu');this.assertCurrent(isCurrent);this.active=renderer;return{renderer,analysis,fallbackReason:reason};
   }
   async renderWithFallback({program,preference='auto',id,controls,legacyMath,onProgress,onSelection,isCurrent}){
+    if(usesRoundedBox(program)){
+      controls=snapshotControls(controls);
+      const version=this.sourceVersion,callerIsCurrent=isCurrent;
+      isCurrent=()=>this.sourceVersion===version&&(!callerIsCurrent||callerIsCurrent());
+    }
     let selection;
-    try{selection=await this.select(program,preference,isCurrent)}catch(error){this.throwIfCancelled(error,isCurrent);throw error}
+    try{selection=await this.select(program,preference,isCurrent,controls)}catch(error){this.throwIfCancelled(error,isCurrent);throw error}
     this.assertCurrent(isCurrent);onSelection?.(selection,{runtimeFallback:false,gpuError:null});
     const args={id,program,controls,legacyMath,webgpuAnalysis:selection.analysis,onProgress:this.progressHandler(onProgress,isCurrent)};
     try{
@@ -65,6 +72,13 @@ export class RendererManager{
     }catch(gpuError){
       this.throwIfCancelled(gpuError,isCurrent);
       if(selection.renderer.id!=='webgpu')throw gpuError;
+      if(gpuError instanceof NumericAdmissionError){
+        const renderer=await this.get('cpu');this.assertCurrent(isCurrent);this.active=renderer;
+        selection={renderer,analysis:this.analyze(program,controls),fallbackReason:gpuError.message};
+        onSelection?.(selection,{runtimeFallback:false,gpuError:null});
+        const result=await renderer.render({...args,webgpuAnalysis:selection.analysis});
+        this.assertCurrent(isCurrent);return {...selection,result,gpuError:null,runtimeFallback:false};
+      }
       console.error('WebGPU render failed; retrying on CPU',gpuError);this.rememberGpuFailure(program,selection.renderer,gpuError);
       let cpu;
       try{cpu=await this.get('cpu');this.assertCurrent(isCurrent)}catch(cpuInitError){this.throwIfCancelled(cpuInitError,isCurrent);throw this.fallbackError(gpuError,cpuInitError)}

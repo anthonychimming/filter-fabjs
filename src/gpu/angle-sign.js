@@ -2,7 +2,7 @@
 import { CONTROL_COUNT } from '../core/controls.js';
 // These CPU operations produce +0 when their result is zero (absolute values,
 // nonnegative masks/samples, clamping against +0, or cancellation of magnitudes).
-const POSITIVE_ZERO_CALLS=new Set('src src0 src1 srcWrap srcMirror srcLinear rad rad0 rad1 map abs sub dif sqr sqrt cos c2m radius step smoothstep fract bias gain hash2 valueNoise perlin worleyF1 worleyF2 fbm turbulence ridged periodicNoise mandelbrot julia wrap mirror repeat mirrorRepeat linearGrad radialGrad angularGrad checker brick line circle ring box triangle grid sierpinski sdfLine sdfCircle sdfBox sdfFill sdfOutline multiply screen overlay softLight difference'.split(' '));
+const POSITIVE_ZERO_CALLS=new Set('src src0 src1 srcWrap srcMirror srcLinear rad rad0 rad1 map abs sub dif sqr sqrt cos c2m radius step smoothstep fract bias gain hash2 valueNoise perlin worleyF1 worleyF2 fbm turbulence ridged periodicNoise mandelbrot julia wrap mirror repeat mirrorRepeat linearGrad radialGrad angularGrad checker brick line circle ring box triangle grid sierpinski sdfLine sdfCircle sdfBox sdfRoundedBox hue1024 sdfFill sdfOutline multiply screen overlay softLight difference'.split(' '));
 const and=(a,b)=>a==='false'||b==='false'?'false':a==='true'?b:b==='true'?a:`(${a} && ${b})`;
 const or=(a,b)=>a==='true'||b==='true'?'true':a==='false'?b:b==='false'?a:`(${a} || ${b})`;
 const not=a=>a==='true'?'false':a==='false'?'true':`(!${a})`;

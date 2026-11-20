@@ -6,6 +6,13 @@
 - Validate bounded backups before writes; guard cross-tab changes and preserve the collection on quota failures. Backup dialogs preserve active preview and editing sessions.
 
 
+## 2.12.0
+
+- Add native-float `sdfRoundedBox()` (rounded-rectangle signed pixel distance) and `hue1024()` (encoded RGB hue in 1024 angle units) to the CPU Worker and WebGPU; formulas using either name require v2.12.0 or later.
+- Add conservative finite-producer GPU admission, dimension-aware rounded-box caching, contributing-control validation and explicit CPU fallback; keep the existing 3-billion-unit CPU work guard.
+- Document numerical parity on Intel Iris Xe under the [Gate 3 hard-edge criterion](GATE3_HARD_EDGE_ACCEPTANCE_POLICY.md). Near exact hard edges CPU and GPU may still differ in coverage; no universal multi-adapter parity or speedup is claimed.
+- Preserve native JSON v2, typed IR v1, historic AFS behaviour and existing built-in/Online Library formulas; do not publish dependent filters until the compatible reader is deployed.
+
 ## 2.11.2
 
 - Add Previous and Next controls with a result range below each page of Filter Library results.

@@ -39,6 +39,39 @@ function shapeMask(distance,feather){feather=Math.max(0,Math.abs(feather));if(di
 function segmentDistance(px,py,ax,ay,bx,by){const dx=bx-ax,dy=by-ay,den=dx*dx+dy*dy;if(den<=1e-12)return Math.hypot(px-ax,py-ay);const t=clamp(((px-ax)*dx+(py-ay)*dy)/den,0,1);return Math.hypot(px-(ax+dx*t),py-(ay+dy*t))}
 function lineDistance(px,py,ax,ay,bx,by,width){return segmentDistance(px,py,ax,ay,bx,by)-Math.abs(width)/2}
 function circleDistance(px,py,cx,cy,radius){return Math.hypot(px-cx,py-cy)-Math.abs(radius)}
+function hue1024(r,g,b){
+  if(!Number.isFinite(r)||!Number.isFinite(g)||!Number.isFinite(b))return 0;
+  r=clamp(r,0,255);g=clamp(g,0,255);b=clamp(b,0,255);
+  const peak=Math.max(r,g,b),chroma=peak-Math.min(r,g,b);
+  if(chroma===0)return 0;
+  let sector;
+  if(peak===r)sector=(g-b)/chroma;
+  else if(peak===g)sector=2+(b-r)/chroma;
+  else sector=4+(r-g)/chroma;
+  if(sector<0)sector+=6;
+  const angle=sector*1024/6;
+  return angle>0&&angle<1024?angle:0;
+}
+function roundedBoxDistance(x,y,cx,cy,width,height,radius,rotation){
+  const invalid=1e20;
+  if(!Number.isFinite(x)||!Number.isFinite(y)||!Number.isFinite(cx)||!Number.isFinite(cy)||!Number.isFinite(rotation)||
+     !Number.isFinite(width)||!Number.isFinite(height)||!Number.isFinite(radius))return invalid;
+  const halfWidth=Math.abs(width)/2,halfHeight=Math.abs(height)/2;
+  const r=Math.min(Math.abs(radius),halfWidth,halfHeight);
+  const dx=x-cx,dy=y-cy;
+  const turn=rotation%1024;
+  let u=dx,v=dy;
+  if(turn%256===0){
+    // A half turn preserves both absolute coordinates. A quarter turn swaps them.
+    if(turn%512!==0){u=dy;v=dx;}
+  }else{
+    const angle=turn*(2*Math.PI/1024),co=Math.cos(angle),si=Math.sin(angle);
+    u=co*dx+si*dy;v=-si*dx+co*dy;
+  }
+  const qx=Math.abs(u)-(halfWidth-r),qy=Math.abs(v)-(halfHeight-r);
+  const distance=Math.hypot(Math.max(qx,0),Math.max(qy,0))+Math.min(Math.max(qx,qy),0)-r;
+  return Number.isFinite(distance)?distance||0:invalid;
+}
 function boxDistance(px,py,cx,cy,width,height,rotation){const angle=rotation*Math.PI*2/1024,co=Math.cos(angle),si=Math.sin(angle),dx=px-cx,dy=py-cy,qx=Math.abs(co*dx+si*dy)-Math.abs(width)/2,qy=Math.abs(-si*dx+co*dy)-Math.abs(height)/2;return Math.hypot(Math.max(qx,0),Math.max(qy,0))+Math.min(Math.max(qx,qy),0)}
 function smoothUnionDistance(a,b,radius){const k=Math.abs(radius);if(k===0)return Math.min(a,b);const h=clamp(0.5+0.5*(b-a)/k,0,1);return b+(a-b)*h-k*h*(1-h)}
 function lineMask(px,py,ax,ay,bx,by,width,feather){return shapeMask(lineDistance(px,py,ax,ay,bx,by,width),feather)}
@@ -75,11 +108,11 @@ case'mandelbrot':return fractalEscape2(0,0,A(0),A(1),A(2));case'julia':return fr
 case'wrap':case'repeat':return coordWrap(A(0),A(1));case'mirror':case'mirrorRepeat':return coordMirror(A(0),A(1));case'gradient3':{const t=clamp(A(0),0,1);return t<=0.5?A(1)+(A(2)-A(1))*t*2:A(2)+(A(3)-A(2))*(t*2-1)}case'gradient4':{const t=clamp(A(0),0,1);if(t<=1/3)return A(1)+(A(2)-A(1))*t*3;if(t<=2/3)return A(2)+(A(3)-A(2))*(t*3-1);return A(3)+(A(4)-A(3))*(t*3-2)}
 case'linearGrad':{const dx=A(4)-A(2),dy=A(5)-A(3),den=dx*dx+dy*dy;return den?clamp(((A(0)-A(2))*dx+(A(1)-A(3))*dy)/den,0,1):0}case'radialGrad':return clamp(1-Math.hypot(A(0)-A(2),A(1)-A(3))/Math.max(1e-6,Math.abs(A(4))),0,1);case'angularGrad':return mod(Math.atan2(A(1)-A(3),A(0)-A(2))/(Math.PI*2)+(Math.abs(A(4))<=1?A(4):A(4)/1024),1);case'checker':return (Math.floor(A(0)/Math.max(1,Math.abs(A(2))))+Math.floor(A(1)/Math.max(1,Math.abs(A(3)))))&1?1:0;case'brick':{const w=Math.max(1,Math.abs(A(2))),h=Math.max(1,Math.abs(A(3))),m=clamp(Math.abs(A(4)),0,Math.min(w,h)/2),row=Math.floor(A(1)/h),off=(Math.abs(A(5))<=1?A(5)*w:A(5))*(row&1),lx=coordWrap(A(0)+off,w),ly=coordWrap(A(1),h);return lx>=m&&lx<=w-m&&ly>=m&&ly<=h-m?1:0}
 case'line':return lineMask(A(0),A(1),A(2),A(3),A(4),A(5),A(6),A(7));case'circle':return circleMask(A(0),A(1),A(2),A(3),A(4),A(5));case'ring':return ringMask(A(0),A(1),A(2),A(3),A(4),A(5),A(6));case'box':return boxMask(A(0),A(1),A(2),A(3),A(4),A(5),A(6),A(7));case'triangle':return triangleMask(A(0),A(1),A(2),A(3),A(4),A(5),A(6),A(7),A(8));case'grid':return gridMask(A(0),A(1),A(2),A(3),A(4),A(5));case'sierpinski':return sierpinskiMask(A(0),A(1),A(2),A(3),A(4),A(5),A(6));
-case'sdfLine':return lineDistance(A(0),A(1),A(2),A(3),A(4),A(5),A(6));case'sdfCircle':return circleDistance(A(0),A(1),A(2),A(3),A(4));case'sdfBox':return boxDistance(A(0),A(1),A(2),A(3),A(4),A(5),A(6));
+case'sdfLine':return lineDistance(A(0),A(1),A(2),A(3),A(4),A(5),A(6));case'sdfCircle':return circleDistance(A(0),A(1),A(2),A(3),A(4));case'hue1024':return hue1024(A(0),A(1),A(2));case'sdfRoundedBox':return roundedBoxDistance(A(0),A(1),A(2),A(3),A(4),A(5),A(6),A(7));case'sdfBox':return boxDistance(A(0),A(1),A(2),A(3),A(4),A(5),A(6));
 case'sdfUnion':return Math.min(A(0),A(1));case'sdfIntersect':return Math.max(A(0),A(1));case'sdfSubtract':return Math.max(A(0),-A(1));case'sdfSmoothUnion':return smoothUnionDistance(A(0),A(1),A(2));case'sdfFill':return shapeMask(A(0),a.length>1?A(1):0);case'sdfOutline':return shapeMask(Math.abs(A(0))-Math.abs(A(1))/2,a.length>2?A(2):0);
 case'multiply':case'screen':case'overlay':case'softLight':case'difference':return opacityMix(A(0),blendMode(n,A(0),A(1)),a.length>2?A(2):undefined)
 }return 0}
-function callLegacy(n,a,e){const A=i=>toI32(a[i]);switch(n){
+function callLegacy(n,a,e){if(n==="sdfRoundedBox"||n==="hue1024")throw new Error(n+"() requires native float mode");const A=i=>toI32(a[i]);switch(n){
 case'rnd':return legacyRnd(A(0),A(1));case'rst':legacyRst(A(0));return 0;
 case'val':{const i=A(0),c=i>=0&&i<${CONTROL_COUNT}?toI32(controls[i]):0;return toI32(i32Div(Math.imul(c,toI32(A(2)-A(1))),255)+A(1))}
 case'map':{const i=A(0),v=clamp(A(1),0,255);if(i<0||i>=${CONTROL_PAIR_COUNT})return 0;const hi=toI32(controls[i*2]),lo=toI32(controls[i*2+1]);if(hi===lo)return v<hi?0:255;if(lo>hi){if(v<=hi)return 255;if(v>=lo)return 0}else{if(v<=lo)return 0;if(v>=hi)return 255}return i32Div(Math.imul(toI32(v-lo),255),toI32(hi-lo))}

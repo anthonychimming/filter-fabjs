@@ -1,6 +1,6 @@
 # Architecture
 
-ChromaMeld RGBA v2.11.2 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
+ChromaMeld RGBA v2.12.0 uses a renderer-neutral compiler boundary so the formula language is not coupled directly to either rendering backend.
 
 ```text
 Formula text
@@ -53,6 +53,15 @@ Filter descriptions are optional top-level metadata beside `name` and `author`. 
 The Phase 3.5 WebGPU subset covers supported deterministic stateless operations: arithmetic, conditions, ten controls, image and polar sampling, normalized and centered coordinates, coordinate shaping and repetition, scalar palette ramps, gradients, procedural patterns, analytic shape masks, signed-distance primitives and composition, deterministic noise, bounded Mandelbrot and Julia fields, blend operations, and fixed 3×3 convolution. Signed-distance fields remain ordinary scalar expressions inside the current one-pass program and become masks only through explicit fill/outline helpers; domain warping is coordinate composition rather than a second execution model. Fractal iteration is encapsulated inside compiler intrinsics with a shared 512-step ceiling; the formula language does not expose general-purpose loops. Operations outside the subset are identified by compatibility analysis and use the CPU Worker fallback. Phase 3.5D exposes the manager's authoritative analysis as a read-only diagnostic snapshot containing formula compatibility, current GPU eligibility, selected backend, fallback reason, operation count, and the current one-pass count. `pow()` remains CPU-only because WGSL does not define JavaScript-compatible results for negative bases.
 
 The CPU renderer remains the compatibility backend for legacy integer-mode AFS filters, bitwise/shift/comma expressions, and operations with sequential or shared mutable state (`rnd()`, `rst()`, `get()`, and `put()`).
+
+### Native-float scalar intrinsics — v2.12.0
+
+`sdfRoundedBox()` and `hue1024()` are additive native-float functions introduced in v2.12.0. Both keep the existing parser-to-typed-IR v1-to-renderer pipeline and native JSON v2 format; neither is available in historic legacy math mode. All other functions retain their current behavior.
+
+Numerical eligibility remains the authority of `WGSLCompiler.analyze()`, not IR metadata. The rounded-box producer check uses effective source dimensions, validated contributing controls, bounded finite argument producers and dimension-scoped compatibility cache entries. Direct GPU plan use must reject stale admission when dimensions or contributing control validity change, even if the shader pipeline is warm. Hue admission is independent of dimensions and only admits conservatively proven encoded-byte producers. Unsupported expressions retain explicit CPU fallback and the existing work budget; no new general-purpose numeric proof system is introduced.
+
+The rounded-box CPU helper uses a positive finite `1e20` nonfinite sentinel. The GPU uses f32 precision, and CPU/GPU hard coverage may differ at extremely close boundaries. The accepted [Gate 3 hard-edge criterion](../GATE3_HARD_EDGE_ACCEPTANCE_POLICY.md) is a **test review policy**, not a runtime change to `sdfFill()` or older SDF helpers. The combined candidate retains the Gate 3 runtime tested on Intel Iris Xe with Chrome 157.
+
 
 ## Filter library
 
@@ -153,3 +162,11 @@ Preview and Download reuse completed results; Download preserves the original PN
 ## Online publishing (Stage 5)
 
 The separate `filter-fabjs-library` repository supplies the static feed. The main app owns the Node publisher and reuses its native, PNG and Online validators. See [Online Library publishing](ONLINE_LIBRARY_PUBLISHING.md) for registry/revision rules, immutable historical PNGs, deterministic builds, validator pinning, deployment gates and release QA. The centralized production URL remains `https://anthonychimming.github.io/filter-fabjs-library/catalogue.json`. The launch catalogue has libraryVersion 2 and five production filters with standardized Sample images and portable PNG packages; test fixtures are never publication seeds.
+
+## Development branch · native rounded-box distance
+
+The minimum reader is v2.12.0. Stock v2.11.2 rejects the name. Do not distribute filters that depend on the function to older readers.
+
+`sdfRoundedBox(x,y,cx,cy,width,height,radius,rotation)` returns a scalar signed distance in pixels in native float mode. Extents are full dimensions. Their signs and the radius sign are ignored, and the radius cannot exceed the smaller half-extent. Positive rotation is clockwise, with 1,024 units per turn. Zero-area shapes keep their valid segment or point boundary. The Worker returns +0 for a valid zero and positive finite 1e20 for invalid inputs or nonfinite arithmetic. An ordinary hard fill treats the sentinel as outside; negation and other downstream composition can change that interpretation.
+
+WebGPU admission considers each argument producer, its intermediate arithmetic, the effective source dimensions and the validity of contributing control slots. A sufficient bound is 32,768 pixels for each geometry argument, 1,024 units for rotation, and 2²⁰ for producer intermediates. Inputs outside the proof can still run on the Worker subject to the CPU budget (provisional call weight 24 plus children). Shader/pipeline caches remain program-based. Rounded-box capability decisions also key on dimensions and a ten-bit invalid-control mask. Direct dispatch repeats the authoritative analysis against its own source and upload snapshot before accepting a warm plan.
