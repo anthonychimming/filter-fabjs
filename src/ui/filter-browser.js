@@ -1,3 +1,4 @@
+import { FormulaModeError } from '../core/ir.js';
 import { installLibraryBackupUI } from './library-backup.js';
 import { searchCatalog } from '../app/filter-catalog.js';
 import { searchText, tagKey } from '../core/filter-metadata.js';
@@ -55,7 +56,7 @@ export function createFilterBrowser({launcher,getEntries,begin,preview,previewOn
       return;
     }
     row.dataset.thumbnailReady='false';label.textContent=state==='failed'?'Preview unavailable':state==='idle'?'Preview':'Previewing…';
-    if(state==='failed'){description.textContent=`Preview unavailable for ${entry.name}. The filter can still be selected.`;button.setAttribute('aria-describedby',description.id);}else{description.textContent='';button.removeAttribute('aria-describedby');}
+    if(state==='failed'){description.textContent=result?.error instanceof FormulaModeError?result.error.message:`Preview unavailable for ${entry.name}. The filter can still be selected.`;button.setAttribute('aria-describedby',description.id);}else{description.textContent='';button.removeAttribute('aria-describedby');}
   }
   function enqueueSample(row){
     if(row.dataset.sampleRequested)return;row.dataset.sampleRequested='true';
@@ -119,7 +120,7 @@ export function createFilterBrowser({launcher,getEntries,begin,preview,previewOn
         if(!accepted){pendingKey=null;previewing=false;refresh({preserveScroll:true});syncActions();return;}
         selectedKey=entry.key;pendingKey=null;
         previewing=false;find('[data-preview-status]').textContent=`Previewing ${entry.name}. Apply it or keep browsing.`;refresh({preserveScroll:true});syncActions();
-      }catch(error){if(id!==actionId)return;pendingKey=null;previewErrorKey=entry.key;previewing=false;find('[data-preview-status]').textContent=selectedKey?'Your previous preview is still on the canvas.':'Choose a filter to preview it on the canvas.';refresh({preserveScroll:true});syncActions();find('[data-error]').textContent=`Could not preview this filter. Your previous preview was kept.`;}
+      }catch(error){if(id!==actionId)return;pendingKey=null;previewErrorKey=entry.key;previewing=false;find('[data-preview-status]').textContent=selectedKey?'Your previous preview is still on the canvas.':'Choose a filter to preview it on the canvas.';refresh({preserveScroll:true});syncActions();find('[data-error]').textContent=error instanceof FormulaModeError?error.message:`Could not preview this filter. Your previous preview was kept.`;}
     });
     previewButton.className='filter-card-preview';
     if(!online||previewOnline){previewButton.setAttribute('aria-label',`Preview ${entry.name}`);previewButton.setAttribute('aria-pressed',String(entry.key===selectedKey));previewButton.dataset.entryKey=entry.key;previewButton.dataset.entryAction='preview';}

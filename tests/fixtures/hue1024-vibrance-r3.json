@@ -1,0 +1,21 @@
+{
+  "name": "Photoshop Style Vibrance",
+  "formulas": [
+    "clamp(i+(c-i)*min(((1+val(1,-100,100)/100)*(1+val(0,-100,100)/100*(1-clamp(((max(r,max(g,b))-min(r,min(g,b)))==0?0:(max(r,max(g,b))-min(r,min(g,b)))/(255-abs(max(r,max(g,b))+min(r,min(g,b))-255)))*(1+val(1,-100,100)/100),0,1))*(1-0.65*(1-smoothstep(0.2,0.65,abs(wrap(((max(r,max(g,b))-min(r,min(g,b)))==0?0:max(r,max(g,b))==r?wrap((g-b)/(max(r,max(g,b))-min(r,min(g,b))),6):max(r,max(g,b))==g?(b-r)/(max(r,max(g,b))-min(r,min(g,b)))+2:(r-g)/(max(r,max(g,b))-min(r,min(g,b)))+4)+2.5,6)-3)))))),min((r==i?999:r>i?(255-i)/(r-i):i/(i-r)),min((g==i?999:g>i?(255-i)/(g-i):i/(i-g)),(b==i?999:b>i?(255-i)/(b-i):i/(i-b))))),0,255)",
+    "clamp(i+(c-i)*min(((1+val(1,-100,100)/100)*(1+val(0,-100,100)/100*(1-clamp(((max(r,max(g,b))-min(r,min(g,b)))==0?0:(max(r,max(g,b))-min(r,min(g,b)))/(255-abs(max(r,max(g,b))+min(r,min(g,b))-255)))*(1+val(1,-100,100)/100),0,1))*(1-0.65*(1-smoothstep(0.2,0.65,abs(wrap(((max(r,max(g,b))-min(r,min(g,b)))==0?0:max(r,max(g,b))==r?wrap((g-b)/(max(r,max(g,b))-min(r,min(g,b))),6):max(r,max(g,b))==g?(b-r)/(max(r,max(g,b))-min(r,min(g,b)))+2:(r-g)/(max(r,max(g,b))-min(r,min(g,b)))+4)+2.5,6)-3)))))),min((r==i?999:r>i?(255-i)/(r-i):i/(i-r)),min((g==i?999:g>i?(255-i)/(g-i):i/(i-g)),(b==i?999:b>i?(255-i)/(b-i):i/(i-b))))),0,255)",
+    "clamp(i+(c-i)*min(((1+val(1,-100,100)/100)*(1+val(0,-100,100)/100*(1-clamp(((max(r,max(g,b))-min(r,min(g,b)))==0?0:(max(r,max(g,b))-min(r,min(g,b)))/(255-abs(max(r,max(g,b))+min(r,min(g,b))-255)))*(1+val(1,-100,100)/100),0,1))*(1-0.65*(1-smoothstep(0.2,0.65,abs(wrap(((max(r,max(g,b))-min(r,min(g,b)))==0?0:max(r,max(g,b))==r?wrap((g-b)/(max(r,max(g,b))-min(r,min(g,b))),6):max(r,max(g,b))==g?(b-r)/(max(r,max(g,b))-min(r,min(g,b)))+2:(r-g)/(max(r,max(g,b))-min(r,min(g,b)))+4)+2.5,6)-3)))))),min((r==i?999:r>i?(255-i)/(r-i):i/(i-r)),min((g==i?999:g>i?(255-i)/(g-i):i/(i-g)),(b==i?999:b>i?(255-i)/(b-i):i/(i-b))))),0,255)",
+    "a"
+  ],
+  "controls": [
+    165.75,
+    127.5,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128
+  ]
+}

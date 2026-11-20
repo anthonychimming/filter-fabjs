@@ -98,7 +98,7 @@ assert.match(app, /state\.lastSuccessfulRenderSignature=renderSignature;[\s\S]*?
 assert.match(app, /function initImage\(data,width,height\)\{state\.renderId\+\+;[\s\S]*?state\.lastSuccessfulRenderSignature=null;/, 'a new source image must invalidate export provenance until its render succeeds');
 assert.doesNotMatch(app, /toDataURL\(/, 'PNG export must not block on a base64 data URL');
 assert.match(app, /rendererManager\.renderWithFallback\(/, 'the renderer manager must own runtime CPU fallback');
-assert.match(app, /rendererManager\.diagnose\(program,state\.rendererPreference\)/, 'the UI inspector must consume manager-owned renderer diagnostics');
+assert.match(app, /rendererManager\.diagnose\(program,state\.rendererPreference,state\.controls\)/, 'the UI inspector must consume manager-owned renderer diagnostics');
 assert.doesNotMatch(app, /rendererManager\.get\('cpu'\)|rendererManager\.active\s*=/, 'the app must not bypass manager-owned fallback state');
 assert.match(app, /function prepareFilter\(input\)/, 'filter definitions must be normalized before application state changes');
 assert.match(app, /function applyFilter\(definition,selection,\{importSource=selection\?null:'file'\}=\{\}\)\{[\s\S]*?const next=prepareFilter\(definition\);invalidateLibraryForReplacement\(\);applyPreparedPresentation\(next\);commitActiveDocument/, 'filter application must finish validation and compilation before mutating UI state');

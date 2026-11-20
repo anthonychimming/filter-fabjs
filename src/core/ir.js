@@ -131,8 +131,29 @@ export class TypedIRCompiler{
     return{nodeCount:this.meta.nodeCount,controlMask:[...this.meta.controls],controlMappings,dynamicControls:this.meta.dynamicControls,functions:[...this.meta.functions].sort(),variables:[...this.meta.variables].sort(),usesSource:this.meta.usesSource,stateful:this.meta.stateful,deterministic:this.meta.deterministic};
   }
 }
+export class FormulaModeError extends FormulaError{}
+
+// Validate the resolved mode before an imported filter can enter storage or a renderer.
+export function validateFormulaMode(asts,legacyMath){
+  if(!legacyMath)return;
+  for(const [channel,root] of asts.entries()){
+    const pending=[root];
+    while(pending.length){
+      const node=pending.pop();
+      switch(node.k){
+        case 'f':
+          if(node.n==='sdfRoundedBox'||node.n==='hue1024')throw new FormulaModeError('Channel '+(channel+1)+': '+node.n+'() requires native float mode');
+          pending.push(...node.a);break;
+        case 'u':pending.push(node.e);break;
+        case 'b':pending.push(node.l,node.r);break;
+        case 't':pending.push(node.c,node.y,node.n);break;
+      }
+    }
+  }
+}
 export function compileFilterProgram(astList,{legacyMath=false}={}){
   if(!Array.isArray(astList)||astList.length!==4)throw new FormulaError('A filter program requires four channel expressions');
+  validateFormulaMode(astList,legacyMath);
   const compiler=new TypedIRCompiler({legacyMath});
   const outputs=astList.map((ast,channel)=>({channel,type:IRType.CHANNEL,expression:compiler.compile(ast)}));
   return{kind:'filter-fab-program',irVersion:IR_VERSION,mathMode:legacyMath?'legacy':'float',outputs,metadata:compiler.finish()};

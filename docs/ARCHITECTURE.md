@@ -54,6 +54,15 @@ The Phase 3.5 WebGPU subset covers supported deterministic stateless operations:
 
 The CPU renderer remains the compatibility backend for legacy integer-mode AFS filters, bitwise/shift/comma expressions, and operations with sequential or shared mutable state (`rnd()`, `rst()`, `get()`, and `put()`).
 
+### Pending additive scalar intrinsics — Gate 4 staging
+
+`sdfRoundedBox()` and `hue1024()` are unreleased native-float additions. Both keep the existing parser-to-typed-IR v1-to-renderer pipeline and native JSON v2 format; neither is available in historic legacy math mode. All other functions retain their current behavior.
+
+Numerical eligibility remains the authority of `WGSLCompiler.analyze()`, not IR metadata. The rounded-box producer check uses effective source dimensions, validated contributing controls, bounded finite argument producers and dimension-scoped compatibility cache entries. Direct GPU plan use must reject stale admission when dimensions or contributing control validity change, even if the shader pipeline is warm. Hue admission is independent of dimensions and only admits conservatively proven encoded-byte producers. Unsupported expressions retain explicit CPU fallback and the existing work budget; no new general-purpose numeric proof system is introduced.
+
+The rounded-box CPU helper uses a positive finite `1e20` nonfinite sentinel. The GPU uses f32 precision, and CPU/GPU hard coverage may differ at extremely close boundaries. The accepted [Gate 3 hard-edge criterion](../GATE3_HARD_EDGE_ACCEPTANCE_POLICY.md) is a **test review policy**, not a runtime change to `sdfFill()` or older SDF helpers. The combined candidate retains the Gate 3 runtime tested on Intel Iris Xe with Chrome 157.
+
+
 ## Filter library
 
 `core/filter-metadata.js` owns bounded tags, portable identity validation, and metadata comparison. `app/filter-catalog.js` projects metadata, searches/ranks cached catalog entries, persists per-entry local preferences, and checks target baselines before ID-based writes. `ui/filter-browser.js` owns the visual drawer, search/cards, lazy visibility observation, and action dialogs. The app owns the temporary library session: it snapshots the working presentation, rendered pixels, active saved/imported identity, saved-content baseline, and source-record baseline before any candidate is shown. Candidate presentation and rendering reuse normal validation and renderer-generation protection but do not commit identity or persistence. Apply promotes the prepared candidate; Cancel restores the snapshot without rerendering.
@@ -153,3 +162,11 @@ Preview and Download reuse completed results; Download preserves the original PN
 ## Online publishing (Stage 5)
 
 The separate `filter-fabjs-library` repository supplies the static feed. The main app owns the Node publisher and reuses its native, PNG and Online validators. See [Online Library publishing](ONLINE_LIBRARY_PUBLISHING.md) for registry/revision rules, immutable historical PNGs, deterministic builds, validator pinning, deployment gates and release QA. The centralized production URL remains `https://anthonychimming.github.io/filter-fabjs-library/catalogue.json`. The launch catalogue has libraryVersion 2 and five production filters with standardized Sample images and portable PNG packages; test fixtures are never publication seeds.
+
+## Development branch · native rounded-box distance
+
+The minimum reader is the first future application release containing this branch. Stock v2.11.2 rejects the name. The numeric release identifier remains unassigned until release qualification. Do not distribute filters that depend on the function to older readers.
+
+`sdfRoundedBox(x,y,cx,cy,width,height,radius,rotation)` returns a scalar signed distance in pixels in native float mode. Extents are full dimensions. Their signs and the radius sign are ignored, and the radius cannot exceed the smaller half-extent. Positive rotation is clockwise, with 1,024 units per turn. Zero-area shapes keep their valid segment or point boundary. The Worker returns +0 for a valid zero and positive finite 1e20 for invalid inputs or nonfinite arithmetic. An ordinary hard fill treats the sentinel as outside; negation and other downstream composition can change that interpretation.
+
+WebGPU admission considers each argument producer, its intermediate arithmetic, the effective source dimensions and the validity of contributing control slots. A sufficient bound is 32,768 pixels for each geometry argument, 1,024 units for rotation, and 2²⁰ for producer intermediates. Inputs outside the proof can still run on the Worker subject to the CPU budget (provisional call weight 24 plus children). Shader/pipeline caches remain program-based. Rounded-box capability decisions also key on dimensions and a ten-bit invalid-control mask. Direct dispatch repeats the authoritative analysis against its own source and upload snapshot before accepting a warm plan.

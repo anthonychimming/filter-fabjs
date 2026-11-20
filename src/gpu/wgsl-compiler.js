@@ -4,14 +4,14 @@
  * Licensed GPL-2.0-or-later. See LICENSE and README.md.
  */
 import { CHROMA_MODELS } from '../core/chroma.js';
-import { CONTROL_COUNT, CONTROL_PAIR_COUNT } from '../core/controls.js';
+import { CONTROL_COUNT, CONTROL_PAIR_COUNT, DEFAULT_CONTROL_VALUE } from '../core/controls.js';
 import { MAX_FRACTAL_ITERATIONS } from '../core/formula-language.js';
 import { IR_VERSION, IRType, programCacheKey } from '../core/ir.js';
 import { WEBGPU_CONTROL_SLOT_COUNT } from './params-layout.js';
 import { AngleSignLowering, SEMANTIC_ANGLE_WGSL } from './angle-sign.js';
 
 export class WGSLCompileError extends Error{constructor(message,blockers=[]){super(message);this.name='WGSLCompileError';this.blockers=blockers}}
-const WEBGPU_FUNCTIONS=new Set('src src0 src1 srcWrap srcMirror srcLinear rad rad0 rad1 cnv cnv0 cnv1 ctl val map min max abs add sub dif mix scl sqr sqrt sin cos tan r2x r2y c2d c2m radius angle clamp lerp step smoothstep floor ceil round fract sign bias gain hash2 valueNoise perlin worleyF1 worleyF2 fbm turbulence ridged periodicNoise mandelbrot julia wrap mirror repeat mirrorRepeat gradient3 gradient4 linearGrad radialGrad angularGrad checker brick line circle ring box triangle grid sierpinski sdfLine sdfCircle sdfBox sdfUnion sdfIntersect sdfSubtract sdfSmoothUnion sdfFill sdfOutline multiply screen overlay softLight difference'.split(' '));
+const WEBGPU_FUNCTIONS=new Set('src src0 src1 srcWrap srcMirror srcLinear rad rad0 rad1 cnv cnv0 cnv1 ctl val map min max abs add sub dif mix scl sqr sqrt sin cos tan r2x r2y c2d c2m radius angle clamp lerp step smoothstep floor ceil round fract sign bias gain hash2 valueNoise perlin worleyF1 worleyF2 fbm turbulence ridged periodicNoise mandelbrot julia wrap mirror repeat mirrorRepeat gradient3 gradient4 linearGrad radialGrad angularGrad checker brick line circle ring box triangle grid sierpinski sdfLine sdfCircle sdfBox sdfRoundedBox hue1024 sdfUnion sdfIntersect sdfSubtract sdfSmoothUnion sdfFill sdfOutline multiply screen overlay softLight difference'.split(' '));
 const WEBGPU_UNARY=new Set(['+','-','!']);
 const WEBGPU_BINARY=new Set(['+','-','*','/','%','<','<=','>','>=','==','!=','&&','||']);
 const WEBGPU_BOOLEAN_BINARY=new Set(['<','<=','>','>=','==','!=','&&','||']);
@@ -23,8 +23,60 @@ const SHAREABLE_FIELD_FUNCTIONS=new Set(['mandelbrot','julia','fbm','turbulence'
 const CHANNEL_DEPENDENT_VARIABLES=new Set(['c','c0','c1','z','p']);
 const IMPLICIT_CHANNEL_FUNCTIONS=new Set(['cnv','cnv0','cnv1']);
 export const MAX_WEBGPU_IR_NODES=4096;
+export const usesRoundedBox=program=>program?.metadata?.functions?.includes('sdfRoundedBox');
+export const snapshotControls=controls=>Array.from({length:CONTROL_COUNT},(_,i)=>controls?.[i]??DEFAULT_CONTROL_VALUE);
+export function invalidControlMask(controls){
+  let mask=0;
+  for(let i=0;i<CONTROL_COUNT;i++){
+    const value=controls?.[i]??DEFAULT_CONTROL_VALUE;
+    if(!Number.isFinite(value)||value<0||value>255)mask|=1<<i;
+  }
+  return mask;
+}
+// This closed grammar guarantees exact byte-valued children, independent of the source dimensions and controls.
+function isHueByteProducer(node){
+  if(node.op==='var')return ['r','g','b'].includes(node.name);
+  if(node.op==='const')return Number.isInteger(node.value)&&node.value>=0&&node.value<=255;
+  return node.op==='call'&&['min','max','clamp'].includes(node.fn)&&node.args.every(isHueByteProducer);
+}
+// Only called on new-call argument trees. One absolute unit of rounding slack
+// exceeds f32 error at 2^20. Reject every unknown intermediate before its parent.
+function roundedBoxMagnitude(node,context){
+  const cap=value=>value<=2**20?value:Infinity;
+  const child=n=>roundedBoxMagnitude(n,context);
+  switch(node.op){
+    case 'const':return cap(Math.max(Math.abs(node.value),Math.abs(Math.fround(node.value))));
+    case 'var':{
+      if(['r','g','b'].includes(node.name))return 255;
+      const size={x:context.width,X:context.width,y:context.height,Y:context.height}[node.name];
+      return Number.isSafeInteger(size)&&size>0?cap(size):Infinity;
+    }
+    case 'unary':return ['+','-'].includes(node.operator)?child(node.input):Infinity;
+    case 'binary':{
+      const a=child(node.left),b=child(node.right);
+      if(!Number.isFinite(a)||!Number.isFinite(b))return Infinity;
+      if(node.operator==='+'||node.operator==='-')return cap(a+b+1);
+      if(node.operator==='*')return cap(a*b+1);
+      if(node.operator==='/'&&node.right.op==='const'&&node.right.value===2)return cap(a/2+1);
+      return Infinity;
+    }
+    case 'call':{
+      if(['min','max','clamp'].includes(node.fn))return Math.max(...node.args.map(child));
+      if(node.fn!=='ctl'&&node.fn!=='val')return Infinity;
+      const [slot,lo,hi]=node.args,index=slot.value;
+      if(slot.op!=='const'||!Number.isInteger(index)||index<0||index>=CONTROL_COUNT||
+         (context.invalidControls & (1<<index)))return Infinity;
+      if(node.fn==='ctl')return 255;
+      if(lo.op!=='const'||hi.op!=='const')return Infinity;
+      const delta=cap(child(lo)+child(hi)+1),product=cap(255*delta+1);
+      return cap(product/255+1+child(lo)+1);
+    }
+    default:return Infinity;
+  }
+}
+export class NumericAdmissionError extends Error{}
 export class WGSLCompiler{
-  static analyze(program){
+  static analyze(program,context={}){
     const blockers=[];let nodeCount=0;
     if(!program||program.kind!=='filter-fab-program'||program.irVersion!==IR_VERSION)blockers.push('unsupported IR program');
     if(program?.mathMode!=='float')blockers.push('legacy integer compatibility mode');
@@ -46,6 +98,17 @@ export class WGSLCompiler{
         case'select':walk(node.condition);walk(node.whenTrue,exactIntegerContext);walk(node.whenFalse,exactIntegerContext);return;
         case'call':{
           if(!WEBGPU_FUNCTIONS.has(node.fn))blockers.push(`${node.fn}()`);
+          if(node.fn==='hue1024'){
+            node.args.forEach((arg,index)=>{
+              if(!isHueByteProducer(arg))blockers.push('hue1024(): cannot establish finite producer for argument '+(index+1));
+            });
+          }
+          if(node.fn==='sdfRoundedBox'){
+            node.args.forEach((arg,index)=>{
+              const limit=index===7?1024:32768;
+              if(roundedBoxMagnitude(arg,context)>limit)blockers.push('sdfRoundedBox(): cannot establish finite producer for argument '+(index+1));
+            });
+          }
           const exactNoiseIntegers=EXACT_INTEGER_NOISE_FUNCTIONS.has(node.fn);
           node.args.forEach(arg=>walk(arg,exactIntegerContext||(exactNoiseIntegers&&arg.type===IRType.INTEGER)));
           return;
@@ -213,6 +276,8 @@ export class WGSLCompiler{
       case'sierpinski':return`ff_sierpinski(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)}, ${A(5)}, ${A(6)})`;
       case'sdfLine':return`ff_line_distance(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)}, ${A(5)}, ${A(6)})`;
       case'sdfCircle':return`ff_circle_distance(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)})`;
+      case'hue1024':return 'ff_hue1024('+a.join(', ')+')';
+      case'sdfRoundedBox':return 'ff_rounded_box('+a.join(', ')+')';
       case'sdfBox':return`ff_box_distance(${A(0)}, ${A(1)}, ${A(2)}, ${A(3)}, ${A(4)}, ${A(5)}, ${A(6)})`;
       case'sdfUnion':return`min(${A(0)}, ${A(1)})`;case'sdfIntersect':return`max(${A(0)}, ${A(1)})`;case'sdfSubtract':return`max(${A(0)}, -(${A(1)}))`;
       case'sdfSmoothUnion':return`ff_sdf_smooth_union(${A(0)}, ${A(1)}, ${A(2)})`;
@@ -297,6 +362,39 @@ fn ff_shape_mask(distance:f32,feather0:f32)->f32{let feather=max(0.0,abs(feather
 fn ff_segment_distance(p:vec2<f32>,a:vec2<f32>,b:vec2<f32>)->f32{let delta=b-a;let den=dot(delta,delta);if(den<=0.000000000001){return length(p-a);}let t=clamp(dot(p-a,delta)/den,0.0,1.0);return length(p-(a+delta*t));}
 fn ff_line_distance(x:f32,y:f32,ax:f32,ay:f32,bx:f32,by:f32,width:f32)->f32{return ff_segment_distance(vec2<f32>(x,y),vec2<f32>(ax,ay),vec2<f32>(bx,by))-abs(width)*0.5;}
 fn ff_circle_distance(x:f32,y:f32,cx:f32,cy:f32,radius:f32)->f32{return length(vec2<f32>(x-cx,y-cy))-abs(radius);}
+${this.program.metadata?.functions?.includes('hue1024')?`fn ff_hue1024(red:f32,green:f32,blue:f32)->f32{
+  let r=clamp(red,0.0,255.0);let g=clamp(green,0.0,255.0);let b=clamp(blue,0.0,255.0);
+  let peak=max(r,max(g,b));let chroma=peak-min(r,min(g,b));
+  if(chroma==0.0){return 0.0;}
+  // Exact channel ties fall on sector boundaries. Use the least f32 angle
+  // at or above each boundary so converting back to sectors preserves floor.
+  if(r==g){return select(682.66668701171875,170.6666717529296875,r>b);}
+  if(g==b){return select(0.0,512.0,g>r);}
+  if(b==r){return select(341.333343505859375,853.3333740234375,b>g);}
+  var sector:f32;
+  if(peak==r){sector=(g-b)/chroma;}else if(peak==g){sector=2.0+(b-r)/chroma;}else{sector=4.0+(r-g)/chroma;}
+  if(sector<0.0){sector+=6.0;}
+  let angle=sector*1024.0/6.0;
+  return select(0.0,angle,angle>0.0&&angle<1024.0);
+}`:''}
+${usesRoundedBox(this.program)?`fn ff_rounded_box(x:f32,y:f32,cx:f32,cy:f32,w:f32,h:f32,radius:f32,rotation:f32)->f32{
+  let halfSize=0.5*abs(vec2<f32>(w,h));
+  let r=min(abs(radius),min(halfSize.x,halfSize.y));
+  // Absolute local coordinates are invariant under a half turn. Reduce to
+  // the nearest quarter turn in angle units before converting to radians.
+  let quarter=round(rotation/256.0);
+  let angle=(rotation-quarter*256.0)*(FF_TAU/1024.0);
+  // On [-pi/4, pi/4] the degree-10 cosine and degree-9 sine Taylor
+  // remainders are below 2e-9. Native shader trig can move hard edges.
+  let t=angle*angle;
+  let co=1.0+t*(-0.5+t*(1.0/24.0+t*(-1.0/720.0+t*(1.0/40320.0-t/3628800.0))));
+  let si=angle+angle*t*(-1.0/6.0+t*(1.0/120.0+t*(-1.0/5040.0+t/362880.0)));
+  let dx=x-cx;let dy=y-cy;
+  let local=abs(vec2<f32>(co*dx+si*dy,-si*dx+co*dy));
+  let q=select(local,local.yx,(i32(quarter)&1)!=0)-(halfSize-vec2<f32>(r));
+  let distance=length(max(q,vec2<f32>(0.0)))+min(max(q.x,q.y),0.0)-r;
+  return select(distance,0.0,distance==0.0);
+}`:''}
 fn ff_box_distance(x:f32,y:f32,cx:f32,cy:f32,width:f32,height:f32,rotation:f32)->f32{let angle=rotation*FF_TAU/1024.0;let co=cos(angle);let si=sin(angle);let delta=vec2<f32>(x-cx,y-cy);let q=abs(vec2<f32>(co*delta.x+si*delta.y,-si*delta.x+co*delta.y))-vec2<f32>(abs(width),abs(height))*0.5;return length(max(q,vec2<f32>(0.0)))+min(max(q.x,q.y),0.0);}
 fn ff_sdf_smooth_union(a:f32,b:f32,radius0:f32)->f32{let radius=abs(radius0);if(radius==0.0){return min(a,b);}let h=clamp(0.5+0.5*(b-a)/radius,0.0,1.0);return mix(b,a,h)-radius*h*(1.0-h);}
 fn ff_sdf_outline(distance:f32,width:f32,feather:f32)->f32{return ff_shape_mask(abs(distance)-abs(width)*0.5,feather);}

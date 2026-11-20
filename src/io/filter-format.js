@@ -4,6 +4,7 @@
  * Licensed GPL-2.0-or-later. See LICENSE and README.md.
  */
 import { normalizeTags, validatePortableId } from '../core/filter-metadata.js';
+import { validateFormulaMode } from '../core/ir.js';
 import { clamp } from '../core/utils.js';
 import { CONTROL_COUNT, CONTROL_DEFINITIONS, cloneControlUI, normalizeControlUI, normalizeColorGroups } from '../core/controls.js';
 import { FORMULA_LIMITS, Parser } from '../core/formula-language.js';
@@ -58,6 +59,7 @@ export function validateNativeFilter(data){
   if(!Number.isInteger(data.version)||![1,2].includes(data.version))throw new Error('Native filter version must be 1 or 2');
   if(data.mathMode!==undefined&&!['float','legacy'].includes(data.mathMode))throw new Error('Native filter mathMode must be “float” or “legacy”');
   const formulas=validatedFormulas(Array.isArray(data.formulas)?data.formulas:data.f);
+  validateFormulaMode(formulas.asts,(data.mathMode??(data.version===1?'legacy':'float'))==='legacy');
   const result={format:'filter-fab-js',version:data.version,...(data.id===undefined?{}:{id:validatePortableId(data.id)}),tags:normalizeTags(data.tags),mathMode:data.mathMode??(data.version===1?'legacy':'float'),name:boundedString(data.name,'name',120,'Untitled Filter'),description:boundedString(data.description,'description',FILTER_DESCRIPTION_MAX_LENGTH),author:boundedString(data.author,'author',120),formulas:formulas.normalized,controls:normalizeNativeControls(data)};
   const colorGroups=normalizeColorGroups(data.colorGroups);if(colorGroups.length)result.colorGroups=colorGroups;
   validatedFormulaAsts.set(result,formulas.asts);return result;
@@ -100,6 +102,7 @@ export function parseAFS(text,fileName=''){
   const f=splitAFSFormulaGroups(lines.join('\n'));
   if(f.length!==4)throw new Error(`AFS file contains ${f.length} channel formula${f.length===1?'':'s'}; expected 4`);
   const formulas=validatedFormulas(f,'AFS filter');
+  validateFormulaMode(formulas.asts,true);
   const base=String(fileName||'').replace(/\.[^.]+$/,'').trim();
   const labels=Array.from({length:8},(_,i)=>`Control ${i+1}`),controls=CONTROL_DEFINITIONS.map((definition,index)=>({label:labels[index]??definition.defaultLabel,value:values[index]??definition.defaultValue,ui:cloneControlUI()}));
   const result={format:'filter-factory-afs',version:header.replace(/^%RGB-?/i,'')||'1.0',name:base||'Imported AFS Filter',description:'',author:'',mathMode:'legacy',values,labels,f:formulas.normalized,controls};
